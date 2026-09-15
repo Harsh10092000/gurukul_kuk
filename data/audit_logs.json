@@ -1,0 +1,69 @@
+[
+  {
+    "userId": "usr-1789372007949-qcafl",
+    "userName": "Anshu Miglani",
+    "userRole": "applicant",
+    "action": "PASSWORD_RESET_SUCCESS",
+    "entity": "User",
+    "details": {
+      "identifier": "anshutemp10@gmail.com"
+    },
+    "id": "audit-1789385420555-zrgxq",
+    "timestamp": "2026-09-14T11:30:20.555Z"
+  },
+  {
+    "userId": "usr-1789376532796-ephcj",
+    "userName": "satvik",
+    "userRole": "applicant",
+    "action": "PASSWORD_RESET_SUCCESS",
+    "entity": "User",
+    "details": {
+      "identifier": "satviksaini77777@gmail.com"
+    },
+    "id": "audit-1789379352656-a10vk",
+    "timestamp": "2026-09-14T09:49:12.656Z"
+  },
+  {
+    "userId": "usr-1789372007949-qcafl",
+    "userName": "Anshu Miglani",
+    "userRole": "applicant",
+    "action": "PASSWORD_RESET_SUCCESS",
+    "entity": "User",
+    "details": {
+      "identifier": "gk26-10004"
+    },
+    "id": "audit-1789379112289-kgmv7",
+    "timestamp": "2026-09-14T09:45:12.289Z"
+  },
+  {
+    "userId": "usr-admin-1",
+    "userName": "Principal / Exam Controller",
+    "userRole": "admin",
+    "action": "UPDATE_FORM_SCHEDULE",
+    "entity": "FormSchedule",
+    "details": {
+      "previous": {
+        "startDate": "2026-09-01T00:00:00.000Z",
+        "endDate": "2026-10-31T23:59:59.000Z",
+        "statusOverride": "auto",
+        "timezone": "Asia/Kolkata (IST)",
+        "announcementNotice": "Online Application for Entrance Examination Session 2026-27 is active for Classes 5th, 6th, 7th, 8th, 9th, 11th & NDA Wing.",
+        "reopenedCount": 0,
+        "lastUpdated": "2026-09-14T06:50:44.781Z",
+        "updatedBy": "system"
+      },
+      "new": {
+        "startDate": "2026-08-31T18:30:00.000Z",
+        "endDate": "2026-10-31T18:29:00.000Z",
+        "statusOverride": "auto",
+        "timezone": "Asia/Kolkata (IST)",
+        "announcementNotice": "Online Application for Entrance Examination Session 2026-27 is active for Classes 5th, 6th, 7th, 8th, 9th, 11th & NDA Wing.",
+        "reopenedCount": 0,
+        "lastUpdated": "2026-09-14T07:16:46.075Z",
+        "updatedBy": "Principal / Exam Controller (usr-admin-1)"
+      }
+    },
+    "id": "audit-1789370206076-5fge9",
+    "timestamp": "2026-09-14T07:16:46.076Z"
+  }
+]
