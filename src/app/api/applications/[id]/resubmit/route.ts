@@ -45,6 +45,27 @@ export async function POST(
       return NextResponse.json({ error: 'Failed to update application' }, { status: 500 });
     }
 
+    // Create persistent Admin Notification
+    try {
+      await db.createAdminNotification({
+        type: 'APPLICATION_STATUS_CHANGED',
+        title: `Clarification / Resubmission: ${updated.personalInfo?.fullName || 'Candidate'}`,
+        message: `Candidate ${updated.personalInfo?.fullName || 'Candidate'} (${updated.applicationNumber}) submitted revised particulars/documents for re-scrutiny.`,
+        entityId: updated.id,
+        entityType: 'application',
+        link: `/admin/applications/${updated.id}`,
+        metadata: {
+          applicationId: updated.id,
+          candidateName: updated.personalInfo?.fullName,
+          applicationNumber: updated.applicationNumber,
+          classApplying: updated.classApplying,
+          clarification: clarification?.trim(),
+        },
+      });
+    } catch (notifErr) {
+      console.warn('Failed to dispatch admin notification on resubmission:', notifErr);
+    }
+
     return NextResponse.json({
       success: true,
       message: 'Your revised details & documents have been successfully submitted for re-evaluation.',

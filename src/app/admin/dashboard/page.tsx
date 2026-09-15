@@ -2,15 +2,15 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { 
-  Users, 
-  CreditCard, 
-  CheckCircle, 
-  AlertTriangle, 
-  ArrowRight, 
-  Download, 
-  FileSpreadsheet, 
-  Clock, 
+import {
+  Users,
+  CreditCard,
+  CheckCircle,
+  AlertTriangle,
+  ArrowRight,
+  Download,
+  FileSpreadsheet,
+  Clock,
   Building,
   Award
 } from 'lucide-react';
@@ -84,7 +84,9 @@ export default function AdminDashboard() {
           <div className="text-2xl sm:text-3xl font-black text-slate-900">
             {stats?.totalApplications || 0}
           </div>
-          <p className="text-[11px] text-slate-400">All submitted candidate profiles</p>
+          <p className="text-[11px] text-slate-400">
+            Active candidate profiles {stats?.rejected ? `(${stats.rejected} rejected)` : ''}
+          </p>
         </div>
 
         {/* Approved Dossiers */}
@@ -190,59 +192,66 @@ export default function AdminDashboard() {
           </Link>
         </div>
 
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs">
-            <thead className="bg-slate-50 text-slate-500 uppercase font-bold text-[10px] border-b border-slate-200">
-              <tr>
-                <th className="py-2.5 px-3">App Number</th>
-                <th className="py-2.5 px-3">Candidate</th>
-                <th className="py-2.5 px-3">Class</th>
-                <th className="py-2.5 px-3">Phone</th>
-                <th className="py-2.5 px-3">Centre Preference</th>
-                <th className="py-2.5 px-3">Status</th>
-                <th className="py-2.5 px-3 text-right">Action</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
-              {recentApps.map((app) => (
-                <tr key={app.id} className="hover:bg-slate-50">
-                  <td className="py-3 px-3 font-mono font-bold text-slate-800">{app.applicationNumber}</td>
-                  <td className="py-3 px-3 font-semibold text-slate-900">{app.personalInfo?.fullName}</td>
-                  <td className="py-3 px-3">
-                    <span className="bg-amber-50 text-amber-800 border border-amber-200 px-2 py-0.5 rounded text-[11px] font-bold">
-                      {app.classApplying}
-                    </span>
-                  </td>
-                  <td className="py-3 px-3 text-slate-600 font-mono">{app.parentInfo?.fatherPhone}</td>
-                  <td className="py-3 px-3 text-slate-600 max-w-[160px] truncate">
-                    {app.examCentrePref?.preferredCenter1}
-                  </td>
-                  <td className="py-3 px-3">
-                    <span
-                      className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase ${
-                        app.status === 'approved'
-                          ? 'bg-emerald-100 text-emerald-800'
-                          : app.status === 'correction_needed'
-                          ? 'bg-red-100 text-red-800'
-                          : 'bg-amber-100 text-amber-800'
-                      }`}
-                    >
-                      {app.status.replace('_', ' ')}
-                    </span>
-                  </td>
-                  <td className="py-3 px-3 text-right">
-                    <Link
-                      href={`/admin/applications/${app.id}`}
-                      className="bg-slate-100 hover:bg-amber-500 hover:text-white text-slate-700 font-bold px-3 py-1.5 rounded-lg text-[11px] transition"
-                    >
-                      Inspect Dossier
-                    </Link>
-                  </td>
+        {recentApps.length === 0 ? (
+          <div className="py-10 text-center text-xs text-slate-500 bg-slate-50/60 rounded-xl">
+            <CheckCircle className="w-6 h-6 text-emerald-500 mx-auto mb-2" />
+            <p className="font-bold text-slate-700">All Submissions Processed</p>
+            <p className="text-[11px] text-slate-400">No candidate applications currently awaiting review.</p>
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-xs">
+              <thead className="bg-slate-50 text-slate-500 uppercase font-bold text-[10px] border-b border-slate-200">
+                <tr>
+                  <th className="py-2.5 px-3">App Number</th>
+                  <th className="py-2.5 px-3">Candidate</th>
+                  <th className="py-2.5 px-3">Class</th>
+                  <th className="py-2.5 px-3">Phone</th>
+                  <th className="py-2.5 px-3">Centre Preference</th>
+                  <th className="py-2.5 px-3">Status</th>
+                  <th className="py-2.5 px-3 text-right">Action</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {recentApps.map((app) => (
+                  <tr key={app.id} className="hover:bg-slate-50">
+                    <td className="py-3 px-3 font-mono font-bold text-slate-800">{app.applicationNumber}</td>
+                    <td className="py-3 px-3 font-semibold text-slate-900">{app.personalInfo?.fullName}</td>
+                    <td className="py-3 px-3">
+                      <span className="bg-amber-50 text-amber-800 border border-amber-200 px-2 py-0.5 rounded text-[11px] font-bold">
+                        {app.classApplying}
+                      </span>
+                    </td>
+                    <td className="py-3 px-3 text-slate-600 font-mono">{app.parentInfo?.fatherPhone}</td>
+                    <td className="py-3 px-3 text-slate-600 max-w-[160px] truncate">
+                      {app.examCentrePref?.preferredCenter1}
+                    </td>
+                    <td className="py-3 px-3">
+                      <span
+                        className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase ${app.status === 'approved'
+                            ? 'bg-emerald-100 text-emerald-800'
+                            : app.status === 'correction_needed'
+                              ? 'bg-red-100 text-red-800'
+                              : 'bg-amber-100 text-amber-800'
+                          }`}
+                      >
+                        {app.status.replace('_', ' ')}
+                      </span>
+                    </td>
+                    <td className="py-3 px-3 text-right">
+                      <Link
+                        href={`/admin/applications/${app.id}`}
+                        className="bg-slate-100 hover:bg-amber-500 hover:text-white text-slate-700 font-bold px-3 py-1.5 rounded-lg text-[11px] transition"
+                      >
+                        Inspect Dossier
+                      </Link>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
     </div>
   );

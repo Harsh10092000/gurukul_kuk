@@ -22,11 +22,19 @@ import {
   Percent,
   Calculator,
   MessageSquare,
-  FileText,
-  Save,
-  BookmarkCheck
+  FileText, 
+  Save, 
+  BookmarkCheck,
+  ShieldAlert
 } from 'lucide-react';
 import { INDIAN_STATES_AND_DISTRICTS } from '@/lib/indianLocations';
+import {
+  validateName,
+  validateOccupation,
+  validatePhone,
+  validateAadhaar,
+  validateMarks,
+} from '@/lib/validations';
 
 export default function ApplyPage() {
   const router = useRouter();
@@ -38,8 +46,16 @@ export default function ApplyPage() {
   const [existingApp, setExistingApp] = useState<any>(null);
   const [submittedApp, setSubmittedApp] = useState<any>(null);
   const [currentUser, setCurrentUser] = useState<any>(null);
-  const [docErrors, setDocErrors] = useState<{ photo?: boolean; signature?: boolean; aadhaarCard?: boolean }>({});
+  const [docErrors, setDocErrors] = useState<{
+    photo?: boolean;
+    signature?: boolean;
+    parentSignature?: boolean;
+    aadhaarCard?: boolean;
+    lastMarksheet?: boolean;
+  }>({});
   const [declarationAgreed, setDeclarationAgreed] = useState(false);
+  const [ntaAdvisoryAccepted, setNtaAdvisoryAccepted] = useState(false);
+  const [ntaCheckbox, setNtaCheckbox] = useState(false);
 
   // Form State
   const [formData, setFormData] = useState({
@@ -124,7 +140,16 @@ export default function ApplyPage() {
       const obt = parseFloat(formData.marksObtained);
       const tot = parseFloat(formData.marksTotal);
       if (!isNaN(obt) && !isNaN(tot) && tot > 0) {
-        const pct = ((obt / tot) * 100).toFixed(2);
+        if (obt < 0) {
+          setFormData((prev) => ({ ...prev, marksObtained: '0', previousClassMarksPercentage: '0.00' }));
+          return;
+        }
+        if (obt > tot) {
+          const pct = '100.00';
+          setFormData((prev) => ({ ...prev, previousClassMarksPercentage: pct }));
+          return;
+        }
+        const pct = Math.min(100, Math.max(0, (obt / tot) * 100)).toFixed(2);
         setFormData((prev) => ({ ...prev, previousClassMarksPercentage: pct }));
       }
     }
@@ -162,14 +187,22 @@ export default function ApplyPage() {
         const user = authData.user;
         setCurrentUser(user);
 
-        // Pre-fill user profile details
+        // If fresh refill requested, wipe user-scoped draft
+        if (typeof window !== 'undefined' && window.location.search.includes('fresh=true')) {
+          try {
+            localStorage.removeItem(`gurukul_draft_${user.id}`);
+            localStorage.removeItem('gurukul_application_draft');
+          } catch {}
+        }
+
+        // Pre-fill user profile details (Father's mobile starts completely empty without auto-prefill)
         setFormData((prev) => ({
           ...prev,
           fullName: user.name || prev.fullName || '',
           candidateEmail: user.email || prev.candidateEmail || '',
           candidateMobile: user.phone || prev.candidateMobile || '',
           whatsappNumber: user.phone || prev.whatsappNumber || '',
-          fatherPhone: prev.fatherPhone || user.phone || '',
+          fatherPhone: prev.fatherPhone || '',
         }));
 
         // 2. Fetch candidate's own application or draft from API
@@ -179,10 +212,14 @@ export default function ApplyPage() {
             if (data.application && data.application.userId === user.id) {
               if (data.application.status === 'draft') {
                 const app = data.application;
-                setFormData((prev) => ({
-                  ...prev,
-                  fullName: app.personalInfo?.fullName || user.name || prev.fullName,
-                  dob: app.personalInfo?.dob || prev.dob,
+                setFormData((prev) => {
+                  const candidateFullName = (app.personalInfo?.fullName && app.personalInfo.fullName !== 'Temp Delete Test' && app.personalInfo.fullName.trim() !== '')
+                    ? app.personalInfo.fullName
+                    : (user.name || prev.fullName);
+                  return {
+                    ...prev,
+                    fullName: candidateFullName,
+                    dob: app.personalInfo?.dob || prev.dob,
                   gender: app.personalInfo?.gender || prev.gender,
                   category: app.personalInfo?.category || prev.category,
                   bloodGroup: app.personalInfo?.bloodGroup || prev.bloodGroup,
@@ -194,7 +231,7 @@ export default function ApplyPage() {
                   whatsappNumber: app.personalInfo?.whatsappNumber || prev.whatsappNumber,
                   fatherName: app.parentInfo?.fatherName || prev.fatherName,
                   fatherOccupation: app.parentInfo?.fatherOccupation || prev.fatherOccupation,
-                  fatherPhone: app.parentInfo?.fatherPhone || prev.fatherPhone,
+                  fatherPhone: app.parentInfo?.fatherPhone || prev.fatherPhone || '',
                   motherName: app.parentInfo?.motherName || prev.motherName,
                   motherOccupation: app.parentInfo?.motherOccupation || prev.motherOccupation,
                   annualIncome: app.parentInfo?.annualIncome || prev.annualIncome,
@@ -222,69 +259,43 @@ export default function ApplyPage() {
                   parentSignatureName: app.documents?.parentSignature ? 'Uploaded-ParentSignature.jpg' : prev.parentSignatureName,
                   aadhaarCard: app.documents?.aadhaarCard || prev.aadhaarCard,
                   aadhaarCardName: app.documents?.aadhaarCard ? 'Uploaded-Aadhaar.pdf' : prev.aadhaarCardName,
-                }));
+                  lastMarksheet: app.documents?.lastMarksheet || prev.lastMarksheet,
+                  lastMarksheetName: app.documents?.lastMarksheet ? 'Uploaded-Marksheet.pdf' : prev.lastMarksheetName,
+                };
+              });
 
                 if (app.currentStep) {
                   setStep(app.currentStep);
                 }
                 setDraftSavedMsg('Resumed from your previously saved draft application.');
                 setTimeout(() => setDraftSavedMsg(''), 5000);
-              } else if (data.application.status === 'rejected' || (typeof window !== 'undefined' && window.location.search.includes('reapply=true'))) {
-                // Rejected candidate re-applying: load previous application data for ease and start fresh submission
-                const app = data.application;
-                setFormData((prev) => ({
-                  ...prev,
-                  fullName: app.personalInfo?.fullName || user.name || prev.fullName,
-                  dob: app.personalInfo?.dob || prev.dob,
-                  gender: app.personalInfo?.gender || prev.gender,
-                  category: app.personalInfo?.category || prev.category,
-                  bloodGroup: app.personalInfo?.bloodGroup || prev.bloodGroup,
-                  aadhaarNumber: app.personalInfo?.aadhaarNumber || prev.aadhaarNumber,
-                  nationality: app.personalInfo?.nationality || prev.nationality,
-                  religion: app.personalInfo?.religion || prev.religion,
-                  candidateEmail: app.personalInfo?.candidateEmail || user.email || prev.candidateEmail,
-                  candidateMobile: app.personalInfo?.candidateMobile || user.phone || prev.candidateMobile,
-                  whatsappNumber: app.personalInfo?.whatsappNumber || prev.whatsappNumber,
-                  fatherName: app.parentInfo?.fatherName || prev.fatherName,
-                  fatherOccupation: app.parentInfo?.fatherOccupation || prev.fatherOccupation,
-                  fatherPhone: app.parentInfo?.fatherPhone || prev.fatherPhone,
-                  motherName: app.parentInfo?.motherName || prev.motherName,
-                  motherOccupation: app.parentInfo?.motherOccupation || prev.motherOccupation,
-                  annualIncome: app.parentInfo?.annualIncome || prev.annualIncome,
-                  streetAddress: app.addressInfo?.streetAddress || prev.streetAddress,
-                  city: app.addressInfo?.city || prev.city,
-                  district: app.addressInfo?.district || prev.district,
-                  state: app.addressInfo?.state || prev.state,
-                  pincode: app.addressInfo?.pincode || prev.pincode,
-                  applyingClass: app.classApplying || prev.applyingClass,
-                  mediumOfInstruction: app.academicInfo?.mediumOfInstruction || prev.mediumOfInstruction,
-                  previousSchoolName: app.academicInfo?.previousSchoolName || prev.previousSchoolName,
-                  previousBoard: app.academicInfo?.previousBoard || prev.previousBoard,
-                  marksMode: app.academicInfo?.marksMode || prev.marksMode,
-                  marksObtained: app.academicInfo?.marksObtained || prev.marksObtained,
-                  marksTotal: app.academicInfo?.marksTotal || prev.marksTotal,
-                  previousClassMarksPercentage: app.academicInfo?.previousClassMarksPercentage || prev.previousClassMarksPercentage,
-                  passingYear: app.academicInfo?.passingYear || prev.passingYear,
-                  preferredCenter1: app.examCentrePref?.preferredCenter1 || prev.preferredCenter1,
-                  preferredCenter2: app.examCentrePref?.preferredCenter2 || prev.preferredCenter2,
-                  photo: app.documents?.photo || prev.photo,
-                  photoName: app.documents?.photo ? 'Previous-Photo.jpg' : prev.photoName,
-                  signature: app.documents?.signature || prev.signature,
-                  signatureName: app.documents?.signature ? 'Previous-Signature.jpg' : prev.signatureName,
-                  parentSignature: app.documents?.parentSignature || prev.parentSignature,
-                  parentSignatureName: app.documents?.parentSignature ? 'Previous-ParentSignature.jpg' : prev.parentSignatureName,
-                  aadhaarCard: app.documents?.aadhaarCard || prev.aadhaarCard,
-                  aadhaarCardName: app.documents?.aadhaarCard ? 'Previous-Aadhaar.pdf' : prev.aadhaarCardName,
-                  lastMarksheet: app.documents?.lastMarksheet || prev.lastMarksheet,
-                  lastMarksheetName: app.documents?.lastMarksheet ? 'Previous-Marksheet.pdf' : prev.lastMarksheetName,
-                }));
-                setStep(1);
-                setDraftSavedMsg('Re-Application Mode: Your previous particulars have been loaded for your convenience. Please update required fields and submit your new application.');
-                setTimeout(() => setDraftSavedMsg(''), 8000);
+              } else if (data.application.status === 'rejected') {
+                // If application is rejected, candidate must review NTA Rejection Dialog on /dashboard and click Refill from there
+                window.location.href = '/dashboard';
+                return;
               } else {
+                // Active application already submitted
                 setExistingApp(data.application);
               }
             } else {
+              // Automatically initialize a baseline draft application if none exists
+              try {
+                fetch('/api/applications/draft', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                    classApplying: 'Class 6',
+                    currentStep: 1,
+                    personalInfo: {
+                      fullName: user.name,
+                      candidateEmail: user.email,
+                      candidateMobile: user.phone,
+                      whatsappNumber: user.phone,
+                    },
+                  }),
+                }).catch(() => {});
+              } catch {}
+
               // Check user-scoped local storage for user.id ONLY
               try {
                 const userDraft = localStorage.getItem(`gurukul_draft_${user.id}`);
@@ -369,6 +380,7 @@ export default function ApplyPage() {
         signature: formData.signature,
         parentSignature: formData.parentSignature,
         aadhaarCard: formData.aadhaarCard,
+        lastMarksheet: formData.lastMarksheet || '',
       },
     };
 
@@ -417,6 +429,32 @@ export default function ApplyPage() {
     } else if (name === 'pincode') {
       const clean = value.replace(/\D/g, '').slice(0, 6);
       setFormData((prev) => ({ ...prev, [name]: clean }));
+    } else if (name === 'marksObtained') {
+      const clean = value.replace(/[^0-9.]/g, '');
+      setFormData((prev) => {
+        const obt = parseFloat(clean);
+        const tot = parseFloat(prev.marksTotal);
+        let pct = '';
+        if (!isNaN(obt) && !isNaN(tot) && tot > 0) {
+          if (obt <= tot) {
+            pct = ((obt / tot) * 100).toFixed(2);
+          }
+        }
+        return { ...prev, marksObtained: clean, previousClassMarksPercentage: pct };
+      });
+    } else if (name === 'marksTotal') {
+      const clean = value.replace(/[^0-9.]/g, '');
+      setFormData((prev) => {
+        const obt = parseFloat(prev.marksObtained);
+        const tot = parseFloat(clean);
+        let pct = '';
+        if (!isNaN(obt) && !isNaN(tot) && tot > 0) {
+          if (obt <= tot) {
+            pct = ((obt / tot) * 100).toFixed(2);
+          }
+        }
+        return { ...prev, marksTotal: clean, previousClassMarksPercentage: pct };
+      });
     } else {
       setFormData({ ...formData, [name]: value });
     }
@@ -426,9 +464,30 @@ export default function ApplyPage() {
     const file = e.target.files?.[0];
     if (file) {
       if (file.size > 2 * 1024 * 1024) {
-        setError(`File size exceeds 2MB limit for ${field}. Please select a smaller file.`);
+        setError(`File size must be less than or equal to 2 MB. (Selected file: ${(file.size / (1024 * 1024)).toFixed(2)} MB).`);
         return;
       }
+
+      const isPhotoOrSign = ['photo', 'signature', 'parentSignature'].includes(field);
+      const isDoc = ['aadhaarCard', 'lastMarksheet'].includes(field);
+      const fileType = (file.type || '').toLowerCase();
+      const fileName = file.name.toLowerCase();
+
+      if (isPhotoOrSign) {
+        const isImage = fileType === 'image/jpeg' || fileType === 'image/jpg' || fileType === 'image/png' || fileName.endsWith('.jpg') || fileName.endsWith('.jpeg') || fileName.endsWith('.png');
+        if (!isImage) {
+          setError('Only JPG, JPEG, or PNG images are allowed for Candidate Photo and Signatures.');
+          return;
+        }
+      } else if (isDoc) {
+        const isAllowedDoc = fileType === 'image/jpeg' || fileType === 'image/jpg' || fileType === 'image/png' || fileType === 'application/pdf' ||
+          fileName.endsWith('.jpg') || fileName.endsWith('.jpeg') || fileName.endsWith('.png') || fileName.endsWith('.pdf');
+        if (!isAllowedDoc) {
+          setError('Only JPG, PNG, or PDF document formats are allowed.');
+          return;
+        }
+      }
+
       setError('');
       const reader = new FileReader();
       reader.onloadend = () => {
@@ -443,17 +502,18 @@ export default function ApplyPage() {
     }
   };
 
-  const nextStep = () => {
+  const nextStep = async () => {
     setError('');
 
-    // Step 1 Validation: Personal Particulars
+    // Step 1 Validation: Personal Particulars & Immediate Duplicate Aadhaar Check
     if (step === 1) {
-      if (!formData.fullName.trim() || !formData.dob || !formData.aadhaarNumber.trim()) {
-        setError('Please fill in candidate full name, date of birth, and Aadhaar number.');
+      const nameVal = validateName(formData.fullName, 'Candidate Full Name');
+      if (!nameVal.isValid) {
+        setError(nameVal.error || 'Candidate Full Name is invalid.');
         return;
       }
-      if (formData.fullName.trim().length < 5) {
-        setError('Candidate Full Name must be at least 5 characters long.');
+      if (!formData.dob) {
+        setError('Please enter candidate date of birth.');
         return;
       }
       const dobParts = formData.dob.split('-');
@@ -462,30 +522,58 @@ export default function ApplyPage() {
         setError('Please enter a valid Date of Birth with a 4-digit year between 1990 and 2026.');
         return;
       }
-      if (!/^\d{12}$/.test(formData.aadhaarNumber.trim())) {
-        setError('Aadhaar card number must be exactly 12 digits (numbers only).');
+      const aadhaarVal = validateAadhaar(formData.aadhaarNumber);
+      if (!aadhaarVal.isValid) {
+        setError(aadhaarVal.error || 'Aadhaar card number must be exactly 12 digits.');
         return;
+      }
+
+      // Immediate duplicate Aadhaar verification before advancing to next stage
+      setLoading(true);
+      try {
+        const aadhRes = await fetch('/api/applications/validate-aadhaar', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ aadhaarNumber: formData.aadhaarNumber }),
+        });
+        const aadhData = await aadhRes.json();
+        if (!aadhRes.ok || !aadhData.valid) {
+          setError(aadhData.error || 'This Aadhaar card number is already registered with another active application.');
+          setLoading(false);
+          return;
+        }
+      } catch (err) {
+        console.warn('Aadhaar check network warning:', err);
+      } finally {
+        setLoading(false);
       }
     }
 
     // Step 2 Validation: Parent particulars & Annual Income (Mandatory)
     if (step === 2) {
-      if (!formData.fatherName.trim() || !formData.fatherPhone.trim() || !formData.motherName.trim()) {
-        setError('Please enter father name, mobile number, and mother name.');
+      const fatherNameVal = validateName(formData.fatherName, "Father's Full Name");
+      if (!fatherNameVal.isValid) {
+        setError(fatherNameVal.error || "Father's Full Name is invalid.");
         return;
       }
-      if (formData.fatherName.trim().length < 5) {
-        setError("Father's Full Name must be at least 5 characters long.");
+      const motherNameVal = validateName(formData.motherName, "Mother's Full Name");
+      if (!motherNameVal.isValid) {
+        setError(motherNameVal.error || "Mother's Full Name is invalid.");
         return;
       }
-      if (formData.motherName.trim().length < 5) {
-        setError("Mother's Full Name must be at least 5 characters long.");
+      const fatherPhoneVal = validatePhone(formData.fatherPhone, "Father's Mobile Phone");
+      if (!fatherPhoneVal.isValid) {
+        setError(fatherPhoneVal.error || "Father's Mobile Phone must be a valid 10-digit number.");
         return;
       }
-      const fatherClean = formData.fatherPhone.replace(/\D/g, '');
-      const validMobileRegex = /^[6-9]\d{9}$/;
-      if (!validMobileRegex.test(fatherClean) || /^([6-9])\1{9}$/.test(fatherClean)) {
-        setError("Father's Mobile Phone must be a valid 10-digit mobile number starting with 6, 7, 8, or 9.");
+      const fatherOccVal = validateOccupation(formData.fatherOccupation, "Father's Occupation");
+      if (!fatherOccVal.isValid) {
+        setError(fatherOccVal.error || "Father's Occupation is invalid.");
+        return;
+      }
+      const motherOccVal = validateOccupation(formData.motherOccupation, "Mother's Occupation");
+      if (!motherOccVal.isValid) {
+        setError(motherOccVal.error || "Mother's Occupation is invalid.");
         return;
       }
       if (!formData.annualIncome) {
@@ -506,18 +594,48 @@ export default function ApplyPage() {
       }
     }
 
-    // Step 4 Validation: Academic
+    // Step 4 Validation: Academic & Strict Marks Comparison
     if (step === 4) {
-      if (!formData.previousSchoolName.trim() || !formData.previousClassMarksPercentage.trim()) {
-        setError('Please enter previous school name and marks obtained/percentage.');
+      if (!formData.previousSchoolName.trim()) {
+        setError('Please enter your previous school name.');
         return;
+      }
+      if (formData.marksMode === 'marks') {
+        const obt = parseFloat(formData.marksObtained);
+        const tot = parseFloat(formData.marksTotal);
+        if (isNaN(obt) || isNaN(tot)) {
+          setError('Please enter valid numerical marks obtained and total maximum marks.');
+          return;
+        }
+        if (obt > tot) {
+          setError(`Marks obtained (${obt}) cannot be greater than total maximum marks (${tot}).`);
+          return;
+        }
+        const marksVal = validateMarks(formData.marksObtained, formData.marksTotal);
+        if (!marksVal.isValid) {
+          setError(marksVal.error || 'Please enter valid non-negative marks.');
+          return;
+        }
+      } else {
+        const pct = parseFloat(formData.previousClassMarksPercentage);
+        if (isNaN(pct) || pct < 0 || pct > 100) {
+          setError('Percentage must be a valid number between 0% and 100%.');
+          return;
+        }
       }
     }
 
-    // Step 6 Validation: Strict Document Upload Check (Must NOT allow moving to Payment without docs!)
+    // Step 6 Validation: Strict All 5 Required Document Check
     if (step === 6) {
-      const missingErrors: { photo?: boolean; signature?: boolean; aadhaarCard?: boolean } = {};
+      const missingErrors: {
+        photo?: boolean;
+        signature?: boolean;
+        parentSignature?: boolean;
+        aadhaarCard?: boolean;
+        lastMarksheet?: boolean;
+      } = {};
       let hasMissing = false;
+
       if (!formData.photo) {
         missingErrors.photo = true;
         hasMissing = true;
@@ -526,20 +644,91 @@ export default function ApplyPage() {
         missingErrors.signature = true;
         hasMissing = true;
       }
+      if (!formData.parentSignature) {
+        missingErrors.parentSignature = true;
+        hasMissing = true;
+      }
       if (!formData.aadhaarCard) {
         missingErrors.aadhaarCard = true;
+        hasMissing = true;
+      }
+      if (!formData.lastMarksheet) {
+        missingErrors.lastMarksheet = true;
         hasMissing = true;
       }
 
       if (hasMissing) {
         setDocErrors(missingErrors);
-        setError('Mandatory documents are missing. Please upload the required documents (highlighted in red) to proceed.');
+        setError('All 5 mandatory documents must be uploaded. Please upload the required documents (highlighted in red) to proceed.');
         return;
       }
       setDocErrors({});
     }
 
-    setStep(step + 1);
+    const nextS = step + 1;
+    setStep(nextS);
+
+    // Auto-sync draft progress to backend API so candidate's latest details and status are updated in real-time
+    try {
+      fetch('/api/applications/draft', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          classApplying: formData.applyingClass,
+          currentStep: nextS,
+          personalInfo: {
+            fullName: formData.fullName || currentUser?.name || '',
+            dob: formData.dob,
+            gender: formData.gender,
+            category: formData.category,
+            bloodGroup: formData.bloodGroup,
+            aadhaarNumber: formData.aadhaarNumber,
+            nationality: formData.nationality,
+            religion: formData.religion,
+            candidateEmail: formData.candidateEmail || currentUser?.email || '',
+            candidateMobile: formData.candidateMobile || currentUser?.phone || '',
+            whatsappNumber: formData.whatsappNumber || currentUser?.phone || '',
+          },
+          parentInfo: {
+            fatherName: formData.fatherName,
+            fatherOccupation: formData.fatherOccupation,
+            fatherPhone: formData.fatherPhone,
+            motherName: formData.motherName,
+            motherOccupation: formData.motherOccupation,
+            annualIncome: formData.annualIncome,
+          },
+          addressInfo: {
+            streetAddress: formData.streetAddress,
+            city: formData.city,
+            district: formData.district,
+            state: formData.state,
+            pincode: formData.pincode,
+          },
+          academicInfo: {
+            applyingClass: formData.applyingClass,
+            mediumOfInstruction: formData.mediumOfInstruction,
+            previousSchoolName: formData.previousSchoolName,
+            previousBoard: formData.previousBoard,
+            marksMode: formData.marksMode,
+            marksObtained: formData.marksObtained,
+            marksTotal: formData.marksTotal,
+            previousClassMarksPercentage: formData.previousClassMarksPercentage,
+            passingYear: formData.passingYear,
+          },
+          examCentrePref: {
+            preferredCenter1: formData.preferredCenter1,
+            preferredCenter2: formData.preferredCenter2,
+          },
+          documents: {
+            photo: formData.photo,
+            signature: formData.signature,
+            parentSignature: formData.parentSignature,
+            aadhaarCard: formData.aadhaarCard,
+            lastMarksheet: formData.lastMarksheet || '',
+          },
+        }),
+      }).catch(() => {});
+    } catch {}
   };
 
   const prevStep = () => {
@@ -871,17 +1060,119 @@ export default function ApplyPage() {
       {/* Step Form Container */}
       <div className="bg-white border border-slate-200 rounded-2xl shadow-xl p-6 sm:p-10">
 
-        {/* STEP 1: Personal Details & WhatsApp */}
-        {step === 1 && (
+        {/* STEP 1: Personal Details OR NTA/JEE/CUET PRE-APPLICATION ADVISORY */}
+        {step === 1 && !ntaAdvisoryAccepted ? (
+          <div className="space-y-6">
+            <div className="border-b border-amber-200 pb-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+              <div className="flex items-center gap-2.5">
+                <ShieldAlert className="w-6 h-6 text-amber-600 flex-shrink-0" />
+                <div>
+                  <h2 className="text-base sm:text-lg font-black text-gurukul-navy">
+                    Pre-Application Advisory &amp; Candidate Undertaking
+                  </h2>
+                  <p className="text-xs text-slate-500 font-medium">
+                    (In line with National Testing Agency &amp; Central Entrance Examination Standards)
+                  </p>
+                </div>
+              </div>
+              <span className="text-[10px] font-black uppercase tracking-wider bg-amber-100 text-amber-900 border border-amber-300 px-3 py-1 rounded-full w-fit">
+                Mandatory Verification
+              </span>
+            </div>
+
+            <div className="space-y-3.5 text-xs text-slate-700 leading-relaxed bg-amber-50/60 p-5 sm:p-6 rounded-2xl border border-amber-200">
+              <div className="flex items-start gap-3">
+                <span className="w-5 h-5 rounded-full bg-amber-500 text-gurukul-navy font-black text-xs flex items-center justify-center flex-shrink-0 mt-0.5">
+                  1
+                </span>
+                <div>
+                  <strong className="text-slate-900 font-bold block mb-0.5">
+                    Strict Aadhaar &amp; Official Identity Veracity:
+                  </strong>
+                  Candidate Full Name, Date of Birth, Gender, Father&apos;s Name, Mother&apos;s Name, and Aadhaar Card Number must strictly match the candidate&apos;s original Aadhaar Card. No subsequent request for correction of basic identity particulars will be permitted once the application dossier is verified and approved.
+                </div>
+              </div>
+
+              <div className="flex items-start gap-3">
+                <span className="w-5 h-5 rounded-full bg-amber-500 text-gurukul-navy font-black text-xs flex items-center justify-center flex-shrink-0 mt-0.5">
+                  2
+                </span>
+                <div>
+                  <strong className="text-slate-900 font-bold block mb-0.5">
+                    Prohibition of Duplicate Registrations &amp; Aadhaar Misuse:
+                  </strong>
+                  A candidate can submit only ONE application form for the academic session 2026-27. Reusing another candidate&apos;s Aadhaar card number is prohibited and automatically blocked by real-time portal security guards.
+                </div>
+              </div>
+
+              <div className="flex items-start gap-3">
+                <span className="w-5 h-5 rounded-full bg-amber-500 text-gurukul-navy font-black text-xs flex items-center justify-center flex-shrink-0 mt-0.5">
+                  3
+                </span>
+                <div>
+                  <strong className="text-slate-900 font-bold block mb-0.5">
+                    Genuine Documents &amp; Penalty for Discrepancy:
+                  </strong>
+                  All 5 mandatory documents (Passport Photograph, Candidate Signature, Parent Signature, Aadhaar Card Copy, Previous Class Marksheet) must be clear, genuine, and authentic. Submission of fabricated documents or inflated marks obtained will result in immediate disqualification and cancellation of candidature.
+                </div>
+              </div>
+
+              <div className="flex items-start gap-3">
+                <span className="w-5 h-5 rounded-full bg-amber-500 text-gurukul-navy font-black text-xs flex items-center justify-center flex-shrink-0 mt-0.5">
+                  4
+                </span>
+                <div>
+                  <strong className="text-slate-900 font-bold block mb-0.5">
+                    Active Mobile &amp; Email Communications:
+                  </strong>
+                  Important notifications, OTP verification codes, examination centre allotments, admit cards, and merit scorecards will be communicated via the registered Mobile Number &amp; Email Address. Ensure both are authentic.
+                </div>
+              </div>
+            </div>
+
+            {/* Mandatory Undertaking Checkbox */}
+            <div className="p-4 sm:p-5 bg-slate-50 border-2 border-slate-300 rounded-2xl space-y-3">
+              <label className="flex items-start gap-3 cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  checked={ntaCheckbox}
+                  onChange={(e) => setNtaCheckbox(e.target.checked)}
+                  className="mt-1 w-4 h-4 text-gurukul-600 rounded border-slate-300 focus:ring-amber-500 cursor-pointer flex-shrink-0"
+                />
+                <span className="text-xs text-slate-800 font-bold leading-relaxed">
+                  I have carefully read, understood, and accept all the instructions, eligibility criteria, and examination guidelines for Gurukul Kurukshetra Entrance Examination 2026-27. I solemnly declare that all particulars furnished by me in this application are authentic and true, and I undertake full responsibility for any discrepancies.
+                </span>
+              </label>
+            </div>
+
+            <div className="flex items-center justify-between pt-3 border-t">
+              <Link
+                href="/dashboard"
+                className="text-xs text-slate-500 hover:text-slate-800 font-bold px-3 py-2 rounded-xl transition"
+              >
+                ← Return to Dashboard
+              </Link>
+              <button
+                type="button"
+                disabled={!ntaCheckbox}
+                onClick={() => setNtaAdvisoryAccepted(true)}
+                className="px-6 py-3 bg-gurukul-navy hover:bg-gurukul-navyLight disabled:opacity-40 disabled:cursor-not-allowed text-white font-extrabold text-xs rounded-xl shadow-lg transition flex items-center gap-2"
+              >
+                <span>Accept Declaration &amp; Proceed to Fill Details</span>
+                <ArrowRight className="w-4 h-4 text-amber-400" />
+              </button>
+            </div>
+          </div>
+        ) : step === 1 ? (
           <div className="space-y-6">
             <h2 className="text-lg font-bold text-slate-900 border-b border-slate-100 pb-3 flex items-center gap-2">
-              <User className="w-5 h-5 text-gurukul-600" /> Step 1: Candidate Personal & Contact Particulars
+              <User className="w-5 h-5 text-gurukul-600" /> Step 1: Candidate Personal &amp; Contact Particulars
             </h2>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
-                  Candidate Full Name (As per School Record) *
+                  Candidate Full Name (As per AADHAAR CARD) *
                 </label>
                 <input
                   type="text"
@@ -889,7 +1180,7 @@ export default function ApplyPage() {
                   minLength={5}
                   value={formData.fullName}
                   onChange={handleChange}
-                  placeholder="e.g. Aarav Sharma (Min 5 characters)"
+                  placeholder="As per candidate's Aadhaar Card (Min 5 characters)"
                   className="w-full px-3.5 py-2 text-sm border rounded-lg focus:ring-2 focus:ring-amber-500 outline-none font-medium"
                 />
               </div>
@@ -987,7 +1278,7 @@ export default function ApplyPage() {
               </div>
             </div>
           </div>
-        )}
+        ) : null}
 
         {/* STEP 2: Parents Particulars & Mandatory Annual Income */}
         {step === 2 && (
@@ -1302,39 +1593,60 @@ export default function ApplyPage() {
                 </div>
 
                 {formData.marksMode === 'marks' ? (
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 items-center">
-                    <div>
-                      <label className="block text-[11px] font-bold text-slate-600 uppercase mb-1">
-                        Marks Obtained *
-                      </label>
-                      <input
-                        type="number"
-                        name="marksObtained"
-                        value={formData.marksObtained}
-                        onChange={handleChange}
-                        placeholder="e.g. 450"
-                        className="w-full px-3 py-2 text-sm border rounded-lg focus:ring-2 focus:ring-amber-500 outline-none font-mono font-bold"
-                      />
+                  <div className="space-y-3">
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 items-center">
+                      <div>
+                        <label className="block text-[11px] font-bold text-slate-600 uppercase mb-1">
+                          Marks Obtained *
+                        </label>
+                        <input
+                          type="number"
+                          name="marksObtained"
+                          value={formData.marksObtained}
+                          onChange={handleChange}
+                          placeholder="e.g. 450"
+                          className={`w-full px-3 py-2 text-sm border rounded-lg focus:ring-2 focus:ring-amber-500 outline-none font-mono font-bold ${
+                            formData.marksObtained && formData.marksTotal && parseFloat(formData.marksObtained) > parseFloat(formData.marksTotal)
+                              ? 'border-rose-400 bg-rose-50/40 text-rose-700'
+                              : ''
+                          }`}
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[11px] font-bold text-slate-600 uppercase mb-1">
+                          Total Maximum Marks (Out Of) *
+                        </label>
+                        <input
+                          type="number"
+                          name="marksTotal"
+                          value={formData.marksTotal}
+                          onChange={handleChange}
+                          placeholder="e.g. 500"
+                          className="w-full px-3 py-2 text-sm border rounded-lg focus:ring-2 focus:ring-amber-500 outline-none font-mono font-bold"
+                        />
+                      </div>
+                      <div className="pt-4 sm:pt-0">
+                        <span className="block text-[11px] font-bold text-slate-500 uppercase">Computed Percentage</span>
+                        {formData.marksObtained && formData.marksTotal && parseFloat(formData.marksObtained) > parseFloat(formData.marksTotal) ? (
+                          <span className="text-xs font-bold text-rose-600 flex items-center gap-1">
+                            <AlertCircle className="w-3.5 h-3.5" /> Invalid (Obtained &gt; Total)
+                          </span>
+                        ) : (
+                          <span className="text-base font-black text-gurukul-600">
+                            {formData.previousClassMarksPercentage ? `${formData.previousClassMarksPercentage}%` : '—'}
+                          </span>
+                        )}
+                      </div>
                     </div>
-                    <div>
-                      <label className="block text-[11px] font-bold text-slate-600 uppercase mb-1">
-                        Total Maximum Marks (Out Of) *
-                      </label>
-                      <input
-                        type="number"
-                        name="marksTotal"
-                        value={formData.marksTotal}
-                        onChange={handleChange}
-                        placeholder="e.g. 500"
-                        className="w-full px-3 py-2 text-sm border rounded-lg focus:ring-2 focus:ring-amber-500 outline-none font-mono font-bold"
-                      />
-                    </div>
-                    <div className="pt-4 sm:pt-0">
-                      <span className="block text-[11px] font-bold text-slate-500 uppercase">Computed Percentage</span>
-                      <span className="text-base font-black text-gurukul-600">
-                        {formData.previousClassMarksPercentage ? `${formData.previousClassMarksPercentage}%` : '—'}
-                      </span>
-                    </div>
+
+                    {formData.marksObtained && formData.marksTotal && parseFloat(formData.marksObtained) > parseFloat(formData.marksTotal) && (
+                      <div className="p-2.5 bg-rose-50 border border-rose-200 rounded-lg text-xs font-semibold text-rose-700 flex items-center gap-2 animate-fadeIn">
+                        <AlertCircle className="w-4 h-4 text-rose-600 flex-shrink-0" />
+                        <span>
+                          Marks Obtained (<strong>{formData.marksObtained}</strong>) cannot be greater than Total Maximum Marks (<strong>{formData.marksTotal}</strong>).
+                        </span>
+                      </div>
+                    )}
                   </div>
                 ) : (
                   <div>
@@ -1550,21 +1862,31 @@ export default function ApplyPage() {
 
               {/* 3. Parent / Guardian Signature */}
               <div className={`border-2 rounded-2xl p-4 space-y-3 transition ${
-                formData.parentSignature ? 'border-emerald-400 bg-emerald-50/30' : 'border-slate-200 bg-slate-50'
+                formData.parentSignature
+                  ? 'border-emerald-400 bg-emerald-50/30'
+                  : docErrors.parentSignature
+                  ? 'border-red-500 bg-red-50/40 ring-2 ring-red-400'
+                  : 'border-slate-200 bg-slate-50'
               }`}>
                 <div className="flex justify-between items-center">
-                  <label className="block text-xs font-bold text-slate-800 uppercase">
-                    Parent / Guardian Signature
+                  <label className={`block text-xs font-bold uppercase ${docErrors.parentSignature && !formData.parentSignature ? 'text-red-700' : 'text-slate-800'}`}>
+                    Parent / Guardian Signature *
                   </label>
-                  {formData.parentSignature && (
+                  {formData.parentSignature ? (
                     <span className="text-[10px] text-emerald-700 font-bold flex items-center gap-1">
                       <Check className="w-3.5 h-3.5" /> Uploaded
                     </span>
-                  )}
+                  ) : docErrors.parentSignature ? (
+                    <span className="text-[10px] text-red-600 font-bold flex items-center gap-1">
+                      <AlertCircle className="w-3.5 h-3.5" /> Upload Required *
+                    </span>
+                  ) : null}
                 </div>
 
                 <div className="flex items-center gap-4">
-                  <div className="w-28 h-20 border-2 border-dashed border-slate-300 rounded-xl bg-white flex flex-col items-center justify-center relative overflow-hidden flex-shrink-0">
+                  <div className={`w-28 h-20 border-2 border-dashed rounded-xl bg-white flex flex-col items-center justify-center relative overflow-hidden flex-shrink-0 ${
+                    docErrors.parentSignature && !formData.parentSignature ? 'border-red-400 bg-red-50/30' : 'border-slate-300'
+                  }`}>
                     {formData.parentSignature ? (
                       /* eslint-disable-next-line @next/next/no-img-element */
                       <img
@@ -1574,8 +1896,8 @@ export default function ApplyPage() {
                       />
                     ) : (
                       <div className="text-center p-2 text-slate-400">
-                        <Upload className="w-6 h-6 mx-auto text-slate-400 mb-1" />
-                        <span className="text-[9px] font-bold block leading-tight text-slate-500">
+                        <Upload className={`w-6 h-6 mx-auto mb-1 ${docErrors.parentSignature ? 'text-red-500' : 'text-amber-500'}`} />
+                        <span className={`text-[9px] font-bold block leading-tight ${docErrors.parentSignature ? 'text-red-600' : 'text-slate-500'}`}>
                           Parent Sign
                         </span>
                       </div>
@@ -1583,7 +1905,9 @@ export default function ApplyPage() {
                   </div>
 
                   <div className="space-y-1.5 flex-1">
-                    <label className="inline-block bg-white hover:bg-slate-50 border border-slate-300 text-slate-800 text-xs font-bold px-3 py-1.5 rounded-lg shadow-sm cursor-pointer transition">
+                    <label className={`inline-block bg-white hover:bg-slate-50 border text-xs font-bold px-3 py-1.5 rounded-lg shadow-sm cursor-pointer transition ${
+                      docErrors.parentSignature && !formData.parentSignature ? 'border-red-400 text-red-700' : 'border-slate-300 text-slate-800'
+                    }`}>
                       <span>{formData.parentSignature ? 'Change Sign' : 'Choose File'}</span>
                       <input
                         type="file"
@@ -1593,7 +1917,7 @@ export default function ApplyPage() {
                       />
                     </label>
                     <p className="text-[10px] text-slate-500 truncate">
-                      {formData.parentSignatureName || 'Father/Mother/Guardian sign'}
+                      {formData.parentSignatureName || 'Father/Mother/Guardian sign (Max 2MB)'}
                     </p>
                   </div>
                 </div>
@@ -1662,23 +1986,33 @@ export default function ApplyPage() {
                 </div>
               </div>
 
-              {/* 5. Previous Class Marksheet (Optional / As Applicable) */}
+              {/* 5. Previous Class Marksheet (Mandatory) */}
               <div className={`border-2 rounded-2xl p-4 space-y-3 transition ${
-                formData.lastMarksheet ? 'border-emerald-400 bg-emerald-50/30' : 'border-slate-200 bg-slate-50'
+                formData.lastMarksheet
+                  ? 'border-emerald-400 bg-emerald-50/30'
+                  : docErrors.lastMarksheet
+                  ? 'border-red-500 bg-red-50/40 ring-2 ring-red-400'
+                  : 'border-slate-200 bg-slate-50'
               }`}>
                 <div className="flex justify-between items-center">
-                  <label className="block text-xs font-bold uppercase text-slate-800">
-                    Previous Marksheet / Report Card (Optional)
+                  <label className={`block text-xs font-bold uppercase ${docErrors.lastMarksheet && !formData.lastMarksheet ? 'text-red-700' : 'text-slate-800'}`}>
+                    Previous Marksheet / Report Card *
                   </label>
-                  {formData.lastMarksheet && (
+                  {formData.lastMarksheet ? (
                     <span className="text-[10px] text-emerald-700 font-bold flex items-center gap-1">
                       <Check className="w-3.5 h-3.5" /> Uploaded
                     </span>
-                  )}
+                  ) : docErrors.lastMarksheet ? (
+                    <span className="text-[10px] text-red-600 font-bold flex items-center gap-1">
+                      <AlertCircle className="w-3.5 h-3.5" /> Upload Required *
+                    </span>
+                  ) : null}
                 </div>
 
                 <div className="flex items-center gap-4">
-                  <div className="w-28 h-20 border-2 border-dashed border-slate-300 rounded-xl bg-white flex flex-col items-center justify-center relative overflow-hidden flex-shrink-0">
+                  <div className={`w-28 h-20 border-2 border-dashed rounded-xl bg-white flex flex-col items-center justify-center relative overflow-hidden flex-shrink-0 ${
+                    docErrors.lastMarksheet && !formData.lastMarksheet ? 'border-red-400 bg-red-50/30' : 'border-slate-300'
+                  }`}>
                     {formData.lastMarksheet ? (
                       /* eslint-disable-next-line @next/next/no-img-element */
                       <img
@@ -1688,8 +2022,8 @@ export default function ApplyPage() {
                       />
                     ) : (
                       <div className="text-center p-2 text-slate-400">
-                        <FileText className="w-6 h-6 mx-auto text-slate-400 mb-1" />
-                        <span className="text-[9px] font-bold block leading-tight text-slate-500">
+                        <FileText className={`w-6 h-6 mx-auto mb-1 ${docErrors.lastMarksheet ? 'text-red-500' : 'text-amber-500'}`} />
+                        <span className={`text-[9px] font-bold block leading-tight ${docErrors.lastMarksheet ? 'text-red-600' : 'text-slate-500'}`}>
                           Marksheet
                         </span>
                       </div>
@@ -1697,7 +2031,9 @@ export default function ApplyPage() {
                   </div>
 
                   <div className="space-y-1.5 flex-1">
-                    <label className="inline-block bg-white hover:bg-slate-50 border border-slate-300 text-slate-800 text-xs font-bold px-3 py-1.5 rounded-lg shadow-sm cursor-pointer transition">
+                    <label className={`inline-block bg-white hover:bg-slate-50 border text-xs font-bold px-3 py-1.5 rounded-lg shadow-sm cursor-pointer transition ${
+                      docErrors.lastMarksheet && !formData.lastMarksheet ? 'border-red-400 text-red-700' : 'border-slate-300 text-slate-800'
+                    }`}>
                       <span>{formData.lastMarksheet ? 'Change File' : 'Choose Marksheet'}</span>
                       <input
                         type="file"
@@ -1805,64 +2141,66 @@ export default function ApplyPage() {
         )}
 
         {/* Action Controls Navigation */}
-        <div className="mt-8 pt-5 border-t border-slate-200 flex flex-wrap justify-between items-center gap-3">
-          <div className="flex items-center gap-2">
-            {step > 1 && (
-              <button
-                type="button"
-                onClick={prevStep}
-                className="px-5 py-2.5 border border-slate-300 rounded-xl text-slate-700 font-bold text-xs hover:bg-slate-50 transition flex items-center gap-1.5"
-              >
-                <ArrowLeft className="w-4 h-4" />
-                <span>Previous Step</span>
-              </button>
-            )}
+        {!(step === 1 && !ntaAdvisoryAccepted) && (
+          <div className="mt-8 pt-5 border-t border-slate-200 flex flex-wrap justify-between items-center gap-3">
+            <div className="flex items-center gap-2">
+              {step > 1 && (
+                <button
+                  type="button"
+                  onClick={prevStep}
+                  className="px-5 py-2.5 border border-slate-300 rounded-xl text-slate-700 font-bold text-xs hover:bg-slate-50 transition flex items-center gap-1.5"
+                >
+                  <ArrowLeft className="w-4 h-4" />
+                  <span>Previous Step</span>
+                </button>
+              )}
 
-            {step < 7 && (
+              {step < 7 && (
+                <button
+                  type="button"
+                  onClick={handleSaveDraft}
+                  disabled={savingDraft}
+                  className="px-4 py-2.5 border border-amber-300 bg-amber-50 hover:bg-amber-100 text-amber-900 font-bold text-xs rounded-xl transition flex items-center gap-1.5 shadow-sm"
+                  title="Save current details as draft and resume anytime"
+                >
+                  <Save className="w-3.5 h-3.5 text-amber-700" />
+                  <span>{savingDraft ? 'Saving Draft...' : 'Save as Draft'}</span>
+                </button>
+              )}
+            </div>
+
+            {step < 7 ? (
               <button
                 type="button"
-                onClick={handleSaveDraft}
-                disabled={savingDraft}
-                className="px-4 py-2.5 border border-amber-300 bg-amber-50 hover:bg-amber-100 text-amber-900 font-bold text-xs rounded-xl transition flex items-center gap-1.5 shadow-sm"
-                title="Save current details as draft and resume anytime"
+                onClick={nextStep}
+                className="px-6 py-2.5 bg-gurukul-600 hover:bg-gurukul-700 text-white font-bold text-xs rounded-xl shadow transition flex items-center gap-1.5"
               >
-                <Save className="w-3.5 h-3.5 text-amber-700" />
-                <span>{savingDraft ? 'Saving Draft...' : 'Save as Draft'}</span>
+                <span>Save & Continue</span>
+                <ArrowRight className="w-4 h-4" />
+              </button>
+            ) : (
+              <button
+                type="button"
+                disabled={loading || !declarationAgreed}
+                onClick={handleSubmitApplication}
+                className={`px-8 py-3 rounded-xl shadow-lg transition flex items-center gap-2 font-extrabold text-sm ${
+                  !declarationAgreed || loading
+                    ? 'bg-slate-300 text-slate-500 cursor-not-allowed shadow-none'
+                    : 'bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-700 hover:to-emerald-800 text-white hover:shadow-xl'
+                }`}
+              >
+                {loading ? (
+                  <span>Processing Payment...</span>
+                ) : (
+                  <>
+                    <CreditCard className="w-4 h-4" />
+                    <span>Pay ₹1,200 & Complete Payment</span>
+                  </>
+                )}
               </button>
             )}
           </div>
-
-          {step < 7 ? (
-            <button
-              type="button"
-              onClick={nextStep}
-              className="px-6 py-2.5 bg-gurukul-600 hover:bg-gurukul-700 text-white font-bold text-xs rounded-xl shadow transition flex items-center gap-1.5"
-            >
-              <span>Save & Continue</span>
-              <ArrowRight className="w-4 h-4" />
-            </button>
-          ) : (
-            <button
-              type="button"
-              disabled={loading || !declarationAgreed}
-              onClick={handleSubmitApplication}
-              className={`px-8 py-3 rounded-xl shadow-lg transition flex items-center gap-2 font-extrabold text-sm ${
-                !declarationAgreed || loading
-                  ? 'bg-slate-300 text-slate-500 cursor-not-allowed shadow-none'
-                  : 'bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-700 hover:to-emerald-800 text-white hover:shadow-xl'
-              }`}
-            >
-              {loading ? (
-                <span>Processing Payment...</span>
-              ) : (
-                <>
-                  <CreditCard className="w-4 h-4" />
-                  <span>Pay ₹1,200 & Complete Payment</span>
-                </>
-              )}
-            </button>
-          )}
-        </div>
+        )}
       </div>
     </div>
   );

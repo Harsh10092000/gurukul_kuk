@@ -1,54 +1,59 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { getCurrentUser } from '@/lib/auth';
+import { computeApplicationMetrics } from '@/lib/applicationMetrics';
 
 export async function GET() {
   try {
     const user = await getCurrentUser();
-    if (!user || user.role !== 'admin') {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
+    if (!user) {
+      return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
+    }
+    if (user.role !== 'admin') {
+      return NextResponse.json({ error: 'Unauthorized: Admin access required' }, { status: 403 });
     }
 
     const applications = await db.getApplications();
     const settings = await db.getSettings();
     const centres = await db.getCentres();
 
-    const totalApplications = applications.length;
-    const approved = applications.filter((a) => a.status === 'approved').length;
-    const underReview = applications.filter((a) => a.status === 'under_review' || a.status === 'submitted').length;
-    const correctionNeeded = applications.filter((a) => a.status === 'correction_needed').length;
-    const rejected = applications.filter((a) => a.status === 'rejected').length;
+    // Authoritative Single Source of Truth Metrics
+    const metrics = computeApplicationMetrics(applications);
 
-    const totalFeesCollected = applications
-      .filter((a) => a.paymentStatus === 'completed')
-      .reduce((sum, a) => sum + (a.amountPaid || 1200), 0);
+    // Active candidates in portal (excluding rejected dossiers)
+    const activeApplications = applications.filter((a) => a.status !== 'rejected');
 
-    // Class-wise breakdown
+    // Class-wise breakdown (across active candidates)
     const classCounts: Record<string, number> = {};
-    applications.forEach((a) => {
-      classCounts[a.classApplying] = (classCounts[a.classApplying] || 0) + 1;
+    activeApplications.forEach((a) => {
+      const cls = a.classApplying || 'Class 6';
+      classCounts[cls] = (classCounts[cls] || 0) + 1;
     });
 
-    // State-wise breakdown
+    // State-wise breakdown (across active candidates)
     const stateCounts: Record<string, number> = {};
-    applications.forEach((a) => {
+    activeApplications.forEach((a) => {
       const state = a.addressInfo?.state || 'Haryana';
       stateCounts[state] = (stateCounts[state] || 0) + 1;
     });
 
+    // Status-aware query for Recent Applications Awaiting Verification
+    // (excludes drafts and rejected candidates; only includes submitted, under_review, correction_needed)
+    const recentAwaitingVerification = activeApplications
+      .filter((a) => a.status === 'submitted' || a.status === 'under_review' || a.status === 'correction_needed')
+      .slice(0, 8);
+
     return NextResponse.json({
       stats: {
-        totalApplications,
-        approved,
-        underReview,
-        correctionNeeded,
-        rejected,
-        totalFeesCollected,
+        ...metrics,
+        totalApplications: metrics.active, // Active candidates count (reconciled with Applications desk)
+        totalDossiers: metrics.total,      // Total historical dossiers including rejected
         totalCentres: centres.length,
         classCounts,
         stateCounts,
       },
-      recentApplications: applications.slice(0, 8),
+      recentAwaitingVerification,
+      recentApplications: activeApplications.slice(0, 8),
       settings,
     });
   } catch (error) {

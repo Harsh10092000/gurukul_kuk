@@ -68,7 +68,7 @@ export default function RegisterPage() {
 
     // 1. Name validation
     if (!name.trim() || name.trim().length < 2) {
-      setError('Please enter candidate’s full name as per school records.');
+      setError('Please enter candidate’s full name as per Aadhaar Card.');
       return;
     }
 
@@ -415,7 +415,7 @@ export default function RegisterPage() {
           {/* Full Name */}
           <div>
             <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
-              Candidate Full Name *
+              Candidate Full Name (As per AADHAAR CARD) *
             </label>
             <div className="relative">
               <User className="w-4 h-4 text-slate-400 absolute left-3 top-3.5 pointer-events-none" />
@@ -424,7 +424,7 @@ export default function RegisterPage() {
                 required
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                placeholder="As per previous school records"
+                placeholder="As per candidate's Aadhaar Card"
                 className="w-full pl-10 pr-3 py-2.5 text-sm border border-slate-300 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none transition"
               />
             </div>

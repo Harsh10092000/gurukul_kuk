@@ -17,10 +17,13 @@ import {
   LogOut
 } from 'lucide-react';
 
+import AdminNotificationBell from '@/components/AdminNotificationBell';
+
 export default function Header() {
   const pathname = usePathname();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [currentUser, setCurrentUser] = useState<any>(null);
+  const [resultsDeclared, setResultsDeclared] = useState(false);
 
   const isAdminRoute = pathname.startsWith('/admin');
   const isAdminLogin = pathname === '/admin/login';
@@ -34,6 +37,14 @@ export default function Header() {
       .then((res) => res.json())
       .then((data) => {
         if (data.user) setCurrentUser(data.user);
+      })
+      .catch(() => {});
+
+    // Check if examination results are declared
+    fetch('/api/results/status')
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.resultsDeclared) setResultsDeclared(true);
       })
       .catch(() => {});
   }, [pathname]);
@@ -135,8 +146,13 @@ export default function Header() {
               <Link href="/admit-card" className="hover:text-gurukul-600 transition">
                 Admit Card
               </Link>
-              <Link href="/result" className="hover:text-gurukul-600 transition">
-                Results
+              {(resultsDeclared || isAdmin) && (
+                <Link href="/result" className="hover:text-gurukul-600 transition">
+                  Results
+                </Link>
+              )}
+              <Link href="/contact" className="hover:text-gurukul-600 transition">
+                Contact & Enquiries
               </Link>
             </>
           ) : (
@@ -154,6 +170,12 @@ export default function Header() {
                 Applications
               </Link>
               <Link 
+                href="/admin/enquiries" 
+                className={`hover:text-gurukul-600 transition ${pathname.startsWith('/admin/enquiries') ? 'text-amber-600 font-bold' : ''}`}
+              >
+                Enquiries
+              </Link>
+              <Link 
                 href="/admin/settings" 
                 className={`hover:text-gurukul-600 transition ${pathname.startsWith('/admin/settings') ? 'text-amber-600 font-bold' : ''}`}
               >
@@ -164,6 +186,7 @@ export default function Header() {
 
           {currentUser ? (
             <div className="flex items-center gap-3 pl-2 border-l border-slate-200">
+              {currentUser?.role === 'admin' && <AdminNotificationBell />}
               <Link
                 href={currentUser?.role === 'admin' ? '/admin/dashboard' : '/dashboard'}
                 className="flex items-center gap-2 bg-amber-50 text-amber-900 border border-amber-200 px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-amber-100 transition"
@@ -206,6 +229,7 @@ export default function Header() {
 
         {/* Mobile menu toggle */}
         <div className="lg:hidden flex items-center gap-2">
+          {currentUser?.role === 'admin' && <AdminNotificationBell />}
           <button
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
             className="p-2 text-slate-700 hover:text-gurukul-600"
@@ -256,13 +280,15 @@ export default function Header() {
               >
                 Download Admit Card
               </Link>
-              <Link
-                href="/result"
-                onClick={() => setMobileMenuOpen(false)}
-                className="block py-2 text-slate-800 font-semibold"
-              >
-                Entrance Results
-              </Link>
+              {(resultsDeclared || isAdmin) && (
+                <Link
+                  href="/result"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="block py-2 text-slate-800 font-semibold"
+                >
+                  Entrance Results
+                </Link>
+              )}
             </>
           ) : (
             <>

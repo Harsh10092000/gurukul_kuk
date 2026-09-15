@@ -3,18 +3,18 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { 
-  FileText, 
-  CreditCard, 
-  Clock, 
-  Download, 
-  CheckCircle2, 
-  AlertCircle, 
-  Printer, 
-  Award, 
-  Calendar, 
-  MapPin, 
-  User, 
+import {
+  FileText,
+  CreditCard,
+  Clock,
+  Download,
+  CheckCircle2,
+  AlertCircle,
+  Printer,
+  Award,
+  Calendar,
+  MapPin,
+  User,
   ExternalLink,
   Phone,
   LogOut,
@@ -27,9 +27,13 @@ import {
   FileCheck,
   XCircle,
   Info,
-  ShieldCheck
+  ShieldCheck,
+  HelpCircle,
+  AlertTriangle,
+  MessageSquare
 } from 'lucide-react';
 import { Application, AdmitCard, ExamResult } from '@/lib/types';
+import ConfirmModal from '@/components/ConfirmModal';
 
 export default function ApplicantDashboard() {
   const [currentUser, setCurrentUser] = useState<any>(null);
@@ -38,6 +42,16 @@ export default function ApplicantDashboard() {
   const [result, setResult] = useState<ExamResult | null>(null);
   const [loading, setLoading] = useState(true);
   const [draftSaved, setDraftSaved] = useState(false);
+
+  // Rejection & Grievance State
+  const [refillLoading, setRefillLoading] = useState(false);
+  const [showQueryModal, setShowQueryModal] = useState(false);
+  const [querySubject, setQuerySubject] = useState('Ground of Rejection Clarification');
+  const [queryPhone, setQueryPhone] = useState('');
+  const [queryText, setQueryText] = useState('');
+  const [queryLoading, setQueryLoading] = useState(false);
+  const [querySuccess, setQuerySuccess] = useState(false);
+  const [queryError, setQueryError] = useState<string | null>(null);
 
   // Document upload & resubmission state
   const [uploadedDocs, setUploadedDocs] = useState<{ [key: string]: string }>({});
@@ -57,6 +71,22 @@ export default function ApplicantDashboard() {
   const [resubmitLoading, setResubmitLoading] = useState(false);
   const [resubmitMsg, setResubmitMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [activeResubmitTab, setActiveResubmitTab] = useState<'docs' | 'personal' | 'academic'>('docs');
+
+  // Accessible centralized confirmation & notification modal state
+  const [modalState, setModalState] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    variant?: 'warning' | 'danger' | 'info' | 'success';
+    confirmText?: string;
+    cancelText?: string;
+    onConfirm: () => void;
+  }>({
+    isOpen: false,
+    title: '',
+    message: '',
+    onConfirm: () => {},
+  });
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -87,7 +117,7 @@ export default function ApplicantDashboard() {
         // Purge any un-scoped legacy draft from shared browser storage
         try {
           localStorage.removeItem('gurukul_application_draft');
-        } catch (e) {}
+        } catch (e) { }
 
         // 2. Fetch candidate's own application
         fetch('/api/applications')
@@ -187,7 +217,7 @@ export default function ApplicantDashboard() {
                     });
                   }
                 }
-              } catch (e) {}
+              } catch (e) { }
             }
             setLoading(false);
           })
@@ -257,6 +287,102 @@ export default function ApplicantDashboard() {
     }
   };
 
+  const handleRefillApplication = () => {
+    setModalState({
+      isOpen: true,
+      title: 'Refill Fresh Application?',
+      message: 'Your previous rejected application details will be cleared and you can start a fresh application from Step 1.\n\nAre you sure you want to proceed?',
+      variant: 'warning',
+      confirmText: 'Start Fresh',
+      cancelText: 'Cancel',
+      onConfirm: async () => {
+        setModalState((prev) => ({ ...prev, isOpen: false }));
+        setRefillLoading(true);
+        try {
+          const res = await fetch('/api/applications/refill', {
+            method: 'POST',
+          });
+          const data = await res.json();
+          if (data.success) {
+            // Purge any local draft from storage
+            try {
+              if (currentUser?.id) {
+                localStorage.removeItem(`gurukul_draft_${currentUser.id}`);
+              }
+              localStorage.removeItem('gurukul_application_draft');
+            } catch { }
+
+            // Redirect directly to Step 1 of fresh application
+            window.location.href = '/apply?step=1&fresh=true';
+          } else {
+            setModalState({
+              isOpen: true,
+              title: 'Refill Failed',
+              message: data.error || 'Failed to initiate application refill. Please try again.',
+              variant: 'danger',
+              confirmText: 'Dismiss',
+              cancelText: '',
+              onConfirm: () => setModalState((prev) => ({ ...prev, isOpen: false })),
+            });
+            setRefillLoading(false);
+          }
+        } catch {
+          setModalState({
+            isOpen: true,
+            title: 'Connection Error',
+            message: 'Network error while resetting application form. Please check your connection and try again.',
+            variant: 'danger',
+            confirmText: 'Dismiss',
+            cancelText: '',
+            onConfirm: () => setModalState((prev) => ({ ...prev, isOpen: false })),
+          });
+          setRefillLoading(false);
+        }
+      },
+    });
+  };
+
+  const handleSubmitQuery = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setQueryError(null);
+
+    const cleanPhone = (queryPhone || currentUser?.phone || '').replace(/\D/g, '').slice(-10);
+    if (!cleanPhone || cleanPhone.length !== 10 || !/^[6-9]\d{9}$/.test(cleanPhone)) {
+      setQueryError('Please enter a valid 10-digit Indian mobile number (e.g. 9876543210).');
+      return;
+    }
+
+    if (!queryText.trim() || queryText.trim().length < 10) {
+      setQueryError('Please provide a detailed description (minimum 10 characters).');
+      return;
+    }
+
+    setQueryLoading(true);
+    try {
+      const res = await fetch('/api/applications/query', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          subject: querySubject,
+          phone: cleanPhone,
+          query: queryText.trim(),
+          applicationNumber: application?.applicationNumber || application?.registrationNumber || '',
+        }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setQuerySuccess(true);
+        setQueryText('');
+      } else {
+        setQueryError(data.error || 'Failed to submit grievance query.');
+      }
+    } catch {
+      setQueryError('Network error while submitting query. Please try again.');
+    } finally {
+      setQueryLoading(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-[60vh] flex items-center justify-center">
@@ -316,6 +442,303 @@ export default function ApplicantDashboard() {
             </Link>
           </div>
         </div>
+      </div>
+    );
+  }
+
+  // REJECTED APPLICATION VIEW: Strict NTA Examination Authority Model
+  // When an application is rejected, ALL previous details and tabs are blocked.
+  // Candidate sees ONLY the authoritative Rejection Screen & Modal Dialog with Refill and Raise Query options.
+  if (application.status === 'rejected') {
+    return (
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 py-10 space-y-8 font-sans">
+        {/* Top Header Card */}
+        <div className="bg-gradient-to-r from-red-950 via-slate-900 to-red-900 text-white rounded-3xl p-6 sm:p-8 shadow-xl border border-red-800/40 relative overflow-hidden flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+          <div className="space-y-2 z-10">
+            <div className="flex items-center gap-2.5 flex-wrap">
+              <span className="bg-red-500/90 text-white text-[11px] font-black px-3 py-1 rounded-full uppercase tracking-wider font-mono shadow-sm flex items-center gap-1.5">
+                <XCircle className="w-3.5 h-3.5" />
+                Admission Scrutiny Finding
+              </span>
+              <span className="bg-white/20 text-xs font-bold px-3 py-1 rounded-full font-mono">
+                Ref: {application.applicationNumber || application.registrationNumber}
+              </span>
+            </div>
+            <h1 className="text-2xl sm:text-3xl font-black text-white">
+              Application Dossier Disqualified
+            </h1>
+            <p className="text-xs sm:text-sm text-red-200">
+              Gurukul Kurukshetra Online Entrance Examination Portal • Academic Session 2026-27
+            </p>
+          </div>
+
+          <div className="z-10 flex gap-2">
+            <button
+              onClick={() => {
+                fetch('/api/auth/logout', { method: 'POST' }).then(() => {
+                  window.location.href = '/login';
+                });
+              }}
+              className="bg-white/10 hover:bg-white/20 text-white text-xs font-bold px-4 py-2.5 rounded-xl transition flex items-center gap-1.5 border border-white/20"
+            >
+              <LogOut className="w-3.5 h-3.5" />
+              <span>Sign Out</span>
+            </button>
+          </div>
+        </div>
+
+        {/* Authoritative NTA Rejection Modal Card */}
+        <div className="bg-white rounded-3xl border-2 border-red-200 shadow-xl overflow-hidden">
+          {/* Official Red Header Band */}
+          <div className="bg-red-600 text-white p-5 sm:p-6 flex items-center gap-4">
+            <div className="w-12 h-12 rounded-2xl bg-white/10 border border-white/30 flex items-center justify-center flex-shrink-0">
+              <AlertTriangle className="w-7 h-7 text-amber-300" />
+            </div>
+            <div>
+              <div className="text-[10px] font-mono uppercase tracking-widest text-red-200 font-extrabold">
+                Central Examination & Scrutiny Board
+              </div>
+              <h2 className="text-lg sm:text-xl font-black tracking-wide">
+                APPLICATION FORM REJECTED / DISQUALIFIED
+              </h2>
+            </div>
+          </div>
+
+          <div className="p-6 sm:p-8 space-y-6">
+            {/* Candidate summary details */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 bg-slate-50 border border-slate-200 rounded-2xl p-4 text-xs">
+              <div>
+                <span className="text-slate-400 block font-medium">Candidate Name</span>
+                <strong className="text-slate-900">{application.personalInfo?.fullName || currentUser?.name || 'Candidate'}</strong>
+              </div>
+              <div>
+                <span className="text-slate-400 block font-medium">Application No</span>
+                <strong className="font-mono text-gurukul-navy">{application.applicationNumber || application.registrationNumber}</strong>
+              </div>
+              <div>
+                <span className="text-slate-400 block font-medium">Class Applied</span>
+                <strong className="text-slate-900">{application.classApplying}</strong>
+              </div>
+              <div>
+                <span className="text-slate-400 block font-medium">Decision Status</span>
+                <span className="inline-block text-[11px] font-extrabold text-red-700 bg-red-100 px-2 py-0.5 rounded-md">
+                  REJECTED
+                </span>
+              </div>
+            </div>
+
+            {/* Official Ground of Rejection Alert Box */}
+            <div className="bg-red-50/90 border-2 border-red-300 rounded-2xl p-5 sm:p-6 space-y-2">
+              <div className="flex items-center gap-2 text-red-900 font-black text-xs uppercase tracking-wider">
+                <AlertCircle className="w-4 h-4 text-red-600" />
+                <span>Official Committee Remarks / Ground for Rejection:</span>
+              </div>
+              <div className="text-sm font-bold text-red-950 bg-white p-4 rounded-xl border border-red-200 leading-relaxed font-sans">
+                &ldquo;{application.remarks || 'Application does not meet the prescribed age criteria, minimum qualifying eligibility, or documentation standards.'}&rdquo;
+              </div>
+            </div>
+
+            {/* Official NTA Policy Disclaimer */}
+            <div className="bg-slate-50 border-l-4 border-gurukul-navy rounded-r-2xl p-4 text-xs text-slate-600 space-y-2">
+              <p className="font-bold text-slate-800">
+                Important Regulatory Notice (Admission Session 2026-27):
+              </p>
+              <ul className="list-disc list-inside space-y-1 text-slate-600 leading-relaxed">
+                <li>All particulars, documents, and records linked with this submission have been officially annulled.</li>
+                <li>No Admit Card or Examination Roll Number will be generated for this rejected dossier.</li>
+                <li>You may <strong>Refill a Fresh Application Form</strong> with correct details before the deadline, or submit an official Grievance if you believe this decision requires review.</li>
+              </ul>
+            </div>
+
+            {/* Primary Action Buttons */}
+            <div className="flex flex-col sm:flex-row gap-4 pt-2">
+              <button
+                onClick={handleRefillApplication}
+                disabled={refillLoading}
+                className="flex-1 bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-700 hover:to-teal-800 text-white font-extrabold text-sm px-6 py-4 rounded-2xl shadow-lg hover:shadow-xl transition flex items-center justify-center gap-2.5 disabled:opacity-50"
+              >
+                {refillLoading ? (
+                  <>
+                    <RefreshCw className="w-4 h-4 animate-spin" />
+                    <span>Purging Old Record & Preparing Fresh Form...</span>
+                  </>
+                ) : (
+                  <>
+                    <RefreshCw className="w-4 h-4" />
+                    <span>Refill Fresh Application Form</span>
+                  </>
+                )}
+              </button>
+
+              <button
+                onClick={() => {
+                  if (!queryPhone && currentUser?.phone) {
+                    setQueryPhone(currentUser.phone.replace(/\D/g, '').slice(-10));
+                  }
+                  setShowQueryModal(true);
+                }}
+                className="bg-white hover:bg-slate-50 text-gurukul-navy font-black text-sm px-6 py-4 rounded-2xl border-2 border-slate-300 shadow-sm transition flex items-center justify-center gap-2"
+              >
+                <HelpCircle className="w-4 h-4 text-gurukul-600" />
+                <span>Raise Query / Grievance to Helpdesk</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Helpdesk Contact Footer */}
+          <div className="bg-slate-100 p-4 px-6 border-t border-slate-200 text-center text-xs text-slate-600 flex flex-wrap justify-between items-center gap-2">
+            <span>Admission Helpdesk: <strong>+91-1744-259114 / 9896328329</strong></span>
+            <span>Official Email: <strong>admissions@gurukulkurukshetra.com</strong></span>
+          </div>
+        </div>
+
+        {/* Grievance Submission Modal */}
+        {showQueryModal && (
+          <div className="fixed inset-0 bg-slate-900/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+            <div className="bg-white rounded-3xl max-w-lg w-full p-6 sm:p-8 space-y-5 shadow-2xl border border-slate-200 animate-in fade-in zoom-in-95 duration-200">
+              <div className="flex justify-between items-start border-b border-slate-100 pb-4">
+                <div>
+                  <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-gurukul-600 bg-amber-50 px-2.5 py-0.5 rounded-full">
+                    Grievance Redressal Mechanism
+                  </span>
+                  <h3 className="text-lg font-black text-gurukul-navy mt-1">
+                    Submit Candidate Query / Grievance
+                  </h3>
+                </div>
+                <button
+                  onClick={() => {
+                    setShowQueryModal(false);
+                    setQuerySuccess(false);
+                    setQueryError(null);
+                  }}
+                  className="p-1 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-100"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              {querySuccess ? (
+                <div className="p-6 bg-emerald-50 border-2 border-emerald-300 rounded-2xl text-center space-y-3">
+                  <CheckCircle2 className="w-12 h-12 text-emerald-600 mx-auto" />
+                  <h4 className="text-base font-black text-emerald-950">
+                    Grievance Lodged Successfully!
+                  </h4>
+                  <p className="text-xs text-emerald-800 leading-relaxed max-w-sm mx-auto">
+                    Your query has been assigned to the Examination Controller. An update will be communicated to your registered mobile number and email.
+                  </p>
+                  <div className="pt-2">
+                    <button
+                      onClick={() => {
+                        setShowQueryModal(false);
+                        setQuerySuccess(false);
+                      }}
+                      className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs px-6 py-2.5 rounded-xl transition shadow-sm"
+                    >
+                      Close
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <form onSubmit={handleSubmitQuery} className="space-y-4 text-xs">
+                  {queryError && (
+                    <div className="p-3 bg-red-50 border border-red-200 text-red-800 rounded-xl font-bold">
+                      {queryError}
+                    </div>
+                  )}
+
+                  <div>
+                    <label className="block font-bold text-slate-700 mb-1">
+                      Query Subject / Category
+                    </label>
+                    <select
+                      value={querySubject}
+                      onChange={(e) => setQuerySubject(e.target.value)}
+                      className="w-full border rounded-xl p-2.5 font-semibold text-slate-800 outline-none focus:ring-2 focus:ring-amber-500"
+                    >
+                      <option value="Ground of Rejection Clarification">Ground of Rejection Clarification</option>
+                      <option value="Document Resubmission Permission">Document Resubmission Permission</option>
+                      <option value="Eligibility Criteria Review">Eligibility Criteria Review</option>
+                      <option value="Technical Error During Form Submission">Technical Error During Form Submission</option>
+                      <option value="Other Admission Query">Other Admission Query</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <div className="flex justify-between items-center mb-1">
+                      <label className="block font-bold text-slate-700">
+                        Contact Mobile Number <span className="text-red-500">*</span>
+                      </label>
+                      <span className="text-[10px] font-mono text-slate-400">
+                        {queryPhone.length}/10 digits
+                      </span>
+                    </div>
+                    <div className="relative">
+                      <span className="absolute left-3.5 top-2.5 font-bold text-slate-400 select-none text-xs">
+                        +91
+                      </span>
+                      <input
+                        type="tel"
+                        inputMode="numeric"
+                        pattern="[6-9][0-9]{9}"
+                        maxLength={10}
+                        value={queryPhone}
+                        onChange={(e) => {
+                          const val = e.target.value.replace(/\D/g, '').slice(0, 10);
+                          setQueryPhone(val);
+                        }}
+                        placeholder="9876543210"
+                        className="w-full border rounded-xl pl-12 pr-3 py-2.5 font-semibold text-slate-800 outline-none focus:ring-2 focus:ring-amber-500 font-mono text-xs tracking-wider"
+                      />
+                    </div>
+                    <p className="text-[10px] text-slate-400 mt-1">
+                      Enter 10-digit mobile number (numbers only, starts with 6, 7, 8, or 9)
+                    </p>
+                  </div>
+
+                  <div>
+                    <label className="block font-bold text-slate-700 mb-1">
+                      Detailed Query / Clarification <span className="text-red-500">*</span>
+                    </label>
+                    <textarea
+                      rows={4}
+                      value={queryText}
+                      onChange={(e) => setQueryText(e.target.value)}
+                      placeholder="Please explain in detail why you believe your application should be reviewed or what clarification you need from the committee..."
+                      className="w-full border rounded-xl p-3 font-normal text-slate-800 outline-none focus:ring-2 focus:ring-amber-500 resize-none"
+                    />
+                  </div>
+
+                  <div className="flex justify-end gap-2.5 pt-2">
+                    <button
+                      type="button"
+                      onClick={() => setShowQueryModal(false)}
+                      className="px-4 py-2.5 rounded-xl border border-slate-200 text-slate-600 font-bold hover:bg-slate-50 transition"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={queryLoading}
+                      className="bg-gurukul-navy hover:bg-slate-900 text-white font-extrabold px-6 py-2.5 rounded-xl transition flex items-center gap-2 disabled:opacity-50"
+                    >
+                      {queryLoading ? (
+                        <>
+                          <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                          <span>Submitting...</span>
+                        </>
+                      ) : (
+                        <>
+                          <Send className="w-3.5 h-3.5 text-amber-400" />
+                          <span>Submit Grievance</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
+                </form>
+              )}
+            </div>
+          </div>
+        )}
       </div>
     );
   }
@@ -434,13 +857,12 @@ export default function ApplicantDashboard() {
               return (
                 <div
                   key={fs.num}
-                  className={`p-4 rounded-xl border transition flex flex-col justify-between ${
-                    isDone
+                  className={`p-4 rounded-xl border transition flex flex-col justify-between ${isDone
                       ? 'bg-emerald-50/40 border-emerald-300 text-emerald-950'
                       : isCurrent
-                      ? 'bg-amber-50/70 border-amber-300 text-amber-950 ring-2 ring-amber-400/40'
-                      : 'bg-slate-50 border-slate-200 text-slate-500'
-                  }`}
+                        ? 'bg-amber-50/70 border-amber-300 text-amber-950 ring-2 ring-amber-400/40'
+                        : 'bg-slate-50 border-slate-200 text-slate-500'
+                    }`}
                 >
                   <div className="space-y-2">
                     <div className="flex items-center justify-between">
@@ -466,9 +888,8 @@ export default function ApplicantDashboard() {
                   <div className="pt-3 mt-3 border-t border-slate-200/60">
                     <Link
                       href={`/apply?step=${fs.num}`}
-                      className={`text-xs font-bold flex items-center gap-1 hover:underline ${
-                        isDone ? 'text-emerald-700' : isCurrent ? 'text-amber-700' : 'text-slate-600'
-                      }`}
+                      className={`text-xs font-bold flex items-center gap-1 hover:underline ${isDone ? 'text-emerald-700' : isCurrent ? 'text-amber-700' : 'text-slate-600'
+                        }`}
                     >
                       <span>{isDone ? 'Review / Edit' : 'Fill this step'}</span>
                       <ArrowRight className="w-3 h-3" />
@@ -538,26 +959,26 @@ export default function ApplicantDashboard() {
 
   const steps = [
     { label: 'Application Submitted', completed: true, current: false },
-    { 
-      label: 'Document Verification', 
+    {
+      label: 'Document Verification',
       completed: application.status === 'approved' || !!admitCard,
       current: application.status === 'submitted' || application.status === 'under_review' || application.status === 'correction_needed',
       warning: application.status === 'correction_needed'
     },
-    { 
-      label: 'Admit Card Issued', 
+    {
+      label: 'Admit Card Issued',
       completed: !!admitCard?.isReleased,
       current: application.status === 'approved' && !admitCard?.isReleased
     },
-    { 
-      label: 'Written Entrance Exam', 
+    {
+      label: 'Written Entrance Exam',
       completed: !!result,
       current: !!admitCard?.isReleased && !result
     },
-    { 
-      label: 'Result & Merit Scorecard', 
+    {
+      label: 'Result & Merit Scorecard',
       completed: !!result?.isPublished,
-      current: false 
+      current: false
     },
   ];
 
@@ -573,9 +994,11 @@ export default function ApplicantDashboard() {
             <span className="bg-white/20 text-xs font-bold px-3 py-1 rounded-full">
               Class: {application.classApplying}
             </span>
-            <span className="bg-slate-900/80 text-amber-300 text-[11px] font-semibold px-3 py-1 rounded-full border border-amber-400/30">
-              Roll No: {admitCard?.rollNumber ? admitCard.rollNumber : 'Pending Allotment (To be issued later)'}
-            </span>
+            {admitCard?.rollNumber && admitCard.rollNumber !== 'PENDING' && (
+              <span className="bg-slate-900/80 text-amber-300 text-[11px] font-semibold px-3 py-1 rounded-full border border-amber-400/30">
+                Roll No: {admitCard.rollNumber}
+              </span>
+            )}
           </div>
           <h1 className="text-2xl sm:text-3xl font-black">
             Welcome, {currentUser?.name || application.personalInfo?.fullName || 'Candidate'}
@@ -586,45 +1009,35 @@ export default function ApplicantDashboard() {
         </div>
 
         <div className="z-10 flex flex-wrap gap-3 items-center">
-          {application.status === 'rejected' ? (
+          {(application.status === 'approved' || application.status === 'admitted' || admitCard?.isReleased) && (
             <Link
-              href="/apply?step=1&reapply=true"
+              href="/admission-form"
+              className="bg-gurukul-navy hover:bg-slate-800 text-amber-300 font-extrabold text-xs px-4 py-2.5 rounded-xl shadow-lg transition flex items-center gap-1.5 border border-amber-400/40"
+              title="Download / Print Official Admission Verification & Enrolment Form"
+            >
+              <Printer className="w-4 h-4" />
+              <span>Admission Form</span>
+            </Link>
+          )}
+
+          {admitCard?.isReleased && (
+            <Link
+              href="/admit-card"
               className="bg-amber-500 hover:bg-amber-600 text-gurukul-navy font-black text-xs px-5 py-2.5 rounded-xl shadow-lg transition flex items-center gap-1.5"
             >
-              <span>Fill Form Again</span>
-              <ArrowRight className="w-4 h-4" />
+              <Download className="w-4 h-4" />
+              <span>Download Admit Card</span>
             </Link>
-          ) : (
-            <>
-              <Link
-                href="/admission-form"
-                className="bg-gurukul-navy hover:bg-slate-800 text-amber-300 font-extrabold text-xs px-4 py-2.5 rounded-xl shadow-lg transition flex items-center gap-1.5 border border-amber-400/40"
-                title="Download / Print Official Admission Verification & Enrolment Form"
-              >
-                <Printer className="w-4 h-4" />
-                <span>Admission Form</span>
-              </Link>
+          )}
 
-              {admitCard?.isReleased && (
-                <Link
-                  href="/admit-card"
-                  className="bg-amber-500 hover:bg-amber-600 text-gurukul-navy font-black text-xs px-5 py-2.5 rounded-xl shadow-lg transition flex items-center gap-1.5"
-                >
-                  <Download className="w-4 h-4" />
-                  <span>Download Admit Card</span>
-                </Link>
-              )}
-
-              {result?.isPublished && (
-                <Link
-                  href="/result"
-                  className="bg-emerald-500 hover:bg-emerald-600 text-white font-black text-xs px-5 py-2.5 rounded-xl shadow-lg transition flex items-center gap-1.5"
-                >
-                  <Award className="w-4 h-4" />
-                  <span>View Scorecard</span>
-                </Link>
-              )}
-            </>
+          {result?.isPublished && (
+            <Link
+              href="/result"
+              className="bg-emerald-500 hover:bg-emerald-600 text-white font-black text-xs px-5 py-2.5 rounded-xl shadow-lg transition flex items-center gap-1.5"
+            >
+              <Award className="w-4 h-4" />
+              <span>View Scorecard</span>
+            </Link>
           )}
         </div>
       </div>
@@ -632,11 +1045,10 @@ export default function ApplicantDashboard() {
       {/* Resubmission / Action Alert Messages */}
       {resubmitMsg && (
         <div
-          className={`p-4 rounded-2xl text-xs font-semibold flex items-center justify-between shadow-sm transition ${
-            resubmitMsg.type === 'success'
+          className={`p-4 rounded-2xl text-xs font-semibold flex items-center justify-between shadow-sm transition ${resubmitMsg.type === 'success'
               ? 'bg-emerald-50 border-2 border-emerald-300 text-emerald-950'
               : 'bg-red-50 border-2 border-red-300 text-red-950'
-          }`}
+            }`}
         >
           <div className="flex items-center gap-2.5">
             {resubmitMsg.type === 'success' ? (
@@ -655,465 +1067,420 @@ export default function ApplicantDashboard() {
         </div>
       )}
 
-      {/* If Application is Rejected: Show ONLY the dedicated Rejection Notice & Re-apply CTA */}
-      {application.status === 'rejected' ? (
-        <div className="bg-white border-2 border-red-200 rounded-3xl p-8 sm:p-12 shadow-sm max-w-3xl mx-auto text-center space-y-6">
-          <div className="w-20 h-20 bg-red-50 text-red-600 rounded-full flex items-center justify-center mx-auto border-4 border-red-100 shadow-inner">
-            <XCircle className="w-10 h-10" />
+      {/* Status Notification Banner: Approved */}
+      {application.status === 'approved' && (
+        <div className="bg-gradient-to-r from-emerald-500/10 via-emerald-50 to-teal-50 border-2 border-emerald-400 rounded-3xl p-6 sm:p-7 shadow-sm flex items-start gap-3.5">
+          <div className="p-2.5 bg-emerald-500 text-white rounded-2xl shadow-sm flex-shrink-0">
+            <CheckCircle2 className="w-6 h-6" />
           </div>
-
-          <div className="space-y-2">
-            <span className="bg-red-100 text-red-900 text-xs font-black uppercase px-3.5 py-1 rounded-full border border-red-200 font-mono tracking-wide">
-              Application Status: Rejected
+          <div className="space-y-1">
+            <span className="bg-emerald-100 text-emerald-950 text-[10px] font-black uppercase px-2.5 py-0.5 rounded-full border border-emerald-300 font-mono">
+              Admission Scrutiny Status • Approved
             </span>
-            <h2 className="text-2xl sm:text-3xl font-black text-slate-900 pt-2 tracking-tight">
-              Your Application Has Been Rejected
-            </h2>
-            <p className="text-sm text-slate-600 max-w-xl mx-auto leading-relaxed">
-              We regret to inform you that your application for admission (Registration No:{' '}
-              <strong className="font-mono text-slate-900">
-                {application.registrationNumber || application.applicationNumber}
-              </strong>
-              ) has been rejected by the Admissions &amp; Scrutiny Committee.
+            <h3 className="text-lg font-black text-emerald-950 mt-1">
+              🎉 Application Dossier Approved &amp; Verified!
+            </h3>
+            <p className="text-xs text-emerald-800 mt-0.5 max-w-2xl leading-relaxed">
+              The Central Admissions Committee has officially verified and approved your credentials for <strong>{application.classApplying}</strong>.
+              {application.remarks && (
+                <span className="block mt-1.5 font-medium italic text-emerald-900 bg-white/70 px-3 py-1.5 rounded-lg border border-emerald-200/80">
+                  &ldquo;{application.remarks}&rdquo;
+                </span>
+              )}
             </p>
-          </div>
-
-          {/* Official Committee Grounds / Reason */}
-          <div className="bg-red-50/80 border border-red-200 rounded-2xl p-5 text-left max-w-xl mx-auto space-y-2 shadow-sm">
-            <div className="flex items-center gap-2 text-red-900 font-bold text-xs uppercase tracking-wider">
-              <AlertCircle className="w-4 h-4 text-red-600 flex-shrink-0" />
-              <span>Official Committee Grounds &amp; Remarks:</span>
-            </div>
-            <p className="text-slate-900 font-semibold text-sm italic bg-white p-3.5 rounded-xl border border-red-200/80 leading-relaxed shadow-xs">
-              &ldquo;{application.remarks || 'Application does not meet specified admission eligibility criteria or verification requirements.'}&rdquo;
-            </p>
-          </div>
-
-          {/* CTA: Re-apply / Fill Form Again */}
-          <div className="pt-4 border-t border-slate-100 max-w-xl mx-auto flex flex-col sm:flex-row items-center justify-center gap-4">
-            <Link
-              href="/apply?step=1&reapply=true"
-              className="w-full sm:w-auto px-8 py-3.5 bg-gradient-to-r from-gurukul-navy to-slate-800 hover:from-slate-900 hover:to-black text-amber-300 font-black text-sm rounded-xl shadow-lg hover:shadow-xl transition flex items-center justify-center gap-2 border border-amber-400/40"
-            >
-              <FileText className="w-4 h-4" />
-              <span>Fill Application Form Again / Re-apply</span>
-              <ArrowRight className="w-4 h-4 ml-1" />
-            </Link>
-          </div>
-
-          {/* Helpdesk Contact */}
-          <div className="pt-2 text-xs text-slate-500 flex flex-wrap items-center justify-center gap-4">
-            <span className="flex items-center gap-1.5 font-medium">
-              <Phone className="w-3.5 h-3.5 text-slate-400" />
-              Admissions Helpdesk: +91-1744-259114 / +91-9896328329
-            </span>
           </div>
         </div>
-      ) : (
-        <>
-          {/* Status Notification Banner: Approved */}
-          {application.status === 'approved' && (
-            <div className="bg-gradient-to-r from-emerald-500/10 via-emerald-50 to-teal-50 border-2 border-emerald-400 rounded-3xl p-6 sm:p-7 shadow-sm flex items-start gap-3.5">
-              <div className="p-2.5 bg-emerald-500 text-white rounded-2xl shadow-sm flex-shrink-0">
-                <CheckCircle2 className="w-6 h-6" />
-              </div>
-              <div className="space-y-1">
-                <span className="bg-emerald-100 text-emerald-950 text-[10px] font-black uppercase px-2.5 py-0.5 rounded-full border border-emerald-300 font-mono">
-                  Admission Scrutiny Status • Approved
+      )}
+
+      {/* Status Notification Banner: Correction Needed (Details Demanded) */}
+      {application.status === 'correction_needed' && (
+        <div className="bg-gradient-to-r from-amber-500/10 via-amber-50 to-amber-100/50 border-2 border-amber-400 rounded-3xl p-6 sm:p-7 shadow-sm space-y-4">
+          <div className="flex items-start gap-3.5">
+            <div className="p-2.5 bg-amber-500 text-slate-950 rounded-2xl shadow-sm flex-shrink-0">
+              <AlertCircle className="w-6 h-6" />
+            </div>
+            <div className="space-y-1">
+              <span className="bg-amber-100 text-amber-950 text-[10px] font-black uppercase px-2.5 py-0.5 rounded-full border border-amber-300 font-mono">
+                Action Required • Scrutiny Committee Request
+              </span>
+              <h3 className="text-lg font-black text-amber-950 mt-1">
+                ⚠️ Additional Details / Documents Demanded by Examination Committee
+              </h3>
+              <p className="text-xs text-amber-900 max-w-2xl leading-relaxed">
+                The verification committee has reviewed your application and requested document revisions or clarification before approving your dossier. Please upload the required documents below.
+              </p>
+              <div className="mt-3 bg-white/90 p-3.5 rounded-xl border border-amber-300 text-xs font-semibold text-slate-900">
+                <span className="text-[10px] font-bold text-amber-800 uppercase block mb-1">
+                  Committee Instructions & Demanded Items:
                 </span>
-                <h3 className="text-lg font-black text-emerald-950 mt-1">
-                  🎉 Application Dossier Approved &amp; Verified!
-                </h3>
-                <p className="text-xs text-emerald-800 mt-0.5 max-w-2xl leading-relaxed">
-                  The Central Admissions Committee has officially verified and approved your credentials for <strong>{application.classApplying}</strong>.
-                  {application.remarks && (
-                    <span className="block mt-1.5 font-medium italic text-emerald-900 bg-white/70 px-3 py-1.5 rounded-lg border border-emerald-200/80">
-                      &ldquo;{application.remarks}&rdquo;
-                    </span>
-                  )}
-                </p>
+                <span className="text-slate-800 font-bold">&ldquo;{application.remarks || 'Please upload clear verification documents.'}&rdquo;</span>
               </div>
-            </div>
-          )}
-
-          {/* Status Notification Banner: Correction Needed (Details Demanded) */}
-          {application.status === 'correction_needed' && (
-            <div className="bg-gradient-to-r from-amber-500/10 via-amber-50 to-amber-100/50 border-2 border-amber-400 rounded-3xl p-6 sm:p-7 shadow-sm space-y-4">
-              <div className="flex items-start gap-3.5">
-                <div className="p-2.5 bg-amber-500 text-slate-950 rounded-2xl shadow-sm flex-shrink-0">
-                  <AlertCircle className="w-6 h-6" />
-                </div>
-                <div className="space-y-1">
-                  <span className="bg-amber-100 text-amber-950 text-[10px] font-black uppercase px-2.5 py-0.5 rounded-full border border-amber-300 font-mono">
-                    Action Required • Scrutiny Committee Request
-                  </span>
-                  <h3 className="text-lg font-black text-amber-950 mt-1">
-                    ⚠️ Additional Details / Documents Demanded by Examination Committee
-                  </h3>
-                  <p className="text-xs text-amber-900 max-w-2xl leading-relaxed">
-                    The verification committee has reviewed your application and requested document revisions or clarification before approving your dossier. Please upload the required documents below.
-                  </p>
-                  <div className="mt-3 bg-white/90 p-3.5 rounded-xl border border-amber-300 text-xs font-semibold text-slate-900">
-                    <span className="text-[10px] font-bold text-amber-800 uppercase block mb-1">
-                      Committee Instructions & Demanded Items:
-                    </span>
-                    <span className="text-slate-800 font-bold">&ldquo;{application.remarks || 'Please upload clear verification documents.'}&rdquo;</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Application Status Timeline Card */}
-          <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
-            <h2 className="text-sm font-bold uppercase tracking-wider text-slate-700 mb-6 flex items-center gap-2">
-              <Clock className="w-4 h-4 text-gurukul-600" />
-              Application Progress Tracker
-            </h2>
-
-            <div className="grid grid-cols-1 sm:grid-cols-5 gap-4 relative">
-              {steps.map((st, idx) => (
-                <div
-                  key={idx}
-                  className={`p-4 rounded-xl border text-left transition ${
-                    st.completed
-                      ? 'bg-emerald-50/50 border-emerald-300 text-emerald-950'
-                      : st.current
-                      ? st.warning
-                        ? 'bg-red-50 border-red-300 text-red-950'
-                        : 'bg-amber-50 border-amber-300 text-amber-950 ring-2 ring-amber-400/40'
-                      : 'bg-slate-50 border-slate-200 text-slate-400'
-                  }`}
-                >
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-[10px] font-mono font-bold uppercase">Step 0{idx + 1}</span>
-                    {st.completed ? (
-                      <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-                    ) : st.warning ? (
-                      <AlertCircle className="w-4 h-4 text-red-600" />
-                    ) : (
-                      <div className="w-2 h-2 rounded-full bg-slate-300" />
-                    )}
-                  </div>
-                  <h4 className="font-bold text-xs leading-snug">{st.label}</h4>
-                  <span className="text-[10px] mt-1 block">
-                    {st.completed
-                      ? 'Completed'
-                      : st.current
-                      ? st.warning
-                        ? 'Action Required'
-                        : 'In Progress'
-                      : 'Pending'}
-                  </span>
-                </div>
-              ))}
             </div>
           </div>
+        </div>
+      )}
 
-          {/* INTERACTIVE IN-PLACE DOCUMENT UPLOAD DESK (When Correction / Documents Demanded) */}
-          {application.status === 'correction_needed' && (
-            <div className="bg-white border-2 border-amber-300 rounded-2xl p-6 sm:p-8 shadow-sm space-y-6">
-              <div className="border-b border-slate-100 pb-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
-                <div>
-                  <h3 className="font-black text-slate-900 text-base flex items-center gap-2">
-                    <Upload className="w-5 h-5 text-amber-600" />
-                    Document Re-Upload & Clarification Desk
-                  </h3>
-                  <p className="text-xs text-slate-500 mt-0.5">
-                    Upload the demanded documents directly below. You can submit files in JPG, PNG, or PDF format (up to 5MB).
-                  </p>
-                </div>
-                <span className="text-[11px] font-bold bg-amber-100 text-amber-900 px-3 py-1 rounded-full border border-amber-200">
-                  Immediate Re-Verification Enabled
-                </span>
+      {/* Application Status Timeline Card */}
+      <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
+        <h2 className="text-sm font-bold uppercase tracking-wider text-slate-700 mb-6 flex items-center gap-2">
+          <Clock className="w-4 h-4 text-gurukul-600" />
+          Application Progress Tracker
+        </h2>
+
+        <div className="grid grid-cols-1 sm:grid-cols-5 gap-4 relative">
+          {steps.map((st, idx) => (
+            <div
+              key={idx}
+              className={`p-4 rounded-xl border text-left transition ${st.completed
+                  ? 'bg-emerald-50/50 border-emerald-300 text-emerald-950'
+                  : st.current
+                    ? st.warning
+                      ? 'bg-red-50 border-red-300 text-red-950'
+                      : 'bg-amber-50 border-amber-300 text-amber-950 ring-2 ring-amber-400/40'
+                    : 'bg-slate-50 border-slate-200 text-slate-400'
+                }`}
+            >
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-[10px] font-mono font-bold uppercase">Step 0{idx + 1}</span>
+                {st.completed ? (
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                ) : st.warning ? (
+                  <AlertCircle className="w-4 h-4 text-red-600" />
+                ) : (
+                  <div className="w-2 h-2 rounded-full bg-slate-300" />
+                )}
               </div>
+              <h4 className="font-bold text-xs leading-snug">{st.label}</h4>
+              <span className="text-[10px] mt-1 block">
+                {st.completed
+                  ? 'Completed'
+                  : st.current
+                    ? st.warning
+                      ? 'Action Required'
+                      : 'In Progress'
+                    : 'Pending'}
+              </span>
+            </div>
+          ))}
+        </div>
+      </div>
 
-              <form onSubmit={handleResubmit} className="space-y-6">
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {[
-                    { key: 'photo', label: '1. Passport Photograph', desc: 'Clear recent photo with white/light background' },
-                    { key: 'signature', label: '2. Candidate Signature', desc: 'Signed on plain paper in blue/black ink' },
-                    { key: 'parentSignature', label: '3. Parent / Guardian Signature', desc: 'Signature of Father or Mother' },
-                    { key: 'aadhaarCard', label: '4. Aadhaar Card Copy', desc: 'Clear front & back photo or PDF' },
-                    { key: 'lastMarksheet', label: '5. Previous Class Marksheet', desc: 'Official marksheet or report card' },
-                  ].map((doc) => {
-                    const currentVal = (application.documents as any)?.[doc.key];
-                    const newVal = uploadedDocs[doc.key];
-                    const previewVal = newVal || currentVal;
+      {/* INTERACTIVE IN-PLACE DOCUMENT UPLOAD DESK (When Correction / Documents Demanded) */}
+      {application.status === 'correction_needed' && (
+        <div className="bg-white border-2 border-amber-300 rounded-2xl p-6 sm:p-8 shadow-sm space-y-6">
+          <div className="border-b border-slate-100 pb-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
+            <div>
+              <h3 className="font-black text-slate-900 text-base flex items-center gap-2">
+                <Upload className="w-5 h-5 text-amber-600" />
+                Document Re-Upload & Clarification Desk
+              </h3>
+              <p className="text-xs text-slate-500 mt-0.5">
+                Upload the demanded documents directly below. You can submit files in JPG, PNG, or PDF format (up to 5MB).
+              </p>
+            </div>
+            <span className="text-[11px] font-bold bg-amber-100 text-amber-900 px-3 py-1 rounded-full border border-amber-200">
+              Immediate Re-Verification Enabled
+            </span>
+          </div>
 
-                    return (
-                      <div
-                        key={doc.key}
-                        className={`border-2 rounded-xl p-4 space-y-3 transition ${
-                          newVal
-                            ? 'border-emerald-500 bg-emerald-50/20'
-                            : currentVal
-                            ? 'border-slate-200 bg-slate-50/50'
-                            : 'border-amber-300 bg-amber-50/30'
-                        }`}
-                      >
-                        <div className="flex justify-between items-start">
-                          <div>
-                            <h4 className="font-bold text-xs text-slate-900">{doc.label}</h4>
-                            <p className="text-[10px] text-slate-500 mt-0.5">{doc.desc}</p>
-                          </div>
-                          {newVal ? (
-                            <span className="bg-emerald-100 text-emerald-800 text-[9px] font-black px-2 py-0.5 rounded-full">
-                              NEW FILE
-                            </span>
-                          ) : currentVal ? (
-                            <span className="bg-slate-100 text-slate-700 text-[9px] font-bold px-2 py-0.5 rounded-full">
-                              UPLOADED
-                            </span>
-                          ) : (
-                            <span className="bg-amber-100 text-amber-900 text-[9px] font-bold px-2 py-0.5 rounded-full">
-                              PENDING
-                            </span>
-                          )}
-                        </div>
+          <form onSubmit={handleResubmit} className="space-y-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {[
+                { key: 'photo', label: '1. Passport Photograph', desc: 'Clear recent photo with white/light background' },
+                { key: 'signature', label: '2. Candidate Signature', desc: 'Signed on plain paper in blue/black ink' },
+                { key: 'parentSignature', label: '3. Parent / Guardian Signature', desc: 'Signature of Father or Mother' },
+                { key: 'aadhaarCard', label: '4. Aadhaar Card Copy', desc: 'Clear front & back photo or PDF' },
+                { key: 'lastMarksheet', label: '5. Previous Class Marksheet', desc: 'Official marksheet or report card' },
+              ].map((doc) => {
+                const currentVal = (application.documents as any)?.[doc.key];
+                const newVal = uploadedDocs[doc.key];
+                const previewVal = newVal || currentVal;
 
-                        {/* Preview Thumbnail if image */}
-                        {previewVal && (
-                          <div className="h-24 w-full bg-slate-100 rounded-lg overflow-hidden border border-slate-200 flex items-center justify-center relative">
-                            {previewVal.startsWith('data:image') || previewVal.startsWith('http') ? (
-                              <img
-                                src={previewVal}
-                                alt={doc.label}
-                                className="h-full w-full object-contain p-1"
-                              />
-                            ) : (
-                              <div className="text-center p-2">
-                                <FileText className="w-6 h-6 text-slate-400 mx-auto mb-1" />
-                                <span className="text-[10px] text-slate-600 font-bold block truncate max-w-[150px]">
-                                  {uploadedDocNames[doc.key] || 'Document File'}
-                                </span>
-                              </div>
-                            )}
+                return (
+                  <div
+                    key={doc.key}
+                    className={`border-2 rounded-xl p-4 space-y-3 transition ${newVal
+                        ? 'border-emerald-500 bg-emerald-50/20'
+                        : currentVal
+                          ? 'border-slate-200 bg-slate-50/50'
+                          : 'border-amber-300 bg-amber-50/30'
+                      }`}
+                  >
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <h4 className="font-bold text-xs text-slate-900">{doc.label}</h4>
+                        <p className="text-[10px] text-slate-500 mt-0.5">{doc.desc}</p>
+                      </div>
+                      {newVal ? (
+                        <span className="bg-emerald-100 text-emerald-800 text-[9px] font-black px-2 py-0.5 rounded-full">
+                          NEW FILE
+                        </span>
+                      ) : currentVal ? (
+                        <span className="bg-slate-100 text-slate-700 text-[9px] font-bold px-2 py-0.5 rounded-full">
+                          UPLOADED
+                        </span>
+                      ) : (
+                        <span className="bg-amber-100 text-amber-900 text-[9px] font-bold px-2 py-0.5 rounded-full">
+                          PENDING
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Preview Thumbnail if image */}
+                    {previewVal && (
+                      <div className="h-24 w-full bg-slate-100 rounded-lg overflow-hidden border border-slate-200 flex items-center justify-center relative">
+                        {previewVal.startsWith('data:image') || previewVal.startsWith('http') ? (
+                          <img
+                            src={previewVal}
+                            alt={doc.label}
+                            className="h-full w-full object-contain p-1"
+                          />
+                        ) : (
+                          <div className="text-center p-2">
+                            <FileText className="w-6 h-6 text-slate-400 mx-auto mb-1" />
+                            <span className="text-[10px] text-slate-600 font-bold block truncate max-w-[150px]">
+                              {uploadedDocNames[doc.key] || 'Document File'}
+                            </span>
                           </div>
                         )}
-
-                        {/* File Input */}
-                        <div>
-                          <label className="block text-[10px] font-bold text-slate-700 mb-1">
-                            {previewVal ? 'Replace / Upload New File:' : 'Choose Document File:'}
-                          </label>
-                          <input
-                            type="file"
-                            accept="image/jpeg,image/png,application/pdf"
-                            onChange={(e) => handleFileUpload(e, doc.key)}
-                            className="w-full text-[11px] text-slate-600 file:mr-2 file:py-1 file:px-2.5 file:rounded-lg file:border-0 file:text-[10px] file:font-bold file:bg-slate-800 file:text-amber-300 hover:file:bg-slate-900 cursor-pointer"
-                          />
-                        </div>
                       </div>
-                    );
-                  })}
-                </div>
-
-                {/* Candidate Clarification Note */}
-                <div>
-                  <label className="block text-xs font-bold text-slate-800 uppercase mb-1">
-                    Candidate Explanation & Clarification to Committee:
-                  </label>
-                  <textarea
-                    rows={3}
-                    value={candidateClarification}
-                    onChange={(e) => setCandidateClarification(e.target.value)}
-                    placeholder="Briefly explain the documents uploaded or any clarifications regarding the requested items..."
-                    className="w-full p-3 text-xs border rounded-xl outline-none focus:ring-2 focus:ring-amber-500 font-medium"
-                  />
-                </div>
-
-                <div className="flex flex-col sm:flex-row justify-between items-center gap-3 pt-4 border-t">
-                  <Link
-                    href="/apply"
-                    className="text-xs font-bold text-gurukul-700 hover:text-gurukul-900 flex items-center gap-1"
-                  >
-                    <span>Need to edit other application details? Open Application Form</span>
-                    <ArrowRight className="w-3.5 h-3.5" />
-                  </Link>
-
-                  <button
-                    type="submit"
-                    disabled={resubmitLoading}
-                    className="w-full sm:w-auto px-6 py-3 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-slate-950 font-black text-xs rounded-xl shadow-lg transition flex items-center justify-center gap-2"
-                  >
-                    {resubmitLoading ? (
-                      <RefreshCw className="w-4 h-4 animate-spin" />
-                    ) : (
-                      <Send className="w-4 h-4" />
                     )}
-                    <span>Submit Demanded Documents for Re-verification</span>
-                  </button>
-                </div>
-              </form>
-            </div>
-          )}
 
-          {/* Grid of Details & Quick Actions */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            {/* Left 2 Cols: Application Dossier */}
-            <div className="lg:col-span-2 space-y-6">
-              <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm space-y-4">
-                <div className="flex justify-between items-center border-b border-slate-100 pb-3">
-                  <h3 className="font-bold text-slate-900 text-sm flex items-center gap-2">
-                    <FileText className="w-4 h-4 text-gurukul-600" /> Candidate Dossier Summary
-                  </h3>
-                  <span className={`text-xs font-bold px-3 py-1 rounded-full ${
-                    application.status === 'approved' 
-                      ? 'bg-emerald-100 text-emerald-800' 
-                      : 'bg-amber-100 text-amber-800'
-                  }`}>
-                    Status: {application.status.replace('_', ' ').toUpperCase()}
+                    {/* File Input */}
+                    <div>
+                      <label className="block text-[10px] font-bold text-slate-700 mb-1">
+                        {previewVal ? 'Replace / Upload New File:' : 'Choose Document File:'}
+                      </label>
+                      <input
+                        type="file"
+                        accept="image/jpeg,image/png,application/pdf"
+                        onChange={(e) => handleFileUpload(e, doc.key)}
+                        className="w-full text-[11px] text-slate-600 file:mr-2 file:py-1 file:px-2.5 file:rounded-lg file:border-0 file:text-[10px] file:font-bold file:bg-slate-800 file:text-amber-300 hover:file:bg-slate-900 cursor-pointer"
+                      />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Candidate Clarification Note */}
+            <div>
+              <label className="block text-xs font-bold text-slate-800 uppercase mb-1">
+                Candidate Explanation & Clarification to Committee:
+              </label>
+              <textarea
+                rows={3}
+                value={candidateClarification}
+                onChange={(e) => setCandidateClarification(e.target.value)}
+                placeholder="Briefly explain the documents uploaded or any clarifications regarding the requested items..."
+                className="w-full p-3 text-xs border rounded-xl outline-none focus:ring-2 focus:ring-amber-500 font-medium"
+              />
+            </div>
+
+            <div className="flex justify-end items-center pt-4 border-t">
+              <button
+                type="submit"
+                disabled={resubmitLoading}
+                className="w-full sm:w-auto px-6 py-3 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-slate-950 font-black text-xs rounded-xl shadow-lg transition flex items-center justify-center gap-2"
+              >
+                {resubmitLoading ? (
+                  <RefreshCw className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Send className="w-4 h-4" />
+                )}
+                <span>Submit Demanded Documents for Re-verification</span>
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {/* Grid of Details & Quick Actions */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Left 2 Cols: Application Dossier */}
+        <div className="lg:col-span-2 space-y-6">
+          <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm space-y-4">
+            <div className="flex justify-between items-center border-b border-slate-100 pb-3">
+              <h3 className="font-bold text-slate-900 text-sm flex items-center gap-2">
+                <FileText className="w-4 h-4 text-gurukul-600" /> Candidate Dossier Summary
+              </h3>
+              <span className={`text-xs font-bold px-3 py-1 rounded-full ${application.status === 'approved'
+                  ? 'bg-emerald-100 text-emerald-800'
+                  : 'bg-amber-100 text-amber-800'
+                }`}>
+                Status: {application.status.replace('_', ' ').toUpperCase()}
+              </span>
+            </div>
+
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 text-xs">
+              <div>
+                <span className="text-slate-400 block">Registration Number:</span>
+                <span className="font-mono font-black text-amber-700 text-sm">
+                  {application.registrationNumber || application.applicationNumber}
+                </span>
+              </div>
+              {admitCard?.rollNumber && admitCard.rollNumber !== 'PENDING' && (
+                <div>
+                  <span className="text-slate-400 block">Examination Roll Number:</span>
+                  <span className="font-mono font-bold text-slate-800">
+                    {admitCard.rollNumber}
                   </span>
                 </div>
-
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 text-xs">
-                  <div>
-                    <span className="text-slate-400 block">Registration Number:</span>
-                    <span className="font-mono font-black text-amber-700 text-sm">
-                      {application.registrationNumber || application.applicationNumber}
-                    </span>
-                  </div>
-                  <div>
-                    <span className="text-slate-400 block">Examination Roll Number:</span>
-                    <span className="font-mono font-bold text-slate-800">
-                      {admitCard?.rollNumber ? admitCard.rollNumber : 'Pending Allotment'}
-                    </span>
-                  </div>
-                  <div>
-                    <span className="text-slate-400 block">Candidate Name:</span>
-                    <span className="font-bold text-slate-900">{application.personalInfo?.fullName}</span>
-                  </div>
-                  <div>
-                    <span className="text-slate-400 block">Date of Birth:</span>
-                    <span className="font-bold text-slate-900">{application.personalInfo?.dob}</span>
-                  </div>
-                  <div>
-                    <span className="text-slate-400 block">Gender / Category:</span>
-                    <span className="font-bold text-slate-900">
-                      {application.personalInfo?.gender} ({application.personalInfo?.category})
-                    </span>
-                  </div>
-
-                  <div>
-                    <span className="text-slate-400 block">Father&apos;s Name:</span>
-                    <span className="font-bold text-slate-900">{application.parentInfo?.fatherName}</span>
-                  </div>
-                  <div>
-                    <span className="text-slate-400 block">Mother&apos;s Name:</span>
-                    <span className="font-bold text-slate-900">{application.parentInfo?.motherName}</span>
-                  </div>
-                  <div>
-                    <span className="text-slate-400 block">Phone:</span>
-                    <span className="font-bold text-slate-900">{application.parentInfo?.fatherPhone}</span>
-                  </div>
-
-                  <div className="sm:col-span-2">
-                    <span className="text-slate-400 block">Residential Address:</span>
-                    <span className="font-medium text-slate-800">
-                      {application.addressInfo?.streetAddress}, {application.addressInfo?.city}, {application.addressInfo?.state} - {application.addressInfo?.pincode}
-                    </span>
-                  </div>
-                  <div>
-                    <span className="text-slate-400 block">Preferred Exam Centre:</span>
-                    <span className="font-semibold text-gurukul-700">
-                      {application.examCentrePref?.preferredCenter1}
-                    </span>
-                  </div>
-                </div>
-
-                <div className="pt-4 border-t border-slate-100 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
-                  <div>
-                    <span className="font-bold text-slate-800 block text-xs">Official Admission & Enrolment Form</span>
-                    <span className="text-[11px] text-slate-500">Required for physical document verification at the institution.</span>
-                  </div>
-                  <Link
-                    href="/admission-form"
-                    className="inline-flex items-center gap-1.5 bg-slate-900 hover:bg-black text-amber-300 font-bold px-4 py-2 rounded-xl text-xs transition border border-amber-400/30"
-                  >
-                    <Printer className="w-3.5 h-3.5" />
-                    <span>Print Admission Form</span>
-                  </Link>
-                </div>
+              )}
+              <div>
+                <span className="text-slate-400 block">Candidate Name:</span>
+                <span className="font-bold text-slate-900">{application.personalInfo?.fullName}</span>
+              </div>
+              <div>
+                <span className="text-slate-400 block">Date of Birth:</span>
+                <span className="font-bold text-slate-900">{application.personalInfo?.dob}</span>
+              </div>
+              <div>
+                <span className="text-slate-400 block">Gender / Category:</span>
+                <span className="font-bold text-slate-900">
+                  {application.personalInfo?.gender} ({application.personalInfo?.category})
+                </span>
               </div>
 
-              {/* Quick Admit Card Alert if ready */}
-              {admitCard && (
-                <div className="bg-amber-50 border-2 border-amber-300 rounded-2xl p-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                  <div className="space-y-1">
-                    <span className="bg-amber-200 text-amber-900 text-[10px] font-black px-2 py-0.5 rounded uppercase">
-                      Roll No: {admitCard.rollNumber}
-                    </span>
-                    <h4 className="font-black text-slate-900 text-base">
-                      Entrance Examination Admit Card Issued
-                    </h4>
-                    <p className="text-xs text-slate-600">
-                      Venue: <strong>{admitCard.examCentreName}</strong> | Date: <strong>{admitCard.examDate}</strong> ({admitCard.reportingTime})
-                    </p>
-                  </div>
+              <div>
+                <span className="text-slate-400 block">Father&apos;s Name:</span>
+                <span className="font-bold text-slate-900">{application.parentInfo?.fatherName}</span>
+              </div>
+              <div>
+                <span className="text-slate-400 block">Mother&apos;s Name:</span>
+                <span className="font-bold text-slate-900">{application.parentInfo?.motherName}</span>
+              </div>
+              <div>
+                <span className="text-slate-400 block">Phone:</span>
+                <span className="font-bold text-slate-900">{application.parentInfo?.fatherPhone}</span>
+              </div>
 
-                  <Link
-                    href="/admit-card"
-                    className="bg-gurukul-600 hover:bg-gurukul-700 text-white font-bold text-xs px-5 py-2.5 rounded-xl shadow transition flex items-center gap-1.5 flex-shrink-0"
-                  >
-                    <Printer className="w-4 h-4" />
-                    <span>Print Hall Ticket</span>
-                  </Link>
-                </div>
-              )}
+              <div className="sm:col-span-2">
+                <span className="text-slate-400 block">Residential Address:</span>
+                <span className="font-medium text-slate-800">
+                  {application.addressInfo?.streetAddress}, {application.addressInfo?.city}, {application.addressInfo?.state} - {application.addressInfo?.pincode}
+                </span>
+              </div>
+              <div>
+                <span className="text-slate-400 block">Preferred Exam Centre:</span>
+                <span className="font-semibold text-gurukul-700">
+                  {application.examCentrePref?.preferredCenter1}
+                </span>
+              </div>
             </div>
 
-            {/* Right 1 Col: Fee Payment Receipt & Helpline */}
-            <div className="space-y-6">
-              {/* Payment Receipt */}
-              <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm space-y-4">
-                <h3 className="font-bold text-slate-900 text-sm flex items-center gap-2 border-b border-slate-100 pb-3">
-                  <CreditCard className="w-4 h-4 text-emerald-600" /> Fee Payment Receipt
-                </h3>
+            <div className="pt-4 border-t border-slate-100 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+              <div>
+                <span className="font-bold text-slate-800 block text-xs">Official Admission & Enrolment Form</span>
+                <span className="text-[11px] text-slate-500">
+                  {(application.status === 'approved' || application.status === 'admitted' || admitCard?.isReleased)
+                    ? 'Required for physical enrolment and document verification at the institution.'
+                    : 'Will become available once document verification is officially approved by the committee.'}
+                </span>
+              </div>
+              {(application.status === 'approved' || application.status === 'admitted' || admitCard?.isReleased) ? (
+                <Link
+                  href="/admission-form"
+                  className="inline-flex items-center gap-1.5 bg-slate-900 hover:bg-black text-amber-300 font-bold px-4 py-2 rounded-xl text-xs transition border border-amber-400/30"
+                >
+                  <Printer className="w-3.5 h-3.5" />
+                  <span>Print Admission Form</span>
+                </Link>
+              ) : (
+                <span className="text-[11px] font-bold text-slate-400 bg-slate-100 px-3 py-1.5 rounded-xl border border-slate-200 cursor-not-allowed">
+                  Available After Verification
+                </span>
+              )}
+            </div>
+          </div>
 
-                <div className="space-y-2 text-xs">
-                  <div className="flex justify-between">
-                    <span className="text-slate-500">Payment Status:</span>
-                    <span className="font-bold text-emerald-600 uppercase flex items-center gap-1">
-                      <CheckCircle2 className="w-3.5 h-3.5" /> Paid & Verified
-                    </span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-slate-500">Amount Paid:</span>
-                    <span className="font-mono font-bold text-slate-900">₹{application.amountPaid || 1200}.00</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-slate-500">Transaction Ref:</span>
-                    <span className="font-mono text-slate-700 text-[11px]">{application.transactionId}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-slate-500">Gateway:</span>
-                    <span className="text-slate-700">Razorpay Secure Online</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-slate-500">Submission Date:</span>
-                    <span className="text-slate-700">{new Date(application.createdAt).toLocaleDateString()}</span>
-                  </div>
-                </div>
+          {/* Quick Admit Card Alert if ready */}
+          {admitCard && (
+            <div className="bg-amber-50 border-2 border-amber-300 rounded-2xl p-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+              <div className="space-y-1">
+                <span className="bg-amber-200 text-amber-900 text-[10px] font-black px-2 py-0.5 rounded uppercase">
+                  Roll No: {admitCard.rollNumber}
+                </span>
+                <h4 className="font-black text-slate-900 text-base">
+                  Entrance Examination Admit Card Issued
+                </h4>
+                <p className="text-xs text-slate-600">
+                  Venue: <strong>{admitCard.examCentreName}</strong> | Date: <strong>{admitCard.examDate}</strong> ({admitCard.reportingTime})
+                </p>
               </div>
 
-              {/* Helpline Box */}
-              <div className="bg-slate-900 text-white rounded-2xl p-6 shadow-md space-y-3">
-                <h4 className="font-bold text-sm text-amber-400 flex items-center gap-2">
-                  <Phone className="w-4 h-4" /> Admission Helpdesk
-                </h4>
-                <p className="text-xs text-slate-300 leading-relaxed">
-                  Have questions regarding document verification, syllabus, or exam centres? Contact the Gurukul Kurukshetra Examination Cell.
-                </p>
-                <div className="pt-2 text-xs space-y-1 font-mono text-amber-200">
-                  <div>+91-1744-259114</div>
-                  <div>+91-9896328329</div>
-                </div>
+              <Link
+                href="/admit-card"
+                className="bg-gurukul-600 hover:bg-gurukul-700 text-white font-bold text-xs px-5 py-2.5 rounded-xl shadow transition flex items-center gap-1.5 flex-shrink-0"
+              >
+                <Printer className="w-4 h-4" />
+                <span>Print Hall Ticket</span>
+              </Link>
+            </div>
+          )}
+        </div>
+
+        {/* Right 1 Col: Fee Payment Receipt & Helpline */}
+        <div className="space-y-6">
+          {/* Payment Receipt */}
+          <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm space-y-4">
+            <h3 className="font-bold text-slate-900 text-sm flex items-center gap-2 border-b border-slate-100 pb-3">
+              <CreditCard className="w-4 h-4 text-emerald-600" /> Fee Payment Receipt
+            </h3>
+
+            <div className="space-y-2 text-xs">
+              <div className="flex justify-between">
+                <span className="text-slate-500">Payment Status:</span>
+                <span className="font-bold text-emerald-600 uppercase flex items-center gap-1">
+                  <CheckCircle2 className="w-3.5 h-3.5" /> Paid & Verified
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-500">Amount Paid:</span>
+                <span className="font-mono font-bold text-slate-900">₹{application.amountPaid || 1200}.00</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-500">Transaction Ref:</span>
+                <span className="font-mono text-slate-700 text-[11px]">{application.transactionId}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-500">Gateway:</span>
+                <span className="text-slate-700">Razorpay Secure Online</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-500">Submission Date:</span>
+                <span className="text-slate-700">{new Date(application.createdAt).toLocaleDateString()}</span>
               </div>
             </div>
           </div>
-        </>
-      )}
+
+          {/* Helpline Box */}
+          <div className="bg-slate-900 text-white rounded-2xl p-6 shadow-md space-y-3">
+            <h4 className="font-bold text-sm text-amber-400 flex items-center gap-2">
+              <Phone className="w-4 h-4" /> Admission Helpdesk
+            </h4>
+            <p className="text-xs text-slate-300 leading-relaxed">
+              Have questions regarding document verification, syllabus, or exam centres? Contact the Gurukul Kurukshetra Examination Cell.
+            </p>
+            <div className="pt-2 text-xs space-y-1 font-mono text-amber-200">
+              <div>+91-1744-259114</div>
+              <div>+91-9896328329</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Accessible Centralized Modal */}
+      <ConfirmModal
+        isOpen={modalState.isOpen}
+        title={modalState.title}
+        message={modalState.message}
+        variant={modalState.variant}
+        confirmText={modalState.confirmText}
+        cancelText={modalState.cancelText}
+        onConfirm={modalState.onConfirm}
+        onCancel={() => setModalState((prev) => ({ ...prev, isOpen: false }))}
+      />
     </div>
   );
 }

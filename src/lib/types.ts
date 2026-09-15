@@ -162,6 +162,7 @@ export interface ExamCentre {
 
 export interface SystemSettings {
   portalOpen: boolean;
+  resultsDeclared: boolean;
   academicSession: string;
   applicationFee: number;
   registrationStartDate: string;
@@ -173,3 +174,52 @@ export interface SystemSettings {
   helplinePhone: string;
   helplineEmail: string;
 }
+
+export type AdminNotificationType =
+  | 'APPLICATION_SUBMITTED'
+  | 'APPLICATION_STATUS_CHANGED'
+  | 'APPLICATION_APPROVED'
+  | 'APPLICATION_REJECTED'
+  | 'CORRECTION_REQUIRED'
+  | 'CONTACT_ENQUIRY'
+  | 'ADMIN_UPDATE';
+
+export interface AdminNotification {
+  id: string;
+  type: AdminNotificationType;
+  title: string;
+  message: string;
+  entityId?: string;
+  entityType?: 'application' | 'enquiry' | 'user' | 'system';
+  link?: string;
+  isRead: boolean;
+  metadata?: {
+    candidateName?: string;
+    applicationNumber?: string;
+    classApplying?: string;
+    email?: string;
+    phone?: string;
+    rejectionReason?: string;
+    remarks?: string;
+    [key: string]: any;
+  };
+  createdAt: string;
+}
+
+export type ContactEnquiryStatus = 'new' | 'read' | 'in_progress' | 'resolved';
+
+export interface ContactEnquiry {
+  id: string;
+  name: string;
+  email: string;
+  phone: string;
+  subject: string;
+  message: string;
+  applicationNumber?: string;
+  source: 'public_contact' | 'candidate_grievance';
+  status: ContactEnquiryStatus;
+  adminRemarks?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+

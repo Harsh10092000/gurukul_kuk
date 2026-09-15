@@ -16,7 +16,9 @@ import {
   ShieldCheck, 
   Menu, 
   X,
-  ExternalLink
+  ExternalLink,
+  Bell,
+  MessageSquare
 } from 'lucide-react';
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
@@ -24,6 +26,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const router = useRouter();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [adminUser, setAdminUser] = useState<any>(null);
+
+  const [unreadNotifCount, setUnreadNotifCount] = useState(0);
+  const [unreadEnquiryCount, setUnreadEnquiryCount] = useState(0);
 
   useEffect(() => {
     // Don't check on admin login page
@@ -39,6 +44,40 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         }
       })
       .catch(() => router.push('/admin/login'));
+
+    // Fetch unread counters
+    const fetchCounters = () => {
+      fetch('/api/admin/notifications?limit=1')
+        .then((res) => res.json())
+        .then((data) => {
+          if (data.unreadCount !== undefined) setUnreadNotifCount(data.unreadCount);
+        })
+        .catch(() => {});
+
+      fetch('/api/admin/enquiries?status=new')
+        .then((res) => res.json())
+        .then((data) => {
+          if (data.enquiries) setUnreadEnquiryCount(data.enquiries.length);
+        })
+        .catch(() => {});
+    };
+
+    fetchCounters();
+    const interval = setInterval(fetchCounters, 20000);
+
+    // Immediately sync the sidebar badge when the bell marks notifications as read
+    const handleNotifCountUpdate = (e: Event) => {
+      const evt = e as CustomEvent<{ unreadCount: number }>;
+      if (typeof evt.detail?.unreadCount === 'number') {
+        setUnreadNotifCount(evt.detail.unreadCount);
+      }
+    };
+    window.addEventListener('gurukul:notif-count-update', handleNotifCountUpdate);
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('gurukul:notif-count-update', handleNotifCountUpdate);
+    };
   }, [pathname, router]);
 
   const handleLogout = async () => {
@@ -54,6 +93,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const navItems = [
     { name: 'Analytics & Overview', href: '/admin/dashboard', icon: LayoutDashboard },
     { name: 'Candidate Applications', href: '/admin/applications', icon: Users },
+    { name: 'Contact Enquiries', href: '/admin/enquiries', icon: MessageSquare, badge: unreadEnquiryCount },
+    { name: 'Notification Center', href: '/admin/notifications', icon: Bell, badge: unreadNotifCount },
     { name: 'Results & Merit List', href: '/admin/results', icon: Award },
     { name: 'Attendance Registers', href: '/admin/attendance', icon: CheckSquare },
     { name: 'Examination Centres', href: '/admin/centers', icon: Building },
@@ -73,6 +114,18 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           <span className="font-black text-sm tracking-tight">GURUKUL ADMIN</span>
         </Link>
         <div className="flex items-center gap-2">
+          <Link
+            href="/admin/notifications"
+            className="relative p-1.5 text-slate-300 hover:text-white"
+            title="Notifications"
+          >
+            <Bell className="w-5 h-5 text-amber-400" />
+            {unreadNotifCount > 0 && (
+              <span className="absolute top-0 right-0 bg-red-600 text-white font-mono text-[9px] font-bold w-4 h-4 rounded-full flex items-center justify-center">
+                {unreadNotifCount > 9 ? '9+' : unreadNotifCount}
+              </span>
+            )}
+          </Link>
           <button
             onClick={handleLogout}
             className="bg-red-600 hover:bg-red-700 text-white px-2.5 py-1 rounded text-xs font-bold flex items-center gap-1"
@@ -128,14 +181,27 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                   key={item.href}
                   href={item.href}
                   onClick={() => setSidebarOpen(false)}
-                  className={`flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold transition ${
+                  className={`flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold transition ${
                     isActive
                       ? 'bg-amber-500 text-gurukul-navy shadow-md font-black'
                       : 'text-slate-300 hover:bg-slate-800 hover:text-white'
                   }`}
                 >
-                  <Icon className={`w-4 h-4 ${isActive ? 'text-gurukul-navy' : 'text-amber-400'}`} />
-                  <span>{item.name}</span>
+                  <div className="flex items-center gap-3">
+                    <Icon className={`w-4 h-4 ${isActive ? 'text-gurukul-navy' : 'text-amber-400'}`} />
+                    <span>{item.name}</span>
+                  </div>
+                  {item.badge !== undefined && item.badge > 0 && (
+                    <span
+                      className={`text-[10px] font-mono font-extrabold px-1.5 py-0.2 rounded-full ${
+                        isActive
+                          ? 'bg-gurukul-navy text-amber-400'
+                          : 'bg-red-600 text-white'
+                      }`}
+                    >
+                      {item.badge > 99 ? '99+' : item.badge}
+                    </span>
+                  )}
                 </Link>
               );
             })}

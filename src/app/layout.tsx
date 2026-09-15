@@ -42,6 +42,32 @@ export default function RootLayout({
     <html lang="en" className={`${inter.variable} ${merriweather.variable} scroll-smooth`}>
       <head>
         <link rel="icon" href="/favicon.ico" sizes="any" />
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              // Safeguard: Intercept third-party browser extension content-script errors from bubbling to Next.js dev overlay
+              if (typeof window !== 'undefined') {
+                window.addEventListener('error', function(event) {
+                  var fn = event.filename || '';
+                  var msg = event.message || '';
+                  if (fn.indexOf('chrome-extension://') !== -1 || fn.indexOf('moz-extension://') !== -1 || msg.indexOf('M_ID') !== -1) {
+                    event.stopImmediatePropagation();
+                    event.preventDefault();
+                    return true;
+                  }
+                }, true);
+
+                window.addEventListener('unhandledrejection', function(event) {
+                  var r = event.reason;
+                  if (r && ((r.stack && r.stack.indexOf('chrome-extension://') !== -1) || (r.message && r.message.indexOf('M_ID') !== -1))) {
+                    event.stopImmediatePropagation();
+                    event.preventDefault();
+                  }
+                });
+              }
+            `,
+          }}
+        />
       </head>
       <body className="font-sans min-h-screen flex flex-col bg-slate-50 text-slate-900">
         <Header />

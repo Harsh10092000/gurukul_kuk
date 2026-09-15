@@ -53,8 +53,11 @@ export async function GET(req: Request) {
       candidates = candidates.filter((c) => c.classApplying.toLowerCase().includes(classFilter.toLowerCase()));
     }
 
-    // Sort by roll number or registration number
-    candidates.sort((a, b) => a.rollNumber.localeCompare(b.rollNumber));
+    // STRICT FILTER: Show ONLY candidates whose official Roll Number has been allotted (exclude 'PENDING' and rejected)
+    candidates = candidates.filter((c) => c.rollNumber && c.rollNumber !== 'PENDING' && c.status !== 'rejected');
+
+    // Sort by roll number numerically or alphabetically
+    candidates.sort((a, b) => a.rollNumber.localeCompare(b.rollNumber, undefined, { numeric: true }));
 
     return NextResponse.json({
       success: true,

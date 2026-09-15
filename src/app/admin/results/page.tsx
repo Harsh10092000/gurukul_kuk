@@ -20,6 +20,7 @@ export default function AdminResultsPage() {
   const [loading, setLoading] = useState(true);
   const [publishing, setPublishing] = useState(false);
   const [message, setMessage] = useState('');
+  const [errorMessage, setErrorMessage] = useState('');
 
   // Mark Entry Form State
   const [subjects, setSubjects] = useState([
@@ -65,6 +66,7 @@ export default function AdminResultsPage() {
 
     setPublishing(true);
     setMessage('');
+    setErrorMessage('');
 
     try {
       const res = await fetch('/api/results', {
@@ -81,9 +83,11 @@ export default function AdminResultsPage() {
       if (data.success) {
         setMessage('Result published successfully! Candidate scorecard is now live.');
         setResultsList((prev) => [data.result, ...prev.filter((r) => r.id !== data.result.id)]);
+      } else {
+        setErrorMessage(data.error || 'Failed to publish result.');
       }
     } catch {
-      alert('Failed to publish result.');
+      setErrorMessage('Failed to publish result. Please try again.');
     } finally {
       setPublishing(false);
     }
@@ -107,8 +111,15 @@ export default function AdminResultsPage() {
 
       {message && (
         <div className="p-3 bg-emerald-50 border border-emerald-300 rounded-xl text-emerald-900 text-xs font-bold flex items-center gap-2">
-          <CheckCircle className="w-4 h-4 text-emerald-600" />
+          <CheckCircle className="w-4 h-4 text-emerald-600 shrink-0" />
           <span>{message}</span>
+        </div>
+      )}
+
+      {errorMessage && (
+        <div className="p-3 bg-rose-50 border border-rose-300 rounded-xl text-rose-900 text-xs font-bold flex items-center gap-2">
+          <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
+          <span>{errorMessage}</span>
         </div>
       )}
 

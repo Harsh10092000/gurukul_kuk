@@ -5,31 +5,57 @@ import { sendNotification } from '@/lib/notifications';
 
 export async function GET(request: Request) {
   try {
+    const user = await getCurrentUser();
+    if (!user) {
+      return NextResponse.json({ error: 'Authentication required to access examination result' }, { status: 401 });
+    }
+
     const { searchParams } = new URL(request.url);
     const appId = searchParams.get('appId');
     const rollNo = searchParams.get('rollNo');
 
-    if (appId) {
-      const res = await db.getResult(appId);
-      return NextResponse.json({ result: res });
-    }
-
-    if (rollNo) {
-      const res = await db.getResult(rollNo);
-      return NextResponse.json({ result: res });
-    }
-
-    // Try current logged in user
-    const user = await getCurrentUser();
-    if (user) {
-      const app = await db.getApplicationByUserId(user.userId);
-      if (app) {
-        const res = await db.getResult(app.id);
+    // Admin can query any candidate result
+    if (user.role === 'admin') {
+      if (appId) {
+        const res = await db.getResult(appId);
+        return NextResponse.json({ result: res });
+      }
+      if (rollNo) {
+        const res = await db.getResult(rollNo);
         return NextResponse.json({ result: res });
       }
     }
 
-    return NextResponse.json({ result: null });
+    // Check if results are officially declared by examination cell
+    const resultsDeclared = await db.areResultsDeclared();
+    if (!resultsDeclared) {
+      return NextResponse.json(
+        { error: 'Results have not been officially declared yet.', resultsDeclared: false, result: null },
+        { status: 403 }
+      );
+    }
+
+    // Applicant can ONLY access their own result dossier
+    const userApp = await db.getApplicationByUserId(user.userId);
+    if (!userApp) {
+      return NextResponse.json({ result: null, resultsDeclared: true });
+    }
+
+    // Block IDOR parameter tampering
+    if (appId && appId !== userApp.id && appId !== userApp.applicationNumber && appId !== userApp.registrationNumber) {
+      return NextResponse.json({ error: 'Forbidden: You cannot access another candidate result' }, { status: 403 });
+    }
+
+    if (rollNo && (!userApp.rollNumber || rollNo !== userApp.rollNumber)) {
+      return NextResponse.json({ error: 'Forbidden: You cannot query another candidate result' }, { status: 403 });
+    }
+
+    const res = await db.getResult(userApp.id);
+    if (!res || !res.isPublished) {
+      return NextResponse.json({ result: null, resultsDeclared: true });
+    }
+
+    return NextResponse.json({ result: res, resultsDeclared: true });
   } catch (error) {
     console.error('Error in results route:', error);
     return NextResponse.json({ error: 'Failed to retrieve result' }, { status: 500 });

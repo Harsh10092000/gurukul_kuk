@@ -8,7 +8,10 @@ import {
   AdmitCard, 
   ExamResult, 
   ExamCentre, 
-  SystemSettings 
+  SystemSettings,
+  AdminNotification,
+  ContactEnquiry,
+  ContactEnquiryStatus
 } from './types';
 
 // Default configuration from environment
@@ -38,10 +41,13 @@ interface FallbackStore {
   results: ExamResult[];
   examCentres: ExamCentre[];
   settings: SystemSettings;
+  notifications?: AdminNotification[];
+  enquiries?: ContactEnquiry[];
 }
 
 const DEFAULT_SETTINGS: SystemSettings = {
   portalOpen: true,
+  resultsDeclared: false,
   academicSession: '2026-2027',
   applicationFee: 1200,
   registrationStartDate: '2026-09-01',
@@ -109,7 +115,20 @@ function initFallbackFile(): FallbackStore {
   if (fs.existsSync(STORE_FILE)) {
     try {
       const data = fs.readFileSync(STORE_FILE, 'utf-8');
-      return JSON.parse(data);
+      const parsed = JSON.parse(data);
+      let changed = false;
+      if (!parsed.notifications) {
+        parsed.notifications = [];
+        changed = true;
+      }
+      if (!parsed.enquiries) {
+        parsed.enquiries = [];
+        changed = true;
+      }
+      if (changed) {
+        fs.writeFileSync(STORE_FILE, JSON.stringify(parsed, null, 2), 'utf-8');
+      }
+      return parsed;
     } catch (e) {
       console.error('Error reading fallback store, creating fresh one:', e);
     }
@@ -250,9 +269,11 @@ function initFallbackFile(): FallbackStore {
     ],
     examCentres: DEFAULT_CENTRES,
     settings: DEFAULT_SETTINGS,
+    notifications: [],
+    enquiries: [],
   };
 
-  fs.writeFileSync(STORE_FILE, JSON.stringify(initialStore, null, 2), 'utf-8');
+  saveFallbackStore(initialStore);
   return initialStore;
 }
 
@@ -267,7 +288,7 @@ function saveFallbackStore(store: FallbackStore) {
 /**
  * Initialize Database tables in MySQL or initialize fallback JSON store
  */
-export async function initDatabase() {
+export async function initDatabase(): Promise<void> {
   try {
     // 1. First attempt to connect to MySQL server
     const connection = await mysql.createConnection({
@@ -293,6 +314,7 @@ export async function initDatabase() {
         phone VARCHAR(32) NOT NULL,
         password_hash VARCHAR(255) NOT NULL,
         role ENUM('applicant', 'admin', 'verifier', 'accounts') DEFAULT 'applicant',
+        registration_number VARCHAR(64),
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP
       );
     `);
@@ -384,6 +406,38 @@ export async function initDatabase() {
       CREATE TABLE IF NOT EXISTS system_settings (
         setting_key VARCHAR(64) PRIMARY KEY,
         setting_value JSON NOT NULL,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+      );
+    `);
+
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS admin_notifications (
+        id VARCHAR(64) PRIMARY KEY,
+        type VARCHAR(64) NOT NULL,
+        title VARCHAR(255) NOT NULL,
+        message TEXT NOT NULL,
+        entity_id VARCHAR(64),
+        entity_type VARCHAR(32),
+        link VARCHAR(255),
+        is_read BOOLEAN DEFAULT FALSE,
+        metadata JSON,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      );
+    `);
+
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS contact_enquiries (
+        id VARCHAR(64) PRIMARY KEY,
+        name VARCHAR(255) NOT NULL,
+        email VARCHAR(255) NOT NULL,
+        phone VARCHAR(32) NOT NULL,
+        subject VARCHAR(255) NOT NULL,
+        message TEXT NOT NULL,
+        application_number VARCHAR(64),
+        source VARCHAR(32) DEFAULT 'public_contact',
+        status VARCHAR(32) DEFAULT 'new',
+        admin_remarks TEXT,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
       );
     `);
@@ -562,6 +616,50 @@ export const db = {
     return true;
   },
 
+  async updateUser(id: string, updates: Partial<User>): Promise<boolean> {
+    const store = initFallbackFile();
+    const idx = store.users.findIndex((u) => u.id === id);
+    if (idx !== -1) {
+      store.users[idx] = { ...store.users[idx], ...updates };
+      saveFallbackStore(store);
+    }
+
+    if (pool && !useFallbackStorage) {
+      try {
+        if ('registrationNumber' in updates) {
+          await pool.query('UPDATE users SET registration_number = ? WHERE id = ?', [updates.registrationNumber || null, id]);
+        }
+        if (updates.name) {
+          await pool.query('UPDATE users SET name = ? WHERE id = ?', [updates.name, id]);
+        }
+      } catch (e) {
+        console.warn('MySQL updateUser error:', e);
+      }
+    }
+    return true;
+  },
+
+  async deleteUser(id: string): Promise<boolean> {
+    if (useFallbackStorage || !pool) {
+      const store = initFallbackFile();
+      const initialCount = store.users.length;
+      store.users = store.users.filter((u) => u.id !== id && u.registrationNumber !== id && u.email !== id && u.phone !== id);
+      if (store.users.length !== initialCount) {
+        saveFallbackStore(store);
+        return true;
+      }
+      return false;
+    }
+
+    try {
+      const [res]: any = await pool.query('DELETE FROM users WHERE id = ? OR registration_number = ? OR email = ?', [id, id, id]);
+      return res.affectedRows > 0;
+    } catch (e) {
+      console.error('MySQL deleteUser error:', e);
+      return false;
+    }
+  },
+
   async createUser(user: Omit<User, 'id' | 'createdAt' | 'registrationNumber'> & { passwordHash: string; registrationNumber?: string }): Promise<User> {
     const id = 'usr-' + Date.now() + '-' + Math.random().toString(36).substring(2, 7);
     const createdAt = new Date().toISOString();
@@ -607,34 +705,69 @@ export const db = {
   async getApplications(): Promise<Application[]> {
     if (useFallbackStorage || !pool) {
       const store = initFallbackFile();
-      return store.applications.map(a => ({
-        ...a,
-        registrationNumber: a.registrationNumber || a.applicationNumber,
-        applicationNumber: a.applicationNumber || a.registrationNumber,
-      }));
+      return store.applications.map(a => {
+        const user = store.users.find(u => u.id === a.userId);
+        const resolvedName = (a.personalInfo?.fullName && a.personalInfo.fullName !== 'Temp Delete Test' && a.personalInfo.fullName.trim() !== '')
+          ? a.personalInfo.fullName
+          : (user?.name || 'Applicant');
+
+        return {
+          ...a,
+          registrationNumber: a.registrationNumber || a.applicationNumber,
+          applicationNumber: a.applicationNumber || a.registrationNumber,
+          personalInfo: {
+            ...a.personalInfo,
+            fullName: resolvedName,
+            candidateEmail: a.personalInfo?.candidateEmail || user?.email || '',
+            candidateMobile: a.personalInfo?.candidateMobile || user?.phone || '',
+          },
+          parentInfo: {
+            ...a.parentInfo,
+            fatherPhone: a.parentInfo?.fatherPhone || a.personalInfo?.candidateMobile || user?.phone || '',
+          }
+        };
+      });
     }
-    const [rows]: any = await pool.query('SELECT * FROM applications ORDER BY created_at DESC');
-    return rows.map((r: any) => ({
-      id: r.id,
-      registrationNumber: r.registration_number || r.application_number,
-      applicationNumber: r.application_number || r.registration_number,
-      rollNumber: r.roll_number || undefined,
-      userId: r.user_id,
-      classApplying: r.class_applying,
-      personalInfo: typeof r.personal_info === 'string' ? JSON.parse(r.personal_info) : r.personal_info,
-      parentInfo: typeof r.parent_info === 'string' ? JSON.parse(r.parent_info) : r.parent_info,
-      addressInfo: typeof r.address_info === 'string' ? JSON.parse(r.address_info) : r.address_info,
-      academicInfo: typeof r.academic_info === 'string' ? JSON.parse(r.academic_info) : r.academic_info,
-      examCentrePref: typeof r.exam_centre_pref === 'string' ? JSON.parse(r.exam_centre_pref) : r.exam_centre_pref,
-      documents: typeof r.documents === 'string' ? JSON.parse(r.documents) : r.documents,
-      status: r.status,
-      remarks: r.remarks,
-      paymentStatus: r.payment_status,
-      amountPaid: parseFloat(r.amount_paid || 0),
-      transactionId: r.transaction_id,
-      createdAt: r.created_at,
-      updatedAt: r.updated_at,
-    }));
+    const [rows]: any = await pool.query(`
+      SELECT a.*, u.name as user_name, u.email as user_email, u.phone as user_phone
+      FROM applications a
+      LEFT JOIN users u ON a.user_id = u.id
+      ORDER BY a.created_at DESC
+    `);
+    return rows.map((r: any) => {
+      const parsedPersonal = typeof r.personal_info === 'string' ? JSON.parse(r.personal_info) : (r.personal_info || {});
+      const resolvedName = (parsedPersonal.fullName && parsedPersonal.fullName !== 'Temp Delete Test' && parsedPersonal.fullName.trim() !== '')
+        ? parsedPersonal.fullName
+        : (r.user_name || 'Applicant');
+      parsedPersonal.fullName = resolvedName;
+      if (!parsedPersonal.candidateEmail) parsedPersonal.candidateEmail = r.user_email || '';
+      if (!parsedPersonal.candidateMobile) parsedPersonal.candidateMobile = r.user_phone || '';
+
+      const parsedParent = typeof r.parent_info === 'string' ? JSON.parse(r.parent_info) : (r.parent_info || {});
+      if (!parsedParent.fatherPhone) parsedParent.fatherPhone = parsedPersonal.candidateMobile || r.user_phone || '';
+
+      return {
+        id: r.id,
+        registrationNumber: r.registration_number || r.application_number,
+        applicationNumber: r.application_number || r.registration_number,
+        rollNumber: r.roll_number || undefined,
+        userId: r.user_id,
+        classApplying: r.class_applying,
+        personalInfo: parsedPersonal,
+        parentInfo: parsedParent,
+        addressInfo: typeof r.address_info === 'string' ? JSON.parse(r.address_info) : r.address_info,
+        academicInfo: typeof r.academic_info === 'string' ? JSON.parse(r.academic_info) : r.academic_info,
+        examCentrePref: typeof r.exam_centre_pref === 'string' ? JSON.parse(r.exam_centre_pref) : r.exam_centre_pref,
+        documents: typeof r.documents === 'string' ? JSON.parse(r.documents) : r.documents,
+        status: r.status,
+        remarks: r.remarks,
+        paymentStatus: r.payment_status,
+        amountPaid: parseFloat(r.amount_paid || 0),
+        transactionId: r.transaction_id,
+        createdAt: r.created_at,
+        updatedAt: r.updated_at,
+      };
+    });
   },
 
   async getApplicationById(id: string): Promise<Application | null> {
@@ -679,16 +812,39 @@ export const db = {
       const store = initFallbackFile();
       const a = store.applications.find((app) => app.userId === userId);
       if (!a) return null;
+      const user = store.users.find(u => u.id === userId);
+      const resolvedName = (a.personalInfo?.fullName && a.personalInfo.fullName !== 'Temp Delete Test' && a.personalInfo.fullName.trim() !== '')
+        ? a.personalInfo.fullName
+        : (user?.name || 'Applicant');
       return {
         ...a,
         registrationNumber: a.registrationNumber || a.applicationNumber,
         applicationNumber: a.applicationNumber || a.registrationNumber,
+        personalInfo: {
+          ...a.personalInfo,
+          fullName: resolvedName,
+          candidateEmail: a.personalInfo?.candidateEmail || user?.email || '',
+          candidateMobile: a.personalInfo?.candidateMobile || user?.phone || '',
+        },
       };
     }
     const [rows]: any = await pool.query('SELECT * FROM applications WHERE user_id = ? ORDER BY created_at DESC LIMIT 1', [userId]);
     if (!rows.length) return null;
     return this.getApplicationById(rows[0].id);
   },
+
+  async findApplicationByAadhaar(aadhaarNumber: string): Promise<Application | null> {
+    const clean = aadhaarNumber ? aadhaarNumber.replace(/\D/g, '') : '';
+    if (!clean) return null;
+
+    const allApps = await this.getApplications();
+    const found = allApps.find((a) => {
+      const aClean = (a.personalInfo?.aadhaarNumber || '').replace(/\D/g, '');
+      return aClean === clean && a.status !== 'rejected';
+    });
+    return found || null;
+  },
+
 
   async createApplication(app: Omit<Application, 'id' | 'registrationNumber' | 'applicationNumber' | 'createdAt' | 'updatedAt'> & { registrationNumber?: string }): Promise<Application> {
     const store = initFallbackFile();
@@ -698,12 +854,22 @@ export const db = {
     const id = 'app-' + Date.now();
     const now = new Date().toISOString();
 
+    const candidateName = (app.personalInfo?.fullName && app.personalInfo.fullName !== 'Temp Delete Test' && app.personalInfo.fullName.trim() !== '')
+      ? app.personalInfo.fullName
+      : (user?.name || 'Applicant');
+
     const newApp: Application = {
       ...app,
       id,
       registrationNumber: regNumber,
       applicationNumber: regNumber,
       rollNumber: undefined, // Roll number is strictly deferred per user instructions
+      personalInfo: {
+        ...app.personalInfo,
+        fullName: candidateName,
+        candidateEmail: app.personalInfo?.candidateEmail || user?.email || '',
+        candidateMobile: app.personalInfo?.candidateMobile || user?.phone || '',
+      } as any,
       createdAt: now,
       updatedAt: now,
     };
@@ -788,12 +954,22 @@ export const db = {
 
   async saveDraftApplication(draft: Partial<Application> & { userId: string }): Promise<Application> {
     const store = initFallbackFile();
+    const user = store.users.find(u => u.id === draft.userId);
     const existingIndex = store.applications.findIndex(a => a.userId === draft.userId);
     const now = new Date().toISOString();
 
     if (existingIndex !== -1) {
       const existing = store.applications[existingIndex];
-      // Only allow modifying if draft or correction_needed
+      const mergedPersonal = {
+        ...(existing.personalInfo || {}),
+        ...(draft.personalInfo || {}),
+      };
+      if (!mergedPersonal.fullName || mergedPersonal.fullName === 'Temp Delete Test' || mergedPersonal.fullName.trim() === '') {
+        mergedPersonal.fullName = user?.name || existing.personalInfo?.fullName || 'Applicant';
+      }
+      if (!mergedPersonal.candidateEmail) mergedPersonal.candidateEmail = user?.email || '';
+      if (!mergedPersonal.candidateMobile) mergedPersonal.candidateMobile = user?.phone || '';
+
       const updated: Application = {
         ...existing,
         ...draft,
@@ -801,6 +977,7 @@ export const db = {
         userId: existing.userId,
         registrationNumber: existing.registrationNumber,
         applicationNumber: existing.applicationNumber,
+        personalInfo: mergedPersonal,
         currentStep: draft.currentStep || existing.currentStep || 1,
         status: (existing.status === 'submitted' || existing.status === 'approved') ? existing.status : 'draft',
         updatedAt: now,
@@ -840,14 +1017,28 @@ export const db = {
     const id = 'app-draft-' + Date.now();
     const count = store.applications.length + 10001;
     const tempNumber = `DRAFT-${count}`;
+    const newDraftPersonal = {
+      fullName: user?.name || '',
+      candidateEmail: user?.email || '',
+      candidateMobile: user?.phone || '',
+      whatsappNumber: user?.phone || '',
+      ...(draft.personalInfo || {}),
+    };
+    if (!newDraftPersonal.fullName || newDraftPersonal.fullName === 'Temp Delete Test' || newDraftPersonal.fullName.trim() === '') {
+      newDraftPersonal.fullName = user?.name || 'Applicant';
+    }
+
     const newDraft: Application = {
       id,
       registrationNumber: tempNumber,
       applicationNumber: tempNumber,
       userId: draft.userId,
       classApplying: draft.classApplying || 'Class 6',
-      personalInfo: draft.personalInfo || {} as any,
-      parentInfo: draft.parentInfo || {} as any,
+      personalInfo: newDraftPersonal as any,
+      parentInfo: {
+        fatherPhone: draft.parentInfo?.fatherPhone || '',
+        ...(draft.parentInfo || {}),
+      } as any,
       addressInfo: draft.addressInfo || {} as any,
       academicInfo: draft.academicInfo || {} as any,
       examCentrePref: draft.examCentrePref || {} as any,
@@ -909,6 +1100,12 @@ export const db = {
         app.status = status;
         if (remarks !== undefined) app.remarks = remarks;
         app.updatedAt = now;
+
+        // If rejected, automatically revoke and delete any issued Admit Card
+        if (status === 'rejected') {
+          store.admitCards = store.admitCards.filter((c) => c.applicationId !== id);
+        }
+
         saveFallbackStore(store);
         return true;
       }
@@ -919,6 +1116,11 @@ export const db = {
       'UPDATE applications SET status = ?, remarks = ?, updated_at = ? WHERE id = ?',
       [status, remarks || null, now, id]
     );
+
+    if (status === 'rejected') {
+      await pool.query('DELETE FROM admit_cards WHERE application_id = ?', [id]);
+    }
+
     return true;
   },
 
@@ -1180,6 +1382,25 @@ export const db = {
     return this.publishResult(result);
   },
 
+  async areResultsDeclared(): Promise<boolean> {
+    // Uses the admin-controlled resultsDeclared flag in settings.
+    // Merely having published result records does NOT expose them to candidates.
+    // Admin must explicitly toggle Settings > Declare Results = ON.
+    if (useFallbackStorage || !pool) {
+      const store = initFallbackFile();
+      return store.settings?.resultsDeclared === true;
+    }
+    try {
+      const [rows]: any = await pool.query(
+        "SELECT setting_value FROM system_settings WHERE setting_key = 'resultsDeclared' LIMIT 1"
+      );
+      return rows[0]?.setting_value === 'true' || rows[0]?.setting_value === true;
+    } catch {
+      const store = initFallbackFile();
+      return store.settings?.resultsDeclared === true;
+    }
+  },
+
   // Settings & Exam Centres
   async getSettings(): Promise<SystemSettings> {
     const store = initFallbackFile();
@@ -1308,7 +1529,335 @@ export const db = {
 
     return true;
   },
+
+  // ==========================================
+  // --- Admin Notifications ---
+  // ==========================================
+  async getAdminNotifications(limit: number = 50): Promise<AdminNotification[]> {
+    if (useFallbackStorage || !pool) {
+      const store = initFallbackFile();
+      const notifs = store.notifications || [];
+      return [...notifs]
+        .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+        .slice(0, limit);
+    }
+
+    try {
+      const [rows] = await pool.query<mysql.RowDataPacket[]>(
+        'SELECT * FROM admin_notifications ORDER BY created_at DESC LIMIT ?',
+        [limit]
+      );
+      return rows.map((r) => ({
+        id: r.id,
+        type: r.type,
+        title: r.title,
+        message: r.message,
+        entityId: r.entity_id || undefined,
+        entityType: r.entity_type || undefined,
+        link: r.link || undefined,
+        isRead: Boolean(r.is_read),
+        metadata: r.metadata ? (typeof r.metadata === 'string' ? JSON.parse(r.metadata) : r.metadata) : undefined,
+        createdAt: r.created_at ? new Date(r.created_at).toISOString() : new Date().toISOString(),
+      }));
+    } catch (e) {
+      console.warn('MySQL getAdminNotifications error, falling back to JSON:', e);
+      const store = initFallbackFile();
+      return [...(store.notifications || [])]
+        .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+        .slice(0, limit);
+    }
+  },
+
+  async getUnreadAdminNotificationCount(): Promise<number> {
+    if (useFallbackStorage || !pool) {
+      const store = initFallbackFile();
+      return (store.notifications || []).filter((n) => !n.isRead).length;
+    }
+
+    try {
+      const [rows] = await pool.query<mysql.RowDataPacket[]>(
+        'SELECT COUNT(*) as unread_count FROM admin_notifications WHERE is_read = FALSE'
+      );
+      return rows[0]?.unread_count || 0;
+    } catch (e) {
+      const store = initFallbackFile();
+      return (store.notifications || []).filter((n) => !n.isRead).length;
+    }
+  },
+
+  async createAdminNotification(data: Omit<AdminNotification, 'id' | 'isRead' | 'createdAt'>): Promise<AdminNotification> {
+    const id = `notif-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`;
+    const now = new Date().toISOString();
+    const newNotification: AdminNotification = {
+      ...data,
+      id,
+      isRead: false,
+      createdAt: now,
+    };
+
+    const store = initFallbackFile();
+    if (!store.notifications) store.notifications = [];
+    store.notifications.unshift(newNotification);
+    // Strict max 100 notifications FIFO queue limit (delete oldest when incoming exceeds 100)
+    if (store.notifications.length > 100) {
+      store.notifications = store.notifications.slice(0, 100);
+    }
+    saveFallbackStore(store);
+
+    if (pool && !useFallbackStorage) {
+      try {
+        await pool.query(
+          `INSERT INTO admin_notifications (id, type, title, message, entity_id, entity_type, link, is_read, metadata, created_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, FALSE, ?, ?)`,
+          [
+            newNotification.id,
+            newNotification.type,
+            newNotification.title,
+            newNotification.message,
+            newNotification.entityId || null,
+            newNotification.entityType || null,
+            newNotification.link || null,
+            newNotification.metadata ? JSON.stringify(newNotification.metadata) : null,
+            now,
+          ]
+        );
+
+        // Enforce max 100 notifications in MySQL by pruning oldest records
+        await pool.query(
+          `DELETE FROM admin_notifications WHERE id NOT IN (
+            SELECT id FROM (
+              SELECT id FROM admin_notifications ORDER BY created_at DESC LIMIT 100
+            ) AS latest_queue
+          )`
+        );
+      } catch (e) {
+        console.warn('MySQL createAdminNotification error:', e);
+      }
+    }
+
+    return newNotification;
+  },
+
+  async markAdminNotificationAsRead(id: string): Promise<boolean> {
+    const store = initFallbackFile();
+    if (!store.notifications) store.notifications = [];
+    const notif = store.notifications.find((n) => n.id === id);
+    if (notif) {
+      notif.isRead = true;
+      saveFallbackStore(store);
+    }
+
+    if (pool && !useFallbackStorage) {
+      try {
+        await pool.query('UPDATE admin_notifications SET is_read = TRUE WHERE id = ?', [id]);
+      } catch (e) {
+        console.warn('MySQL markAdminNotificationAsRead error:', e);
+      }
+    }
+
+    return true;
+  },
+
+  async markAllAdminNotificationsAsRead(): Promise<boolean> {
+    const store = initFallbackFile();
+    if (!store.notifications) store.notifications = [];
+    store.notifications.forEach((n) => {
+      n.isRead = true;
+    });
+    saveFallbackStore(store);
+
+    if (pool && !useFallbackStorage) {
+      try {
+        await pool.query('UPDATE admin_notifications SET is_read = TRUE');
+      } catch (e) {
+        console.warn('MySQL markAllAdminNotificationsAsRead error:', e);
+      }
+    }
+
+    return true;
+  },
+
+  // ==========================================
+  // --- Contact Enquiries ---
+  // ==========================================
+  async getContactEnquiries(status?: string): Promise<ContactEnquiry[]> {
+    if (useFallbackStorage || !pool) {
+      const store = initFallbackFile();
+      let enqs = store.enquiries || [];
+      if (status && status !== 'all') {
+        enqs = enqs.filter((e) => e.status === status);
+      }
+      return [...enqs].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    }
+
+    try {
+      let query = 'SELECT * FROM contact_enquiries';
+      const params: any[] = [];
+      if (status && status !== 'all') {
+        query += ' WHERE status = ?';
+        params.push(status);
+      }
+      query += ' ORDER BY created_at DESC';
+      const [rows] = await pool.query<mysql.RowDataPacket[]>(query, params);
+      return rows.map((r) => ({
+        id: r.id,
+        name: r.name,
+        email: r.email,
+        phone: r.phone,
+        subject: r.subject,
+        message: r.message,
+        applicationNumber: r.application_number || undefined,
+        source: (r.source as any) || 'public_contact',
+        status: (r.status as any) || 'new',
+        adminRemarks: r.admin_remarks || undefined,
+        createdAt: r.created_at ? new Date(r.created_at).toISOString() : new Date().toISOString(),
+        updatedAt: r.updated_at ? new Date(r.updated_at).toISOString() : new Date().toISOString(),
+      }));
+    } catch (e) {
+      console.warn('MySQL getContactEnquiries error, falling back:', e);
+      const store = initFallbackFile();
+      let enqs = store.enquiries || [];
+      if (status && status !== 'all') {
+        enqs = enqs.filter((e) => e.status === status);
+      }
+      return [...enqs].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    }
+  },
+
+  async getContactEnquiryById(id: string): Promise<ContactEnquiry | null> {
+    const store = initFallbackFile();
+    const enq = (store.enquiries || []).find((e) => e.id === id);
+    if (enq) return enq;
+
+    if (pool && !useFallbackStorage) {
+      try {
+        const [rows] = await pool.query<mysql.RowDataPacket[]>('SELECT * FROM contact_enquiries WHERE id = ?', [id]);
+        if (rows.length > 0) {
+          const r = rows[0];
+          return {
+            id: r.id,
+            name: r.name,
+            email: r.email,
+            phone: r.phone,
+            subject: r.subject,
+            message: r.message,
+            applicationNumber: r.application_number || undefined,
+            source: (r.source as any) || 'public_contact',
+            status: (r.status as any) || 'new',
+            adminRemarks: r.admin_remarks || undefined,
+            createdAt: r.created_at ? new Date(r.created_at).toISOString() : new Date().toISOString(),
+            updatedAt: r.updated_at ? new Date(r.updated_at).toISOString() : new Date().toISOString(),
+          };
+        }
+      } catch (e) {
+        console.warn('MySQL getContactEnquiryById error:', e);
+      }
+    }
+    return null;
+  },
+
+  async createContactEnquiry(data: {
+    name: string;
+    email: string;
+    phone: string;
+    subject: string;
+    message: string;
+    applicationNumber?: string;
+    source?: 'public_contact' | 'candidate_grievance';
+  }): Promise<ContactEnquiry> {
+    const id = `enq-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`;
+    const now = new Date().toISOString();
+    const newEnq: ContactEnquiry = {
+      id,
+      name: data.name.trim(),
+      email: data.email.trim(),
+      phone: data.phone.trim(),
+      subject: data.subject.trim(),
+      message: data.message.trim(),
+      applicationNumber: data.applicationNumber?.trim() || undefined,
+      source: data.source || 'public_contact',
+      status: 'new',
+      createdAt: now,
+      updatedAt: now,
+    };
+
+    const store = initFallbackFile();
+    if (!store.enquiries) store.enquiries = [];
+    store.enquiries.unshift(newEnq);
+    saveFallbackStore(store);
+
+    if (pool && !useFallbackStorage) {
+      try {
+        await pool.query(
+          `INSERT INTO contact_enquiries (id, name, email, phone, subject, message, application_number, source, status, created_at, updated_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'new', ?, ?)`,
+          [
+            newEnq.id,
+            newEnq.name,
+            newEnq.email,
+            newEnq.phone,
+            newEnq.subject,
+            newEnq.message,
+            newEnq.applicationNumber || null,
+            newEnq.source,
+            now,
+            now,
+          ]
+        );
+      } catch (e) {
+        console.warn('MySQL createContactEnquiry error:', e);
+      }
+    }
+
+    // Automatically generate Admin Notification for new enquiry
+    await db.createAdminNotification({
+      type: 'CONTACT_ENQUIRY',
+      title: `New Enquiry: ${newEnq.name}`,
+      message: `${newEnq.name} (${newEnq.email}) submitted an enquiry: "${newEnq.subject}". Mobile: ${newEnq.phone}`,
+      entityId: newEnq.id,
+      entityType: 'enquiry',
+      link: `/admin/enquiries?id=${newEnq.id}`,
+      metadata: {
+        enquiryId: newEnq.id,
+        name: newEnq.name,
+        email: newEnq.email,
+        phone: newEnq.phone,
+        subject: newEnq.subject,
+        applicationNumber: newEnq.applicationNumber,
+      },
+    });
+
+    return newEnq;
+  },
+
+  async updateContactEnquiryStatus(id: string, status: ContactEnquiryStatus, remarks?: string): Promise<ContactEnquiry | null> {
+    const now = new Date().toISOString();
+    const store = initFallbackFile();
+    if (!store.enquiries) store.enquiries = [];
+    const idx = store.enquiries.findIndex((e) => e.id === id);
+    if (idx === -1) return null;
+
+    store.enquiries[idx].status = status;
+    if (remarks !== undefined) store.enquiries[idx].adminRemarks = remarks;
+    store.enquiries[idx].updatedAt = now;
+    const updated = store.enquiries[idx];
+    saveFallbackStore(store);
+
+    if (pool && !useFallbackStorage) {
+      try {
+        await pool.query(
+          'UPDATE contact_enquiries SET status = ?, admin_remarks = ?, updated_at = ? WHERE id = ?',
+          [status, remarks || null, now, id]
+        );
+      } catch (e) {
+        console.warn('MySQL updateContactEnquiryStatus error:', e);
+      }
+    }
+
+    return updated;
+  },
 };
 
 // Automatically execute schema init on module load
 initDatabase().catch((e) => console.error('Database auto-init error:', e));
+

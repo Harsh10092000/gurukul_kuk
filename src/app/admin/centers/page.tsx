@@ -16,11 +16,19 @@ import {
   Loader2,
 } from 'lucide-react';
 import { ExamCentre } from '@/lib/types';
+import ConfirmModal from '@/components/ConfirmModal';
 
 export default function AdminCentersPage() {
   const [centres, setCentres] = useState<ExamCentre[]>([]);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+
+  // Delete modal state
+  const [deleteModal, setDeleteModal] = useState<{ isOpen: boolean; id: string; name: string }>({
+    isOpen: false,
+    id: '',
+    name: '',
+  });
 
   // Modals state
   const [showAddModal, setShowAddModal] = useState(false);
@@ -144,11 +152,13 @@ export default function AdminCentersPage() {
     }
   };
 
-  const handleDelete = async (id: string, name: string) => {
-    if (!window.confirm(`Are you sure you want to delete examination venue "${name}"? This action cannot be undone.`)) {
-      return;
-    }
+  const handleDelete = (id: string, name: string) => {
+    setDeleteModal({ isOpen: true, id, name });
+  };
 
+  const confirmDelete = async () => {
+    const { id, name } = deleteModal;
+    setDeleteModal({ isOpen: false, id: '', name: '' });
     try {
       setDeletingId(id);
       const res = await fetch(`/api/admin/centres/${id}`, {
@@ -606,6 +616,18 @@ export default function AdminCentersPage() {
           </div>
         </div>
       )}
+
+      {/* Accessible Centralized Delete Confirmation Modal */}
+      <ConfirmModal
+        isOpen={deleteModal.isOpen}
+        title="Delete Examination Venue?"
+        message={`Are you sure you want to delete venue "${deleteModal.name}"?\n\nThis action cannot be undone and candidates registered for this centre will need re-allocation.`}
+        variant="danger"
+        confirmText="Delete Venue"
+        cancelText="Cancel"
+        onConfirm={confirmDelete}
+        onCancel={() => setDeleteModal({ isOpen: false, id: '', name: '' })}
+      />
     </div>
   );
 }

@@ -154,6 +154,7 @@ export async function POST(req: Request) {
         maskedEmail: recipientEmail ? maskEmail(recipientEmail) : undefined,
         maskedPhone: recipientPhone ? maskPhone(recipientPhone) : undefined,
         expiresInSeconds: 600,
+        devOtp: process.env.NODE_ENV !== 'production' ? generatedOtp : undefined,
       });
     }
 

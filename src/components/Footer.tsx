@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname } from 'next/navigation';
@@ -8,6 +8,18 @@ import { MapPin, Phone, Mail, Shield, CheckCircle2, ExternalLink } from 'lucide-
 
 export default function Footer() {
   const pathname = usePathname();
+  const [resultsDeclared, setResultsDeclared] = useState(false);
+
+  useEffect(() => {
+    fetch('/api/results/status')
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.resultsDeclared === true) {
+          setResultsDeclared(true);
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   return (
     <footer className="bg-gurukul-navy text-slate-300 border-t-4 border-gurukul-500">
@@ -71,14 +83,21 @@ export default function Footer() {
                 <span>›</span> Download Hall Ticket / Admit Card
               </Link>
             </li>
-            <li>
-              <Link href="/result" className="hover:text-amber-400 transition flex items-center gap-1">
-                <span>›</span> Entrance Exam Result & Merit List
-              </Link>
-            </li>
+            {resultsDeclared && (
+              <li>
+                <Link href="/result" className="hover:text-amber-400 transition flex items-center gap-1">
+                  <span>›</span> Entrance Exam Result & Merit List
+                </Link>
+              </li>
+            )}
             <li>
               <Link href="/#classes" className="hover:text-amber-400 transition flex items-center gap-1">
                 <span>›</span> Class-wise Eligibility Criteria
+              </Link>
+            </li>
+            <li>
+              <Link href="/contact" className="hover:text-amber-400 transition flex items-center gap-1 font-bold text-amber-300">
+                <span>›</span> Helpdesk & Contact Enquiries
               </Link>
             </li>
           </ul>

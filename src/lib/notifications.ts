@@ -20,8 +20,8 @@ export interface NotificationPayload {
 }
 
 // Configure real Gmail SMTP with provided credentials
-const SMTP_USER = (process.env.SMTP_USER || 'anshumiglaniji08@gmail.com').trim();
-const SMTP_PASS = (process.env.SMTP_PASS || 'psuj klcu wfta fpve').replace(/\s+/g, '');
+const SMTP_USER = (process.env.SMTP_USER || process.env.CMAIL || 'anshumiglaniji08@gmail.com').trim();
+const SMTP_PASS = (process.env.SMTP_PASS || process.env.CPASS || '').replace(/\s+/g, '');
 
 const transporter = nodemailer.createTransport({
   service: 'gmail',
@@ -33,7 +33,12 @@ const transporter = nodemailer.createTransport({
 
 export async function sendNotification(payload: NotificationPayload) {
   const { to, name, type, data } = payload;
-  console.log(`[Notification] Dispatching ${type} to ${to} (${name}) via Nodemailer`);
+  const cleanTo = (to || '').trim().toLowerCase();
+  if (!cleanTo || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanTo)) {
+    console.warn(`[Notification] Invalid or empty recipient email rejected: ${cleanTo}`);
+    return { success: false, error: 'Invalid recipient email' };
+  }
+  console.log(`[Notification] Dispatching ${type} to ${cleanTo} (${name}) via Nodemailer`);
 
   let subject = 'Gurukul Kurukshetra - Notification';
   let message = '';
@@ -378,9 +383,64 @@ export async function sendNotification(payload: NotificationPayload) {
       break;
 
     case 'APPLICATION_SUBMITTED':
-      subject = `Gurukul Kurukshetra - Application Submitted: ${data.applicationNumber}`;
-      message = `Dear ${name}, your application ${data.applicationNumber} for Gurukul Kurukshetra Entrance Exam 2026 has been submitted successfully.`;
-      htmlContent = `<p>${message}</p>`;
+      subject = 'Gurukul Kurukshetra – Application Submitted Successfully';
+      message = `Dear ${name || 'Candidate'},\n\nYour application for Entrance Examination 2026-27 has been successfully submitted.\n\nRegistration Number:\n${data.registrationNumber || data.applicationNumber}\n\nPlease keep this registration number safe for future reference.\n\nRegards,\nGurukul Kurukshetra\nAdmissions / Examination Department`;
+      htmlContent = `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta charset="utf-8">
+          <style>
+            body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #f8fafc; margin: 0; padding: 24px 12px; color: #1e293b; }
+            .container { max-width: 600px; margin: 0 auto; background: #ffffff; border-radius: 16px; overflow: hidden; border: 1px solid #e2e8f0; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); }
+            .header { background: #0b192c; padding: 24px 20px; text-align: center; border-bottom: 3px solid #f59e0b; }
+            .header h1 { color: #ffffff; margin: 0 0 4px 0; font-size: 20px; font-weight: 800; letter-spacing: 0.5px; }
+            .header p { color: #f59e0b; margin: 0; font-size: 11px; font-weight: bold; letter-spacing: 1px; }
+            .content { padding: 32px 28px; }
+            .reg-box { background: #f0fdf4; border: 2px dashed #16a34a; border-radius: 12px; padding: 20px; text-align: center; margin: 24px 0; }
+            .reg-label { font-size: 11px; text-transform: uppercase; letter-spacing: 1.5px; font-weight: 800; color: #166534; margin-bottom: 6px; }
+            .reg-code { font-family: 'Courier New', monospace; font-size: 32px; font-weight: 900; letter-spacing: 3px; color: #0b192c; margin: 6px 0; }
+            .footer { background: #f1f5f9; padding: 18px 24px; text-align: center; font-size: 11px; color: #64748b; border-top: 1px solid #e2e8f0; line-height: 1.5; }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="header">
+              <h1>GURUKUL KURUKSHETRA</h1>
+              <p>ENTRANCE EXAMINATION (SESSION 2026-27)</p>
+            </div>
+            <div class="content">
+              <p style="font-size: 15px; font-weight: 600; color: #0f172a; margin-top: 0;">Dear ${name || 'Candidate'},</p>
+              <p style="font-size: 14px; line-height: 1.6; color: #334155;">
+                Your application for Entrance Examination 2026-27 has been successfully submitted.
+              </p>
+              
+              <div class="reg-box">
+                <div class="reg-label">Registration Number</div>
+                <div class="reg-code">${data.registrationNumber || data.applicationNumber}</div>
+                <div style="font-size: 12px; color: #166534; font-weight: 600; margin-top: 4px;">
+                  Class: ${data.classApplying || 'Entrance Examination'}
+                </div>
+              </div>
+
+              <p style="font-size: 13.5px; line-height: 1.6; color: #334155;">
+                Please keep this registration number safe for future reference. You will require it along with your password to access the candidate portal, track document scrutiny, and download your Admit Card.
+              </p>
+
+              <div style="margin-top: 24px; padding-top: 16px; border-top: 1px solid #e2e8f0; font-size: 13px; color: #475569;">
+                Regards,<br>
+                <strong>Gurukul Kurukshetra</strong><br>
+                Admissions / Examination Department
+              </div>
+            </div>
+            <div class="footer">
+              Gurukul Kurukshetra, Near 3rd Gate, Kurukshetra University, Kurukshetra, Haryana - 136119<br>
+              Helpline: +91-1744-259114 • Email: admissions@gurukulkurukshetra.com
+            </div>
+          </div>
+        </body>
+        </html>
+      `;
       break;
 
     case 'PAYMENT_SUCCESS':
@@ -420,18 +480,83 @@ export async function sendNotification(payload: NotificationPayload) {
       break;
 
     case 'APPLICATION_REJECTED':
-      subject = `Gurukul Kurukshetra - Application Status Notice: ${data.applicationNumber}`;
-      message = `Dear ${name}, your application (${data.applicationNumber}) has been reviewed by the committee and requires revision/clarification. Reason: "${data.remarks}". You may submit revised details or missing documents via your candidate dashboard.`;
+      subject = `Official Notice: Application Rejected / Disqualified - Gurukul Kurukshetra Entrance 2026-27 (${data.applicationNumber})`;
+      message = `Dear ${name}, this is an official notification that your entrance examination application (${data.applicationNumber}) has been REJECTED by the Admissions & Scrutiny Committee. Reason for Rejection: "${data.remarks || 'Documentation or eligibility criteria mismatch'}". As per guidelines, all previous details submitted under this dossier have been annulled. You may log in to the candidate portal at http://localhost:3000/login to refill a fresh application form or raise an official query before the application window closes.`;
       htmlContent = `
-        <div style="font-family: sans-serif; padding: 20px; color: #1e293b; background: #fef2f2; border: 1px solid #fecaca; border-radius: 12px;">
-          <h2 style="color: #991b1b; margin-top: 0;">❌ Application Clarification / Revision Required</h2>
-          <p>Dear <strong>${name}</strong>,</p>
-          <p>Your application (<strong>${data.applicationNumber}</strong>) has been reviewed with the following finding:</p>
-          <div style="background: #ffffff; padding: 15px; border-left: 4px solid #ef4444; margin: 15px 0; border-radius: 4px;">
-            <strong>Committee Remarks / Reason:</strong> ${data.remarks || 'Criteria mismatch or illegible documentation.'}
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta charset="utf-8">
+          <style>
+            body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #f8fafc; margin: 0; padding: 24px 12px; color: #1e293b; }
+            .container { max-width: 620px; margin: 0 auto; background: #ffffff; border-radius: 16px; overflow: hidden; border: 1px solid #e2e8f0; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.07); }
+            .header { background: #0b192c; padding: 26px 20px; text-align: center; border-bottom: 4px solid #ef4444; }
+            .header h1 { color: #ffffff; margin: 0 0 4px 0; font-size: 22px; font-weight: 800; letter-spacing: 0.5px; }
+            .header p { color: #f87171; margin: 0; font-size: 12px; font-weight: 700; letter-spacing: 1px; }
+            .header .sub { color: #94a3b8; font-size: 11px; margin-top: 4px; }
+            .alert-banner { background: #fef2f2; border-bottom: 2px solid #fecaca; padding: 14px 20px; text-align: center; font-size: 13px; font-weight: 800; color: #991b1b; letter-spacing: 0.5px; }
+            .content { padding: 28px 24px; }
+            .info-table { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 13px; }
+            .info-table td { padding: 9px 12px; border-bottom: 1px solid #f1f5f9; }
+            .info-table td:first-child { color: #64748b; font-weight: 600; width: 40%; }
+            .info-table td:last-child { color: #0f172a; font-weight: 700; }
+            .rejection-box { background: #fff5f5; border: 2px solid #fca5a5; border-radius: 12px; padding: 18px; margin: 20px 0; }
+            .rejection-title { font-size: 11px; text-transform: uppercase; letter-spacing: 1.5px; font-weight: 800; color: #b91c1c; margin-bottom: 6px; }
+            .rejection-reason { font-size: 14px; font-weight: 700; color: #7f1d1d; line-height: 1.5; }
+            .instruction-box { background: #f8fafc; border-left: 4px solid #0b192c; padding: 14px 16px; border-radius: 0 8px 8px 0; font-size: 12px; line-height: 1.6; color: #334155; margin-bottom: 24px; }
+            .btn-row { text-align: center; margin: 20px 0 10px 0; }
+            .btn-primary { display: inline-block; background: #0b192c; color: #ffffff !important; text-decoration: none; padding: 12px 28px; border-radius: 10px; font-weight: 800; font-size: 13px; }
+            .footer { background: #f8fafc; padding: 20px; text-align: center; font-size: 11px; color: #64748b; border-top: 1px solid #e2e8f0; line-height: 1.6; }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="header">
+              <h1>GURUKUL KURUKSHETRA</h1>
+              <p>ADMISSIONS & ENTRANCE EXAMINATION CELL (SESSION 2026-27)</p>
+              <div class="sub">CBSE Affiliation No. 530006 • Established 1912 • Kurukshetra, Haryana</div>
+            </div>
+            <div class="alert-banner">
+              ⚠️ OFFICIAL NOTICE: APPLICATION FORM REJECTED / DISQUALIFIED
+            </div>
+            <div class="content">
+              <p style="font-size: 15px; font-weight: 600; color: #0f172a; margin-top: 0;">Dear ${name || 'Candidate'},</p>
+              <p style="font-size: 13px; line-height: 1.6; color: #475569;">
+                This is to officially inform you that following scrutiny by the Admissions & Examination Committee, your application dossier for the <strong>Gurukul Kurukshetra Entrance Examination (2026-27)</strong> has been <strong>REJECTED</strong>.
+              </p>
+
+              <table class="info-table">
+                <tr><td>Application Number</td><td style="font-family: monospace; font-size: 14px; color: #0b192c;">${data.applicationNumber}</td></tr>
+                <tr><td>Candidate Name</td><td>${name || 'Candidate'}</td></tr>
+                <tr><td>Class Applied</td><td>${data.classApplying || 'Entrance Examination'}</td></tr>
+                <tr><td>Scrutiny Outcome</td><td style="color: #dc2626; font-weight: 800;">REJECTED</td></tr>
+                <tr><td>Date of Scrutiny</td><td>${new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}</td></tr>
+              </table>
+
+              <div class="rejection-box">
+                <div class="rejection-title">Official Ground / Reason for Rejection</div>
+                <div class="rejection-reason">${data.remarks || 'Document mismatch, incomplete particulars, or failure to satisfy prescribed eligibility criteria.'}</div>
+              </div>
+
+              <div class="instruction-box">
+                <strong>Next Steps & Redressal Options:</strong>
+                <ul style="margin: 6px 0 0 0; padding-left: 20px;">
+                  <li><strong>Refill Application:</strong> As per examination bylaws, your previous particulars have been annulled. You may sign in to your portal account to <strong>Refill a fresh application form</strong> before the closing date.</li>
+                  <li><strong>Raise Grievance:</strong> If you believe this rejection was made in error, you may submit an official query / grievance directly through the candidate portal.</li>
+                </ul>
+              </div>
+
+              <div class="btn-row">
+                <a href="http://localhost:3000/login" class="btn-primary">Sign In to Candidate Portal →</a>
+              </div>
+            </div>
+            <div class="footer">
+              Examination Control Division • Gurukul Kurukshetra, Haryana - 136119<br>
+              Helpline: +91-1744-259114, 9896328329 • Email: admissions@gurukulkurukshetra.com
+            </div>
           </div>
-          <p><strong>Option to Resubmit:</strong> You can submit revised information or upload new supporting documents through your <a href="http://localhost:3000/login" style="color: #2563eb; font-weight: bold;">Candidate Dashboard</a> for re-evaluation by the committee.</p>
-        </div>
+        </body>
+        </html>
       `;
       break;
 

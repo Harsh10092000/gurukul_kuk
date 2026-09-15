@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { hashPassword } from '@/lib/auth';
+import { hashPassword, comparePassword } from '@/lib/auth';
 import { recordAuditLog } from '@/lib/audit';
 
 // Shared global in-memory OTP cache
@@ -54,6 +54,17 @@ export async function POST(req: Request) {
         { error: 'No registered candidate account found with this email or mobile number.' },
         { status: 404 }
       );
+    }
+
+    // Check if new password is identical to current password
+    if (user.passwordHash) {
+      const isSamePassword = await comparePassword(newPassword, user.passwordHash);
+      if (isSamePassword) {
+        return NextResponse.json(
+          { error: 'New password cannot be the same as your old password. Please choose a different password.' },
+          { status: 400 }
+        );
+      }
     }
 
     // Update password using unique user.id

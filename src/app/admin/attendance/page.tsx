@@ -51,7 +51,7 @@ export default function AdminAttendancePage() {
             Entrance Examination Attendance Registers
           </h1>
           <p className="text-xs text-slate-500">
-            Generate printable invigilator attendance sheets grouped by examination centre and room.
+            Generate official printable invigilator attendance sheets (strictly displays candidates with allotted Roll Numbers).
           </p>
         </div>
 
@@ -140,8 +140,11 @@ export default function AdminAttendancePage() {
             <tbody>
               {candidates.length === 0 ? (
                 <tr>
-                  <td colSpan={9} className="p-8 text-center text-slate-400">
-                    No candidates found for selected filters.
+                  <td colSpan={9} className="p-10 text-center text-slate-500 space-y-2">
+                    <p className="font-bold text-sm text-slate-700">No candidates with allotted Roll Numbers found.</p>
+                    <p className="text-xs text-slate-400">
+                      Candidates must have an active Admit Card and allotted Roll Number to appear on the official attendance register.
+                    </p>
                   </td>
                 </tr>
               ) : (

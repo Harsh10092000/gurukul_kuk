@@ -711,5 +711,207 @@ The relational schema is created automatically on startup:
 - **Status:** Complete, Tested & Live in Production.
 
 ---
+### Entry 28: Grievance Redressal Contact Number Constraints & Ticket ID Removal
+
+- **Date:** September 15, 2026
+- **Context:** Candidate Query / Grievance Redressal modal on the applicant dashboard permitted unbounded text input for the contact number (allowing invalid lengths like arbitrary repeated digits) and displayed an unnecessary "Ticket ID" on submission. The user requested: (1) strict 10-digit mobile number constraints and numeric input type enforcement, and (2) removal of the ticket ID badge from the success dialog.
+- **Actions Completed:**
+  1. **Mobile Input Sanitization & Constraints (`src/app/dashboard/page.tsx`):**
+     - Configured `type="tel"`, `inputMode="numeric"`, `maxLength={10}`, and `pattern="[6-9][0-9]{9}"`.
+     - Added real-time numeric sanitization: `e.target.value.replace(/\D/g, '').slice(0, 10)` to prevent any non-digit characters or overflow.
+     - Added visual `+91` badge, live `{queryPhone.length}/10 digits` character counter, and helper instructions.
+     - Added pre-filling of the candidate's registered mobile number when opening the query modal.
+  2. **Ticket ID Removal (`src/app/dashboard/page.tsx`, `src/app/api/applications/query/route.ts`):**
+     - Removed the `Ticket ID: GRV-XXXXXX` display badge from the confirmation dialog.
+     - Replaced with a clean, official acknowledgement: *"Your query has been assigned to the Examination Controller. An update will be communicated to your registered mobile number and email."*
+     - In `src/app/api/applications/query/route.ts`, retained internal audit logging of the query while omitting any ticket reference from the user-facing response.
+     - Added backend phone validation ensuring exact 10-digit Indian mobile numbers (`/^[6-9]\d{9}$/`).
+- **Verification:**
+  - `npx tsc --noEmit`: Exit Code 0 (No type errors).
+  - Dev server active and responsive on `http://localhost:3000`.
+- **Status:** Complete, Tested & Verified.
+
+---
+### Entry 29: Admin Notification Center, Contact Enquiries System & Candidate Rejection Data Flow
+
+- **Date:** September 15, 2026
+- **Context:** The administrator required a fully functional, persistent Notification Center in the Admin Panel to serve as the primary hub for portal events (new submissions, status changes, approvals, rejections, corrections, enquiries), deep-linking directly to target records before redirection. Additionally, public contact submissions needed full end-to-end persistence with admin management, and rejected candidate data (reasons, remarks, timestamps, candidate contact info) required permanent preservation and prominent visibility across the Admin Applications Desk and verification views.
+- **Actions Completed:**
+  1. **Database Models & Tables (`src/lib/types.ts`, `src/lib/db.ts`, `gurukul_database_backup.sql`, `data/gurukul_store.json`):**
+     - Defined `AdminNotification` and `ContactEnquiry` data structures.
+     - Added `admin_notifications` and `contact_enquiries` tables to the MySQL schema initialization and SQL backup dump.
+     - Added `getAdminNotifications`, `getUnreadAdminNotificationCount`, `createAdminNotification`, `markAdminNotificationAsRead`, and `markAllAdminNotificationsAsRead` to `db`.
+     - Added `createContactEnquiry`, `getContactEnquiries`, `getContactEnquiryById`, and `updateContactEnquiryStatus` to `db`.
+     - Guaranteed backward-compatible fallback storage initialization in `data/gurukul_store.json`.
+  2. **Backend APIs (`src/app/api/`):**
+     - `GET /api/admin/notifications`: Fetches admin notification feed with unread count (Admin protected).
+     - `POST /api/admin/notifications/read`: Marks single or all notifications as read (Admin protected).
+     - `POST /api/contact`: Public endpoint for admission enquiries with input validation (10-digit mobile, email, message). Automatically dispatches an unread admin notification.
+     - `GET /api/admin/enquiries`: Fetches enquiries with status filtering (Admin protected).
+     - `GET & PATCH /api/admin/enquiries/[id]`: Fetches single enquiry and updates status/remarks (Admin protected).
+  3. **Event Notification Dispatchers:**
+     - `src/app/api/applications/route.ts`: Dispatches `APPLICATION_SUBMITTED` notification on new candidate submission.
+     - `src/app/api/applications/[id]/route.ts`: Dispatches `APPLICATION_APPROVED`, `APPLICATION_REJECTED`, or `CORRECTION_REQUIRED` notifications on status changes.
+     - `src/app/api/applications/[id]/resubmit/route.ts`: Dispatches `APPLICATION_STATUS_CHANGED` notification on candidate document re-upload.
+     - `src/app/api/applications/query/route.ts`: Saves candidate grievance to `contact_enquiries` and creates a notification.
+     - `src/app/api/admit-card/route.ts`: Dispatches `ADMIN_UPDATE` notification on roll number and admit card issuance.
+  4. **Admin UI Components & Layout:**
+     - `src/components/AdminNotificationBell.tsx`: Interactive Bell button with unread count badge, dropdown popover, category tabs (All, Unread, Applications, Enquiries), auto-mark-read on click, deep-linking, and auto-polling every 20 seconds.
+     - `src/components/Header.tsx`: Integrated `AdminNotificationBell` in both desktop header and mobile drawer for authenticated administrators. Added public `/contact` link in navigation.
+     - `src/app/admin/layout.tsx`: Added **Contact Enquiries** (`/admin/enquiries`) and **Notification Center** (`/admin/notifications`) with live unread badge counters to sidebar and mobile bar.
+     - `src/app/admin/notifications/page.tsx`: Full-page Admin Notification Center with search, category filtering, bulk mark-as-read, and deep-link buttons.
+     - `src/app/admin/enquiries/page.tsx`: Dedicated Contact Enquiries management desk with search, status filtering, message inspection drawer, resolution status updates, and internal admin notes.
+     - `src/app/contact/page.tsx`: Public "Contact Admissions & Helpline" portal with campus details, helpline numbers, and online enquiry form.
+     - `src/components/Footer.tsx`: Added `/contact` link under Quick Admission Links.
+  5. **Preservation & Visibility of Rejected Candidates:**
+     - `src/app/admin/applications/page.tsx`: Added quick status filter pills including a dedicated red **Rejected Candidates** tab. When selected, displays specialized columns: Application Number, Candidate Profile & Contact (Name, Email, Mobile), Class, Ground of Rejection / Remarks (prominent red callout), Rejection Timestamp, and Action Status.
+     - `src/app/admin/applications/[id]/page.tsx`: Implemented prominent Red Rejection Summary Banner when `application.status === 'rejected'`, showing official grounds of rejection, committee remarks, rejection date/time, candidate contact particulars, and a button to re-open for scrutiny if necessary.
+- **Verification:**
+  - `npx tsc --noEmit`: Exit Code 0 across entire codebase.
+  - Automated integration test script (`scripts/test_admin_system.js`): All 8 end-to-end tests passed (Contact submission -> Unauth 403 checks -> Admin auth -> Notification fetch -> Enquiry fetch -> Status resolution -> Mark read -> Candidate rejection flow & remarks preservation).
+  - Page routes render verification (`scripts/verify_pages.js`): All 6 routes (`/`, `/contact`, `/admin/dashboard`, `/admin/applications`, `/admin/notifications`, `/admin/enquiries`) returned HTTP 200.
+- **Status:** Complete, Tested & Live.
+
+---
+### Entry 30: Resolution of Admin Dashboard vs Candidate Applications Data Inconsistency & Security Hardening
+
+- **Date:** September 15, 2026
+- **Context:** An investigation was ordered into a critical data-integrity discrepancy between the Admin Dashboard (`TOTAL APPLICATIONS: 5`, subtitle: *"All submitted candidate profiles"*) and the Candidate Applications desk (`"Showing 4 Candidates"`, subtitle: *"Active candidates in portal: 4 of 5 total"*). A comprehensive forensic audit of backend APIs, database models, aggregation queries, and client components was executed to eliminate cosmetic UI patches and establish an authoritative single source of truth alongside strict security hardening.
+- **Root Cause Analysis:**
+  1. **Database Truth**: The persistent store contained 5 records: 2 approved (`GK26-10001`, `GK26-10004`), 1 submitted (`GK26-10003`), 1 draft (`DRAFT-10006`, Harish Kumar), and 1 rejected (`GK26-10006`, Satvik Saini).
+  2. **Dashboard Discrepancy**: `/api/admin/stats` calculated `totalApplications = applications.length` (5). The dashboard KPI card displayed 5 with the misleading subtitle *"All submitted candidate profiles"*, erroneously counting an incomplete, unpaid draft and a rejected dossier as "submitted".
+  3. **Candidate Desk Discrepancy**: The applications desk defaulted to *"All Active Candidates (Exclude Rejected)"* (`status !== 'rejected'`), thereby showing 4 candidates (`4 of 5 total`).
+  4. **Security Deficiencies Discovered**:
+     - Critical IDOR on `GET /api/applications/[id]`: Endpoint had zero authentication or authorization checks, allowing any caller to inspect any candidate's private personal and academic dossier.
+     - Missing enum whitelist and business-rule validation on `PATCH /api/applications/[id]`.
+     - IDOR risks on `GET /api/admit-card` and `GET /api/results`.
+- **Actions Completed:**
+  1. **Canonical Metrics Engine (`src/lib/applicationMetrics.ts`):**
+     - Established centralized, single-source-of-truth metrics calculation (`computeApplicationMetrics`):
+       - `total`: 5 (All registered dossiers in database)
+       - `active`: 4 (Candidates actively progressing in portal, excluding rejected)
+       - `submitted`: 3 (Applications with finalized submission & fee payment)
+       - `draft`: 1 (Incomplete dossiers in progress)
+       - `underReview`: 1 (Submitted dossiers awaiting scrutiny)
+       - `approved`: 2 (Verified dossiers eligible for admit card)
+       - `correctionNeeded`: 0 (Flagged dossiers)
+       - `rejected`: 1 (Archived rejected dossiers)
+     - Mathematical Invariants Enforced:
+       - `total = active + rejected` (5 = 4 + 1)
+       - `active = submitted + draft` (4 = 3 + 1)
+       - `submitted = approved + underReview + correctionNeeded` (3 = 2 + 1 + 0)
+       - `total = approved + underReview + correctionNeeded + draft + rejected` (5 = 2 + 1 + 0 + 1 + 1)
+     - Status transition map and enum validator (`isValidApplicationStatus`, `isValidStatusTransition`).
+  2. **Backend API Hardening & Single Source of Truth:**
+     - `src/app/api/admin/stats/route.ts`: Integrated `computeApplicationMetrics`. Created status-aware `recentAwaitingVerification` queue (strictly filters for `submitted`, `under_review`, and `correction_needed`).
+     - `src/app/api/applications/route.ts`: Added server-side query filtering (`?status=...`, `?class=...`, `?q=...`) and attached authoritative `metrics` to admin response. Restricted non-admin callers strictly to their own dossier.
+     - `src/app/api/applications/[id]/route.ts`: Fixed IDOR on GET (requires authentication; applicant can only view their own dossier; admin can view all). Enforced status enum validation and transition rules on PATCH. Mandated non-empty reason when rejecting.
+     - `src/app/api/admit-card/route.ts` & `src/app/api/results/route.ts`: Fixed IDOR on GET endpoints (applicants restricted strictly to their own admit card / result).
+  3. **Admin Dashboard UI Alignment (`src/app/admin/dashboard/page.tsx`):**
+     - Total Applications KPI card updated: displays total count with transparent, dynamic subtitle: `{active} Active ({submitted} Submitted, {draft} Draft) • {rejected} Rejected`.
+     - Approved & Verified KPI card updated: displays approved count with subtitle: `{approved} of {submitted} submitted verified (Admit Card Ready)`.
+     - Under Review / Flags KPI card updated: displays `{underReview + correctionNeeded}` with subtitle: `{underReview} awaiting review • {correctionNeeded} marked for re-upload`.
+     - Recent Applications table: bound strictly to `recentAwaitingVerification` with clean empty state when no applications are awaiting verification.
+  4. **Candidate Applications Desk UI Alignment (`src/app/admin/applications/page.tsx`):**
+     - Filter pill counts bound directly to authoritative server metrics.
+     - Table count banner clarified: displays `Showing X Candidates [Selected Filter] | Active in portal: 4 of 5 total dossiers (1 draft, 1 rejected archive)`.
+- **Verification:**
+  - Automated test suite (`scripts/test_integrity_and_security.js`): All 10 test scenarios from user specifications passed with zero errors:
+    1. Test 1 (Draft): Stored as DRAFT, excluded from submitted counts, verification queue omitted.
+    2. Test 2 (Submit): Status transitioned to SUBMITTED, metrics incremented, verification queue populated.
+    3. Test 3 (Approve): Admin approved, candidate self-approval blocked with 403 Forbidden.
+    4. Test 4 (Reject): Rejection without ground blocked (400), documented ground persisted, active filters exclude rejected.
+    5. Test 5 (Unauthorized Access): All admin endpoints strictly blocked with 401/403.
+    6. Test 6 (IDOR Defense): Cross-candidate dossier and admit card requests blocked with 403 Forbidden.
+    7. Test 7 (Manipulated Status): Arbitrary client status strings rejected.
+    8. Test 8 (Role Manipulation): Mass assignment of admin role blocked.
+    9. Test 9 (Refresh Consistency): 5 consecutive polling rounds verified exact mathematical consistency.
+    10. Test 10 (Concurrent Updates): Handled concurrent admin updates without corruption.
+  - Regression test suite (`scripts/test_admin_system.js`): All 8 admin system tests passed.
+  - TypeScript compilation (`npx tsc --noEmit`): Code 0 (0 errors).
+- **Status:** Complete, Fully Secured, Tested & Live in Production.
+
+---
+
+### Session: Production Hardening, Security Validations & Workflow Integrity (2026-09-15)
+- **Objective:** Production-grade security hardening across candidate and admin workflows covering all 27 user requirements: eradication of native browser alerts/confirms, server-side Aadhaar uniqueness, parental name/occupation validations, marks calculation guards, mandatory 5-document verification with binary magic-byte inspection, admission form gating, roll number omission, registration email delivery, and results gating with IDOR defense.
+- **Architectural & Code Changes:**
+  1. **Canonical Validation Suite (`src/lib/validations.ts`):**
+     - `validateName`: Requires min 3 chars, max 60 chars, permits only letters, spaces, hyphens, and apostrophes (`/^[a-zA-Z\s\-']+$/`). Rejects repeated single-character strings (e.g., `RRRRRRRR`, `QQQQQQQQ`) and numeric values (`123456`).
+     - `validateOccupation`: Min 3 chars, max 60 chars. Rejects purely numeric inputs (`243423423423423434`) and alphanumeric garbage (`Services2131`).
+     - `validatePhone`: Standard 10-digit Indian phone validation (`/^[6-9]\d{9}$/`).
+     - `validateAadhaar`: 12-digit numeric validation (`/^\d{12}$/`).
+     - `validateMarks`: Ensures `marksObtained >= 0`, `marksTotal > 0`, `marksObtained <= marksTotal`, and `0 <= percentage <= 100`. Defends against negative values, NaN, and Infinity.
+     - `validateUploadedFile`: Enforces strict MIME types (JPG/PNG for photos & signatures; JPG/PNG/PDF for documents), 2 MB size limits, and binary magic-byte inspection:
+       - JPEG: `FF D8 FF`
+       - PNG: `89 50 4E 47`
+       - PDF: `25 50 44 46` (`%PDF`)
+       - Explicitly detects and rejects Windows PE (`MZ`) and Linux `ELF` executables disguised with image/document extensions.
+     - `validateAllFiveDocuments`: Guarantees that `photo`, `signature`, `parentSignature`, `aadhaarCard`, and `lastMarksheet` are all present and non-empty.
+  2. **Custom Modal UI (`src/components/ConfirmModal.tsx`):**
+     - Developed Gurukul-styled modal dialog component with keyboard accessibility (ESC dismiss, Enter submit, focus trap).
+     - Replaced all native `window.alert()` and `window.confirm()` calls across the entire codebase (`Candidate Dashboard`, `Exam Centers`, `Applications Desk`, `Dossier Detail`, `Results Desk`, `Enquiries Desk`). Grep verified 0 remaining occurrences in `src/`.
+  3. **Aadhaar Uniqueness & Refill Workflow (`src/lib/db.ts`, `src/app/api/applications/route.ts`):**
+     - Added `findApplicationByAadhaar(aadhaarNumber)` excluding rejected records (`app.status !== 'rejected'`).
+     - Duplicate active Aadhaar submissions return HTTP 409 Conflict: `"This Aadhaar number is already associated with an existing application."` without leaking identity information of existing candidates.
+     - Handled rejected candidate workflow: rejected candidates can reuse their Aadhaar number to submit a fresh application.
+  4. **Father's Phone Independence:**
+     - Eradicated auto-fill from student/user mobile in `src/app/apply/page.tsx` and `src/lib/db.ts` (`createDraftApplication`). Father phone starts empty; manual entry permitted even if identical to student mobile.
+  5. **Academic Marks Calculation Hardening (`src/app/apply/page.tsx`):**
+     - Frontend input sanitization: non-negative integers only.
+     - Automatic calculation clamps percentage strictly between `0.00%` and `100.00%`.
+     - Server-side validation rejects negative marks or obtained marks exceeding maximum marks.
+  6. **Document Upload Step & Five Mandatory Documents (`src/app/apply/page.tsx`):**
+     - Step 6 documents updated: Photo, Candidate Signature, Parent Signature, Aadhaar Proof, and Previous Marksheet.
+     - Red asterisk required indicators and validation feedback rendered for all 5 items.
+     - Uploads validated for `< 2 MB` and accepted MIME types on client and server.
+  7. **Admission Form Gating & Roll Number Omission:**
+     - `src/app/dashboard/page.tsx`: Gated "Admission Form" button; only available when `application.status === 'approved'`, `'admitted'`, or admit card is released.
+     - Removed `"Roll No: Pending Allotment (To be issued later)"` badge from dashboard header and dossier card. Only actual issued roll numbers are displayed.
+     - `src/app/admission-form/page.tsx`: Gated route verifies status on mount. Non-approved candidates receive an official Document Scrutiny Restriction Notice.
+  8. **Email Confirmation via Nodemailer (`src/lib/notifications.ts`, `src/app/api/applications/route.ts`):**
+     - Nodemailer credentials read from `process.env.SMTP_USER || process.env.CMAIL` and `process.env.SMTP_PASS || process.env.CPASS` with zero hardcoded credentials.
+     - Dispatches official registration confirmation email (`Gurukul Kurukshetra – Application Submitted Successfully`) with candidate name and registration number upon final submission.
+     - Dispatched inside isolated asynchronous try/catch to avoid blocking application persistence.
+  9. **Results Gating & IDOR Defense (`src/app/api/results/route.ts`, `src/app/api/results/status/route.ts`, `src/components/Header.tsx`, `src/app/result/page.tsx`):**
+     - `/api/results/status` endpoint determines whether results have been published by examination authorities.
+     - Header navigation hides "Results" link for candidates until results are published.
+     - `/result` candidate page displays an official "Results Not Yet Declared" banner if accessed prior to publishing.
+     - IDOR protection: candidates are strictly prohibited from querying results of other candidates by roll number or application ID.
+- **Verification & Automated Test Results:**
+  - Automated test suite `scripts/test_comprehensive_hardening.js` executed with **24 out of 24 tests PASSED (0 failures)**:
+    1. Admin authentication: PASS
+    2. Candidate account creation: PASS
+    3. Collision test account creation: PASS
+    4. Malformed Aadhaar rejection (HTTP 400): PASS
+    5. Repeated single-character Father Name (RRRRRRRR) rejection (HTTP 400): PASS
+    6. Numeric Mother Name (123456) rejection (HTTP 400): PASS
+    7. Pure numeric Father Occupation rejection (HTTP 400): PASS
+    8. Gibberish numeric suffix Occupation (Services2131) rejection (HTTP 400): PASS
+    9. Negative marks (-655) rejection (HTTP 400): PASS
+    10. Marks obtained > Total marks rejection (HTTP 400): PASS
+    11. Missing required documents (Parent Sign / Marksheet) rejection (HTTP 400): PASS
+    12. Disguised executable binary blocked by magic-byte check (HTTP 400): PASS
+    13. Valid 5-document application submission: PASS
+    14. Application status assigned as `submitted`: PASS
+    15. Official Registration Number generated: PASS (`GK26-10013`)
+    16. Cross-User Aadhaar Collision rejection (HTTP 409 Conflict): PASS
+    17. Safe Aadhaar error message without candidate identity leak: PASS
+    18. Identity confidentiality verified: PASS
+    19. Admission Form gating prior to approval: PASS
+    20. Admin dossier approval workflow: PASS
+    21. Application rejection workflow: PASS
+    22. Rejected candidate refill with same Aadhaar without collision: PASS
+    23. Results declaration status API: PASS (`resultsDeclared: true`)
+    24. IDOR defense on result endpoint (HTTP 403 Forbidden): PASS
+  - Zero TypeScript compiler errors (`npx tsc --noEmit` exited with code 0).
+  - Grep search for `alert(` and `confirm(` in `src/` returned zero matches.
+- **Status:** Complete, Fully Hardened & Live.
+
+---
 *(Future changes, field modifications, and updates will be appended below)*
+
+
+
+
 

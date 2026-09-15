@@ -95,6 +95,23 @@ export async function POST(request: Request) {
       passwordHash,
     });
 
+    // Auto-create initial application draft so candidate immediately reflects in admin candidate desk
+    try {
+      await db.saveDraftApplication({
+        userId: newUser.id,
+        classApplying: 'Class 6',
+        personalInfo: {
+          fullName: name,
+          candidateEmail: email,
+          candidateMobile: phone,
+          whatsappNumber: phone,
+        } as any,
+        currentStep: 1,
+      });
+    } catch (draftErr) {
+      console.warn('Auto-draft creation on registration warning:', draftErr);
+    }
+
     // Generate JWT token
     const token = signToken({
       userId: newUser.id,

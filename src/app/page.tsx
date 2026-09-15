@@ -52,7 +52,10 @@ export default function ExamPortalGateway() {
     message: string;
     startDateTimeIST?: string;
     endDateTimeIST?: string;
+    announcementNotice?: string;
   } | null>(null);
+
+  const [portalSettings, setPortalSettings] = useState<any>(null);
 
   // Generate random 5-character alphanumeric captcha
   const generateCaptcha = () => {
@@ -76,9 +79,19 @@ export default function ExamPortalGateway() {
         if (data.details) {
           setSchedule(data.details);
         } else if (data.status && typeof data.status === 'object') {
-          setSchedule(data.status);
+          setSchedule({ ...data.status, announcementNotice: data.announcementNotice });
         } else if (data.isOpen !== undefined) {
           setSchedule(data);
+        }
+      })
+      .catch(() => {});
+
+    // Fetch portal settings & academic milestone dates
+    fetch('/api/settings')
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.settings) {
+          setPortalSettings(data.settings);
         }
       })
       .catch(() => {});
@@ -143,25 +156,51 @@ export default function ExamPortalGateway() {
     }
   };
 
+  const formatDateDisplay = (dateStr?: string, fallback: string = '') => {
+    if (!dateStr) return fallback;
+    try {
+      // Handles YYYY-MM-DD or full ISO
+      const parts = dateStr.split('-');
+      if (parts.length === 3 && parts[0].length === 4) {
+        const d = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+        return d.toLocaleDateString('en-IN', { day: '2-digit', month: 'long', year: 'numeric' });
+      }
+      const d = new Date(dateStr);
+      if (!isNaN(d.getTime())) {
+        return d.toLocaleDateString('en-IN', { day: '2-digit', month: 'long', year: 'numeric' });
+      }
+      return dateStr || fallback;
+    } catch {
+      return dateStr || fallback;
+    }
+  };
+
+  const regStart = formatDateDisplay(portalSettings?.registrationStartDate, '01 September 2026');
+  const regEnd = formatDateDisplay(portalSettings?.registrationEndDate, '31 October 2026');
+  const admitDate = formatDateDisplay(portalSettings?.admitCardReleaseDate, '15 November 2026');
+  const examDate = formatDateDisplay(portalSettings?.entranceExamDate, '06 December 2026');
+  const resultDate = formatDateDisplay(portalSettings?.resultDeclarationDate, '20 December 2026');
+
   const importantDates = [
-    { event: 'Online Registration Commences', date: '01 September 2026', status: 'Active' },
-    { event: 'Last Date for Online Application', date: '31 October 2026', status: 'Ongoing' },
-    { event: 'Release of Hall Ticket / Admit Card', date: '15 November 2026', status: 'Upcoming' },
-    { event: 'Written Entrance Examination', date: '06 December 2026', status: 'Upcoming' },
-    { event: 'Declaration of Merit List / Result', date: '20 December 2026', status: 'Upcoming' },
+    { event: 'Online Registration Commences', date: regStart, status: 'Active' },
+    { event: 'Last Date for Online Application', date: regEnd, status: schedule?.status === 'EXTENDED' ? 'Extended' : 'Ongoing' },
+    { event: 'Release of Hall Ticket / Admit Card', date: admitDate, status: 'Upcoming' },
+    { event: 'Written Entrance Examination', date: examDate, status: 'Upcoming' },
+    { event: 'Declaration of Merit List / Result', date: resultDate, status: portalSettings?.resultsDeclared ? 'Declared' : 'Upcoming' },
   ];
 
-
+  const marqueeText = schedule?.announcementNotice || 'Online Application for Entrance Examination Session 2026-27 is active for Classes 5th, 6th, 7th, 8th, 9th, 11th & NDA Wing.';
+  const currentSession = portalSettings?.academicSession || '2026-27';
 
   return (
     <div className="w-full min-h-screen bg-slate-50 pb-16 font-sans">
       {/* Sleek Announcement Strip */}
       <div className="bg-amber-500/10 border-b border-amber-500/20 py-2 px-4 text-center text-xs font-semibold text-slate-800 flex items-center justify-center gap-2">
         <span className="bg-amber-500 text-gurukul-navy text-[10px] font-black uppercase px-2 py-0.5 rounded tracking-wide flex-shrink-0">
-          ADMISSION 2026-27
+          ADMISSION {currentSession}
         </span>
         <span className="truncate">
-          Online Application for Entrance Examination is active for Classes 5th, 6th, 7th, 8th, 9th, 11th & NDA Wing.
+          {marqueeText}
         </span>
       </div>
 
@@ -441,23 +480,25 @@ export default function ExamPortalGateway() {
                   <ChevronRight className="w-4 h-4 text-slate-400 group-hover:translate-x-1 transition" />
                 </Link>
 
-                <Link
-                  href="/result"
-                  className="p-3 bg-slate-50 hover:bg-slate-100 rounded-xl border border-slate-200 transition flex items-center justify-between group"
-                >
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 rounded-lg bg-amber-50 text-amber-700">
-                      <Award className="w-4 h-4" />
+                {portalSettings?.resultsDeclared && (
+                  <Link
+                    href="/result"
+                    className="p-3 bg-slate-50 hover:bg-slate-100 rounded-xl border border-slate-200 transition flex items-center justify-between group"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 rounded-lg bg-amber-50 text-amber-700">
+                        <Award className="w-4 h-4" />
+                      </div>
+                      <div>
+                        <h5 className="font-bold text-xs text-slate-800 group-hover:text-amber-700 transition">
+                          View Entrance Result & Scorecard
+                        </h5>
+                        <p className="text-[10px] text-slate-500">Subject-wise marks & merit ranking</p>
+                      </div>
                     </div>
-                    <div>
-                      <h5 className="font-bold text-xs text-slate-800 group-hover:text-amber-700 transition">
-                        View Entrance Result & Scorecard
-                      </h5>
-                      <p className="text-[10px] text-slate-500">Subject-wise marks & merit ranking</p>
-                    </div>
-                  </div>
-                  <ChevronRight className="w-4 h-4 text-slate-400 group-hover:translate-x-1 transition" />
-                </Link>
+                    <ChevronRight className="w-4 h-4 text-slate-400 group-hover:translate-x-1 transition" />
+                  </Link>
+                )}
               </div>
             </div>
 

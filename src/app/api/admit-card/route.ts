@@ -5,31 +5,40 @@ import { sendNotification } from '@/lib/notifications';
 
 export async function GET(request: Request) {
   try {
+    const user = await getCurrentUser();
+    if (!user) {
+      return NextResponse.json({ error: 'Authentication required to access admit card' }, { status: 401 });
+    }
+
     const { searchParams } = new URL(request.url);
     const appId = searchParams.get('appId');
     const rollNo = searchParams.get('rollNo');
 
-    if (appId) {
-      const card = await db.getAdmitCard(appId);
-      return NextResponse.json({ admitCard: card });
-    }
-
-    if (rollNo) {
-      const card = await db.getAdmitCard(rollNo);
-      return NextResponse.json({ admitCard: card });
-    }
-
-    // Try current logged in user
-    const user = await getCurrentUser();
-    if (user) {
-      const app = await db.getApplicationByUserId(user.userId);
-      if (app) {
-        const card = await db.getAdmitCard(app.id);
+    // Admin can query any admit card by appId or rollNo
+    if (user.role === 'admin') {
+      if (appId) {
+        const card = await db.getAdmitCard(appId);
+        return NextResponse.json({ admitCard: card });
+      }
+      if (rollNo) {
+        const card = await db.getAdmitCard(rollNo);
         return NextResponse.json({ admitCard: card });
       }
     }
 
-    return NextResponse.json({ admitCard: null });
+    // Applicant can ONLY access their own admit card
+    const userApp = await db.getApplicationByUserId(user.userId);
+    if (!userApp) {
+      return NextResponse.json({ admitCard: null });
+    }
+
+    // If applicant specifically passed appId, enforce that it belongs to them
+    if (appId && appId !== userApp.id && appId !== userApp.applicationNumber) {
+      return NextResponse.json({ error: 'Forbidden: You cannot access another candidate admit card' }, { status: 403 });
+    }
+
+    const card = await db.getAdmitCard(userApp.id);
+    return NextResponse.json({ admitCard: card });
   } catch (error) {
     console.error('Error in admit-card route:', error);
     return NextResponse.json({ error: 'Failed to retrieve admit card' }, { status: 500 });
@@ -90,6 +99,27 @@ export async function POST(request: Request) {
         rollNumber,
       },
     });
+
+    // Create persistent Admin Notification
+    try {
+      await db.createAdminNotification({
+        type: 'ADMIN_UPDATE',
+        title: `Admit Card Issued: ${application.personalInfo.fullName}`,
+        message: `Roll Number ${rollNumber} allotted to ${application.personalInfo.fullName} (${application.applicationNumber}, ${application.classApplying}).`,
+        entityId: application.id,
+        entityType: 'application',
+        link: `/admin/applications/${application.id}`,
+        metadata: {
+          applicationId: application.id,
+          rollNumber,
+          candidateName: application.personalInfo.fullName,
+          applicationNumber: application.applicationNumber,
+          classApplying: application.classApplying,
+        },
+      });
+    } catch (notifErr) {
+      console.warn('Failed to dispatch admin notification for admit card:', notifErr);
+    }
 
     return NextResponse.json({ success: true, admitCard });
   } catch (error) {
