@@ -16,20 +16,20 @@ const merriweather = Merriweather({
 });
 
 export const metadata: Metadata = {
-  title: 'Gurukul Kurukshetra - Entrance Examination & Management Portal (2026-27)',
+  title: 'GURUKUL - Entrance Examination & Admission Portal (2026-27)',
   description:
-    'Official Online Entrance Examination and Admission Portal for Gurukul Kurukshetra. Apply online for Classes 5th, 6th, 7th, 8th, 9th, 11th & NDA Wing. Fee payment, admit card download, and live merit results.',
+    'Official Online Entrance Examination and Admission Portal for GURUKUL (Nilokheri, Jyotisar, Aryakulam). Apply online for Classes 6th, 7th, 8th, 9th, and 11th with online ₹800 fee payment, immediate application form, and admit card download.',
   icons: {
     icon: '/favicon.ico',
     apple: '/logo-gurukul.png',
   },
   keywords: [
-    'Gurukul Kurukshetra',
+    'Gurukul Nilokheri',
+    'Gurukul Jyotisar',
+    'Aryakulam Nilokheri',
     'Gurukul Entrance Exam 2026',
     'Gurukul Admission Portal',
-    'Gurukul Kurukshetra Admit Card',
-    'NDA Wing Gurukul Kurukshetra',
-    'CBSE School Kurukshetra',
+    'Gurukul Admit Card',
   ],
 };
 

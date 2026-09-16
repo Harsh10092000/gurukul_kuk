@@ -8,9 +8,11 @@ import {
   validateOccupation,
   validatePhone,
   validateAadhaar,
-  validateMarks,
+  validateDob,
+  validateClassAndStream,
+  validateStudyLocation,
+  validateAllFourDocuments,
   validateUploadedFile,
-  validateAllFiveDocuments,
 } from '@/lib/validations';
 
 export async function GET(request: Request) {
@@ -22,14 +24,19 @@ export async function GET(request: Request) {
 
     if (user.role === 'admin') {
       const allApplications = await db.getApplications();
-      const metrics = computeApplicationMetrics(allApplications);
+      // Exclude draft records: only officially registered candidates are shown
+      const registeredApplications = allApplications.filter(
+        (a) => a.status !== 'draft' && !(a.registrationNumber || '').startsWith('DRAFT-')
+      );
+      const metrics = computeApplicationMetrics(registeredApplications);
 
       const { searchParams } = new URL(request.url);
       const statusParam = searchParams.get('status');
       const classParam = searchParams.get('class');
       const queryParam = searchParams.get('q');
+      const includeDrafts = searchParams.get('include_drafts') === 'true';
 
-      let filtered = allApplications;
+      let filtered = includeDrafts ? allApplications : registeredApplications;
 
       // Status filtering on server
       if (statusParam && statusParam !== 'all_records') {
@@ -60,13 +67,25 @@ export async function GET(request: Request) {
       return NextResponse.json({
         applications: filtered,
         metrics,
-        totalRecords: allApplications.length,
+        totalRecords: registeredApplications.length,
         filteredCount: filtered.length,
       });
     }
 
     // Normal applicant can ONLY retrieve their own application dossier
-    const application = await db.getApplicationByUserId(user.userId);
+    if (user.userId && user.userId.startsWith('temp_')) {
+      const tempApp = await db.getTempApplication(user.userId);
+      return NextResponse.json({ application: tempApp });
+    }
+
+    let application = await db.getApplicationByUserId(user.userId);
+    if (!application && (user.email || user.registrationNumber)) {
+      const all = await db.getApplications();
+      application = all.find(a => 
+        (user.email && a.personalInfo?.candidateEmail && a.personalInfo.candidateEmail.toLowerCase() === user.email.toLowerCase()) ||
+        (user.registrationNumber && (a.registrationNumber === user.registrationNumber || a.applicationNumber === user.registrationNumber))
+      ) || null;
+    }
     return NextResponse.json({ application });
   } catch (error) {
     console.error('Error fetching applications:', error);
@@ -84,10 +103,12 @@ export async function POST(request: Request) {
     const body = await request.json();
     const {
       classApplying,
+      stream,
       personalInfo,
       parentInfo,
       addressInfo,
       academicInfo,
+      studyLocationPref,
       examCentrePref,
       documents,
       amountPaid,
@@ -98,7 +119,6 @@ export async function POST(request: Request) {
     const existing = await db.getApplicationByUserId(user.userId);
     if (existing && existing.status !== 'draft') {
       if (existing.status === 'rejected') {
-        // User was rejected previously and is re-applying; remove previous rejected record for fresh submission
         await db.deleteApplication(existing.id);
       } else {
         return NextResponse.json(
@@ -108,16 +128,32 @@ export async function POST(request: Request) {
       }
     }
 
-    // ==========================================
-    // SERVER-SIDE VALIDATION CHECKLIST
-    // ==========================================
     // 1. Candidate Full Name
     const candNameVal = validateName(personalInfo?.fullName, 'Candidate Full Name');
     if (!candNameVal.isValid) {
       return NextResponse.json({ error: candNameVal.error }, { status: 400 });
     }
 
-    // 2. Father's and Mother's Full Names
+    // 2. Date of Birth Validation (Cannot be greater than today's date)
+    const dobVal = validateDob(personalInfo?.dob);
+    if (!dobVal.isValid) {
+      return NextResponse.json({ error: dobVal.error }, { status: 400 });
+    }
+
+    // 3. Gender
+    const gender = personalInfo?.gender;
+    if (gender !== 'Male' && gender !== 'Female') {
+      return NextResponse.json({ error: 'Gender must be selected as either Male or Female.' }, { status: 400 });
+    }
+
+    // 4. Class & Stream
+    const finalStream = stream || academicInfo?.stream;
+    const classVal = validateClassAndStream(classApplying, finalStream);
+    if (!classVal.isValid) {
+      return NextResponse.json({ error: classVal.error }, { status: 400 });
+    }
+
+    // 5. Father's and Mother's Full Names & Phone
     const fatherNameVal = validateName(parentInfo?.fatherName, "Father's Full Name");
     if (!fatherNameVal.isValid) {
       return NextResponse.json({ error: fatherNameVal.error }, { status: 400 });
@@ -126,24 +162,24 @@ export async function POST(request: Request) {
     if (!motherNameVal.isValid) {
       return NextResponse.json({ error: motherNameVal.error }, { status: 400 });
     }
-
-    // 3. Father's Mobile Number (format & length)
     const fatherPhoneVal = validatePhone(parentInfo?.fatherPhone, "Father's Mobile Phone");
     if (!fatherPhoneVal.isValid) {
       return NextResponse.json({ error: fatherPhoneVal.error }, { status: 400 });
     }
-
-    // 4. Father's and Mother's Occupations
-    const fatherOccVal = validateOccupation(parentInfo?.fatherOccupation, "Father's Occupation");
-    if (!fatherOccVal.isValid) {
-      return NextResponse.json({ error: fatherOccVal.error }, { status: 400 });
+    if (parentInfo?.fatherOccupation && parentInfo.fatherOccupation.trim()) {
+      const fatherOccVal = validateOccupation(parentInfo.fatherOccupation, "Father's Occupation");
+      if (!fatherOccVal.isValid) {
+        return NextResponse.json({ error: fatherOccVal.error }, { status: 400 });
+      }
     }
-    const motherOccVal = validateOccupation(parentInfo?.motherOccupation, "Mother's Occupation");
-    if (!motherOccVal.isValid) {
-      return NextResponse.json({ error: motherOccVal.error }, { status: 400 });
+    if (parentInfo?.motherOccupation && parentInfo.motherOccupation.trim()) {
+      const motherOccVal = validateOccupation(parentInfo.motherOccupation, "Mother's Occupation");
+      if (!motherOccVal.isValid) {
+        return NextResponse.json({ error: motherOccVal.error }, { status: 400 });
+      }
     }
 
-    // 5. Aadhaar Validation & Uniqueness
+    // 6. Aadhaar Validation & Uniqueness
     const aadhaarVal = validateAadhaar(personalInfo?.aadhaarNumber);
     if (!aadhaarVal.isValid) {
       return NextResponse.json({ error: aadhaarVal.error }, { status: 400 });
@@ -156,42 +192,94 @@ export async function POST(request: Request) {
       );
     }
 
-    // 6. Marks Validation & Safe Calculation
-    const marksVal = validateMarks(academicInfo?.marksObtained, academicInfo?.marksTotal);
-    if (!marksVal.isValid) {
-      return NextResponse.json({ error: marksVal.error }, { status: 400 });
+    // 7. Preferred Study Location
+    const finalStudyPref = studyLocationPref || examCentrePref || {};
+    const locVal = validateStudyLocation(gender, finalStudyPref.firstPreference, finalStudyPref.secondPreference);
+    if (!locVal.isValid) {
+      return NextResponse.json({ error: locVal.error }, { status: 400 });
     }
 
-    // 7. Mandatory All 5 Documents
-    const docsVal = validateAllFiveDocuments(documents);
+    // 8. Mandatory 4 Documents (Marksheet removed!)
+    const docsVal = validateAllFourDocuments(documents);
     if (!docsVal.isValid) {
       return NextResponse.json({ error: docsVal.error }, { status: 400 });
     }
 
-    // 8. File Content, Size (<=2MB), MIME & Magic Bytes Validation
-    for (const docKey of ['photo', 'signature', 'parentSignature', 'aadhaarCard', 'lastMarksheet']) {
+    // 9. File Content, Size (<=2MB), MIME & Magic Bytes Validation
+    for (const docKey of ['photo', 'signature', 'parentSignature', 'aadhaarCard']) {
       const fileVal = validateUploadedFile(documents[docKey], docKey);
       if (!fileVal.isValid) {
         return NextResponse.json({ error: fileVal.error }, { status: 400 });
       }
     }
 
+    // 10. Generate Registration ID: NILB-xxxxx / NILG-xxxxx & Roll Number: 260... / 261...
+    const registrationId = await db.getNextRegistrationNumber(gender as 'Male' | 'Female');
+    const assignedRollNo = await db.getNextRollNumber(gender as 'Male' | 'Female');
+
     const newApp = await db.createApplication({
       userId: user.userId,
-      classApplying: classApplying || academicInfo?.applyingClass || 'Class 6',
+      registrationNumber: registrationId,
+      rollNumber: assignedRollNo,
+      classApplying: classApplying || 'Class 6',
+      stream: classApplying?.includes('11') ? finalStream : undefined,
       personalInfo,
       parentInfo,
       addressInfo,
       academicInfo: {
-        ...academicInfo,
-        previousClassMarksPercentage: String(marksVal.percentage),
+        applyingClass: classApplying,
+        stream: finalStream,
+        previousSchoolName: personalInfo.previousSchoolName,
+        previousBoard: personalInfo.previousBoard,
+        otherBoard: personalInfo.otherBoard,
       },
-      examCentrePref,
+      studyLocationPref: finalStudyPref,
+      examCentrePref: finalStudyPref,
       documents: documents || {},
       status: 'submitted',
       paymentStatus: 'completed',
-      amountPaid: amountPaid || 1200,
-      transactionId: transactionId || 'TXN_GK_' + Math.random().toString(36).substring(2, 9).toUpperCase(),
+      amountPaid: amountPaid || 800,
+      transactionId: transactionId || 'TXN_GUR_' + Math.random().toString(36).substring(2, 9).toUpperCase(),
+    });
+
+    // Generate Official Admit Card Record Simultaneously (isReleased: false until Admin declares)
+    const settings = await db.getSettings();
+    const examDate = settings.entranceExamDate || '06 December 2026';
+    const centres = await db.getCentres();
+    const primaryCentre = centres[0] || {
+      name: 'Gurukul Kurukshetra Main Campus',
+      address: 'Near 3rd Gate, Kurukshetra University, Kurukshetra, Haryana - 136119',
+    };
+
+    const seqNum = parseInt(assignedRollNo.slice(3), 10) || 1;
+    const hallNumber = Math.ceil(seqNum / 30);
+    const deskNumber = ((seqNum - 1) % 30) + 1;
+
+    await db.generateOrReleaseAdmitCard({
+      id: 'admit-' + newApp.id,
+      applicationId: newApp.id,
+      applicationNumber: registrationId,
+      rollNumber: assignedRollNo,
+      candidateName: personalInfo.fullName.trim(),
+      fatherName: parentInfo.fatherName.trim(),
+      classApplying: newApp.classApplying,
+      stream: newApp.stream,
+      examCentreName: primaryCentre.name,
+      examCentreAddress: primaryCentre.address,
+      examDate,
+      reportingTime: '08:30 AM',
+      examDuration: '10:00 AM to 12:30 PM (2.5 Hours)',
+      roomNumber: `Hall-${hallNumber}, Desk ${deskNumber}`,
+      candidatePhotoUrl: documents?.photo || '/logo-gurukul.png',
+      candidateSignatureUrl: documents?.signature || undefined,
+      isReleased: Boolean(settings.admitCardsReleased), // Hidden from candidate until admin declares
+      instructions: [
+        'Bring a printed clear copy of this Admit Card along with your original Aadhaar Card.',
+        'Candidates must report to their allotted examination centre at least 45 minutes before exam start time.',
+        'Calculators, smart devices, watches, and mobile phones are strictly prohibited in the exam hall.',
+        'Only Blue or Black ballpoint pens are permitted for marking answers.',
+      ],
+      createdAt: new Date().toISOString(),
     });
 
     // Fetch user record to include permanent registrationNumber in confirmation
@@ -229,7 +317,7 @@ export async function POST(request: Request) {
           applicationNumber: newApp.applicationNumber,
           receiptNumber: receiptNo,
           transactionId: newApp.transactionId || '',
-          amount: newApp.amountPaid || 1200,
+          amount: newApp.amountPaid || 800,
           classApplying: newApp.classApplying,
           candidateEmail: user.email,
           candidateMobile: candidateMobile,
@@ -263,9 +351,8 @@ export async function POST(request: Request) {
         state: addressInfo?.state || 'N/A',
         district: addressInfo?.district || 'N/A',
         address: `${addressInfo?.streetAddress || ''}, ${addressInfo?.city || ''}, ${addressInfo?.district || ''}, ${addressInfo?.state || ''} - ${addressInfo?.pincode || ''}`.replace(/^,\s*|,\s*$/g, ''),
-        previousSchool: academicInfo?.previousSchoolName ? `${academicInfo.previousSchoolName} (${academicInfo.previousBoard || ''})` : 'N/A',
-        previousMarks: academicInfo?.previousClassMarksPercentage ? `${academicInfo.previousClassMarksPercentage}%` : (academicInfo?.marksObtained ? `${academicInfo.marksObtained}/${academicInfo.marksTotal}` : 'N/A'),
-        amountPaid: newApp.amountPaid || 1200,
+        previousSchool: personalInfo?.previousSchoolName ? `${personalInfo.previousSchoolName} (${personalInfo.previousBoard || ''})` : 'N/A',
+        amountPaid: newApp.amountPaid || 800,
         transactionId: newApp.transactionId || '',
         registrationTime: paymentTimestamp,
       },

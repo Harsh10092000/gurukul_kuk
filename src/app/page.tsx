@@ -27,6 +27,7 @@ import {
   EyeOff
 } from 'lucide-react';
 import VisualCaptcha from '@/components/VisualCaptcha';
+import { resolveAdmissionPhase } from '@/lib/admissionPhases';
 
 export default function ExamPortalGateway() {
   const router = useRouter();
@@ -48,12 +49,15 @@ export default function ExamPortalGateway() {
   // Form Schedule State
   const [schedule, setSchedule] = useState<{
     isOpen: boolean;
-    status: 'OPEN' | 'CLOSED' | 'EXTENDED';
+    status: 'OPEN' | 'CLOSED' | 'EXTENDED' | 'UPCOMING';
     message: string;
-    startDateTimeIST?: string;
-    endDateTimeIST?: string;
+    startDate?: string;
+    endDate?: string;
     announcementNotice?: string;
   } | null>(null);
+
+  // Whether schedule data has been fetched (avoid flash of wrong phase)
+  const [scheduleLoaded, setScheduleLoaded] = useState(false);
 
   const [portalSettings, setPortalSettings] = useState<any>(null);
 
@@ -76,15 +80,19 @@ export default function ExamPortalGateway() {
     fetch('/api/schedule')
       .then((res) => res.json())
       .then((data) => {
+        // API returns: { isOpen, status, message, startDate, endDate, announcementNotice, details, config }
         if (data.details) {
-          setSchedule(data.details);
-        } else if (data.status && typeof data.status === 'object') {
-          setSchedule({ ...data.status, announcementNotice: data.announcementNotice });
+          setSchedule({
+            ...data.details,
+            startDate: data.details.startDate || data.startDate,
+            endDate: data.details.endDate || data.endDate,
+          });
         } else if (data.isOpen !== undefined) {
           setSchedule(data);
         }
+        setScheduleLoaded(true);
       })
-      .catch(() => {});
+      .catch(() => { setScheduleLoaded(true); });
 
     // Fetch portal settings & academic milestone dates
     fetch('/api/settings')
@@ -175,34 +183,49 @@ export default function ExamPortalGateway() {
     }
   };
 
-  const regStart = formatDateDisplay(portalSettings?.registrationStartDate, '01 September 2026');
-  const regEnd = formatDateDisplay(portalSettings?.registrationEndDate, '31 October 2026');
-  const admitDate = formatDateDisplay(portalSettings?.admitCardReleaseDate, '15 November 2026');
-  const examDate = formatDateDisplay(portalSettings?.entranceExamDate, '06 December 2026');
-  const resultDate = formatDateDisplay(portalSettings?.resultDeclarationDate, '20 December 2026');
-
-  const importantDates = [
-    { event: 'Online Registration Commences', date: regStart, status: 'Active' },
-    { event: 'Last Date for Online Application', date: regEnd, status: schedule?.status === 'EXTENDED' ? 'Extended' : 'Ongoing' },
-    { event: 'Release of Hall Ticket / Admit Card', date: admitDate, status: 'Upcoming' },
-    { event: 'Written Entrance Examination', date: examDate, status: 'Upcoming' },
-    { event: 'Declaration of Merit List / Result', date: resultDate, status: portalSettings?.resultsDeclared ? 'Declared' : 'Upcoming' },
-  ];
-
-  const marqueeText = schedule?.announcementNotice || 'Online Application for Entrance Examination Session 2026-27 is active for Classes 5th, 6th, 7th, 8th, 9th, 11th & NDA Wing.';
-  const currentSession = portalSettings?.academicSession || '2026-27';
+  const phaseInfo = resolveAdmissionPhase({
+    registrationStartDate: portalSettings?.registrationStartDate || schedule?.startDate,
+    registrationEndDate: portalSettings?.registrationEndDate || schedule?.endDate,
+    admitCardReleaseDate: portalSettings?.admitCardReleaseDate,
+    entranceExamDate: portalSettings?.entranceExamDate,
+    resultDeclarationDate: portalSettings?.resultDeclarationDate,
+    counselingStartDate: portalSettings?.counselingStartDate,
+    academicSession: portalSettings?.academicSession,
+    admitCardsReleased: portalSettings?.admitCardsReleased,
+    resultsDeclared: portalSettings?.resultsDeclared,
+    statusOverride: schedule?.status === 'EXTENDED' ? 'extended' : undefined,
+  });
 
   return (
     <div className="w-full min-h-screen bg-slate-50 pb-16 font-sans">
-      {/* Sleek Announcement Strip */}
-      <div className="bg-amber-500/10 border-b border-amber-500/20 py-2 px-4 text-center text-xs font-semibold text-slate-800 flex items-center justify-center gap-2">
-        <span className="bg-amber-500 text-gurukul-navy text-[10px] font-black uppercase px-2 py-0.5 rounded tracking-wide flex-shrink-0">
-          ADMISSION {currentSession}
-        </span>
-        <span className="truncate">
-          {marqueeText}
-        </span>
-      </div>
+      {/* Sleek Dynamic Phase-Aware Announcement Strip */}
+      {!scheduleLoaded ? (
+        /* Neutral skeleton shown while /api/schedule is fetching — prevents wrong-phase flash */
+        <div className="py-2 px-4 text-center text-xs font-semibold flex items-center justify-center gap-2 border-b bg-slate-100 text-slate-400">
+          <span className="text-[10px] uppercase px-2.5 py-0.5 rounded tracking-wide flex-shrink-0 bg-slate-200 animate-pulse">
+            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+          </span>
+          <span className="bg-slate-200 animate-pulse rounded w-64 h-3 inline-block" />
+        </div>
+      ) : (
+        <div className={`py-2 px-4 text-center text-xs font-semibold flex items-center justify-center gap-2 border-b transition ${phaseInfo.banner.containerStyle}`}>
+          <span className={`text-[10px] uppercase px-2.5 py-0.5 rounded tracking-wide flex-shrink-0 ${phaseInfo.banner.badgeStyle}`}>
+            {phaseInfo.banner.badge}
+          </span>
+          <span className="truncate">
+            {phaseInfo.banner.message}
+          </span>
+          {phaseInfo.banner.link && (
+            <Link
+              href={phaseInfo.banner.link.href}
+              className="hover:underline flex items-center gap-1 font-bold ml-1 flex-shrink-0 group"
+            >
+              <span>{phaseInfo.banner.link.label}</span>
+              <span className="font-extrabold group-hover:translate-x-0.5 transition-transform">→</span>
+            </Link>
+          )}
+        </div>
+      )}
 
       <div className="max-w-6xl mx-auto px-4 sm:px-6 pt-8">
         {/* Page Title & Context Header */}
@@ -393,49 +416,67 @@ export default function ExamPortalGateway() {
                 </>
               )}
 
-              {/* Bottom Support Notice */}
-              <div className="bg-slate-50 border-t border-slate-200 px-6 py-3 text-xs text-slate-500 flex flex-col sm:flex-row justify-between items-center gap-2">
-                <span>Helpline: +91-1744-259114, 9896328329</span>
-                <span>Email: admissions@gurukulkurukshetra.com</span>
-              </div>
+
             </div>
           </div>
 
           {/* Right Column (5 Cols): New Candidate Registration & Quick Services */}
           <div className="lg:col-span-5 space-y-6">
 
-            {/* Step 1: New Candidate Registration Card (Clean & Active) */}
-            <div className="bg-white rounded-2xl border-2 border-amber-500/40 p-6 shadow-md relative overflow-hidden flex flex-col justify-between">
-              <div className="space-y-4">
+            {/* Step 1: New Candidate Registration Card (Phase-Aware) */}
+            {!scheduleLoaded ? (
+              /* Skeleton card while schedule API loads */
+              <div className="bg-white rounded-2xl border-2 border-slate-200 p-6 shadow-md space-y-4 animate-pulse">
                 <div className="flex justify-between items-center">
-                  <div className="w-10 h-10 rounded-xl bg-amber-500 text-gurukul-navy flex items-center justify-center font-bold">
-                    <UserPlus className="w-5 h-5" />
+                  <div className="w-10 h-10 rounded-xl bg-slate-200" />
+                  <div className="h-5 w-28 bg-slate-200 rounded-full" />
+                </div>
+                <div className="space-y-2 pt-2">
+                  <div className="h-6 w-48 bg-slate-200 rounded" />
+                  <div className="h-3 w-full bg-slate-100 rounded" />
+                  <div className="h-3 w-3/4 bg-slate-100 rounded" />
+                </div>
+                <div className="pt-6 mt-4 border-t border-slate-100">
+                  <div className="h-10 w-full bg-slate-200 rounded-xl" />
+                </div>
+              </div>
+            ) : (
+              <div className={`bg-white rounded-2xl border-2 ${phaseInfo.registrationCard.isOpen ? 'border-amber-500/40' : 'border-rose-200'} p-6 shadow-md relative overflow-hidden flex flex-col justify-between`}>
+                <div className="space-y-4">
+                  <div className="flex justify-between items-center">
+                    <div className={`w-10 h-10 rounded-xl ${phaseInfo.registrationCard.isOpen ? 'bg-amber-500 text-gurukul-navy' : 'bg-rose-100 text-rose-700'} flex items-center justify-center font-bold`}>
+                      <UserPlus className="w-5 h-5" />
+                    </div>
+                    <span className={`${phaseInfo.registrationCard.isOpen ? 'bg-amber-100 text-amber-900' : 'bg-rose-100 text-rose-800 border border-rose-300'} text-[10px] font-black uppercase px-3 py-1 rounded-full`}>
+                      {phaseInfo.registrationCard.badge}
+                    </span>
                   </div>
-                  <span className="bg-amber-100 text-amber-900 text-[10px] font-black uppercase px-3 py-1 rounded-full">
-                    Step 1: Apply Online
-                  </span>
+
+                  <div>
+                    <h3 className="text-xl font-black tracking-tight text-gurukul-navy">
+                      {phaseInfo.registrationCard.title}
+                    </h3>
+                    <p className="text-xs text-slate-600 mt-1 leading-relaxed">
+                      {phaseInfo.registrationCard.description}
+                    </p>
+                  </div>
                 </div>
 
-                <div>
-                  <h3 className="text-xl font-black tracking-tight text-gurukul-navy">
-                    New Candidate Registration
-                  </h3>
-                  <p className="text-xs text-slate-600 mt-1 leading-relaxed">
-                    New candidates applying for admission for Session 2026-27 must register here first to generate their Registration Number.
-                  </p>
+                <div className="pt-6 mt-4 border-t border-slate-100">
+                  <Link
+                    href={phaseInfo.registrationCard.actionHref}
+                    className={`w-full py-3 ${
+                      phaseInfo.registrationCard.isPrimary
+                        ? 'bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-gurukul-navy'
+                        : 'bg-gurukul-navy hover:bg-slate-800 text-amber-300'
+                    } font-black text-xs rounded-xl shadow transition flex items-center justify-center gap-2 uppercase tracking-wide`}
+                  >
+                    <span>{phaseInfo.registrationCard.actionText}</span>
+                    <ArrowRight className="w-4 h-4" />
+                  </Link>
                 </div>
               </div>
-
-              <div className="pt-6 mt-4 border-t border-slate-100">
-                <Link
-                  href="/register"
-                  className="w-full py-3 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-gurukul-navy font-black text-xs rounded-xl shadow transition flex items-center justify-center gap-2 uppercase tracking-wide"
-                >
-                  <span>Register Online (Session 2026-27)</span>
-                  <ArrowRight className="w-4 h-4" />
-                </Link>
-              </div>
-            </div>
+            )}
 
             {/* Candidate Quick Services Cards */}
             <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm space-y-3">
@@ -534,32 +575,44 @@ export default function ExamPortalGateway() {
               </h3>
             </div>
             <span className="text-[11px] text-amber-700 bg-amber-50 border border-amber-200 px-2.5 py-1 rounded font-bold">
-              Strictly Followed by Gurukul Kurukshetra
+              Strictly Followed by GURUKUL Network
             </span>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
-            {importantDates.map((item, idx) => (
-              <div key={idx} className="p-3.5 bg-slate-50 border border-slate-200 rounded-xl space-y-1 hover:border-amber-400 transition">
-                <div className="flex justify-between items-center">
-                  <span className="text-[10px] font-mono font-bold text-slate-400 uppercase">
-                    Stage 0{idx + 1}
-                  </span>
-                  <span className={`text-[9px] px-1.5 py-0.5 rounded font-bold ${
-                    item.status === 'Active' ? 'bg-emerald-100 text-emerald-800' :
-                    item.status === 'Ongoing' ? 'bg-blue-100 text-blue-800' :
-                    'bg-slate-200 text-slate-600'
-                  }`}>
-                    {item.status}
-                  </span>
+          {!scheduleLoaded ? (
+            /* Skeleton grid while data loads */
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 animate-pulse">
+              {[1, 2, 3, 4, 5].map((i) => (
+                <div key={i} className="p-3.5 bg-slate-100 border border-slate-200 rounded-xl space-y-2">
+                  <div className="flex justify-between items-center">
+                    <div className="h-3 w-12 bg-slate-200 rounded" />
+                    <div className="h-3 w-14 bg-slate-200 rounded" />
+                  </div>
+                  <div className="h-4 w-full bg-slate-200 rounded" />
+                  <div className="h-3 w-20 bg-slate-200 rounded" />
                 </div>
-                <h4 className="font-bold text-xs text-slate-900 leading-snug">{item.event}</h4>
-                <p className="text-xs font-semibold text-gurukul-600 flex items-center gap-1 pt-1">
-                  <Clock className="w-3 h-3 text-amber-500" /> {item.date}
-                </p>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+              {phaseInfo.stages.map((item, idx) => (
+                <div key={idx} className="p-3.5 bg-slate-50 border border-slate-200 rounded-xl space-y-1 hover:border-amber-400 transition">
+                  <div className="flex justify-between items-center">
+                    <span className="text-[10px] font-mono font-bold text-slate-400 uppercase">
+                      Stage {item.stageNumber}
+                    </span>
+                    <span className={`text-[9px] px-1.5 py-0.5 rounded font-bold ${item.badgeClass}`}>
+                      {item.status}
+                    </span>
+                  </div>
+                  <h4 className="font-bold text-xs text-slate-900 leading-snug">{item.event}</h4>
+                  <p className="text-xs font-semibold text-gurukul-600 flex items-center gap-1 pt-1">
+                    <Clock className="w-3 h-3 text-amber-500" /> {item.date}
+                  </p>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Candidate Information & Guidelines */}
@@ -570,12 +623,12 @@ export default function ExamPortalGateway() {
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-slate-600 leading-relaxed pt-1">
             <div className="space-y-1.5">
-              <p>• <strong>Registration Number Generation:</strong> A unique Registration Number (e.g. <code>GK26-10024</code>) is generated immediately upon registration. Please note it down safely.</p>
-              <p>• <strong>Separate Roll Number:</strong> Official Roll Number will be assigned later by the Examination Cell prior to the entrance examination.</p>
+              <p>• <strong>Registration ID Generation:</strong> A unique Registration ID (<code>NILB-xxxxx</code> for Boys, <code>NILG-xxxxx</code> for Girls) is generated server-side immediately upon successful ₹800 fee payment.</p>
+              <p>• <strong>Official Application Form &amp; Hall Ticket:</strong> Your official Admission Form and Entrance Admit Card are generated immediately upon completed registration.</p>
             </div>
             <div className="space-y-1.5">
-              <p>• <strong>Required Documents:</strong> Please keep scanned passport size photo (&lt; 200KB), candidate signature, father signature, and Aadhaar card ready before filling details.</p>
-              <p>• <strong>Entrance Fee:</strong> Online examination fee of ₹1,200 must be paid online via Razorpay/Debit Card/UPI to submit the application successfully.</p>
+              <p>• <strong>4 Mandatory Documents:</strong> Keep candidate passport photo, candidate signature, parent signature, and Aadhaar card ready with interactive cropper before payment.</p>
+              <p>• <strong>Entrance Fee:</strong> Online examination and registration fee of ₹800 must be paid online via Razorpay/Debit Card/UPI to confirm registration.</p>
             </div>
           </div>
         </div>

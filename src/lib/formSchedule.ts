@@ -72,7 +72,18 @@ export function checkFormStatus(): FormStatusResult {
   const schedule = getFormSchedule();
   const now = new Date();
   const start = new Date(schedule.startDate);
-  const end = new Date(schedule.endDate);
+  let end = new Date(schedule.endDate);
+  if (schedule.endDate) {
+    if (schedule.endDate.length === 10) {
+      end = new Date(schedule.endDate + 'T23:59:59+05:30');
+    } else if (schedule.endDate.includes('T00:00:00')) {
+      const datePart = schedule.endDate.split('T')[0];
+      end = new Date(datePart + 'T23:59:59+05:30');
+    }
+  }
+
+  const formattedEnd = end.toLocaleDateString('en-IN', { day: '2-digit', month: 'long', year: 'numeric', timeZone: 'Asia/Kolkata' });
+  const formattedStart = start.toLocaleDateString('en-IN', { day: '2-digit', month: 'long', year: 'numeric', timeZone: 'Asia/Kolkata' });
 
   if (schedule.statusOverride === 'closed') {
     return {
@@ -82,19 +93,20 @@ export function checkFormStatus(): FormStatusResult {
       endDate: schedule.endDate,
       timezone: schedule.timezone,
       message: 'Online Entrance Examination applications are currently closed by administration.',
-      announcementNotice: schedule.announcementNotice,
+      announcementNotice: 'Online Application for Entrance Examination Session 2026-27 is currently closed.',
     };
   }
 
-  if (schedule.statusOverride === 'open') {
+  // If the deadline has passed in IST, the portal is CLOSED unless statusOverride is 'extended'
+  if (now > end && schedule.statusOverride !== 'extended') {
     return {
-      isOpen: true,
-      status: 'OPEN',
+      isOpen: false,
+      status: 'CLOSED',
       startDate: schedule.startDate,
       endDate: schedule.endDate,
       timezone: schedule.timezone,
-      message: `Online applications are open until ${end.toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata' })} (${schedule.timezone}).`,
-      announcementNotice: schedule.announcementNotice,
+      message: `Online applications closed on ${formattedEnd} (${schedule.timezone}).`,
+      announcementNotice: `Online Application for Entrance Examination Session 2026-27 closed on ${formattedEnd}. Verification of submitted dossiers and roll number allotment in progress.`,
     };
   }
 
@@ -105,8 +117,8 @@ export function checkFormStatus(): FormStatusResult {
       startDate: schedule.startDate,
       endDate: schedule.endDate,
       timezone: schedule.timezone,
-      message: `Application form has been extended until ${end.toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata' })} (${schedule.timezone}).`,
-      announcementNotice: schedule.announcementNotice,
+      message: `Application form has been extended until ${formattedEnd} (${schedule.timezone}).`,
+      announcementNotice: `Notice: Online Application for Entrance Examination Session 2026-27 has been extended up to ${formattedEnd}.`,
     };
   }
 
@@ -118,20 +130,8 @@ export function checkFormStatus(): FormStatusResult {
       startDate: schedule.startDate,
       endDate: schedule.endDate,
       timezone: schedule.timezone,
-      message: `Online applications will commence on ${start.toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata' })} at ${start.toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata' })} (${schedule.timezone}).`,
-      announcementNotice: schedule.announcementNotice,
-    };
-  }
-
-  if (now > end) {
-    return {
-      isOpen: false,
-      status: 'CLOSED',
-      startDate: schedule.startDate,
-      endDate: schedule.endDate,
-      timezone: schedule.timezone,
-      message: `Online applications closed on ${end.toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata' })} at ${end.toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata' })} (${schedule.timezone}).`,
-      announcementNotice: schedule.announcementNotice,
+      message: `Online applications will commence on ${formattedStart} (${schedule.timezone}).`,
+      announcementNotice: `Online applications will commence on ${formattedStart}.`,
     };
   }
 
@@ -141,8 +141,8 @@ export function checkFormStatus(): FormStatusResult {
     startDate: schedule.startDate,
     endDate: schedule.endDate,
     timezone: schedule.timezone,
-    message: `Online applications are currently active until ${end.toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata' })} (${schedule.timezone}).`,
-    announcementNotice: schedule.announcementNotice,
+    message: `Online applications are currently active until ${formattedEnd} (${schedule.timezone}).`,
+    announcementNotice: `Online Application for Entrance Examination Session 2026-27 is active. Last date: ${formattedEnd}.`,
   };
 }
 

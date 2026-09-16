@@ -7,24 +7,32 @@ import { Printer, Download, Search, Users, Calendar, MapPin, Building } from 'lu
 export default function AdminAttendancePage() {
   const [candidates, setCandidates] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selectedCentre, setSelectedCentre] = useState('');
   const [selectedClass, setSelectedClass] = useState('');
-  const [centresList, setCentresList] = useState<any[]>([]);
+  const [selectedWing, setSelectedWing] = useState<'all' | 'boys' | 'girls'>('all');
+  const [officialCentre, setOfficialCentre] = useState('Gurukul Kurukshetra Main Campus');
 
   useEffect(() => {
     fetch('/api/admin/centres')
       .then((res) => res.json())
       .then((data) => {
-        if (data.centres) setCentresList(data.centres);
+        if (data.centres && data.centres.length > 0) {
+          setOfficialCentre(data.centres[0].name);
+        }
       })
-      .catch((e) => console.warn('Failed to load centres for filter:', e));
+      .catch((e) => console.warn('Failed to load centre name:', e));
   }, []);
 
   const fetchAttendance = () => {
     setLoading(true);
+    // For Class 11 stream variants, we pass the class and stream separately
+    const [classVal, streamVal] = selectedClass.includes('|')
+      ? selectedClass.split('|')
+      : [selectedClass, ''];
+
     let url = `/api/admin/attendance?`;
-    if (selectedCentre) url += `centre=${encodeURIComponent(selectedCentre)}&`;
-    if (selectedClass) url += `class=${encodeURIComponent(selectedClass)}&`;
+    if (classVal) url += `class=${encodeURIComponent(classVal)}&`;
+    if (streamVal) url += `stream=${encodeURIComponent(streamVal)}&`;
+    if (selectedWing !== 'all') url += `gender=${encodeURIComponent(selectedWing)}&`;
 
     fetch(url)
       .then((res) => res.json())
@@ -37,12 +45,40 @@ export default function AdminAttendancePage() {
 
   useEffect(() => {
     fetchAttendance();
-  }, [selectedCentre, selectedClass]);
+  }, [selectedClass, selectedWing]);
+
+  const handlePrintWing = (wing: 'all' | 'boys' | 'girls') => {
+    setSelectedWing(wing);
+    setTimeout(() => {
+      window.print();
+    }, 400);
+  };
+
+  const formatClass = (cls?: string) => {
+    if (!cls) return '—';
+    const str = String(cls).trim();
+    // Check if already ends with th, st, nd, rd (e.g. 6th)
+    if (/^\d+(st|nd|rd|th)/i.test(str)) {
+      return str;
+    }
+    // Match "Class 7", "Class 11 Science", "7", "11", etc.
+    const match = str.match(/(?:class\s*)?(\d+)(.*)/i);
+    if (match) {
+      const num = parseInt(match[1], 10);
+      const suffix = match[2] ? match[2].trim() : '';
+      let ordinal = 'th';
+      if (num === 1 || (num % 10 === 1 && num !== 11)) ordinal = 'st';
+      else if (num === 2 || (num % 10 === 2 && num !== 12)) ordinal = 'nd';
+      else if (num === 3 || (num % 10 === 3 && num !== 13)) ordinal = 'rd';
+      return `${num}${ordinal}${suffix ? ` ${suffix}` : ''}`;
+    }
+    return str;
+  };
 
   return (
     <div className="space-y-6 font-sans">
       {/* Top Banner (Hidden on Print) */}
-      <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4 bg-white p-6 rounded-2xl border border-slate-200 shadow-sm print:hidden">
+      <div className="flex flex-col lg:flex-row justify-between lg:items-center gap-4 bg-white p-6 rounded-2xl border border-slate-200 shadow-sm print:hidden">
         <div>
           <span className="text-[10px] font-mono uppercase tracking-wider text-gurukul-600 bg-amber-100 px-3 py-1 rounded-full font-bold">
             Examination Desk • Session 2026-27
@@ -51,57 +87,104 @@ export default function AdminAttendancePage() {
             Entrance Examination Attendance Registers
           </h1>
           <p className="text-xs text-slate-500">
-            Generate official printable invigilator attendance sheets (strictly displays candidates with allotted Roll Numbers).
+            Generate official printable invigilator attendance sheets separated for Boys Wing and Girls Wing.
           </p>
         </div>
 
-        <button
-          onClick={() => window.print()}
-          className="bg-gurukul-navy hover:bg-slate-900 text-white font-extrabold text-xs px-5 py-2.5 rounded-xl shadow transition flex items-center justify-center gap-2"
-        >
-          <Printer className="w-4 h-4 text-amber-400" />
-          <span>Print Attendance Sheet</span>
-        </button>
+        <div className="flex flex-wrap gap-2">
+          <button
+            type="button"
+            onClick={() => handlePrintWing('boys')}
+            className="bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs px-4 py-2.5 rounded-xl shadow transition flex items-center justify-center gap-1.5"
+          >
+            <Printer className="w-3.5 h-3.5" />
+            <span>Print Boys Sheet</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => handlePrintWing('girls')}
+            className="bg-pink-600 hover:bg-pink-700 text-white font-bold text-xs px-4 py-2.5 rounded-xl shadow transition flex items-center justify-center gap-1.5"
+          >
+            <Printer className="w-3.5 h-3.5" />
+            <span>Print Girls Sheet</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => window.print()}
+            className="bg-gurukul-navy hover:bg-slate-900 text-white font-bold text-xs px-4 py-2.5 rounded-xl shadow transition flex items-center justify-center gap-1.5"
+          >
+            <Printer className="w-3.5 h-3.5 text-amber-400" />
+            <span>Print Current Sheet</span>
+          </button>
+        </div>
       </div>
 
-      {/* Filters (Hidden on Print) */}
-      <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-wrap gap-4 items-center print:hidden">
-        <div className="flex items-center gap-2 text-xs font-bold text-slate-700">
-          <Building className="w-4 h-4 text-gurukul-600" />
-          <span>Centre Filter:</span>
+      {/* Category / Wing Tabs & Filters (Hidden on Print) */}
+      <div className="space-y-3 print:hidden">
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="text-xs font-bold text-slate-600 mr-1">Category / Wing:</span>
+          <button
+            type="button"
+            onClick={() => setSelectedWing('all')}
+            className={`px-4 py-2 rounded-xl text-xs font-bold transition ${selectedWing === 'all'
+              ? 'bg-gurukul-navy text-white shadow-sm'
+              : 'bg-white text-slate-700 border border-slate-200 hover:bg-slate-50'
+              }`}
+          >
+            All Candidates
+          </button>
+          <button
+            type="button"
+            onClick={() => setSelectedWing('boys')}
+            className={`px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 ${selectedWing === 'boys'
+              ? 'bg-blue-600 text-white shadow-sm'
+              : 'bg-white text-blue-700 border border-blue-200 hover:bg-blue-50'
+              }`}
+          >
+            <span> Boys Attendance Sheet</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setSelectedWing('girls')}
+            className={`px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 ${selectedWing === 'girls'
+              ? 'bg-pink-600 text-white shadow-sm'
+              : 'bg-white text-pink-700 border border-pink-200 hover:bg-pink-50'
+              }`}
+          >
+            <span>Girls Attendance Sheet</span>
+
+          </button>
         </div>
-        <select
-          value={selectedCentre}
-          onChange={(e) => setSelectedCentre(e.target.value)}
-          className="text-xs border rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-amber-500 font-semibold"
-        >
-          <option value="">All Examination Centres</option>
-          {centresList.map((c) => (
-            <option key={c.id} value={c.name}>
-              {c.name} ({c.code})
-            </option>
-          ))}
-        </select>
 
-        <select
-          value={selectedClass}
-          onChange={(e) => setSelectedClass(e.target.value)}
-          className="text-xs border rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-amber-500 font-semibold"
-        >
-          <option value="">All Classes</option>
-          <option value="Class 5">Class 5th</option>
-          <option value="Class 6">Class 6th</option>
-          <option value="Class 7">Class 7th</option>
-          <option value="Class 8">Class 8th</option>
-          <option value="Class 9">Class 9th</option>
-          <option value="Class 11 Science">Class 11th Science</option>
-          <option value="Class 11 Commerce">Class 11th Commerce</option>
-          <option value="Class 11 NDA Wing">Class 11th NDA Wing</option>
-        </select>
+        <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-wrap gap-4 items-center">
+          <div className="flex items-center gap-2 text-xs font-semibold text-slate-700 bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-200">
+            <Building className="w-4 h-4 text-gurukul-600" />
+            <span>Centre: <strong className="text-gurukul-navy">{officialCentre}</strong></span>
+          </div>
 
-        <span className="text-xs font-mono text-slate-500 ml-auto">
-          Total Candidates: <strong>{candidates.length}</strong>
-        </span>
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-bold text-slate-600">Filter Class:</span>
+            <select
+              value={selectedClass}
+              onChange={(e) => setSelectedClass(e.target.value)}
+              className="text-xs border rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-amber-500 font-semibold"
+            >
+              <option value="">All Classes</option>
+              <option value="Class 6">Class 6th</option>
+              <option value="Class 7">Class 7th</option>
+              <option value="Class 8">Class 8th</option>
+              <option value="Class 9">Class 9th</option>
+              <option value="Class 11|Non Medical">Class 11th — Non Medical</option>
+              <option value="Class 11|Medical">Class 11th — Medical</option>
+              <option value="Class 11|Commerce">Class 11th — Commerce</option>
+              <option value="Class 11|Arts">Class 11th — Arts</option>
+            </select>
+          </div>
+
+          <span className="text-xs font-mono text-slate-500 ml-auto">
+            Candidates in Sheet: <strong>{candidates.length}</strong>
+          </span>
+        </div>
       </div>
 
       {/* Printable Sheet Container */}
@@ -109,14 +192,16 @@ export default function AdminAttendancePage() {
         {/* Printable Header */}
         <div className="border-b-2 border-slate-900 pb-3 mb-4 text-center">
           <h2 className="text-xl font-black text-gurukul-navy uppercase tracking-wider">
-            GURUKUL KURUKSHETRA
+            {selectedWing === 'girls' ? 'ARYAKULAM NILOKHERI' : 'GURUKUL KURUKSHETRA'}
           </h2>
           <p className="text-xs font-serif font-bold text-gurukul-700">
-            ENTRANCE EXAMINATION ATTENDANCE SHEET & VERIFICATION REGISTER (2026-27)
+            ENTRANCE EXAMINATION ATTENDANCE SHEET &amp; VERIFICATION REGISTER (2026-27)
+            {selectedWing === 'boys' ? ' — BOYS' : selectedWing === 'girls' ? ' — GIRLS' : ' — [CONSOLIDATED]'}
           </p>
           <div className="flex justify-between items-center text-[10px] text-slate-600 font-mono pt-2">
             <span>Examination Date: <strong>06 December 2026</strong></span>
-            <span>Centre: <strong>{selectedCentre || 'All Centres'}</strong></span>
+            <span>Wing: <strong>{selectedWing === 'boys' ? 'BOYS WING (GURUKUL)' : selectedWing === 'girls' ? 'GIRLS WING (ARYAKULAM)' : 'ALL WINGS'}</strong></span>
+            <span>Centre: <strong>{officialCentre}</strong></span>
             <span>Reporting: <strong>08:30 AM</strong></span>
           </div>
         </div>
@@ -173,10 +258,25 @@ export default function AdminAttendancePage() {
                     <td className="p-2 border border-slate-300 text-slate-700">
                       {c.fatherName}
                     </td>
-                    <td className="p-2 border border-slate-300 text-center font-semibold">
-                      {c.classApplying}
+                    <td className="p-2 border border-slate-300 text-center font-bold text-slate-800">
+                      {formatClass(c.classApplying)}
                     </td>
-                    <td className="p-2 border border-slate-300 text-center min-h-[36px]"></td>
+                    <td className="p-1 border border-slate-300 text-center">
+                      {c.signature ? (
+                        <div className="h-9 flex items-center justify-center">
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img
+                            src={c.signature}
+                            alt="Candidate Signature"
+                            className="max-h-8 max-w-[110px] object-contain mx-auto"
+                          />
+                        </div>
+                      ) : (
+                        <div className="h-9 border border-dashed border-slate-200 rounded flex items-center justify-center">
+                          <span className="text-[8px] text-slate-300 font-mono italic">Sign Attached</span>
+                        </div>
+                      )}
+                    </td>
                     <td className="p-2 border border-slate-300 text-center min-h-[36px]"></td>
                   </tr>
                 ))

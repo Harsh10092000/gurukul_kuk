@@ -24,6 +24,16 @@ export default function AdmissionFormView({
   const regNo = registrationNumber || application.registrationNumber || application.applicationNumber;
   const rollNo = admitCard?.rollNumber || application.rollNumber || 'PENDING ALLOTMENT';
 
+  const formatDob = (dobStr?: string) => {
+    if (!dobStr) return '—';
+    const s = dobStr.trim();
+    const match = s.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (match) {
+      return `${match[3]}-${match[2]}-${match[1]}`;
+    }
+    return s;
+  };
+
   const handlePrint = () => {
     window.print();
   };
@@ -68,13 +78,13 @@ export default function AdmissionFormView({
 
           <div className="flex-1 text-center">
             <h1 className="text-xl sm:text-2xl font-black tracking-tight text-gurukul-navy leading-none">
-              GURUKUL KURUKSHETRA
+              GURUKUL
             </h1>
             <p className="text-[11px] font-serif font-bold text-gurukul-700 mt-0.5">
-              तमसो मा ज्योतिर्गमय • Established 1912 by Swami Shraddhanand Ji
+              तमसो मा ज्योतिर्गमय
             </p>
             <p className="text-[10px] text-slate-600 font-medium">
-              CBSE Affiliation No. 530006 • Near 3rd Gate, Kurukshetra University, Kurukshetra (Haryana) - 136119
+              CBSE Affiliated Institutional Network • Haryana
             </p>
             <div className="mt-1 bg-gurukul-navy text-white text-[11px] font-black tracking-wider uppercase py-0.5 px-3 rounded inline-block">
               Official Admission Verification & Enrolment Form (Session 2026-27)
@@ -91,7 +101,7 @@ export default function AdmissionFormView({
         {/* Identification Strip */}
         <div className="grid grid-cols-4 gap-2 bg-slate-100 p-2 rounded border border-slate-300 text-[10px]">
           <div>
-            <span className="text-slate-500 block">Registration No:</span>
+            <span className="text-slate-500 block">Registration ID:</span>
             <span className="font-mono font-black text-xs text-gurukul-navy">{regNo}</span>
           </div>
           <div>
@@ -100,7 +110,9 @@ export default function AdmissionFormView({
           </div>
           <div>
             <span className="text-slate-500 block">Class Seeking Admission:</span>
-            <span className="font-black text-xs text-slate-900">{application.classApplying}</span>
+            <span className="font-black text-xs text-slate-900">
+              Class {application.classApplying}{application.stream ? ` (${application.stream})` : ''}
+            </span>
           </div>
           <div>
             <span className="text-slate-500 block">Social Category:</span>
@@ -123,23 +135,31 @@ export default function AdmissionFormView({
                 </div>
                 <div>
                   <span className="text-slate-500 block text-[9px]">Date of Birth:</span>
-                  <span className="font-semibold">{application.personalInfo?.dob || '—'}</span>
+                  <span className="font-semibold">{formatDob(application.personalInfo?.dob)}</span>
                 </div>
                 <div>
-                  <span className="text-slate-500 block text-[9px]">Gender / Blood Group:</span>
-                  <span className="font-semibold">{application.personalInfo?.gender} / {application.personalInfo?.bloodGroup || 'B+'}</span>
+                  <span className="text-slate-500 block text-[9px]">Gender:</span>
+                  <span className="font-semibold">{application.personalInfo?.gender || '—'}</span>
                 </div>
                 <div>
                   <span className="text-slate-500 block text-[9px]">Aadhaar Number:</span>
                   <span className="font-mono font-semibold">{application.personalInfo?.aadhaarNumber || '—'}</span>
                 </div>
                 <div>
-                  <span className="text-slate-500 block text-[9px]">Nationality / Religion:</span>
-                  <span className="font-semibold">{application.personalInfo?.nationality || 'Indian'} / {application.personalInfo?.religion || 'Hindu'}</span>
+                  <span className="text-slate-500 block text-[9px]">PEN (Optional):</span>
+                  <span className="font-mono font-semibold">{application.personalInfo?.panNumber || '—'}</span>
+                </div>
+                <div>
+                  <span className="text-slate-500 block text-[9px]">Family ID (Optional):</span>
+                  <span className="font-mono font-semibold">{application.personalInfo?.familyId || '—'}</span>
                 </div>
                 <div>
                   <span className="text-slate-500 block text-[9px]">Registered Mobile No:</span>
                   <span className="font-mono font-semibold">{application.personalInfo?.candidateMobile || application.personalInfo?.whatsappNumber || '—'}</span>
+                </div>
+                <div className="col-span-2">
+                  <span className="text-slate-500 block text-[9px]">Email Address:</span>
+                  <span className="font-semibold">{application.personalInfo?.email || '—'}</span>
                 </div>
               </div>
             </div>
@@ -198,23 +218,30 @@ export default function AdmissionFormView({
               </div>
             </div>
 
-            {/* Section D: Previous Academic Record */}
+            {/* Section D: Previous Academic Record & Preferred Study Location */}
             <div>
               <h3 className="font-black text-[11px] bg-slate-200 px-2 py-0.5 uppercase tracking-wide text-gurukul-navy mb-1">
-                4. Academic History & Performance
+                4. Academic Background & Preferred Study Location
               </h3>
-              <div className="grid grid-cols-4 gap-x-2 gap-y-1">
-                <div className="col-span-2">
+              <div className="grid grid-cols-2 gap-x-2 gap-y-1">
+                <div>
                   <span className="text-slate-500 block text-[9px]">Previous School:</span>
-                  <span className="font-semibold">{application.academicInfo?.previousSchoolName || '—'}</span>
+                  <span className="font-semibold">{application.personalInfo?.previousSchoolName || application.academicInfo?.previousSchoolName || '—'}</span>
                 </div>
                 <div>
-                  <span className="text-slate-500 block text-[9px]">Board / Passing Year:</span>
-                  <span className="font-semibold">{application.academicInfo?.previousBoard} ({application.academicInfo?.passingYear || '2025'})</span>
+                  <span className="text-slate-500 block text-[9px]">Previous Board:</span>
+                  <span className="font-semibold">
+                    {application.personalInfo?.previousBoard || application.academicInfo?.previousBoard || '—'}
+                    {application.personalInfo?.otherBoard ? ` (${application.personalInfo.otherBoard})` : ''}
+                  </span>
                 </div>
                 <div>
-                  <span className="text-slate-500 block text-[9px]">Marks / Aggregate %:</span>
-                  <span className="font-black text-gurukul-700">{application.academicInfo?.previousClassMarksPercentage}%</span>
+                  <span className="text-slate-500 block text-[9px]">1st Study Location Preference:</span>
+                  <span className="font-bold text-gurukul-navy">{application.studyLocation?.firstPreference || 'Gurukul Nilokheri'}</span>
+                </div>
+                <div>
+                  <span className="text-slate-500 block text-[9px]">2nd Study Location Preference:</span>
+                  <span className="font-semibold text-slate-700">{application.studyLocation?.secondPreference || 'None'}</span>
                 </div>
               </div>
             </div>
@@ -240,7 +267,7 @@ export default function AdmissionFormView({
                 /* eslint-disable-next-line @next/next/no-img-element */
                 <img
                   src={application.documents.signature}
-                  alt="Sign"
+                  alt="Candidate Sign"
                   className="w-full h-full object-contain"
                 />
               ) : (
@@ -248,8 +275,17 @@ export default function AdmissionFormView({
               )}
             </div>
 
-            <div className="w-28 h-10 border border-slate-300 rounded bg-slate-50 flex items-center justify-center text-[8px] text-slate-400 text-center px-1">
-              Parent Signature
+            <div className="w-28 h-12 border border-slate-400 rounded bg-white flex flex-col items-center justify-center p-0.5">
+              {application.documents?.parentSignature ? (
+                /* eslint-disable-next-line @next/next/no-img-element */
+                <img
+                  src={application.documents.parentSignature}
+                  alt="Parent Sign"
+                  className="w-full h-full object-contain"
+                />
+              ) : (
+                <span className="text-[8px] text-slate-400">Parent Signature</span>
+              )}
             </div>
           </div>
         </div>
@@ -258,10 +294,10 @@ export default function AdmissionFormView({
         <div className="border-t border-slate-300 pt-1.5 text-[9px] text-slate-700 space-y-1">
           <p className="font-bold uppercase text-[9px] text-slate-900">Declaration by Student and Parent:</p>
           <p className="leading-snug">
-            We hereby declare that all statements made in this application are true and correct. If admitted to Gurukul Kurukshetra, the candidate shall strictly abide by the rules, Vedic code of conduct, daily sandhya, yoga routine, and residential discipline of the Gurukul. We acknowledge that admission is strictly merit-based and no donation/capitation fee is accepted.
+            We hereby declare that all statements made in this application are true and correct. If admitted to Gurukul, the candidate shall strictly abide by the rules, Vedic code of conduct, daily sandhya, yoga routine, and residential discipline. We acknowledge that admission is strictly merit-based and no donation/capitation fee is accepted.
           </p>
-          <div className="flex justify-between pt-4 px-2 font-bold text-[9px]">
-            <span>Date: ________________</span>
+          <div className="flex justify-between pt-3 px-2 font-bold text-[9px]">
+            <span>Date: {application.paymentInfo?.paidAt ? new Date(application.paymentInfo.paidAt).toLocaleDateString('en-IN') : '________________'}</span>
             <span>Signature of Candidate</span>
             <span>Signature of Father / Guardian</span>
           </div>
@@ -271,34 +307,34 @@ export default function AdmissionFormView({
         <div className="border-2 border-dashed border-slate-500 bg-slate-50 p-2.5 rounded space-y-1.5 text-[9.5px]">
           <div className="flex justify-between items-center border-b border-slate-300 pb-1">
             <span className="font-black uppercase tracking-wider text-gurukul-navy">
-              FOR OFFICIAL USE ONLY (Gurukul Kurukshetra Admission Cell)
+              FOR OFFICIAL USE ONLY (Gurukul Admission Cell)
             </span>
-            <span className="text-[9px] text-slate-500 font-mono">Form Ref: {regNo}</span>
+            <span className="text-[9px] text-slate-500 font-mono">Reg ID: {regNo}</span>
           </div>
 
           <div className="grid grid-cols-4 gap-2 pt-0.5 font-mono">
             <div>
-              <span className="text-slate-500 block text-[8.5px]">Allotted Admission No:</span>
-              <span className="font-bold border-b border-dotted border-slate-400 block min-h-[16px]"></span>
+              <span className="text-slate-500 block text-[8.5px]">Allotted Roll No:</span>
+              <span className="font-bold text-slate-900">{rollNo}</span>
             </div>
             <div>
-              <span className="text-slate-500 block text-[8.5px]">Scholar Register No:</span>
-              <span className="font-bold border-b border-dotted border-slate-400 block min-h-[16px]"></span>
+              <span className="text-slate-500 block text-[8.5px]">Transaction ID:</span>
+              <span className="font-bold text-slate-900 truncate block">{application.paymentInfo?.transactionId || 'PAID-ONLINE'}</span>
             </div>
             <div>
               <span className="text-slate-500 block text-[8.5px]">Application Fee Receipt:</span>
-              <span className="font-bold text-slate-900">PAID (₹1,200)</span>
+              <span className="font-bold text-emerald-800">PAID (₹800)</span>
             </div>
             <div>
-              <span className="text-slate-500 block text-[8.5px]">Admission Status:</span>
-              <span className="font-bold text-emerald-700">VERIFIED / PROVISIONAL</span>
+              <span className="text-slate-500 block text-[8.5px]">Registration Status:</span>
+              <span className="font-bold text-emerald-700">CONFIRMED / REGISTERED</span>
             </div>
           </div>
 
-          <div className="flex justify-between pt-4 px-2 font-bold text-[8.5px] border-t border-slate-200 mt-2">
+          <div className="flex justify-between pt-3 px-2 font-bold text-[8.5px] border-t border-slate-200 mt-2">
             <span>Scrutiny Clerk Sign: __________________</span>
             <span>Exam Controller Sign: __________________</span>
-            <span>Director / Principal Signature & Seal: __________________</span>
+            <span>Principal / Director Signature & Seal: __________________</span>
           </div>
         </div>
       </div>

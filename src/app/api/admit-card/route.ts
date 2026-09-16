@@ -6,39 +6,94 @@ import { sendNotification } from '@/lib/notifications';
 export async function GET(request: Request) {
   try {
     const user = await getCurrentUser();
-    if (!user) {
-      return NextResponse.json({ error: 'Authentication required to access admit card' }, { status: 401 });
-    }
-
     const { searchParams } = new URL(request.url);
-    const appId = searchParams.get('appId');
+    const appId = searchParams.get('appId') || searchParams.get('regNo');
     const rollNo = searchParams.get('rollNo');
+    const dob = searchParams.get('dob')?.trim();
 
     // Admin can query any admit card by appId or rollNo
-    if (user.role === 'admin') {
+    if (user && user.role === 'admin') {
       if (appId) {
         const card = await db.getAdmitCard(appId);
-        return NextResponse.json({ admitCard: card });
+        return NextResponse.json({ admitCard: card, released: true });
       }
       if (rollNo) {
         const card = await db.getAdmitCard(rollNo);
-        return NextResponse.json({ admitCard: card });
+        return NextResponse.json({ admitCard: card, released: true });
       }
     }
 
-    // Applicant can ONLY access their own admit card
-    const userApp = await db.getApplicationByUserId(user.userId);
-    if (!userApp) {
-      return NextResponse.json({ admitCard: null });
+    // Check if Admit Cards have been officially released by Admin
+    const settings = await db.getSettings();
+    if (settings.admitCardsReleased !== true) {
+      return NextResponse.json({
+        admitCard: null,
+        released: false,
+        message: 'Admit cards for Entrance Examination 2026-27 have not been declared/published by the administration yet.',
+      });
     }
 
-    // If applicant specifically passed appId, enforce that it belongs to them
-    if (appId && appId !== userApp.id && appId !== userApp.applicationNumber) {
-      return NextResponse.json({ error: 'Forbidden: You cannot access another candidate admit card' }, { status: 403 });
+    // If query by Registration Number / Application Number / Roll Number and DOB
+    if (appId || rollNo) {
+      const allApps = await db.getApplications();
+      const targetQuery = (appId || rollNo || '').trim().toLowerCase();
+      const matchingApp = allApps.find((a) => {
+        const reg = (a.registrationNumber || a.applicationNumber || '').trim().toLowerCase();
+        const roll = (a.rollNumber || '').trim().toLowerCase();
+        return reg === targetQuery || roll === targetQuery;
+      });
+
+      if (!matchingApp) {
+        return NextResponse.json({
+          admitCard: null,
+          released: true,
+          message: 'No candidate record found for the provided Registration ID or Roll Number.',
+        });
+      }
+
+      // If dob parameter is provided, verify DOB
+      if (dob) {
+        const appDob = (matchingApp.personalInfo?.dob || '').trim();
+        // Normalize DOB formats (e.g. YYYY-MM-DD vs DD/MM/YYYY)
+        const cleanDobInput = dob.replace(/\D/g, '');
+        const cleanAppDob = appDob.replace(/\D/g, '');
+        // Compare directly or by digits if lengths match
+        const dobMatches = appDob.toLowerCase() === dob.toLowerCase() || (cleanDobInput && cleanDobInput === cleanAppDob);
+        if (!dobMatches) {
+          return NextResponse.json({
+            admitCard: null,
+            released: true,
+            error: 'Date of Birth does not match our records for this Registration Number.',
+            message: 'Date of Birth does not match our records for this Registration Number.',
+          }, { status: 400 });
+        }
+      }
+
+      const card = await db.getAdmitCard(matchingApp.id);
+      return NextResponse.json({ admitCard: card, released: true });
+    }
+
+    // If no query parameters, user must be authenticated candidate
+    if (!user) {
+      return NextResponse.json({ error: 'Authentication or Registration details required to access admit card' }, { status: 401 });
+    }
+
+    // Applicant accessing their own admit card
+    let userApp = await db.getApplicationByUserId(user.userId);
+    if (!userApp && user.email) {
+      const allApps = await db.getApplications();
+      userApp = allApps.find(a =>
+        (user.email && a.personalInfo?.candidateEmail && a.personalInfo.candidateEmail.toLowerCase() === user.email.toLowerCase()) ||
+        (user.registrationNumber && (a.registrationNumber === user.registrationNumber || a.applicationNumber === user.registrationNumber))
+      ) || null;
+    }
+
+    if (!userApp) {
+      return NextResponse.json({ admitCard: null, released: true });
     }
 
     const card = await db.getAdmitCard(userApp.id);
-    return NextResponse.json({ admitCard: card });
+    return NextResponse.json({ admitCard: card, released: true });
   } catch (error) {
     console.error('Error in admit-card route:', error);
     return NextResponse.json({ error: 'Failed to retrieve admit card' }, { status: 500 });
@@ -72,8 +127,9 @@ export async function POST(request: Request) {
       candidateName: application.personalInfo.fullName,
       fatherName: application.parentInfo.fatherName,
       classApplying: application.classApplying,
-      examCentreName: examCentreName || application.examCentrePref.preferredCenter1,
-      examCentreAddress: 'Near 3rd Gate, Kurukshetra University, Kurukshetra, Haryana - 136119',
+      stream: application.stream,
+      examCentreName: examCentreName || application.studyLocation?.firstPreference || application.studyLocationPref?.firstPreference || application.examCentrePref?.preferredCenter1 || 'Gurukul Nilokheri',
+      examCentreAddress: 'Campus Admissions & Examination Hall, Haryana',
       examDate: examDate || '06 December 2026',
       reportingTime: reportingTime || '08:30 AM',
       examDuration: '10:00 AM to 12:30 PM (2.5 Hours)',

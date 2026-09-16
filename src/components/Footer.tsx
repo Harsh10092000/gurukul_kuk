@@ -39,7 +39,7 @@ export default function Footer() {
             </div>
             <div>
               <h3 className="text-white font-black text-lg tracking-wide">
-                GURUKUL KURUKSHETRA
+                GURUKUL
               </h3>
               <p className="text-amber-400 font-serif text-xs font-semibold">
                 तमसो मा ज्योतिर्गमय
@@ -47,13 +47,13 @@ export default function Footer() {
             </div>
           </div>
           <p className="text-xs text-slate-400 leading-relaxed">
-            Founded in 1912 by Swami Shraddhanand Ji, Gurukul Kurukshetra blends ancient Vedic values, yoga, and character building with world-class modern academic excellence and sports training.
+            Blends ancient Vedic values, yoga, and character building with world-class modern academic excellence, state-of-the-art infrastructure, and holistic student personality grooming.
           </p>
           <div className="pt-2 text-xs space-y-1 text-slate-400">
             <div className="flex items-center gap-1.5 text-amber-300 font-medium">
-              <CheckCircle2 className="w-3.5 h-3.5" /> CBSE Affiliated (No. 530006)
+              <CheckCircle2 className="w-3.5 h-3.5" /> CBSE Affiliated Institutional Network
             </div>
-            <div>Residential Senior Secondary Boys School</div>
+            <div>Nilokheri • Jyotisar • Aryakulam Campuses</div>
           </div>
         </div>
 
@@ -90,11 +90,7 @@ export default function Footer() {
                 </Link>
               </li>
             )}
-            <li>
-              <Link href="/#classes" className="hover:text-amber-400 transition flex items-center gap-1">
-                <span>›</span> Class-wise Eligibility Criteria
-              </Link>
-            </li>
+
             <li>
               <Link href="/contact" className="hover:text-amber-400 transition flex items-center gap-1 font-bold text-amber-300">
                 <span>›</span> Helpdesk & Contact Enquiries
@@ -153,7 +149,7 @@ export default function Footer() {
       {/* Bottom Copyright Bar */}
       <div className="bg-gurukul-navyDark border-t border-slate-800 py-4 px-4 sm:px-8 text-center text-xs text-slate-400">
         <div className="max-w-7xl mx-auto flex flex-col sm:flex-row justify-between items-center gap-2">
-          <p>© {new Date().getFullYear()} Gurukul Kurukshetra. All Rights Reserved.</p>
+          <p>© {new Date().getFullYear()} GURUKUL Institutional Network. All Rights Reserved.</p>
           <p className="flex items-center gap-2">
             <span>Official Portal for Entrance Examination & Admission Management</span>
             <span className="hidden sm:inline">|</span>

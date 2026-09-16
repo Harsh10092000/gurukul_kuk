@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { 
@@ -22,7 +22,7 @@ import {
 } from 'lucide-react';
 import { ContactEnquiry, ContactEnquiryStatus } from '@/lib/types';
 
-export default function AdminEnquiriesPage() {
+function AdminEnquiriesContent() {
   const searchParams = useSearchParams();
   const initialId = searchParams.get('id');
 
@@ -461,5 +461,13 @@ export default function AdminEnquiriesPage() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function AdminEnquiriesPage() {
+  return (
+    <Suspense fallback={<div className="p-8 text-center text-xs text-slate-500">Loading enquiries desk...</div>}>
+      <AdminEnquiriesContent />
+    </Suspense>
   );
 }

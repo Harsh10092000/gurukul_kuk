@@ -43,19 +43,20 @@ interface FallbackStore {
   settings: SystemSettings;
   notifications?: AdminNotification[];
   enquiries?: ContactEnquiry[];
+  tempApplications?: { [sessionId: string]: any };
 }
 
 const DEFAULT_SETTINGS: SystemSettings = {
   portalOpen: true,
   resultsDeclared: false,
   academicSession: '2026-2027',
-  applicationFee: 1200,
+  applicationFee: 800,
   registrationStartDate: '2026-09-01',
-  registrationEndDate: '2026-10-31',
-  admitCardReleaseDate: '2026-11-15',
-  entranceExamDate: '2026-12-06',
-  resultDeclarationDate: '2026-12-20',
-  counselingStartDate: '2027-01-05',
+  registrationEndDate: '2026-09-15',
+  admitCardReleaseDate: '2026-11-20',
+  entranceExamDate: '2026-12-10',
+  resultDeclarationDate: '2026-12-25',
+  counselingStartDate: '2027-01-10',
   helplinePhone: '+91-1744-259114 / +91-9896328329',
   helplineEmail: 'admissions@gurukulkurukshetra.com',
 };
@@ -67,43 +68,10 @@ const DEFAULT_CENTRES: ExamCentre[] = [
     name: 'Gurukul Kurukshetra Main Campus',
     city: 'Kurukshetra',
     state: 'Haryana',
-    capacity: 2500,
+    capacity: 3000,
     address: 'Near 3rd Gate, Kurukshetra University, Kurukshetra, Haryana - 136119',
     contactPerson: 'Exam Superintendent',
     contactPhone: '+91-1744-259114',
-  },
-  {
-    id: 'center-2',
-    code: 'GK-02',
-    name: 'Arya Samaj Mandir Complex, Delhi NCR',
-    city: 'New Delhi',
-    state: 'Delhi',
-    capacity: 1200,
-    address: 'Hanuman Road, Connaught Place, New Delhi - 110001',
-    contactPerson: 'Zonal Coordinator',
-    contactPhone: '+91-9811002233',
-  },
-  {
-    id: 'center-3',
-    code: 'GK-03',
-    name: 'DAV Senior Model School Centre',
-    city: 'Chandigarh',
-    state: 'Chandigarh (UT)',
-    capacity: 800,
-    address: 'Sector 15-A, Chandigarh - 160015',
-    contactPerson: 'Regional Centre Head',
-    contactPhone: '+91-9876543210',
-  },
-  {
-    id: 'center-4',
-    code: 'GK-04',
-    name: 'Gurukul Rohtak Extension Center',
-    city: 'Rohtak',
-    state: 'Haryana',
-    capacity: 900,
-    address: 'Delhi Bypass Road, Rohtak, Haryana - 124001',
-    contactPerson: 'Center Incharge',
-    contactPhone: '+91-9416001122',
   },
 ];
 
@@ -123,6 +91,14 @@ function initFallbackFile(): FallbackStore {
       }
       if (!parsed.enquiries) {
         parsed.enquiries = [];
+        changed = true;
+      }
+      if (!parsed.tempApplications) {
+        parsed.tempApplications = {};
+        changed = true;
+      }
+      if (parsed.settings && parsed.settings.applicationFee !== 800) {
+        parsed.settings.applicationFee = 800;
         changed = true;
       }
       if (changed) {
@@ -705,7 +681,10 @@ export const db = {
   async getApplications(): Promise<Application[]> {
     if (useFallbackStorage || !pool) {
       const store = initFallbackFile();
-      return store.applications.map(a => {
+      const officialApps = store.applications.filter(
+        a => a.paymentStatus === 'completed' && a.status !== 'draft'
+      );
+      return officialApps.map(a => {
         const user = store.users.find(u => u.id === a.userId);
         const resolvedName = (a.personalInfo?.fullName && a.personalInfo.fullName !== 'Temp Delete Test' && a.personalInfo.fullName.trim() !== '')
           ? a.personalInfo.fullName
@@ -715,6 +694,8 @@ export const db = {
           ...a,
           registrationNumber: a.registrationNumber || a.applicationNumber,
           applicationNumber: a.applicationNumber || a.registrationNumber,
+          studyLocationPref: a.studyLocationPref || a.examCentrePref,
+          examCentrePref: a.examCentrePref || a.studyLocationPref,
           personalInfo: {
             ...a.personalInfo,
             fullName: resolvedName,
@@ -732,6 +713,7 @@ export const db = {
       SELECT a.*, u.name as user_name, u.email as user_email, u.phone as user_phone
       FROM applications a
       LEFT JOIN users u ON a.user_id = u.id
+      WHERE a.payment_status = 'completed' AND a.status != 'draft'
       ORDER BY a.created_at DESC
     `);
     return rows.map((r: any) => {
@@ -796,6 +778,7 @@ export const db = {
       addressInfo: typeof r.address_info === 'string' ? JSON.parse(r.address_info) : r.address_info,
       academicInfo: typeof r.academic_info === 'string' ? JSON.parse(r.academic_info) : r.academic_info,
       examCentrePref: typeof r.exam_centre_pref === 'string' ? JSON.parse(r.exam_centre_pref) : r.exam_centre_pref,
+      studyLocationPref: typeof r.exam_centre_pref === 'string' ? JSON.parse(r.exam_centre_pref) : (r.exam_centre_pref || { firstPreference: 'Gurukul Nilokheri' }),
       documents: typeof r.documents === 'string' ? JSON.parse(r.documents) : r.documents,
       status: r.status,
       remarks: r.remarks,
@@ -810,9 +793,19 @@ export const db = {
   async getApplicationByUserId(userId: string): Promise<Application | null> {
     if (useFallbackStorage || !pool) {
       const store = initFallbackFile();
-      const a = store.applications.find((app) => app.userId === userId);
+      let a = store.applications.find((app) => app.userId === userId);
+      const user = store.users.find(u => u.id === userId || u.email === userId || u.registrationNumber === userId);
+      if (!a && user) {
+        const userEmail = user.email ? user.email.toLowerCase() : '';
+        const userPhone = user.phone ? user.phone.replace(/\D/g, '').slice(-10) : '';
+        a = store.applications.find(app =>
+          app.userId === user.id ||
+          (userEmail && app.personalInfo?.candidateEmail?.toLowerCase() === userEmail) ||
+          (user.registrationNumber && (app.registrationNumber === user.registrationNumber || app.applicationNumber === user.registrationNumber)) ||
+          (userPhone && (app.personalInfo?.candidateMobile?.replace(/\D/g, '').slice(-10) === userPhone || app.parentInfo?.fatherPhone?.replace(/\D/g, '').slice(-10) === userPhone))
+        );
+      }
       if (!a) return null;
-      const user = store.users.find(u => u.id === userId);
       const resolvedName = (a.personalInfo?.fullName && a.personalInfo.fullName !== 'Temp Delete Test' && a.personalInfo.fullName.trim() !== '')
         ? a.personalInfo.fullName
         : (user?.name || 'Applicant');
@@ -846,11 +839,116 @@ export const db = {
   },
 
 
+  async getNextRegistrationNumber(gender: 'Male' | 'Female'): Promise<string> {
+    const isFemale = (gender || '').toLowerCase() === 'female';
+    const prefix = isFemale ? 'NILG-' : 'NILB-';
+    const regex = new RegExp(`^${prefix}(\\d+)`, 'i');
+    let maxSeq = 0;
+
+    const checkReg = (val?: string | null) => {
+      if (!val) return;
+      const m = val.match(regex);
+      if (m && m[1]) {
+        const num = parseInt(m[1], 10);
+        if (!isNaN(num) && num > maxSeq) {
+          maxSeq = num;
+        }
+      }
+    };
+
+    if (useFallbackStorage || !pool) {
+      const store = initFallbackFile();
+      store.users.forEach(u => checkReg(u.registrationNumber));
+      store.applications.forEach(a => {
+        checkReg(a.registrationNumber);
+        checkReg(a.applicationNumber);
+      });
+      const nextSeq = maxSeq + 1;
+      return `${prefix}${String(nextSeq).padStart(5, '0')}`;
+    }
+
+    try {
+      const [userRows]: any = await pool.query('SELECT registration_number FROM users WHERE registration_number LIKE ?', [`${prefix}%`]);
+      const [appRows]: any = await pool.query('SELECT application_number FROM applications WHERE application_number LIKE ?', [`${prefix}%`]);
+      userRows.forEach((r: any) => checkReg(r.registration_number));
+      appRows.forEach((r: any) => checkReg(r.application_number));
+      const nextSeq = maxSeq + 1;
+      return `${prefix}${String(nextSeq).padStart(5, '0')}`;
+    } catch {
+      const nextSeq = maxSeq + 1;
+      return `${prefix}${String(nextSeq).padStart(5, '0')}`;
+    }
+  },
+
+  async getNextRollNumber(gender: 'Male' | 'Female'): Promise<string> {
+    const isFemale = (gender || '').toLowerCase() === 'female';
+    const prefix = isFemale ? '261' : '260';
+    const regex = new RegExp(`^${prefix}(\\d{5})$`);
+    let maxSeq = 0;
+
+    const checkRoll = (val?: string | null) => {
+      if (!val) return;
+      const m = String(val).trim().match(regex);
+      if (m && m[1]) {
+        const num = parseInt(m[1], 10);
+        if (!isNaN(num) && num > maxSeq) {
+          maxSeq = num;
+        }
+      }
+    };
+
+    if (useFallbackStorage || !pool) {
+      const store = initFallbackFile();
+      (store.admitCards || []).forEach(c => checkRoll(c.rollNumber));
+      (store.applications || []).forEach(a => checkRoll(a.rollNumber));
+      const nextSeq = maxSeq + 1;
+      return `${prefix}${String(nextSeq).padStart(5, '0')}`;
+    }
+
+    try {
+      const [admitRows]: any = await pool.query('SELECT roll_number FROM admit_cards WHERE roll_number LIKE ?', [`${prefix}%`]);
+      const [appRows]: any = await pool.query('SELECT roll_number FROM applications WHERE roll_number LIKE ?', [`${prefix}%`]);
+      admitRows.forEach((r: any) => checkRoll(r.roll_number));
+      appRows.forEach((r: any) => checkRoll(r.roll_number));
+      const nextSeq = maxSeq + 1;
+      return `${prefix}${String(nextSeq).padStart(5, '0')}`;
+    } catch {
+      const nextSeq = maxSeq + 1;
+      return `${prefix}${String(nextSeq).padStart(5, '0')}`;
+    }
+  },
+
+  async saveTempApplication(sessionId: string, data: any): Promise<void> {
+    const store = initFallbackFile();
+    if (!store.tempApplications) store.tempApplications = {};
+    store.tempApplications[sessionId] = {
+      ...(store.tempApplications[sessionId] || {}),
+      ...data,
+      sessionId,
+      updatedAt: new Date().toISOString(),
+    };
+    saveFallbackStore(store);
+  },
+
+  async getTempApplication(sessionId: string): Promise<any | null> {
+    const store = initFallbackFile();
+    if (!store.tempApplications) return null;
+    return store.tempApplications[sessionId] || null;
+  },
+
+  async deleteTempApplication(sessionId: string): Promise<void> {
+    const store = initFallbackFile();
+    if (store.tempApplications && store.tempApplications[sessionId]) {
+      delete store.tempApplications[sessionId];
+      saveFallbackStore(store);
+    }
+  },
+
   async createApplication(app: Omit<Application, 'id' | 'registrationNumber' | 'applicationNumber' | 'createdAt' | 'updatedAt'> & { registrationNumber?: string }): Promise<Application> {
     const store = initFallbackFile();
     const user = store.users.find(u => u.id === app.userId);
-    const count = store.applications.length + 10001;
-    const regNumber = app.registrationNumber || user?.registrationNumber || `GK26-${count}`;
+    const gender = (app.personalInfo?.gender || 'Male') as 'Male' | 'Female';
+    const regNumber = app.registrationNumber || user?.registrationNumber || await this.getNextRegistrationNumber(gender);
     const id = 'app-' + Date.now();
     const now = new Date().toISOString();
 
@@ -858,12 +956,17 @@ export const db = {
       ? app.personalInfo.fullName
       : (user?.name || 'Applicant');
 
+    const studyLocation = app.studyLocationPref || app.examCentrePref || { firstPreference: gender === 'Female' ? 'Gurukul Nilokheri' : 'Gurukul Nilokheri' };
+
     const newApp: Application = {
       ...app,
       id,
       registrationNumber: regNumber,
       applicationNumber: regNumber,
       rollNumber: undefined, // Roll number is strictly deferred per user instructions
+      studyLocationPref: studyLocation,
+      examCentrePref: studyLocation,
+      amountPaid: app.amountPaid || 800,
       personalInfo: {
         ...app.personalInfo,
         fullName: candidateName,
@@ -1042,6 +1145,7 @@ export const db = {
       addressInfo: draft.addressInfo || {} as any,
       academicInfo: draft.academicInfo || {} as any,
       examCentrePref: draft.examCentrePref || {} as any,
+      studyLocationPref: (draft.studyLocationPref || draft.examCentrePref || { firstPreference: 'Gurukul Nilokheri' }) as any,
       documents: draft.documents || {},
       status: 'draft',
       currentStep: draft.currentStep || 1,
@@ -1169,6 +1273,10 @@ export const db = {
     }
 
     return updated;
+  },
+
+  async updateApplication(id: string, updates: Partial<Application>): Promise<Application | null> {
+    return this.updateApplicationDetails(id, updates);
   },
 
   async deleteApplication(id: string): Promise<boolean> {

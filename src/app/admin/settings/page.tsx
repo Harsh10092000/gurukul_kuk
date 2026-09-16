@@ -70,6 +70,10 @@ export default function AdminSettingsPage() {
   const [resultsDeclared, setResultsDeclared] = useState<boolean | null>(null);
   const [resultToggling, setResultToggling] = useState(false);
 
+  // ── Admit Card Release State ──────────────────────────────────
+  const [admitCardsReleased, setAdmitCardsReleased] = useState<boolean | null>(null);
+  const [admitCardToggling, setAdmitCardToggling] = useState(false);
+
   // ── Toast Notification Popup State ───────────────────────────
   const [toast, setToast] = useState<ToastState | null>(null);
 
@@ -81,6 +85,34 @@ export default function AdminSettingsPage() {
     }, 4500);
   };
 
+  const formatToISTDateTimeLocal = (dateStr?: string, fallback: string = ''): string => {
+    if (!dateStr) return fallback;
+    try {
+      if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(dateStr)) {
+        return dateStr;
+      }
+      const d = new Date(dateStr);
+      if (isNaN(d.getTime())) return fallback;
+      const parts = new Intl.DateTimeFormat('en-IN', {
+        timeZone: 'Asia/Kolkata',
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false,
+      }).formatToParts(d);
+      const map: Record<string, string> = {};
+      for (const p of parts) {
+        if (p.type !== 'literal') map[p.type] = p.value;
+      }
+      let hour = map.hour === '24' ? '00' : map.hour;
+      return `${map.year}-${map.month}-${map.day}T${hour}:${map.minute}`;
+    } catch {
+      return dateStr.slice(0, 16) || fallback;
+    }
+  };
+
   // ── Initial Data Load ─────────────────────────────────────────
   const loadSchedule = () => {
     fetch('/api/schedule')
@@ -89,8 +121,8 @@ export default function AdminSettingsPage() {
         if (data.config) {
           setScheduleConfig({
             ...data.config,
-            startDate: data.config.startDate ? data.config.startDate.slice(0, 16) : '2026-09-01T00:00',
-            endDate: data.config.endDate ? data.config.endDate.slice(0, 16) : '2026-10-31T23:59',
+            startDate: formatToISTDateTimeLocal(data.config.startDate, '2026-09-01T00:00'),
+            endDate: formatToISTDateTimeLocal(data.config.endDate, '2026-09-30T23:59'),
           });
         }
         if (data.status) setFormStatus(data.status);
@@ -110,6 +142,9 @@ export default function AdminSettingsPage() {
           if (typeof data.settings.resultsDeclared === 'boolean') {
             setResultsDeclared(data.settings.resultsDeclared);
           }
+          if (typeof data.settings.admitCardsReleased === 'boolean') {
+            setAdmitCardsReleased(data.settings.admitCardsReleased);
+          }
         }
       })
       .catch((err) => console.warn('Failed to load academic settings:', err));
@@ -128,6 +163,16 @@ export default function AdminSettingsPage() {
         }
       })
       .catch(() => setResultsDeclared(false));
+
+    // Fetch current admitCardsReleased status directly
+    fetch('/api/admit-card/status')
+      .then((r) => r.json())
+      .then((d) => {
+        if (d.admitCardsReleased !== undefined) {
+          setAdmitCardsReleased(d.admitCardsReleased === true);
+        }
+      })
+      .catch(() => setAdmitCardsReleased(false));
   }, []);
 
   // ── Save Form Schedule ────────────────────────────────────────
@@ -136,12 +181,19 @@ export default function AdminSettingsPage() {
     setScheduleSaving(true);
 
     try {
+      const startIso = scheduleConfig.startDate.length === 16
+        ? new Date(`${scheduleConfig.startDate}:00+05:30`).toISOString()
+        : new Date(scheduleConfig.startDate).toISOString();
+      const endIso = scheduleConfig.endDate.length === 16
+        ? new Date(`${scheduleConfig.endDate}:00+05:30`).toISOString()
+        : new Date(scheduleConfig.endDate).toISOString();
+
       const res = await fetch('/api/schedule', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          startDate: new Date(scheduleConfig.startDate).toISOString(),
-          endDate: new Date(scheduleConfig.endDate).toISOString(),
+          startDate: startIso,
+          endDate: endIso,
           statusOverride: scheduleConfig.statusOverride,
           timezone: scheduleConfig.timezone,
           announcementNotice: scheduleConfig.announcementNotice,
@@ -156,6 +208,8 @@ export default function AdminSettingsPage() {
 
       if (data.status) setFormStatus(data.status);
       showToast('Application schedule settings saved successfully! Changes are live on the portal.', 'success');
+      loadSchedule();
+      loadAcademicSettings();
     } catch {
       showToast('An unexpected error occurred while saving the schedule.', 'error');
     } finally {
@@ -165,19 +219,52 @@ export default function AdminSettingsPage() {
 
   // ── Quick Reopen / Extension ───────────────────────────────────
   const handleQuickReopen = (daysToAdd: number) => {
-    const currentEnd = new Date();
-    currentEnd.setDate(currentEnd.getDate() + daysToAdd);
-    const newEndStr = currentEnd.toISOString().slice(0, 16);
-    const dateFormatted = currentEnd.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+    // Base extension on current effective closing date (from scheduleConfig or academicSettings)
+    const targetStr = scheduleConfig.endDate || academicSettings.registrationEndDate || '';
+    let yr: number, mo: number, da: number, hr = 23, min = 59;
+    const match = targetStr.match(/^(\d{4})-(\d{2})-(\d{2})(?:T(\d{2}):(\d{2}))?/);
 
+    if (match) {
+      yr = parseInt(match[1], 10);
+      mo = parseInt(match[2], 10) - 1;
+      da = parseInt(match[3], 10);
+      if (match[4] !== undefined) hr = parseInt(match[4], 10);
+      if (match[5] !== undefined) min = parseInt(match[5], 10);
+    } else {
+      const now = new Date();
+      yr = now.getFullYear();
+      mo = now.getMonth();
+      da = now.getDate();
+    }
+
+    const base = new Date(yr, mo, da, hr, min, 0);
+    const now = new Date();
+    // If current closing date has already passed, extend from today; otherwise extend from the existing closing date
+    const effectiveBase = base.getTime() < now.getTime()
+      ? new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 0)
+      : base;
+
+    effectiveBase.setDate(effectiveBase.getDate() + daysToAdd);
+
+    const pad = (n: number) => n.toString().padStart(2, '0');
+    const newDateOnlyStr = `${effectiveBase.getFullYear()}-${pad(effectiveBase.getMonth() + 1)}-${pad(effectiveBase.getDate())}`;
+    const newDateTimeStr = `${newDateOnlyStr}T${pad(effectiveBase.getHours())}:${pad(effectiveBase.getMinutes())}`;
+    const dateFormatted = effectiveBase.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+
+    // Synchronously update BOTH scheduleConfig AND academicSettings in real-time
     setScheduleConfig((prev) => ({
       ...prev,
-      endDate: newEndStr,
+      endDate: newDateTimeStr,
       statusOverride: 'extended',
       announcementNotice: `Online Application has been reopened & extended until ${dateFormatted}.`,
     }));
 
-    showToast(`End date extended by ${daysToAdd} days to ${dateFormatted}. Click "Save Schedule" below to commit.`, 'info');
+    setAcademicSettings((prev) => ({
+      ...prev,
+      registrationEndDate: newDateOnlyStr,
+    }));
+
+    showToast(`End date extended by ${daysToAdd} days to ${dateFormatted}. Click "Save Schedule & Portal Controls" below to commit.`, 'info');
   };
 
   // ── Save Key Academic Dates & Milestones ──────────────────────
@@ -201,6 +288,7 @@ export default function AdminSettingsPage() {
       setAcademicSettings(data.settings);
       showToast('Key academic dates & milestone schedules updated successfully! Visible on public portal.', 'success');
       loadSchedule(); // reload schedule in case start/end dates synchronized
+      loadAcademicSettings();
     } catch {
       showToast('Network error while saving academic milestone dates.', 'error');
     } finally {
@@ -234,6 +322,33 @@ export default function AdminSettingsPage() {
       showToast('Network error while toggling result visibility.', 'error');
     } finally {
       setResultToggling(false);
+    }
+  };
+
+  const handleToggleAdmitCards = async (release: boolean) => {
+    setAdmitCardToggling(true);
+    try {
+      const res = await fetch('/api/admit-card/status', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ admitCardsReleased: release }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        showToast(data.error || 'Failed to update admit card status.', 'error');
+      } else {
+        setAdmitCardsReleased(release);
+        showToast(
+          release
+            ? 'Admit cards are now officially RELEASED and visible to candidates!'
+            : 'Admit cards are now HIDDEN from candidates (held in progress).',
+          'success'
+        );
+      }
+    } catch {
+      showToast('Network error while toggling admit card visibility.', 'error');
+    } finally {
+      setAdmitCardToggling(false);
     }
   };
 
@@ -394,7 +509,14 @@ export default function AdminSettingsPage() {
                 type="date"
                 required
                 value={academicSettings.registrationStartDate}
-                onChange={(e) => setAcademicSettings({ ...academicSettings, registrationStartDate: e.target.value })}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setAcademicSettings({ ...academicSettings, registrationStartDate: val });
+                  if (val) {
+                    const timePart = scheduleConfig.startDate?.includes('T') ? scheduleConfig.startDate.split('T')[1] : '00:00';
+                    setScheduleConfig((prev) => ({ ...prev, startDate: `${val}T${timePart}` }));
+                  }
+                }}
                 className="w-full p-2.5 border rounded-xl outline-none focus:ring-2 focus:ring-amber-500 font-mono"
               />
               <p className="text-[10px] text-slate-400 mt-1">Portal opens for registration</p>
@@ -409,7 +531,14 @@ export default function AdminSettingsPage() {
                 type="date"
                 required
                 value={academicSettings.registrationEndDate}
-                onChange={(e) => setAcademicSettings({ ...academicSettings, registrationEndDate: e.target.value })}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setAcademicSettings({ ...academicSettings, registrationEndDate: val });
+                  if (val) {
+                    const timePart = scheduleConfig.endDate?.includes('T') ? scheduleConfig.endDate.split('T')[1] : '23:59';
+                    setScheduleConfig((prev) => ({ ...prev, endDate: `${val}T${timePart}` }));
+                  }
+                }}
                 className="w-full p-2.5 border rounded-xl outline-none focus:ring-2 focus:ring-amber-500 font-mono"
               />
               <p className="text-[10px] text-slate-400 mt-1">Normal registration closing date</p>
@@ -535,7 +664,13 @@ export default function AdminSettingsPage() {
                 type="datetime-local"
                 required
                 value={scheduleConfig.startDate}
-                onChange={(e) => setScheduleConfig({ ...scheduleConfig, startDate: e.target.value })}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setScheduleConfig((prev) => ({ ...prev, startDate: val }));
+                  if (val && val.length >= 10) {
+                    setAcademicSettings((prev) => ({ ...prev, registrationStartDate: val.slice(0, 10) }));
+                  }
+                }}
                 className="w-full p-2.5 border rounded-xl outline-none focus:ring-2 focus:ring-amber-500 font-mono"
               />
               <p className="text-[10px] text-slate-400 mt-1">Form automatically opens on this date and time.</p>
@@ -549,7 +684,13 @@ export default function AdminSettingsPage() {
                 type="datetime-local"
                 required
                 value={scheduleConfig.endDate}
-                onChange={(e) => setScheduleConfig({ ...scheduleConfig, endDate: e.target.value })}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setScheduleConfig((prev) => ({ ...prev, endDate: val }));
+                  if (val && val.length >= 10) {
+                    setAcademicSettings((prev) => ({ ...prev, registrationEndDate: val.slice(0, 10) }));
+                  }
+                }}
                 className="w-full p-2.5 border rounded-xl outline-none focus:ring-2 focus:ring-amber-500 font-mono"
               />
               <p className="text-[10px] text-slate-400 mt-1">New registrations automatically blocked after this timestamp.</p>
@@ -715,6 +856,75 @@ export default function AdminSettingsPage() {
 
         <p className="text-[10px] text-slate-400 border-t border-slate-100 pt-3">
           Note: This toggle strictly manages candidate-facing display. Score entries and merit positions entered in the admin database remain intact.
+        </p>
+      </div>
+
+      {/* ── Admit Card Release & Candidate Visibility ───────────── */}
+      <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-sm space-y-5">
+        <div className="flex items-center gap-3 border-b border-slate-100 pb-4">
+          <div className="w-10 h-10 rounded-2xl bg-amber-100 text-amber-800 flex items-center justify-center flex-shrink-0 shadow-xs">
+            <ShieldCheck className="w-5 h-5 text-amber-600" />
+          </div>
+          <div>
+            <h2 className="text-base sm:text-lg font-black text-slate-900">
+              Admit Card Release &amp; Candidate Visibility
+            </h2>
+            <p className="text-xs text-slate-500">
+              Control whether registered students can access, view, and download their examination Hall Tickets.
+            </p>
+          </div>
+        </div>
+
+        <div className={`p-4 rounded-2xl flex items-start gap-3 transition ${
+          admitCardsReleased
+            ? 'bg-emerald-50 border border-emerald-300'
+            : 'bg-rose-50 border border-rose-300'
+        }`}>
+          {admitCardsReleased ? (
+            <Eye className="w-5 h-5 text-emerald-600 flex-shrink-0 mt-0.5" />
+          ) : (
+            <EyeOff className="w-5 h-5 text-rose-500 flex-shrink-0 mt-0.5" />
+          )}
+          <div className="text-xs">
+            <p className={`font-black text-sm ${
+              admitCardsReleased ? 'text-emerald-900' : 'text-rose-900'
+            }`}>
+              Admit Cards are currently{' '}
+              <span className="uppercase">{admitCardsReleased ? '✅ VISIBLE TO CANDIDATES' : '🔒 HIDDEN FROM CANDIDATES'}</span>
+            </p>
+            <p className={`mt-0.5 font-medium ${
+              admitCardsReleased ? 'text-emerald-700' : 'text-rose-700'
+            }`}>
+              {admitCardsReleased
+                ? 'Registered candidates can download Hall Tickets from the portal and their dashboard.'
+                : 'Admit Card downloads are locked in progress and hidden from students until released.'}
+            </p>
+          </div>
+        </div>
+
+        <div className="flex flex-wrap gap-3 pt-1">
+          <button
+            type="button"
+            disabled={admitCardToggling || admitCardsReleased === true}
+            onClick={() => handleToggleAdmitCards(true)}
+            className="flex items-center gap-2 px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold text-xs rounded-xl shadow transition"
+          >
+            <Eye className="w-3.5 h-3.5" />
+            Release Admit Cards (Make Visible to All Candidates)
+          </button>
+          <button
+            type="button"
+            disabled={admitCardToggling || admitCardsReleased === false}
+            onClick={() => handleToggleAdmitCards(false)}
+            className="flex items-center gap-2 px-5 py-2.5 bg-rose-600 hover:bg-rose-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold text-xs rounded-xl shadow transition"
+          >
+            <EyeOff className="w-3.5 h-3.5" />
+            Stop Showing / Hide Admit Cards from Candidates
+          </button>
+        </div>
+
+        <p className="text-[10px] text-slate-400 border-t border-slate-100 pt-3">
+          Note: Hiding admit cards returns candidate dashboards to &quot;In Progress&quot; status and suppresses the admit card release announcement on the website.
         </p>
       </div>
     </div>

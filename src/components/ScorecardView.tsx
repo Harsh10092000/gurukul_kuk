@@ -15,6 +15,11 @@ export default function ScorecardView({ result }: ScorecardViewProps) {
   };
 
   const isQualified = result.qualifyingStatus === 'Qualified for Admission';
+  const isGirlsWing =
+    result.applicationNumber?.startsWith('NILG-') ||
+    (result as any).gender === 'Female' ||
+    (result as any).categoryWing?.includes('Girls') ||
+    (result as any).campus?.toLowerCase().includes('aryakulam');
 
   return (
     <div className="w-full max-w-4xl mx-auto my-6">
@@ -23,10 +28,10 @@ export default function ScorecardView({ result }: ScorecardViewProps) {
         <div>
           <h2 className="text-amber-900 font-bold text-lg flex items-center gap-2">
             <Award className="w-5 h-5 text-gurukul-600" />
-            Official Entrance Result & Scorecard (2026-27)
+            Official Entrance Result &amp; Scorecard (2026-27)
           </h2>
           <p className="text-xs text-amber-800">
-            Official merit assessment result for Gurukul Kurukshetra Entrance Examination.
+            Official merit assessment result for Gurukul Kurukshetra Entrance Examination • {isGirlsWing ? 'Aryakulam Nilokheri (Girls Wing)' : 'Gurukul Nilokheri & Jyotisar (Boys Wing)'}.
           </p>
         </div>
         <button
@@ -55,7 +60,7 @@ export default function ScorecardView({ result }: ScorecardViewProps) {
 
             <div className="flex-1 text-center px-2">
               <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-gurukul-navy">
-                GURUKUL KURUKSHETRA
+                {isGirlsWing ? 'ARYAKULAM NILOKHERI' : 'GURUKUL KURUKSHETRA'}
               </h1>
               <p className="text-xs sm:text-sm font-serif font-bold text-gurukul-700">
                 तमसो मा ज्योतिर्गमय
@@ -64,20 +69,22 @@ export default function ScorecardView({ result }: ScorecardViewProps) {
                 (Affiliated to CBSE New Delhi - Affiliation No. 530006)
               </p>
               <div className="mt-2 inline-block bg-gurukul-navy text-white text-xs sm:text-sm font-black tracking-wider px-4 py-1 rounded">
-                ENTRANCE EXAMINATION RESULT & MERIT SCORECARD • 2026-27
+                ENTRANCE EXAMINATION RESULT &amp; MERIT SCORECARD • 2026-27
               </div>
             </div>
 
             {/* Rank Badge */}
             <div className="flex flex-col items-center justify-center p-3 bg-amber-50 border-2 border-amber-300 rounded-lg text-center w-24 sm:w-28">
-              <span className="text-[10px] uppercase font-bold text-amber-900">Gurukul Rank</span>
+              <span className="text-[10px] uppercase font-bold text-amber-900">
+                {isGirlsWing ? 'Girls Rank' : 'Boys Rank'}
+              </span>
               <span className="text-xl sm:text-2xl font-black text-gurukul-600">#{result.rank}</span>
             </div>
           </div>
         </div>
 
         {/* Candidate Profile Details */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 bg-slate-50 border border-slate-200 p-4 rounded-lg mb-6 text-xs">
+        <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 bg-slate-50 border border-slate-200 p-4 rounded-lg mb-6 text-xs">
           <div>
             <span className="text-slate-500 block">Candidate Name:</span>
             <span className="font-bold text-sm text-slate-900 uppercase">{result.candidateName}</span>
@@ -94,6 +101,12 @@ export default function ScorecardView({ result }: ScorecardViewProps) {
             <span className="text-slate-500 block">Class Applied:</span>
             <span className="font-bold text-sm text-gurukul-700 bg-amber-100 px-2 py-0.5 rounded inline-block">
               {result.classApplying}
+            </span>
+          </div>
+          <div>
+            <span className="text-slate-500 block">Category / Wing:</span>
+            <span className={`font-bold text-xs px-2.5 py-0.5 rounded inline-block ${isGirlsWing ? 'bg-pink-100 text-pink-900' : 'bg-blue-100 text-blue-900'}`}>
+              {isGirlsWing ? 'Girls Wing' : 'Boys Wing'}
             </span>
           </div>
         </div>

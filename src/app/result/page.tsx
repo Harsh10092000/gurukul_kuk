@@ -132,6 +132,8 @@ export default function ResultPage() {
     );
   }
 
+  const [selectedWing, setSelectedWing] = useState<'all' | 'boys' | 'girls'>('all');
+
   return (
     <div className="max-w-5xl mx-auto px-4 py-10 space-y-6">
       {/* Header */}
@@ -140,16 +142,60 @@ export default function ResultPage() {
           Merit Assessment
         </span>
         <h1 className="text-2xl sm:text-3xl font-black text-gurukul-navy">
-          Entrance Examination Result & Scorecard 2026-27
+          Entrance Examination Result &amp; Scorecard 2026-27
         </h1>
         <p className="text-xs sm:text-sm text-slate-500">
           Official merit rank and score breakdown declared by Gurukul Kurukshetra Examination Cell.
         </p>
       </div>
 
+      {/* Category Tabs for Boys and Girls Wings */}
+      <div className="flex justify-center flex-wrap items-center gap-2 no-print">
+        <button
+          type="button"
+          onClick={() => setSelectedWing('all')}
+          className={`px-4 py-2 rounded-xl text-xs font-bold transition ${
+            selectedWing === 'all'
+              ? 'bg-gurukul-navy text-white shadow-sm'
+              : 'bg-white text-slate-700 border border-slate-200 hover:bg-slate-50'
+          }`}
+        >
+          All Wings
+        </button>
+        <button
+          type="button"
+          onClick={() => setSelectedWing('boys')}
+          className={`px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 ${
+            selectedWing === 'boys'
+              ? 'bg-blue-600 text-white shadow-sm'
+              : 'bg-white text-blue-700 border border-blue-200 hover:bg-blue-50'
+          }`}
+        >
+          <span>👦 Boys Wing Merit</span>
+          <span className="text-[10px] opacity-80">(Gurukul Nilokheri &amp; Jyotisar)</span>
+        </button>
+        <button
+          type="button"
+          onClick={() => setSelectedWing('girls')}
+          className={`px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 ${
+            selectedWing === 'girls'
+              ? 'bg-pink-600 text-white shadow-sm'
+              : 'bg-white text-pink-700 border border-pink-200 hover:bg-pink-50'
+          }`}
+        >
+          <span>👧 Girls Wing Merit</span>
+          <span className="text-[10px] opacity-80">(Aryakulam Nilokheri)</span>
+        </button>
+      </div>
+
       {/* Search Input Box (Admins or if candidate has not loaded result) */}
       {(currentUser?.role === 'admin' || !result) && (
-        <div className="max-w-xl mx-auto bg-white border border-slate-200 rounded-2xl p-4 shadow-md no-print">
+        <div className="max-w-xl mx-auto bg-white border border-slate-200 rounded-2xl p-4 shadow-md no-print space-y-2">
+          {selectedWing !== 'all' && (
+            <p className="text-[11px] font-bold text-slate-600 text-center">
+              Filtering for: <strong className={selectedWing === 'girls' ? 'text-pink-700' : 'text-blue-700'}>{selectedWing === 'girls' ? '👧 Aryakulam Girls Wing (NILG-)' : '👦 Gurukul Boys Wing (NILB-)'}</strong>
+            </p>
+          )}
           <form onSubmit={handleSearch} className="flex gap-2">
             <div className="relative flex-1">
               <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-3.5 pointer-events-none" />
@@ -157,7 +203,13 @@ export default function ResultPage() {
                 type="text"
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
-                placeholder="Enter Roll Number or Registration No."
+                placeholder={
+                  selectedWing === 'girls'
+                    ? 'Enter Girls Roll No or NILG- Registration No.'
+                    : selectedWing === 'boys'
+                    ? 'Enter Boys Roll No or NILB- Registration No.'
+                    : 'Enter Roll Number or Registration No.'
+                }
                 className="w-full pl-10 pr-3 py-2.5 text-sm border rounded-xl outline-none focus:ring-2 focus:ring-amber-500 font-mono"
               />
             </div>

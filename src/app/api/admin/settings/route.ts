@@ -33,13 +33,24 @@ export async function POST(req: Request) {
     const currentSettings = await db.getSettings();
     const updatedSettings = await db.updateSettings(body);
 
-    // If registration dates are updated in academic milestones, synchronize form schedule
     if (body.registrationStartDate || body.registrationEndDate) {
       try {
+        const endDateParsed = body.registrationEndDate
+          ? (body.registrationEndDate.length === 10
+              ? new Date(`${body.registrationEndDate}T23:59:59+05:30`).toISOString()
+              : new Date(body.registrationEndDate).toISOString())
+          : undefined;
+
+        const startDateParsed = body.registrationStartDate
+          ? (body.registrationStartDate.length === 10
+              ? new Date(`${body.registrationStartDate}T00:00:00+05:30`).toISOString()
+              : new Date(body.registrationStartDate).toISOString())
+          : undefined;
+
         await updateFormSchedule(
           {
-            ...(body.registrationStartDate ? { startDate: new Date(body.registrationStartDate).toISOString() } : {}),
-            ...(body.registrationEndDate ? { endDate: new Date(body.registrationEndDate).toISOString() } : {}),
+            ...(startDateParsed ? { startDate: startDateParsed } : {}),
+            ...(endDateParsed ? { endDate: endDateParsed } : {}),
           },
           { id: user.userId, name: user.name, role: user.role }
         );

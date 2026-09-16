@@ -216,11 +216,164 @@ export function validateMarks(
 }
 
 /**
+ * Validate Date of Birth
+ * - Required
+ * - Must be a valid date
+ * - Cannot be greater than today's date
+ */
+export function validateDob(dob: string | undefined | null): ValidationResult {
+  if (!dob || typeof dob !== 'string' || !dob.trim()) {
+    return { isValid: false, error: 'Date of Birth is required.' };
+  }
+
+  const trimmed = dob.trim();
+  const dobDate = new Date(trimmed);
+  if (isNaN(dobDate.getTime())) {
+    return { isValid: false, error: 'Please enter a valid Date of Birth.' };
+  }
+
+  const today = new Date();
+  today.setHours(23, 59, 59, 999);
+
+  if (dobDate > today) {
+    return { isValid: false, error: 'Date of Birth cannot be greater than today’s date.' };
+  }
+
+  // Basic sanity check: year should not be earlier than 1990
+  if (dobDate.getFullYear() < 1990) {
+    return { isValid: false, error: 'Please enter a valid Date of Birth (year 1990 or later).' };
+  }
+
+  return { isValid: true };
+}
+
+/**
+ * Validate Class and Stream
+ * - Allowed classes: 6, 7, 8, 9, 11 (or 'Class 6', 'Class 7', 'Class 8', 'Class 9', 'Class 11')
+ * - Stream:
+ *   - For Class 11: MUST be one of 'Non Medical', 'Medical', 'Commerce', 'Arts'
+ *   - For Class 6, 7, 8, 9: Stream must NOT be selected
+ */
+export function validateClassAndStream(
+  classApplying: string | undefined | null,
+  stream?: string | null
+): ValidationResult {
+  if (!classApplying || typeof classApplying !== 'string' || !classApplying.trim()) {
+    return { isValid: false, error: 'Class applying for is required.' };
+  }
+
+  const cleanClass = classApplying.replace(/^Class\s*/i, '').trim();
+  const allowedClasses = ['6', '7', '8', '9', '11'];
+
+  if (!allowedClasses.includes(cleanClass)) {
+    return {
+      isValid: false,
+      error: `Invalid Class '${classApplying}'. Applications are accepted ONLY for Classes 6, 7, 8, 9, and 11.`,
+    };
+  }
+
+  if (cleanClass === '11') {
+    const allowedStreams = ['Non Medical', 'Medical', 'Commerce', 'Arts'];
+    if (!stream || !allowedStreams.includes(stream.trim())) {
+      return {
+        isValid: false,
+        error: 'Stream selection is mandatory for Class 11. Allowed streams: Non Medical, Medical, Commerce, Arts.',
+      };
+    }
+  } else {
+    if (stream && stream.trim().length > 0 && stream !== 'None') {
+      return {
+        isValid: false,
+        error: `Stream is not applicable for Class ${cleanClass}. It must be left blank.`,
+      };
+    }
+  }
+
+  return { isValid: true };
+}
+
+/**
+ * Validate Preferred Study Location
+ * BOYS:
+ * 1. Gurukul Nilokheri
+ * 2. Gurukul Jyotisar
+ * 3. Aryakulam Nilokheri
+ *
+ * GIRLS:
+ * 1. Gurukul Nilokheri
+ *
+ * Preference rules:
+ * - First Preference = REQUIRED
+ * - Second Preference = OPTIONAL
+ * - For GIRLS: First preference must be Gurukul Nilokheri; second preference not needed or Gurukul Nilokheri.
+ * - For BOYS: First preference required; Second preference optional. Second cannot be identical to First.
+ */
+export const STUDY_LOCATIONS_BOYS = [
+  'Gurukul Nilokheri',
+  'Gurukul Jyotisar',
+  'Aryakulam Nilokheri',
+] as const;
+
+export const STUDY_LOCATIONS_GIRLS = [
+  'Gurukul Nilokheri',
+] as const;
+
+export function validateStudyLocation(
+  gender: string | undefined | null,
+  firstPreference: string | undefined | null,
+  secondPreference?: string | null
+): ValidationResult {
+  if (!firstPreference || typeof firstPreference !== 'string' || !firstPreference.trim()) {
+    return { isValid: false, error: 'First Preferred Study Location is required.' };
+  }
+
+  const first = firstPreference.trim();
+  const second = secondPreference ? secondPreference.trim() : '';
+  const isFemale = (gender || '').toLowerCase() === 'female';
+
+  if (isFemale) {
+    if (first !== 'Gurukul Nilokheri') {
+      return {
+        isValid: false,
+        error: 'For female candidates, the available study location is Gurukul Nilokheri.',
+      };
+    }
+    return { isValid: true };
+  }
+
+  // Boys
+  const validBoys = ['Gurukul Nilokheri', 'Gurukul Jyotisar', 'Aryakulam Nilokheri'];
+  if (!validBoys.includes(first)) {
+    return {
+      isValid: false,
+      error: `Invalid First Preferred Study Location. Must be one of: ${validBoys.join(', ')}.`,
+    };
+  }
+
+  if (second && second.length > 0 && second !== 'None') {
+    if (!validBoys.includes(second)) {
+      return {
+        isValid: false,
+        error: `Invalid Second Preferred Study Location. Must be one of: ${validBoys.join(', ')}.`,
+      };
+    }
+    if (first === second) {
+      return {
+        isValid: false,
+        error: 'Second Preferred Study Location cannot be the same as First Preferred Study Location.',
+      };
+    }
+  }
+
+  return { isValid: true };
+}
+
+/**
  * Validate Uploaded File (Base64 Data URL or Buffer)
  * - Maximum file size 2 MB (2,097,152 bytes)
  * - Photo & Signatures: JPEG/JPG, PNG only
- * - Documents (Aadhaar, Marksheet): JPEG/JPG, PNG, PDF only
- * - Server-side Magic Bytes / signature validation to reject renamed executables (MZ, ELF)
+ * - Documents (Aadhaar): JPEG/JPG, PNG, PDF only
+ * - Server-side Magic Bytes validation to reject renamed executables (MZ, ELF)
  */
 export function validateUploadedFile(
   dataUrl: string | undefined | null,
@@ -311,7 +464,6 @@ export function validateUploadedFile(
       }
     }
   } catch {
-    // If buffer inspection fails, reject upload safely
     return { isValid: false, error: `Could not verify file integrity for '${fieldKey}'.` };
   }
 
@@ -319,24 +471,23 @@ export function validateUploadedFile(
 }
 
 /**
- * Validate All 5 Required Documents for Final Submission
- * 1. Candidate Passport Photograph
+ * Validate All 4 Required Documents for Final Submission
+ * 1. Candidate Photograph
  * 2. Candidate Signature
  * 3. Parent/Guardian Signature
- * 4. Candidate Aadhaar Card / ID Proof
- * 5. Previous Marksheet / Report Card
+ * 4. Candidate Aadhaar / ID Proof
+ * (Previous Marksheet completely removed per specification)
  */
-export function validateAllFiveDocuments(documents: any): {
+export function validateAllFourDocuments(documents: any): {
   isValid: boolean;
   missingFields: string[];
   error?: string;
 } {
   const required = [
-    { key: 'photo', label: 'Candidate Passport Photograph' },
+    { key: 'photo', label: 'Candidate Photograph' },
     { key: 'signature', label: 'Candidate Signature' },
     { key: 'parentSignature', label: 'Parent / Guardian Signature' },
-    { key: 'aadhaarCard', label: 'Candidate Aadhaar Card / ID Proof' },
-    { key: 'lastMarksheet', label: 'Previous Marksheet / Report Card' },
+    { key: 'aadhaarCard', label: 'Aadhaar / ID Proof' },
   ];
 
   const missingFields: string[] = [];
@@ -354,9 +505,12 @@ export function validateAllFiveDocuments(documents: any): {
     return {
       isValid: false,
       missingFields,
-      error: `All 5 documents are mandatory before final submission. Missing: ${missingLabels.join(', ')}.`,
+      error: `All 4 documents are mandatory before payment. Missing: ${missingLabels.join(', ')}.`,
     };
   }
 
   return { isValid: true, missingFields: [] };
 }
+
+// Backward compatibility alias
+export const validateAllFiveDocuments = validateAllFourDocuments;

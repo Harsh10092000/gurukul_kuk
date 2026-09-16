@@ -46,6 +46,24 @@ export default function RegisterPage() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [registeredSuccess, setRegisteredSuccess] = useState(false);
+  const [scheduleStatus, setScheduleStatus] = useState<{
+    isOpen: boolean;
+    message?: string;
+  } | null>(null);
+
+  // Check schedule on load
+  React.useEffect(() => {
+    fetch('/api/schedule')
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.details) {
+          setScheduleStatus(data.details);
+        } else if (data.isOpen !== undefined) {
+          setScheduleStatus(data);
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   // Timer countdown for OTP
   React.useEffect(() => {
@@ -222,73 +240,13 @@ export default function RegisterPage() {
         localStorage.removeItem('gurukul_application_draft');
       } catch (e) {}
 
-      setRegisteredSuccess(true);
-      setLoading(false);
+      // Requirement: Redirect directly to Declaration & Instructions
+      router.push('/apply');
     } catch {
       setError('An error occurred during account registration. Please try again.');
       setLoading(false);
     }
   };
-
-  // Screen 3: Registration & Verification Success Card (Registration No is deferred until fee payment)
-  if (registeredSuccess) {
-    return (
-      <div className="min-h-[85vh] flex items-center justify-center py-12 px-4 bg-slate-100">
-        <div className="max-w-lg w-full bg-white p-8 rounded-3xl shadow-2xl border border-slate-200 text-center space-y-6">
-          <div className="w-16 h-16 bg-emerald-100 text-emerald-600 rounded-2xl flex items-center justify-center mx-auto shadow-inner">
-            <CheckCircle className="w-10 h-10" />
-          </div>
-
-          <div>
-            <span className="text-[10px] font-mono font-black uppercase tracking-wider bg-emerald-100 text-emerald-800 px-3 py-1 rounded-full">
-              Account Verified Successfully
-            </span>
-            <h2 className="text-2xl font-black text-gurukul-navy mt-2">
-              Registration & Verification Completed!
-            </h2>
-            <p className="text-xs text-slate-500 mt-1">
-              Your account has been created and your contact details have been verified.
-            </p>
-          </div>
-
-          {/* Candidate Profile Summary */}
-          <div className="p-4 bg-slate-50 border border-slate-200 rounded-2xl text-xs text-slate-600 text-left space-y-2">
-            <div className="grid grid-cols-2 gap-3 text-[11px]">
-              <div>
-                <span className="text-slate-400 block font-medium">Candidate Name:</span>
-                <strong className="text-slate-800">{name}</strong>
-              </div>
-              <div>
-                <span className="text-slate-400 block font-medium">Mobile Number:</span>
-                <strong className="text-slate-800">+91-{phone.slice(-10)}</strong>
-              </div>
-              <div className="col-span-2">
-                <span className="text-slate-400 block font-medium">Registered Email:</span>
-                <strong className="text-slate-800">{email}</strong>
-              </div>
-            </div>
-          </div>
-
-          {/* Next Steps CTA */}
-          <div className="space-y-3 pt-2">
-            <button
-              onClick={() => router.push('/apply')}
-              className="w-full py-3.5 bg-gradient-to-r from-amber-500 to-gurukul-600 hover:from-amber-600 hover:to-gurukul-700 text-white font-extrabold text-sm rounded-xl shadow-lg transition flex items-center justify-center gap-2"
-            >
-              <span>Proceed to Fill Entrance Application Form</span>
-              <ArrowRight className="w-4 h-4" />
-            </button>
-            <Link
-              href="/dashboard"
-              className="block text-xs text-slate-500 hover:text-slate-900 font-semibold"
-            >
-              Go to Candidate Dashboard
-            </Link>
-          </div>
-        </div>
-      </div>
-    );
-  }
 
   // Screen 2: OTP Verification Card
   if (step === 'otp') {
@@ -379,6 +337,62 @@ export default function RegisterPage() {
     );
   }
 
+  // Closed Schedule Guard
+  if (scheduleStatus && !scheduleStatus.isOpen) {
+    return (
+      <div className="min-h-[85vh] flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8 bg-slate-100 font-sans">
+        <div className="max-w-lg w-full space-y-6 bg-white p-8 sm:p-10 rounded-3xl shadow-xl border border-rose-200 text-center">
+          <div className="w-16 h-16 bg-rose-100 text-rose-600 rounded-2xl flex items-center justify-center mx-auto shadow-inner">
+            <AlertCircle className="w-8 h-8" />
+          </div>
+
+          <div className="space-y-2">
+            <span className="text-[10px] font-black uppercase tracking-wider text-rose-700 bg-rose-100 px-3 py-1 rounded-full inline-block">
+              Registration Concluded
+            </span>
+            <h2 className="text-2xl font-black text-gurukul-navy">
+              Online Registration Closed
+            </h2>
+            <p className="text-xs sm:text-sm text-slate-600 leading-relaxed">
+              {scheduleStatus.message || 'Online applications for Entrance Examination Session 2026-27 have concluded. New candidate registrations are currently closed.'}
+            </p>
+          </div>
+
+          <div className="p-4 bg-slate-50 border border-slate-200 rounded-2xl text-xs text-slate-600 text-left space-y-2">
+            <p className="font-bold text-slate-800">For Already Registered Candidates:</p>
+            <ul className="list-disc pl-4 space-y-1 text-slate-600">
+              <li>Sign in to your Candidate Portal to check scrutiny status or download your submitted form.</li>
+              <li>Track verification and roll number allotment using your Registration ID.</li>
+              <li>Admit Cards will be available for download once released by the Admission Cell.</li>
+            </ul>
+          </div>
+
+          <div className="flex flex-col sm:flex-row gap-3 pt-2">
+            <Link
+              href="/"
+              className="flex-1 py-3 bg-gurukul-navy hover:bg-slate-800 text-amber-300 font-extrabold text-xs rounded-xl shadow transition flex items-center justify-center gap-2"
+            >
+              <span>Sign In to Candidate Portal</span>
+              <ArrowRight className="w-4 h-4" />
+            </Link>
+            <Link
+              href="/status"
+              className="flex-1 py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl transition flex items-center justify-center gap-1.5"
+            >
+              <span>Track Application Status</span>
+            </Link>
+          </div>
+
+          <div className="pt-2">
+            <Link href="/" className="text-xs text-slate-500 hover:text-gurukul-600 font-semibold transition">
+              ← Return to Portal Gateway
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   // Screen 1: Details Entry with Password Visibility Eye Icons
   return (
     <div className="min-h-[85vh] flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8 bg-slate-100">
@@ -387,7 +401,7 @@ export default function RegisterPage() {
           <div className="w-16 h-16 mx-auto flex items-center justify-center">
             <Image
               src="/logo-gurukul.png"
-              alt="Gurukul Kurukshetra Logo"
+              alt="Gurukul Logo"
               width={64}
               height={64}
               className="brand-logo-img object-contain"
@@ -400,7 +414,7 @@ export default function RegisterPage() {
             Candidate Registration
           </h2>
           <p className="text-xs text-slate-500">
-            Verify via Email/WhatsApp OTP to generate your permanent Registration Number.
+            Verify via Email/WhatsApp OTP to begin your entrance examination application.
           </p>
         </div>
 

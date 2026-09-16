@@ -26,6 +26,7 @@ import {
   AlertCircle
 } from 'lucide-react';
 import { Application, AdmitCard } from '@/lib/types';
+import AdmitCardView from '@/components/AdmitCardView';
 
 export default function ApplicationVerificationPage({ params }: { params: { id: string } }) {
   const router = useRouter();
@@ -37,6 +38,7 @@ export default function ApplicationVerificationPage({ params }: { params: { id: 
   const [showCorrectionModal, setShowCorrectionModal] = useState(false);
   const [showRejectModal, setShowRejectModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [showHallTicketModal, setShowHallTicketModal] = useState(false);
   const [selectedDocPreview, setSelectedDocPreview] = useState<{ title: string; url: string } | null>(null);
   const [demandedDocs, setDemandedDocs] = useState<string[]>([]);
   const [notificationMsg, setNotificationMsg] = useState('');
@@ -60,6 +62,17 @@ export default function ApplicationVerificationPage({ params }: { params: { id: 
       })
       .catch(() => setLoading(false));
   }, [params.id]);
+
+  const formatDob = (dobStr?: string) => {
+    if (!dobStr) return '—';
+    const s = dobStr.trim();
+    // If format is YYYY-MM-DD
+    const match = s.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (match) {
+      return `${match[3]}-${match[2]}-${match[1]}`;
+    }
+    return s;
+  };
 
   const updateStatus = async (status: Application['status'], customRemark?: string) => {
     setActionLoading(true);
@@ -114,34 +127,7 @@ export default function ApplicationVerificationPage({ params }: { params: { id: 
     }
   };
 
-  const handleGenerateAdmitCard = async () => {
-    setActionLoading(true);
-    setErrorMsg('');
-    try {
-      const res = await fetch('/api/admit-card', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          applicationId: application?.id,
-          examCentreName: application?.examCentrePref.preferredCenter1,
-          examDate: '06 December 2026',
-          reportingTime: '08:30 AM',
-        }),
-      });
-      const data = await res.json();
-      if (data.success) {
-        setAdmitCard(data.admitCard);
-        setNotificationMsg(`Admit Card Generated! Roll Number: ${data.admitCard.rollNumber}`);
-        setTimeout(() => setNotificationMsg(''), 4000);
-      } else {
-        setErrorMsg(data.error || 'Failed to generate admit card.');
-      }
-    } catch {
-      setErrorMsg('Failed to generate admit card.');
-    } finally {
-      setActionLoading(false);
-    }
-  };
+
 
   if (loading) {
     return (
@@ -219,7 +205,7 @@ export default function ApplicationVerificationPage({ params }: { params: { id: 
             </button>
           ) : (
             <>
-              {/* Print Admission Form (Available for all non-rejected dossiers) */}
+              {/* Print Admission Form */}
               <Link
                 href={`/admin/applications/${application.id}/admission-form`}
                 className="bg-gurukul-navy hover:bg-slate-800 text-amber-300 font-bold px-3.5 py-2 rounded-xl text-xs shadow flex items-center gap-1.5 transition border border-amber-400/40"
@@ -228,34 +214,6 @@ export default function ApplicationVerificationPage({ params }: { params: { id: 
                 <Printer className="w-4 h-4" />
                 <span>Print Admission Form</span>
               </Link>
-
-              {/* Approve Dossier (Only if not already approved) */}
-              {application.status !== 'approved' && (
-                <button
-                  onClick={() => updateStatus('approved', 'Document verification approved by Examination Committee.')}
-                  disabled={actionLoading}
-                  className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-4 py-2 rounded-xl text-xs shadow flex items-center gap-1.5 transition"
-                >
-                  <CheckCircle className="w-4 h-4" />
-                  <span>Approve Dossier</span>
-                </button>
-              )}
-
-              {/* Demand Details / Correction (Removed once approved) */}
-              {application.status !== 'approved' && (
-                <button
-                  onClick={() => {
-                    setRemarks('');
-                    setDemandedDocs([]);
-                    setShowCorrectionModal(true);
-                  }}
-                  disabled={actionLoading}
-                  className="bg-amber-500 hover:bg-amber-600 text-slate-900 font-bold px-4 py-2 rounded-xl text-xs shadow flex items-center gap-1.5 transition"
-                >
-                  <AlertTriangle className="w-4 h-4" />
-                  <span>Demand Details / Correction</span>
-                </button>
-              )}
 
               {/* Reject Application */}
               <button
@@ -376,7 +334,7 @@ export default function ApplicationVerificationPage({ params }: { params: { id: 
               </div>
               <div>
                 <span className="text-slate-400 block">Date of Birth:</span>
-                <span className="font-bold text-slate-900">{application.personalInfo.dob}</span>
+                <span className="font-bold text-slate-900">{formatDob(application.personalInfo.dob)}</span>
               </div>
               <div>
                 <span className="text-slate-400 block">Gender / Category:</span>
@@ -387,13 +345,17 @@ export default function ApplicationVerificationPage({ params }: { params: { id: 
                 <span className="font-mono font-bold text-slate-900">{application.personalInfo.aadhaarNumber}</span>
               </div>
               <div>
-                <span className="text-slate-400 block">Blood Group:</span>
-                <span className="font-bold text-slate-900">{application.personalInfo.bloodGroup || 'N/A'}</span>
+                <span className="text-slate-400 block">PAN / PEN:</span>
+                <span className="font-mono font-bold text-slate-900">{application.personalInfo.panNumber || '—'}</span>
+              </div>
+              <div>
+                <span className="text-slate-400 block">Family ID:</span>
+                <span className="font-mono font-bold text-slate-900">{application.personalInfo.familyId || '—'}</span>
               </div>
               <div>
                 <span className="text-slate-400 block">Applying For:</span>
                 <span className="font-bold text-gurukul-700 bg-amber-100 px-2 py-0.5 rounded inline-block">
-                  {application.classApplying}
+                  Class {application.classApplying}{application.stream ? ` (${application.stream})` : ''}
                 </span>
               </div>
 
@@ -425,86 +387,111 @@ export default function ApplicationVerificationPage({ params }: { params: { id: 
             </div>
           </div>
 
-          {/* 2. Academic History & Examination Centre */}
+          {/* 2. Academic History & Preferred Study Locations */}
           <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm space-y-4">
             <h3 className="font-bold text-slate-900 text-sm flex items-center gap-2 border-b pb-3">
-              <GraduationCap className="w-4 h-4 text-gurukul-600" /> 2. Academic & Centre Preferences
+              <GraduationCap className="w-4 h-4 text-gurukul-600" /> 2. Academic &amp; Study Location Preferences
             </h3>
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 text-xs">
               <div>
                 <span className="text-slate-400 block">Previous School:</span>
-                <span className="font-semibold text-slate-900">{application.academicInfo.previousSchoolName}</span>
+                <span className="font-semibold text-slate-900">{application.personalInfo?.previousSchoolName || application.academicInfo?.previousSchoolName || '—'}</span>
               </div>
               <div>
                 <span className="text-slate-400 block">Previous Board:</span>
-                <span className="font-medium text-slate-800">{application.academicInfo.previousBoard}</span>
+                <span className="font-medium text-slate-800">
+                  {application.personalInfo?.previousBoard || application.academicInfo?.previousBoard || '—'}
+                  {application.personalInfo?.otherBoard ? ` (${application.personalInfo.otherBoard})` : ''}
+                </span>
               </div>
               <div>
-                <span className="text-slate-400 block">Last Exam Marks:</span>
+                <span className="text-slate-400 block">Fee Paid:</span>
                 <span className="font-bold text-slate-900 text-sm text-emerald-700">
-                  {application.academicInfo.previousClassMarksPercentage}
+                  PAID (₹{application.amountPaid || 800})
                 </span>
               </div>
 
               <div className="sm:col-span-2">
-                <span className="text-slate-400 block">1st Centre Preference:</span>
+                <span className="text-slate-400 block">1st Study Location Preference:</span>
                 <span className="font-bold text-gurukul-navy text-xs">
-                  {application.examCentrePref.preferredCenter1}
+                  {application.studyLocation?.firstPreference || 'Gurukul Nilokheri'}
                 </span>
               </div>
               <div>
-                <span className="text-slate-400 block">2nd Centre Preference:</span>
-                <span className="text-slate-700 text-xs">
-                  {application.examCentrePref.preferredCenter2}
+                <span className="text-slate-400 block">2nd Study Location Preference:</span>
+                <span className="text-slate-700 text-xs font-semibold">
+                  {application.studyLocation?.secondPreference || 'None'}
                 </span>
               </div>
             </div>
           </div>
 
-          {/* 3. Admit Card Generation Box */}
+          {/* 3. Admit Card Status Box */}
           <div className="bg-slate-900 text-white rounded-2xl p-6 shadow-md space-y-4">
             <div className="flex justify-between items-center border-b border-slate-700 pb-3">
               <h3 className="font-bold text-sm text-amber-400 flex items-center gap-2">
                 <ShieldCheck className="w-4 h-4" /> Examination Roll Number & Admit Card
               </h3>
-              {admitCard && (
-                <span className="bg-emerald-500/20 text-emerald-300 text-[10px] font-bold px-2 py-0.5 rounded border border-emerald-500/30">
-                  Admit Card Active
+              {admitCard ? (
+                admitCard.isReleased ? (
+                  <span className="bg-emerald-500/20 text-emerald-300 text-[10px] font-bold px-2 py-0.5 rounded border border-emerald-500/30">
+                    Admit Card Active &amp; Declared
+                  </span>
+                ) : (
+                  <span className="bg-blue-500/20 text-blue-300 text-[10px] font-bold px-2 py-0.5 rounded border border-blue-500/30">
+                    Generated (Awaiting Central Declaration)
+                  </span>
+                )
+              ) : (
+                <span className="bg-amber-500/20 text-amber-300 text-[10px] font-bold px-2 py-0.5 rounded border border-amber-500/30">
+                  Registration In Progress
                 </span>
               )}
             </div>
 
             {admitCard ? (
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
-                <div>
-                  <span className="text-slate-400 block">Assigned Roll No:</span>
-                  <span className="font-mono font-black text-amber-400 text-base">{admitCard.rollNumber}</span>
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
+                  <div>
+                    <span className="text-slate-400 block">Assigned Roll No:</span>
+                    <span className="font-mono font-black text-amber-400 text-base">{admitCard.rollNumber}</span>
+                  </div>
+                  <div>
+                    <span className="text-slate-400 block">Exam Date:</span>
+                    <span className="font-semibold text-white">{admitCard.examDate}</span>
+                  </div>
+                  <div>
+                    <span className="text-slate-400 block">Centre:</span>
+                    <span className="font-semibold text-white">{admitCard.examCentreName}</span>
+                  </div>
+                  <div>
+                    <span className="text-slate-400 block">Seating Room:</span>
+                    <span className="font-semibold text-white">{admitCard.roomNumber}</span>
+                  </div>
                 </div>
-                <div>
-                  <span className="text-slate-400 block">Exam Date:</span>
-                  <span className="font-semibold text-white">{admitCard.examDate}</span>
-                </div>
-                <div>
-                  <span className="text-slate-400 block">Centre:</span>
-                  <span className="font-semibold text-white">{admitCard.examCentreName}</span>
-                </div>
-                <div>
-                  <span className="text-slate-400 block">Seating Room:</span>
-                  <span className="font-semibold text-white">{admitCard.roomNumber}</span>
+                <div className="pt-2 border-t border-slate-800 flex items-center justify-between">
+                  <span className="text-[11px] text-slate-400">
+                    {admitCard.isReleased ? 'Candidate can view on portal.' : 'Internal Admin View (Candidate cannot see until declared).'}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setShowHallTicketModal(true)}
+                    className="bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold px-4 py-2 rounded-xl text-xs flex items-center gap-1.5 transition shadow-md active:scale-95"
+                  >
+                    <Eye className="w-4 h-4" />
+                    <span>View Official Hall Ticket</span>
+                  </button>
                 </div>
               </div>
             ) : (
-              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                <p className="text-xs text-slate-300">
-                  Click below to assign an automated roll number and release the candidate&apos;s printable Hall Ticket.
+              <div className="p-4 bg-slate-800/80 rounded-xl border border-slate-700/80 text-xs space-y-2">
+                <div className="flex items-center gap-2 text-amber-400 font-bold">
+                  <AlertCircle className="w-4 h-4" />
+                  <span>Awaiting Roll Number &amp; Admit Card Generation</span>
+                </div>
+                <p className="text-slate-300 leading-relaxed">
+                  Candidate roll numbers and admit cards are automatically created simultaneously upon registration fee payment.
                 </p>
-                <button
-                  onClick={handleGenerateAdmitCard}
-                  disabled={actionLoading}
-                  className="bg-amber-500 hover:bg-amber-600 text-gurukul-navy font-black text-xs px-4 py-2 rounded-xl transition shadow flex-shrink-0"
-                >
-                  Generate & Release Admit Card
-                </button>
               </div>
             )}
           </div>
@@ -517,14 +504,13 @@ export default function ApplicationVerificationPage({ params }: { params: { id: 
               <FileText className="w-4 h-4 text-gurukul-600" /> Uploaded Document Inspector
             </h3>
 
-            {/* All 5 Uploaded Documents Inspection Cards */}
+            {/* All 4 Uploaded Documents Inspection Cards */}
             <div className="space-y-4">
               {[
-                { key: 'photo', title: '1. Candidate Photograph', defaultHeight: 'h-44' },
+                { key: 'photo', title: '1. Candidate Photograph (Passport)', defaultHeight: 'h-44' },
                 { key: 'signature', title: '2. Candidate Signature', defaultHeight: 'h-24' },
                 { key: 'parentSignature', title: '3. Parent / Guardian Signature', defaultHeight: 'h-24' },
                 { key: 'aadhaarCard', title: '4. Candidate Aadhaar / ID Proof', defaultHeight: 'h-36' },
-                { key: 'lastMarksheet', title: '5. Previous Class Marksheet', defaultHeight: 'h-36' },
               ].map((docItem) => {
                 const docUrl = (application.documents as any)?.[docItem.key];
                 const isPdf = docUrl && (docUrl.startsWith('data:application/pdf') || docUrl.toLowerCase().endsWith('.pdf'));
@@ -847,6 +833,50 @@ export default function ApplicationVerificationPage({ params }: { params: { id: 
               >
                 Close Preview
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Admin Instant Admit Card / Hall Ticket Modal */}
+      {showHallTicketModal && admitCard && (
+        <div className="fixed inset-0 bg-slate-900/80 backdrop-blur-sm z-50 flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
+          <div className="bg-white rounded-3xl max-w-4xl w-full max-h-[94vh] flex flex-col shadow-2xl border border-slate-200 overflow-hidden my-auto animate-in fade-in zoom-in-95 duration-200">
+            {/* Modal Header Bar */}
+            <div className="p-4 bg-gurukul-navy text-white flex justify-between items-center px-6 border-b border-amber-500/40">
+              <div className="flex items-center gap-2.5">
+                <ShieldCheck className="w-5 h-5 text-amber-400" />
+                <div>
+                  <h3 className="font-bold text-sm">
+                    Candidate Examination Hall Ticket — Roll No: {admitCard.rollNumber}
+                  </h3>
+                  <p className="text-[11px] text-slate-300">
+                    {admitCard.candidateName} • {admitCard.classApplying} • {admitCard.examCentreName}
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2.5">
+                <button
+                  type="button"
+                  onClick={() => window.print()}
+                  className="bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-bold px-3.5 py-1.5 rounded-lg flex items-center gap-1.5 transition shadow-sm"
+                >
+                  <Printer className="w-3.5 h-3.5" />
+                  <span>Print Hall Ticket</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowHallTicketModal(false)}
+                  className="p-1.5 text-slate-300 hover:text-white rounded-lg hover:bg-white/10 transition"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+
+            {/* Modal Body Rendering AdmitCardView directly */}
+            <div className="p-4 sm:p-6 overflow-y-auto flex-1 bg-slate-100">
+              <AdmitCardView admitCard={admitCard} />
             </div>
           </div>
         </div>

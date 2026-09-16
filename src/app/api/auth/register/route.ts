@@ -85,52 +85,46 @@ export async function POST(request: Request) {
       );
     }
 
-    // Hash password and create user
+    // Hash password and initialize temporary application session (NO official registration before ₹800 payment)
     const passwordHash = await hashPassword(password);
-    const newUser = await db.createUser({
-      name,
-      email,
-      phone,
-      role: 'applicant',
+    const tempSessionId = 'temp_' + Date.now() + '_' + Math.random().toString(36).substring(2, 8);
+
+    await db.saveTempApplication(tempSessionId, {
+      name: name.trim(),
+      email: email.trim().toLowerCase(),
+      phone: phoneClean,
       passwordHash,
+      isTemporary: true,
+      currentStep: 1,
+      personalInfo: {
+        fullName: name.trim(),
+        candidateEmail: email.trim().toLowerCase(),
+        candidateMobile: phoneClean,
+        whatsappNumber: phoneClean,
+      },
     });
 
-    // Auto-create initial application draft so candidate immediately reflects in admin candidate desk
-    try {
-      await db.saveDraftApplication({
-        userId: newUser.id,
-        classApplying: 'Class 6',
-        personalInfo: {
-          fullName: name,
-          candidateEmail: email,
-          candidateMobile: phone,
-          whatsappNumber: phone,
-        } as any,
-        currentStep: 1,
-      });
-    } catch (draftErr) {
-      console.warn('Auto-draft creation on registration warning:', draftErr);
-    }
-
-    // Generate JWT token
+    // Generate temporary JWT token for the application filling session
     const token = signToken({
-      userId: newUser.id,
-      name: newUser.name,
-      email: newUser.email,
-      role: newUser.role,
+      userId: tempSessionId,
+      name: name.trim(),
+      email: email.trim().toLowerCase(),
+      role: 'applicant',
     });
 
     const response = NextResponse.json({
       success: true,
-      message: 'Account registered successfully.',
+      message: 'OTP verified successfully. Redirecting to Declaration & Instructions.',
+      temporary: true,
       user: {
-        id: newUser.id,
-        name: newUser.name,
-        email: newUser.email,
-        phone: newUser.phone,
-        role: newUser.role,
-        registrationNumber: newUser.registrationNumber,
+        id: tempSessionId,
+        name: name.trim(),
+        email: email.trim().toLowerCase(),
+        phone: phoneClean,
+        role: 'applicant',
+        isTemporary: true,
       },
+      redirectTo: '/apply',
     });
 
     const cookieOptions = getAuthCookieOptions();

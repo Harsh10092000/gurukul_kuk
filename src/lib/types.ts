@@ -14,32 +14,38 @@ export type ApplicationStatus =
   | 'draft'
   | 'submitted'
   | 'under_review'
-  | 'correction_needed'
-  | 'rejected'
   | 'approved'
+  | 'correction_needed'
   | 'admit_card_ready'
-  | 'admitted';
+  | 'admitted'
+  | 'rejected';
 
 export interface PersonalInfo {
   fullName: string;
   dob: string;
-  gender: 'Male' | 'Female' | 'Other';
+  gender: 'Male' | 'Female';
   category: 'General' | 'OBC' | 'SC' | 'ST' | 'EWS';
-  bloodGroup?: string;
   aadhaarNumber: string;
-  nationality: string;
-  religion: string;
+  panNumber?: string;
+  familyId?: string;
+  previousSchoolName?: string;
+  previousBoard?: string;
+  otherBoard?: string;
+  nationality?: string;
+  religion?: string;
   whatsappNumber?: string;
   candidateEmail?: string;
   candidateMobile?: string;
+  email?: string;
+  bloodGroup?: string;
 }
 
 export interface ParentInfo {
   fatherName: string;
-  fatherOccupation: string;
+  fatherOccupation?: string;
   fatherPhone: string;
   motherName: string;
-  motherOccupation: string;
+  motherOccupation?: string;
   motherPhone?: string;
   annualIncome: string;
   guardianName?: string;
@@ -56,19 +62,29 @@ export interface AddressInfo {
   alternatePhone?: string;
 }
 
+export type EligibleClass = 'Class 6' | 'Class 7' | 'Class 8' | 'Class 9' | 'Class 11' | '6' | '7' | '8' | '9' | '11';
+export type Class11Stream = 'Non Medical' | 'Medical' | 'Commerce' | 'Arts';
+
 export interface AcademicInfo {
-  applyingClass: 'Class 5' | 'Class 6' | 'Class 7' | 'Class 8' | 'Class 9' | 'Class 11 Science' | 'Class 11 Commerce' | 'Class 11 Arts' | 'Class 11 NDA Wing';
-  mediumOfInstruction: 'Hindi' | 'English';
-  previousSchoolName: string;
-  previousBoard: string;
-  previousClassMarksPercentage: string;
-  passingYear: string;
+  applyingClass: EligibleClass;
+  stream?: Class11Stream;
+  previousSchoolName?: string;
+  previousBoard?: string;
+  otherBoard?: string;
+  mediumOfInstruction?: string;
+  previousClassMarksPercentage?: string;
+  passingYear?: string;
 }
 
-export interface ExamCentrePref {
-  preferredCenter1: string;
-  preferredCenter2: string;
+export interface StudyLocationPref {
+  firstPreference?: string;
+  secondPreference?: string;
+  preferredCenter1?: string;
+  preferredCenter2?: string;
 }
+
+// Alias for backwards compatibility
+export type ExamCentrePref = StudyLocationPref;
 
 export interface DocumentUploads {
   photo?: string;
@@ -85,11 +101,14 @@ export interface Application {
   rollNumber?: string; // Strictly allotted later per admin exam logic
   userId: string;
   classApplying: string;
+  stream?: string;
   personalInfo: PersonalInfo;
   parentInfo: ParentInfo;
   addressInfo: AddressInfo;
   academicInfo: AcademicInfo;
-  examCentrePref: ExamCentrePref;
+  studyLocationPref?: StudyLocationPref;
+  studyLocation?: StudyLocationPref;
+  examCentrePref?: StudyLocationPref;
   documents: DocumentUploads;
   status: ApplicationStatus;
   remarks?: string;
@@ -97,6 +116,16 @@ export interface Application {
   paymentStatus: 'pending' | 'completed' | 'failed';
   amountPaid?: number;
   transactionId?: string;
+  paymentInfo?: {
+    transactionId?: string;
+    amount?: number;
+    date?: string;
+    paidAt?: string;
+    method?: string;
+    orderId?: string;
+    paymentId?: string;
+    status?: string;
+  };
   createdAt: string;
   updatedAt: string;
 }
@@ -109,6 +138,7 @@ export interface AdmitCard {
   candidateName: string;
   fatherName: string;
   classApplying: string;
+  stream?: string;
   examCentreName: string;
   examCentreAddress: string;
   examDate: string;
@@ -163,6 +193,8 @@ export interface ExamCentre {
 export interface SystemSettings {
   portalOpen: boolean;
   resultsDeclared: boolean;
+  admitCardsReleased?: boolean;
+  admitCardsReleasedAt?: string;
   academicSession: string;
   applicationFee: number;
   registrationStartDate: string;

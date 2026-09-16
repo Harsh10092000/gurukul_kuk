@@ -19,6 +19,8 @@ export async function GET() {
         helplineEmail: settings.helplineEmail,
         portalOpen: settings.portalOpen,
         resultsDeclared: settings.resultsDeclared,
+        admitCardsReleased: settings.admitCardsReleased === true,
+        admitCardsReleasedAt: settings.admitCardsReleasedAt || null,
       },
     });
   } catch (error: any) {

@@ -40,14 +40,14 @@ export async function sendNotification(payload: NotificationPayload) {
   }
   console.log(`[Notification] Dispatching ${type} to ${cleanTo} (${name}) via Nodemailer`);
 
-  let subject = 'Gurukul Kurukshetra - Notification';
+  let subject = 'GURUKUL - Notification';
   let message = '';
   let htmlContent = '';
 
   switch (type) {
     case 'REGISTRATION_OTP':
-      subject = `Gurukul Kurukshetra - Your Registration OTP: ${data.otp}`;
-      message = `Dear ${name || 'Candidate'}, your one-time verification code (OTP) for Gurukul Kurukshetra Entrance Registration is ${data.otp}. Valid for 10 minutes. Do not share with anyone.`;
+      subject = `GURUKUL - Your Registration OTP: ${data.otp}`;
+      message = `Dear ${name || 'Candidate'}, your one-time verification code (OTP) for GURUKUL Entrance Registration is ${data.otp}. Valid for 10 minutes. Do not share with anyone.`;
       htmlContent = `
         <!DOCTYPE html>
         <html>
@@ -72,13 +72,13 @@ export async function sendNotification(payload: NotificationPayload) {
         <body>
           <div class="container">
             <div class="header">
-              <h1>GURUKUL KURUKSHETRA</h1>
-              <p>ENTRANCE EXAMINATION (SESSION 2026-27)</p>
+              <h1>GURUKUL</h1>
+              <p>ENTRANCE EXAMINATION • SESSION 2026-27</p>
             </div>
             <div class="content">
               <div class="greeting">Dear ${name || 'Candidate'},</div>
               <p class="text">
-                Thank you for applying for the Entrance Examination at Gurukul Kurukshetra. Please use the following One-Time Password (OTP) to verify your registration:
+                Thank you for beginning your registration for GURUKUL. Please use the following One-Time Password (OTP) to verify your registration:
               </p>
               
               <div class="otp-box">
@@ -88,12 +88,12 @@ export async function sendNotification(payload: NotificationPayload) {
               </div>
 
               <p class="text">
-                If you did not initiate this request, please disregard this email or contact the Gurukul Kurukshetra Admission Helpdesk at <strong>+91-1744-259114</strong>.
+                If you did not initiate this request, please disregard this email or contact the Admission Helpdesk at <strong>+91-1744-259114</strong>.
               </p>
             </div>
             <div class="footer">
-              Gurukul Kurukshetra, Near 3rd Gate, Kurukshetra University, Haryana - 136119<br>
-              CBSE Affiliation No. 530006 • Estd. 1912 • Website: admissions.gurukulkurukshetra.com
+              GURUKUL Institutional Network (Haryana)<br>
+              CBSE Affiliated Institutional Network
             </div>
           </div>
         </body>
@@ -102,8 +102,8 @@ export async function sendNotification(payload: NotificationPayload) {
       break;
 
     case 'FEE_PAYMENT_RECEIPT':
-      subject = `Official Payment Receipt: Gurukul Kurukshetra Entrance Registration (${data.registrationNumber})`;
-      message = `Dear ${name}, your application fee of Rs. ${data.amount || 1200} for Gurukul Kurukshetra Entrance Examination (Session 2026-27) has been successfully received. Permanent Registration Number: ${data.registrationNumber}. Transaction ID: ${data.transactionId}. Please retain this receipt for candidate login and admit card download.`;
+      subject = `Official Payment Receipt: GURUKUL Entrance Registration (${data.registrationNumber})`;
+      message = `Dear ${name}, your application fee of Rs. ${data.amount || 800} for GURUKUL Entrance Examination (Session 2026-27) has been successfully received. Permanent Registration ID: ${data.registrationNumber}. Transaction ID: ${data.transactionId}. Please retain this receipt for candidate login, admission form and admit card download.`;
       htmlContent = `
         <!DOCTYPE html>
         <html>
@@ -134,12 +134,12 @@ export async function sendNotification(payload: NotificationPayload) {
         <body>
           <div class="container">
             <div class="header">
-              <h1>GURUKUL KURUKSHETRA</h1>
+              <h1>GURUKUL</h1>
               <p>OFFICIAL ENTRANCE EXAMINATION FEE RECEIPT (2026-27)</p>
-              <div class="sub">CBSE Affiliation No. 530006 • Established 1912 • Kurukshetra, Haryana</div>
+              <div class="sub">CBSE Affiliated Institutional Network (Haryana)</div>
             </div>
             <div class="badge-box">
-              ✓ FEE PAYMENT RECEIVED & REGISTRATION NUMBER ASSIGNED
+              ✓ FEE PAYMENT RECEIVED &amp; REGISTRATION NUMBER ASSIGNED
             </div>
             <div class="content">
               <p style="font-size: 15px; font-weight: 600; color: #0f172a; margin-top: 0;">Dear ${name},</p>
@@ -150,36 +150,36 @@ export async function sendNotification(payload: NotificationPayload) {
               <div class="reg-box">
                 <div class="reg-label">Permanent Registration Number</div>
                 <div class="reg-code">${data.registrationNumber}</div>
-                <div class="reg-sub">Use this number & your password to sign in to the candidate portal</div>
+                <div class="reg-sub">Use this number &amp; your password to sign in to the candidate portal</div>
               </div>
 
-              <div class="receipt-title">Payment & Candidate Particulars</div>
+              <div class="receipt-title">Payment &amp; Candidate Particulars</div>
               <table class="receipt-table">
                 <tr><td>Official Receipt Number</td><td>${data.receiptNumber}</td></tr>
                 <tr><td>Candidate Full Name</td><td>${name}</td></tr>
                 <tr><td>Class Applying For</td><td>${data.classApplying || 'Entrance Exam 2026'}</td></tr>
-                <tr><td>Fee Amount Paid</td><td style="color: #166534; font-size: 14px;">₹${data.amount || 1200} (Paid - Verified)</td></tr>
+                <tr><td>Fee Amount Paid</td><td style="color: #166534; font-size: 14px;">₹${data.amount || 800} (Paid - Verified)</td></tr>
                 <tr><td>Payment Mode</td><td>Online Netbanking / UPI / Cards</td></tr>
                 <tr><td>Transaction ID / Reference</td><td>${data.transactionId || 'TXN_CONFIRMED'}</td></tr>
-                <tr><td>Payment Date & Time</td><td>${data.paymentDate || new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' })}</td></tr>
-                <tr><td>Application Status</td><td>Submitted & Pending Document Scrutiny</td></tr>
+                <tr><td>Payment Date &amp; Time</td><td>${data.paymentDate || new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' })}</td></tr>
+                <tr><td>Application Status</td><td>Registered &amp; Confirmed</td></tr>
               </table>
 
               <div class="notice-box">
                 <strong>Important Instructions:</strong>
                 <ul style="margin: 6px 0 0 0; padding-left: 18px;">
-                  <li>Log in to the portal at <strong>admissions.gurukulkurukshetra.com</strong> using your <strong>Registration Number (${data.registrationNumber})</strong> and <strong>Password</strong>.</li>
-                  <li>Track your document scrutiny status and verification remarks.</li>
-                  <li>Download your Examination Hall Ticket / Admit Card once Roll Numbers are issued.</li>
+                  <li>Log in to the portal using your <strong>Registration ID (${data.registrationNumber})</strong> and <strong>Password</strong>.</li>
+                  <li>Download your official <strong>Admission Form (A4)</strong> and <strong>Admit Card</strong>.</li>
+                  <li>Bring printed copies to your examination center on exam day.</li>
                 </ul>
               </div>
 
               <p style="font-size: 12px; color: #64748b; line-height: 1.5; margin: 0;">
-                For queries regarding entrance examination, please contact the Admission Helpdesk at <strong>+91-1744-259114</strong>, <strong>9896328329</strong> or email <strong>admissions@gurukulkurukshetra.com</strong>.
+                For queries regarding entrance examination, please contact the Admission Helpdesk at <strong>+91-1744-259114</strong>, <strong>9896328329</strong> or email <strong>admissions@gurukuladmissions.org</strong>.
               </p>
             </div>
             <div class="footer">
-              Gurukul Kurukshetra, Near 3rd Gate, Kurukshetra University, Kurukshetra, Haryana - 136119<br>
+              GURUKUL Institutional Network (Haryana)<br>
               This is a computer-generated official receipt. No physical signature is required.
             </div>
           </div>
@@ -190,7 +190,7 @@ export async function sendNotification(payload: NotificationPayload) {
 
     case 'ADMIN_NEW_REGISTRATION_ALERT':
       subject = `New Member Registered & Fee Paid: ${data.fullName} (${data.registrationNumber})`;
-      message = `New candidate registration alert: ${data.fullName} has registered for ${data.classApplying} with Registration Number ${data.registrationNumber}. Fee of Rs. ${data.amountPaid || 1200} received (Txn: ${data.transactionId}). Candidate Email: ${data.candidateEmail}, Mobile: ${data.candidateMobile}, Father: ${data.fatherName} (${data.fatherPhone}).`;
+      message = `New candidate registration alert: ${data.fullName} has registered for ${data.classApplying} with Registration ID ${data.registrationNumber}. Fee of Rs. ${data.amountPaid || 800} received (Txn: ${data.transactionId}). Candidate Email: ${data.candidateEmail}, Mobile: ${data.candidateMobile}, Father: ${data.fatherName} (${data.fatherPhone}).`;
       htmlContent = `
         <!DOCTYPE html>
         <html>
@@ -214,7 +214,7 @@ export async function sendNotification(payload: NotificationPayload) {
         <body>
           <div class="container">
             <div class="header">
-              <h2>GURUKUL KURUKSHETRA</h2>
+              <h2>GURUKUL</h2>
               <p>ADMISSIONS & ENTRANCE EXAMINATION CELL - ADMIN ALERT</p>
             </div>
             <div class="alert-banner">

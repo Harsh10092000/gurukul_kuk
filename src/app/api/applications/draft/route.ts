@@ -9,6 +9,11 @@ export async function GET() {
       return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
     }
 
+    if (user.userId.startsWith('temp_')) {
+      const tempApp = await db.getTempApplication(user.userId);
+      return NextResponse.json({ application: tempApp });
+    }
+
     const application = await db.getApplicationByUserId(user.userId);
     return NextResponse.json({ application });
   } catch (error) {
@@ -24,6 +29,28 @@ export async function POST(req: Request) {
     }
 
     const body = await req.json();
+
+    if (user.userId.startsWith('temp_')) {
+      await db.saveTempApplication(user.userId, {
+        userId: user.userId,
+        classApplying: body.classApplying || 'Class 6',
+        stream: body.stream || '',
+        personalInfo: body.personalInfo || {},
+        parentInfo: body.parentInfo || {},
+        addressInfo: body.addressInfo || {},
+        academicInfo: body.academicInfo || {},
+        studyLocationPref: body.studyLocationPref || body.examCentrePref || {},
+        examCentrePref: body.studyLocationPref || body.examCentrePref || {},
+        documents: body.documents || {},
+        currentStep: body.currentStep || body.step || 1,
+      });
+
+      return NextResponse.json({
+        success: true,
+        message: 'Temporary draft saved successfully.',
+      });
+    }
+
     const draft = await db.saveDraftApplication({
       userId: user.userId,
       classApplying: body.classApplying || 'Class 6',

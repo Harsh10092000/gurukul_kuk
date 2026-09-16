@@ -909,9 +909,63 @@ The relational schema is created automatically on startup:
 - **Status:** Complete, Fully Hardened & Live.
 
 ---
+
+### [Entry 007] - 2026-09-16: Lifecycle Phases, Flash Mitigation & Dynamic Attendance Stream Filtering
+- **Requirements Addressed:**
+  1. Eliminate the momentary flicker/flash showing "REGISTRATIONS CLOSED" before the actual open status loaded upon page refresh.
+  2. Align the Attendance Desk class options with the actual registration form options (Classes 6, 7, 8, 9, and Class 11 Non Medical, Medical, Commerce, Arts) and remove non-existent Class 5 / NDA Wing labels.
+  3. Ensure Application Status Tracking reflects accurate phase states.
+- **Actions Taken:**
+  1. **Flash Elimination via Schedule Gate (`src/app/page.tsx`):**
+     - Introduced `scheduleLoaded` state variable (starts `false`, set to `true` upon `/api/schedule` resolution).
+     - Gated the top banner announcement strip, Step 1 registration card, and the 5-stage timeline grid with smooth, pulse-animated skeleton placeholders until schedule data resolves.
+     - Fixed property mapping (`startDateTimeIST`/`endDateTimeIST` → `startDate`/`endDate`) to match actual API response structure.
+  2. **Attendance Desk & Class Filtering Hardening (`src/app/admin/attendance/page.tsx`, `src/app/api/admin/attendance/route.ts`):**
+     - Removed non-existent "Class 5" and invalid "NDA Wing" selections.
+     - Aligned dropdown options to store exact values: `Class 6`, `Class 7`, `Class 8`, `Class 9`, and `Class 11|Non Medical`, `Class 11|Medical`, `Class 11|Commerce`, `Class 11|Arts`.
+     - Updated attendance API route to support exact matching and `stream` query parameter for granular Class 11 candidate filtering.
+  3. **Route Link Normalization:**
+     - Updated redirect and back-navigation links from `/login` to `/` in `src/app/status/page.tsx` and `src/app/register/page.tsx`.
+- **Status:** Complete, Tested & Verified.
+
+---
+
+### [Entry 008] - 2026-09-16: UI Polishing, Dynamic Closing Date Sync & Full SQL Database Export
+- **Requirements Addressed:**
+  1. Remove helpline contact strip from the bottom of candidate sign-in card.
+  2. Remove Class-wise Eligibility Criteria link from the public footer.
+  3. Resolve incorrect banner message when closing date was updated to 30 September 2026; guarantee the announcement banner dynamically updates whenever the closing date is changed in the future.
+  4. Generate a complete, ready-to-share SQL database backup file for deployment and sharing.
+  5. Update `PROJECT_WORKLOG.md` to document all recent system modifications.
+- **Actions Taken:**
+  1. **UI Clean-up:**
+     - Removed the helpline phone/email bottom notice bar from the candidate sign-in card in `src/app/page.tsx`.
+     - Removed the "Class-wise Eligibility Criteria" entry from the quick links list in `src/components/Footer.tsx`.
+  2. **Dynamic Closing Date & Phase Message Automation:**
+     - Identified root cause: a stale announcement notice string (`"Online Application for Session 2026-27 closed on 15 September 2026..."`) stored in `data/form_schedule.json` was overriding the active dynamic message.
+     - Updated `src/lib/admissionPhases.ts` and `src/lib/formSchedule.ts` so that `REGISTRATION_ACTIVE`, `REGISTRATION_EXTENDED`, `REGISTRATION_CLOSED`, and `REGISTRATION_UPCOMING` dynamically render the exact formatted deadline (e.g. `30 September 2026`) derived directly from `registrationEndDate`.
+     - Standardized end-of-day parsing so that date strings (like `2026-09-30`) automatically enforce eligibility through `23:59:59 IST`.
+     - Removed `customNotice` override from `src/app/page.tsx` so the banner remains 100% dynamic regardless of stale notice values.
+     - Enhanced `/api/admin/settings` and `/api/schedule` with bidirectional synchronization between `gurukul_store.json` and `form_schedule.json`.
+  3. **SQL Database Backup Generator & Export:**
+     - Created `scripts/export_sql_backup.js` to dump all relational tables, schema definitions, and production data into standard MySQL SQL format.
+     - Exported complete database dump to **`gurukul_backup.sql`** and **`backup.sql`** (587.90 KB) in the project root.
+     - Backup includes `CREATE DATABASE IF NOT EXISTS gurukul_entrance`, foreign key constraints, character sets (`utf8mb4`), and all table schemas with full datasets:
+       - `system_settings`: 1 row (active settings, fees, milestone dates)
+       - `form_schedules`: 1 row (start date, end date, auto mode)
+       - `users`: 22 registered users & administrator credentials
+       - `exam_centres`: Gurukul Kurukshetra Main Campus venue
+       - `applications`: 12 full student dossiers with personal, parent, academic, and document particulars
+       - `admit_cards`: 7 generated hall tickets with roll numbers
+       - `results`: 1 scorecard with marks breakdown and ranks
+       - `admin_notifications`: 57 system & activity notifications
+       - `contact_enquiries`: 3 enquiry tickets
+       - `audit_logs`: 34 immutable activity records
+- **Verification:**
+  - Automated test script `scratch/test_banner.js` verified active, extended, and future-closed phase transitions with 100% correct dynamic strings.
+  - Live query to `http://localhost:3000/api/schedule` confirmed: `status: "OPEN"`, `endDate: "2026-09-30T23:59:59.000+05:30"`, `message: "Online applications are currently active until 30 September 2026 (Asia/Kolkata (IST))."`.
+  - TypeScript build check: `npx tsc --noEmit` exited with **code 0**.
+- **Status:** Complete, Documented & Production-Ready.
+
+---
 *(Future changes, field modifications, and updates will be appended below)*
-
-
-
-
-

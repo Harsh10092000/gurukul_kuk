@@ -55,16 +55,16 @@ export default function AdmitCardView({ admitCard }: AdmitCardViewProps) {
 
             <div className="flex-1 text-center px-2">
               <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-gurukul-navy">
-                GURUKUL KURUKSHETRA
+                GURUKUL
               </h1>
               <p className="text-xs sm:text-sm font-serif font-bold text-gurukul-700">
                 तमसो मा ज्योतिर्गमय
               </p>
               <p className="text-[11px] text-slate-600 font-medium">
-                (Affiliated to CBSE, New Delhi - Affiliation No. 530006)
+                (CBSE Affiliated Institutional Network • Haryana)
               </p>
               <p className="text-[11px] text-slate-500">
-                Near 3rd Gate, Kurukshetra University, Kurukshetra, Haryana - 136119
+                Entrance Examination & Admission Counseling 2026-27
               </p>
               <div className="mt-2 inline-block bg-gurukul-navy text-white text-xs sm:text-sm font-black tracking-wider px-4 py-1 rounded">
                 ENTRANCE EXAMINATION (SESSION 2026-27) • ADMIT CARD
@@ -88,12 +88,12 @@ export default function AdmitCardView({ admitCard }: AdmitCardViewProps) {
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 text-xs">
               <div>
                 <span className="text-slate-500 block font-medium">Roll Number:</span>
-                <span className="font-mono font-black text-lg text-gurukul-navy">
+                <span className={`font-mono font-black ${admitCard.rollNumber?.includes('allotted') ? 'text-xs text-amber-700 bg-amber-50 px-2 py-0.5 rounded border border-amber-300 inline-block' : 'text-lg text-gurukul-navy'}`}>
                   {admitCard.rollNumber}
                 </span>
               </div>
               <div>
-                <span className="text-slate-500 block font-medium">Application No:</span>
+                <span className="text-slate-500 block font-medium">Registration ID:</span>
                 <span className="font-mono font-bold text-sm text-slate-800">
                   {admitCard.applicationNumber}
                 </span>
@@ -195,7 +195,7 @@ export default function AdmitCardView({ admitCard }: AdmitCardViewProps) {
               Possession of electronic gadgets, mobile phones, digital watches, or calculators inside the examination hall will lead to immediate disqualification.
             </li>
             <li>
-              Admissions to Gurukul Kurukshetra are based strictly on merit followed by counseling and physical fitness verification.
+              Admissions to Gurukul are based strictly on merit followed by counseling and physical fitness verification.
             </li>
           </ol>
         </div>
@@ -217,7 +217,7 @@ export default function AdmitCardView({ admitCard }: AdmitCardViewProps) {
               <span className="font-serif italic font-bold text-gurukul-800 text-sm">Gurukul Exam Cell</span>
             </div>
             <p className="mt-1 font-bold text-slate-900">Controller of Examinations</p>
-            <span className="text-[9px] text-slate-500">Gurukul Kurukshetra</span>
+            <span className="text-[9px] text-slate-500">Gurukul Admission Cell</span>
           </div>
         </div>
       </div>

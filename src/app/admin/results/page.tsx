@@ -22,6 +22,8 @@ export default function AdminResultsPage() {
   const [message, setMessage] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
 
+  const [selectedCategory, setSelectedCategory] = useState<'all' | 'boys' | 'girls'>('all');
+
   // Mark Entry Form State
   const [subjects, setSubjects] = useState([
     { subject: 'Mathematics', maxMarks: 50, marksObtained: 45 },
@@ -36,9 +38,10 @@ export default function AdminResultsPage() {
       .then((res) => res.json())
       .then((data) => {
         if (data.applications) {
-          setApplications(data.applications);
-          if (data.applications.length > 0) {
-            setSelectedAppId(data.applications[0].id);
+          const registered = data.applications.filter((a: any) => a.status !== 'draft' && !(a.registrationNumber || '').startsWith('DRAFT-'));
+          setApplications(registered);
+          if (registered.length > 0) {
+            setSelectedAppId(registered[0].id);
           }
         }
         setLoading(false);
@@ -123,12 +126,52 @@ export default function AdminResultsPage() {
         </div>
       )}
 
+      {/* Category Tabs */}
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="text-xs font-bold text-slate-600 mr-1">Merit Category:</span>
+        <button
+          type="button"
+          onClick={() => setSelectedCategory('all')}
+          className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition ${
+            selectedCategory === 'all'
+              ? 'bg-gurukul-navy text-white shadow-xs'
+              : 'bg-white text-slate-700 border border-slate-200 hover:bg-slate-50'
+          }`}
+        >
+          All Candidates ({applications.length})
+        </button>
+        <button
+          type="button"
+          onClick={() => setSelectedCategory('boys')}
+          className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1 ${
+            selectedCategory === 'boys'
+              ? 'bg-blue-600 text-white shadow-xs'
+              : 'bg-white text-blue-700 border border-blue-200 hover:bg-blue-50'
+          }`}
+        >
+          <span>👦 Boys Wing</span>
+          <span className="text-[10px] opacity-80">(Gurukul Nilokheri &amp; Jyotisar)</span>
+        </button>
+        <button
+          type="button"
+          onClick={() => setSelectedCategory('girls')}
+          className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1 ${
+            selectedCategory === 'girls'
+              ? 'bg-pink-600 text-white shadow-xs'
+              : 'bg-white text-pink-700 border border-pink-200 hover:bg-pink-50'
+          }`}
+        >
+          <span>👧 Girls Wing</span>
+          <span className="text-[10px] opacity-80">(Aryakulam Nilokheri)</span>
+        </button>
+      </div>
+
       {/* Grid: Entry Form + Live List */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         {/* Left 5 Cols: Mark Entry & Publishing Desk */}
         <div className="lg:col-span-5 bg-white border border-slate-200 rounded-2xl p-6 shadow-sm space-y-4">
           <h3 className="font-bold text-slate-900 text-sm flex items-center gap-2 border-b pb-3">
-            <Award className="w-4 h-4 text-gurukul-600" /> Enter & Publish Candidate Marks
+            <Award className="w-4 h-4 text-gurukul-600" /> Enter &amp; Publish Candidate Marks
           </h3>
 
           <form onSubmit={handlePublish} className="space-y-4 text-xs">
@@ -141,11 +184,21 @@ export default function AdminResultsPage() {
                 onChange={(e) => setSelectedAppId(e.target.value)}
                 className="w-full p-2.5 border rounded-xl outline-none font-semibold text-slate-800"
               >
-                {applications.map((app) => (
-                  <option key={app.id} value={app.id}>
-                    {app.applicationNumber} - {app.personalInfo.fullName} ({app.classApplying})
-                  </option>
-                ))}
+                {applications
+                  .filter((app) => {
+                    const isGirl = app.personalInfo?.gender === 'Female' || (app.registrationNumber || '').startsWith('NILG-');
+                    if (selectedCategory === 'boys') return !isGirl;
+                    if (selectedCategory === 'girls') return isGirl;
+                    return true;
+                  })
+                  .map((app) => {
+                    const isGirl = app.personalInfo?.gender === 'Female' || (app.registrationNumber || '').startsWith('NILG-');
+                    return (
+                      <option key={app.id} value={app.id}>
+                        {app.registrationNumber || app.applicationNumber} - {app.personalInfo.fullName} ({app.classApplying}) • {isGirl ? 'Girls' : 'Boys'}
+                      </option>
+                    );
+                  })}
               </select>
             </div>
 
@@ -179,7 +232,7 @@ export default function AdminResultsPage() {
 
             <div>
               <label className="block font-bold text-slate-700 uppercase mb-1">
-                Qualifying & Admission Status
+                Qualifying &amp; Admission Status
               </label>
               <select
                 value={qualifyingStatus}
@@ -202,7 +255,7 @@ export default function AdminResultsPage() {
               ) : (
                 <>
                   <Send className="w-4 h-4" />
-                  <span>Publish Official Result & Notify Candidate</span>
+                  <span>Publish Official Result &amp; Notify Candidate</span>
                 </>
               )}
             </button>
@@ -213,10 +266,15 @@ export default function AdminResultsPage() {
         <div className="lg:col-span-7 bg-white border border-slate-200 rounded-2xl p-6 shadow-sm space-y-4">
           <div className="flex justify-between items-center border-b pb-3">
             <h3 className="font-bold text-slate-900 text-sm flex items-center gap-2">
-              <CheckCircle className="w-4 h-4 text-emerald-600" /> Published Results & Merit List (2026-27)
+              <CheckCircle className="w-4 h-4 text-emerald-600" /> Published Results &amp; Merit List (2026-27)
             </h3>
             <span className="text-xs font-mono text-slate-400 font-semibold">
-              {resultsList.length} Declared
+              {resultsList.filter((res) => {
+                const isGirl = res.applicationNumber?.startsWith('NILG-') || (res as any).gender === 'Female';
+                if (selectedCategory === 'boys') return !isGirl;
+                if (selectedCategory === 'girls') return isGirl;
+                return true;
+              }).length} Declared
             </span>
           </div>
 
@@ -226,6 +284,7 @@ export default function AdminResultsPage() {
                 <tr>
                   <th className="py-2.5 px-3">Roll No</th>
                   <th className="py-2.5 px-3">Candidate</th>
+                  <th className="py-2.5 px-3">Wing</th>
                   <th className="py-2.5 px-3">Class</th>
                   <th className="py-2.5 px-3 text-center">Score</th>
                   <th className="py-2.5 px-3 text-center">Rank</th>
@@ -233,32 +292,47 @@ export default function AdminResultsPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {resultsList.map((res) => (
-                  <tr key={res.id} className="hover:bg-slate-50">
-                    <td className="py-3 px-3 font-mono font-bold text-slate-900">{res.rollNumber}</td>
-                    <td className="py-3 px-3 font-bold text-slate-800">{res.candidateName}</td>
-                    <td className="py-3 px-3">{res.classApplying}</td>
-                    <td className="py-3 px-3 text-center font-mono font-bold text-slate-900">
-                      {res.totalMarks}/{res.maxTotalMarks} ({res.percentage}%)
-                    </td>
-                    <td className="py-3 px-3 text-center">
-                      <span className="bg-amber-100 text-amber-900 font-bold px-2 py-0.5 rounded text-[11px]">
-                        #{res.rank}
-                      </span>
-                    </td>
-                    <td className="py-3 px-3">
-                      <span
-                        className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                          res.qualifyingStatus === 'Qualified for Admission'
-                            ? 'bg-emerald-100 text-emerald-800'
-                            : 'bg-amber-100 text-amber-800'
-                        }`}
-                      >
-                        {res.qualifyingStatus}
-                      </span>
-                    </td>
-                  </tr>
-                ))}
+                {resultsList
+                  .filter((res) => {
+                    const isGirl = res.applicationNumber?.startsWith('NILG-') || (res as any).gender === 'Female';
+                    if (selectedCategory === 'boys') return !isGirl;
+                    if (selectedCategory === 'girls') return isGirl;
+                    return true;
+                  })
+                  .map((res) => {
+                    const isGirl = res.applicationNumber?.startsWith('NILG-') || (res as any).gender === 'Female';
+                    return (
+                      <tr key={res.id} className="hover:bg-slate-50">
+                        <td className="py-3 px-3 font-mono font-bold text-slate-900">{res.rollNumber}</td>
+                        <td className="py-3 px-3 font-bold text-slate-800">{res.candidateName}</td>
+                        <td className="py-3 px-3">
+                          <span className={`text-[10px] font-bold px-2 py-0.5 rounded ${isGirl ? 'bg-pink-100 text-pink-800' : 'bg-blue-100 text-blue-800'}`}>
+                            {isGirl ? 'Girls' : 'Boys'}
+                          </span>
+                        </td>
+                        <td className="py-3 px-3">{res.classApplying}</td>
+                        <td className="py-3 px-3 text-center font-mono font-bold text-slate-900">
+                          {res.totalMarks}/{res.maxTotalMarks} ({res.percentage}%)
+                        </td>
+                        <td className="py-3 px-3 text-center">
+                          <span className="bg-amber-100 text-amber-900 font-bold px-2 py-0.5 rounded text-[11px]">
+                            #{res.rank}
+                          </span>
+                        </td>
+                        <td className="py-3 px-3">
+                          <span
+                            className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                              res.qualifyingStatus === 'Qualified for Admission'
+                                ? 'bg-emerald-100 text-emerald-800'
+                                : 'bg-amber-100 text-amber-800'
+                            }`}
+                          >
+                            {res.qualifyingStatus}
+                          </span>
+                        </td>
+                      </tr>
+                    );
+                  })}
               </tbody>
             </table>
           </div>

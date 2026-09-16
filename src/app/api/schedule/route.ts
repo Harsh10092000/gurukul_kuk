@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { checkFormStatus, getFormSchedule, updateFormSchedule } from '@/lib/formSchedule';
 import { getCurrentUser } from '@/lib/auth';
+import { db } from '@/lib/db';
 
 export async function GET() {
   try {
@@ -36,6 +37,36 @@ export async function POST(req: Request) {
       name: user.name,
       role: user.role,
     });
+
+    const settingsUpdate: any = {};
+    const toISTDateString = (isoOrDateStr: string): string => {
+      try {
+        const d = new Date(isoOrDateStr);
+        if (!isNaN(d.getTime())) {
+          return new Intl.DateTimeFormat('en-CA', {
+            timeZone: 'Asia/Kolkata',
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit',
+          }).format(d);
+        }
+      } catch {}
+      return isoOrDateStr.slice(0, 10);
+    };
+
+    if (body.endDate) {
+      settingsUpdate.registrationEndDate = toISTDateString(body.endDate);
+    }
+    if (body.startDate) {
+      settingsUpdate.registrationStartDate = toISTDateString(body.startDate);
+    }
+    if (Object.keys(settingsUpdate).length > 0) {
+      try {
+        await db.updateSettings(settingsUpdate);
+      } catch (syncErr) {
+        console.warn('Failed to sync db settings registration dates:', syncErr);
+      }
+    }
 
     const status = checkFormStatus();
     return NextResponse.json({
