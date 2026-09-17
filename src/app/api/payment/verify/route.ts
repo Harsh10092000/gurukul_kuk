@@ -224,12 +224,10 @@ export async function POST(request: Request) {
 
     // 16. Generate Official Admit Card Record Simultaneously (isReleased: false until Admin declares)
     const settings = await db.getSettings();
-    const examDate = settings.entranceExamDate || '06 December 2026';
-    const centres = await db.getCentres();
-    const primaryCentre = centres[0] || {
-      name: 'Gurukul Kurukshetra Main Campus',
-      address: 'Near 3rd Gate, Kurukshetra University, Kurukshetra, Haryana - 136119',
-    };
+    const examDate = settings.entranceExamDate || '21 March 2027';
+    const reportingTime = settings.entranceExamTime || '9:30 AM';
+    const examCentreName = settings.examVenueName || 'THE GURUKUL JYOTISAR PEHOWA ROAD, KURUKSHETRA';
+    const examCentreAddress = settings.examVenueAddress || '136119, Haryana';
 
     // Calculate room / desk sequential number from roll sequence
     const seqNum = parseInt(assignedRollNo.slice(3), 10) || 1;
@@ -245,10 +243,10 @@ export async function POST(request: Request) {
       fatherName: parentInfo.fatherName.trim(),
       classApplying: newApplication.classApplying,
       stream: newApplication.stream,
-      examCentreName: primaryCentre.name,
-      examCentreAddress: primaryCentre.address,
+      examCentreName,
+      examCentreAddress,
       examDate,
-      reportingTime: '08:30 AM',
+      reportingTime,
       examDuration: '10:00 AM to 12:30 PM (2.5 Hours)',
       roomNumber: `Hall-${hallNumber}, Desk ${deskNumber}`,
       candidatePhotoUrl: documents.photo || '/logo-gurukul.png',

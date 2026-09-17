@@ -1,4 +1,4 @@
-import fs from 'fs';
+﻿import fs from 'fs';
 import path from 'path';
 import { recordAuditLog } from './audit';
 
@@ -20,7 +20,7 @@ const DEFAULT_SCHEDULE: FormScheduleConfig = {
   endDate: '2026-10-31T23:59:59.000Z',
   statusOverride: 'auto',
   timezone: 'Asia/Kolkata (IST)',
-  announcementNotice: 'Online Application for Entrance Examination Session 2026-27 is active for Classes 5th, 6th, 7th, 8th, 9th, 11th & NDA Wing.',
+  announcementNotice: 'Online Application for Entrance Examination Session 2027-28 is active for Classes 5th, 6th, 7th, 8th, 9th, 11th & NDA Wing.',
   reopenedCount: 0,
   lastUpdated: new Date().toISOString(),
   updatedBy: 'system',
@@ -93,7 +93,7 @@ export function checkFormStatus(): FormStatusResult {
       endDate: schedule.endDate,
       timezone: schedule.timezone,
       message: 'Online Entrance Examination applications are currently closed by administration.',
-      announcementNotice: 'Online Application for Entrance Examination Session 2026-27 is currently closed.',
+      announcementNotice: 'Online Application for Entrance Examination Session 2027-28 is currently closed.',
     };
   }
 
@@ -106,7 +106,7 @@ export function checkFormStatus(): FormStatusResult {
       endDate: schedule.endDate,
       timezone: schedule.timezone,
       message: `Online applications closed on ${formattedEnd} (${schedule.timezone}).`,
-      announcementNotice: `Online Application for Entrance Examination Session 2026-27 closed on ${formattedEnd}. Verification of submitted dossiers and roll number allotment in progress.`,
+      announcementNotice: `Online Application for Entrance Examination Session 2027-28 closed on ${formattedEnd}. Verification of submitted dossiers and roll number allotment in progress.`,
     };
   }
 
@@ -118,7 +118,7 @@ export function checkFormStatus(): FormStatusResult {
       endDate: schedule.endDate,
       timezone: schedule.timezone,
       message: `Application form has been extended until ${formattedEnd} (${schedule.timezone}).`,
-      announcementNotice: `Notice: Online Application for Entrance Examination Session 2026-27 has been extended up to ${formattedEnd}.`,
+      announcementNotice: `Notice: Online Application for Entrance Examination Session 2027-28 has been extended up to ${formattedEnd}.`,
     };
   }
 
@@ -142,7 +142,7 @@ export function checkFormStatus(): FormStatusResult {
     endDate: schedule.endDate,
     timezone: schedule.timezone,
     message: `Online applications are currently active until ${formattedEnd} (${schedule.timezone}).`,
-    announcementNotice: `Online Application for Entrance Examination Session 2026-27 is active. Last date: ${formattedEnd}.`,
+    announcementNotice: `Online Application for Entrance Examination Session 2027-28 is active. Last date: ${formattedEnd}.`,
   };
 }
 
@@ -180,3 +180,4 @@ export async function updateFormSchedule(
 
   return updated;
 }
+

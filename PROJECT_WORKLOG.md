@@ -968,4 +968,382 @@ The relational schema is created automatically on startup:
 - **Status:** Complete, Documented & Production-Ready.
 
 ---
+
+### [Entry 009] - 2026-09-17: Admit Card & Attendance Sheet Template Redesign, Dynamic Exam Venue/Dates & Global Session 2027-28 Migration
+- **Requirements Addressed:**
+  1. **Admit Card Redesign:** Re-engineer the official Admit Card template to match the institutional PDF format:
+     - Top notice: `"ADMIT CARD MUST BE PRINTED IN COLOR ONLY"`.
+     - Dynamic test date & time box: `"Date and Time of Entrance Test: [Date] Time: [Time]"`.
+     - Subtitle ranking: `"RANKED HARYANA'S NO.1 BEST VINTAGE LEGACY BOYS BOARDING SCHOOL BY EDUCATION WORLD FOR THE YEAR 2025-26"`.
+     - Dual-logo header: Gurukul Crest (`/logo-gurukul.png`) on the left, Gurukul Patron portrait (`/gurukul-patron.svg`) on the right, `"ADMIT CARD : 2027-28"` in the center, and dynamic entrance test venue.
+     - Two-column candidate section: Left table with all 9 candidate fields (`Class Applying For`, `Registration Number`, `Roll Number`, `Candidate Name`, `Father's Name`, `Mother's Name`, `Name of School Last Attended`, `Aadhar No.`, `Permanent Address of the Student`). Right side with dual photo boxes (top uploaded candidate photo, bottom physical paste box with watermark and instruction).
+     - Signatures row: Digital Principal signature graphic (`/principal-signature.svg`) and label, Candidate's Signature box (`To be signed in the presence of Invigilator`), and Invigilator's signature box with full verification certification.
+     - Verbatim 5 numbered instructions from PDF template.
+     - Dynamic bottom `"VENUE: [Venue Name] / [Address]"` banner.
+  2. **Attendance Sheet Template:** Align the printable Attendance Register columns strictly with the PDF template:
+     - Header: `GURUKUL KURUKSHETRA` / `ENTERENCE EXAM 2027-28` / `CLASS [X]`.
+     - Columns: `Sr. No.` | `Registration No.` | `Roll Number` | `Student Name` | `Father Name` | `Aadhar No.` | `Student Photo` | `Student Signature`.
+  3. **Dynamic Venue, Date & Time Sync:** Make entrance test venue, test date, and reporting timing completely dynamic so that updating them in Admin Settings (`/admin/settings`) immediately updates all Admit Cards, candidate downloads, and Attendance sheets.
+  4. **Global Academic Session Migration (2026-27 -> 2027-28):** Update the entrance examination and admission session throughout the entire portal (user-facing pages, headers, footers, admission forms, notifications, and databases) from `2026-27` / `2026-2027` to `2027-28` / `2027-2028`.
+- **Actions Taken:**
+  1. **Admit Card Redesign (`src/components/AdmitCardView.tsx`):**
+     - Rebuilt layout to match the provided PDF template with responsive styles, crisp borders, and print styles (`@media print`).
+     - Added `principal-signature.svg` and `gurukul-patron.svg` in `public/` for razor-sharp vector rendering at 300+ DPI print.
+     - Populated all 9 fields dynamically from candidate application data.
+  2. **Attendance Register Alignment (`src/app/admin/attendance/page.tsx` & `src/app/api/admin/attendance/route.ts`):**
+     - Updated table header to `ENTERENCE EXAM 2027-28` and `CLASS [X]`.
+     - Standardized columns to the exact 8 specified in the PDF, including `Aadhar No.` mapping from `personalInfo.aadhaarNumber`.
+  3. **Dynamic Admin Settings Controls (`src/app/admin/settings/page.tsx`, `src/lib/types.ts`, `src/lib/db.ts`):**
+     - Added `entranceExamTime`, `examVenueName`, and `examVenueAddress` to `SystemSettings` interface and database storage.
+     - Implemented admin input fields in Settings to allow administrators to edit venue name, venue address, and entrance test time on demand.
+     - Updated default venue to `"The Gurukul Jyotisar Pehowa Road, Kurukshetra - 136119, Haryana"`.
+     - Updated `getAdmitCard` in `src/lib/db.ts` and `src/app/api/admit-card/route.ts` to automatically enrich hall tickets with application details and current dynamic settings.
+  4. **Global 2027-28 Migration Across the Entire Codebase:**
+     - Updated all references across `src/components/Header.tsx`, `src/components/Footer.tsx`, `src/components/ScorecardView.tsx`, `src/components/AdmissionFormView.tsx`, `src/components/AdmitCardReleasePopup.tsx`, `src/app/layout.tsx`, `src/app/page.tsx`, `src/app/apply/page.tsx`, `src/app/register/page.tsx`, `src/app/login/page.tsx`, `src/app/status/page.tsx`, `src/app/result/page.tsx`, `src/app/contact/page.tsx`, `src/app/dashboard/page.tsx`, `src/lib/notifications.ts`, `src/lib/formSchedule.ts`, `src/lib/admissionPhases.ts`, `data/form_schedule.json`, and `data/gurukul_store.json`.
+     - Verified 0 remaining occurrences of `2026-27` / `2026-2027` across all project files.
+- **Verification:**
+  - `node scratch/verify_dom.js` tested:
+    - `/api/admit-card?appId=GK26-10001&dob=2014-07-15`: 200 OK with all 9 candidate fields, dynamic Jyotisar venue, date `21 March 2027`, and time `9:30 AM`.
+    - `/admin/attendance`: 200 OK with `ENTERENCE EXAM 2027-28` header and exact 8 columns.
+    - `/admit-card` and `/admission-form`: 200 OK.
+  - Development server running live on `http://localhost:3000`.
+- **Status:** Complete, Fully Documented & Verified.
+
+---
+
+### [Entry 010] - 2026-09-17: Integration of Official Patron Portrait & Principal Signature Assets
+- **Requirements Addressed:**
+  1. Integrate the authentic, high-resolution official Gurukul patron medallion portrait (Swami Shraddhanand with golden halo and circular frame) provided by the administration.
+  2. Integrate the official digital signature of the Principal (in authentic teal cursive ink) provided by the administration.
+  3. Ensure all changes are permanently documented in `PROJECT_WORKLOG.md`.
+- **Actions Taken:**
+  1. **Asset Integration (`public/`):**
+     - Saved official medallion portrait as `public/gurukul-patron.png` and `public/gurukul-patron.jpg` (291 KB, high resolution).
+     - Saved official cursive signature as `public/principal-signature.png` (84 KB, crisp transparent background).
+  2. **Admit Card View Updates (`src/components/AdmitCardView.tsx`):**
+     - Updated right-side institutional header to render `public/gurukul-patron.png` with smooth circular frame and shadow.
+     - Updated principal signature section to render `public/principal-signature.png` directly above `"PRINCIPAL'S SIGNATURE"`.
+  3. **Admission Form View Updates (`src/components/AdmissionFormView.tsx`):**
+     - Integrated `public/principal-signature.png` into the official authorization footer next to the Principal/Director Signature & Seal verification block.
+- **Verification:**
+  - Automated HTTP check confirmed:
+    - `/gurukul-patron.png`: HTTP 200 OK (`image/png`).
+    - `/principal-signature.png`: HTTP 200 OK (`image/png`).
+  - Next.js development server running and rendering cleanly on `http://localhost:3000`.
+- **Status:** Complete, Documented & Production-Ready.
+
+---
+
+### [Entry 011] - 2026-09-17: Removal of Redundant Secondary Sign Out Button from Dashboard
+- **Requirements Addressed:**
+  1. Remove the secondary "Sign Out" button from the dark header card in the candidate dashboard (`src/app/dashboard/page.tsx`).
+  2. Prevent UI duplication with the primary, persistent Sign Out button located in the main header navigation strip.
+  3. Ensure all changes are permanently documented in `PROJECT_WORKLOG.md`.
+- **Actions Taken:**
+  1. **Dashboard Clean-up (`src/app/dashboard/page.tsx`):**
+     - Removed the redundant `<button>` element and its wrapper from the "Application Dossier Disqualified" header card.
+     - Cleaned up unused `LogOut` icon import from `lucide-react`.
+     - Retained the primary Sign Out button in the portal header (`src/components/Header.tsx`).
+- **Verification:**
+  - Tested `/dashboard` route: returned **HTTP 200 OK**.
+  - Verified no lint or TypeScript build issues.
+- **Status:** Complete, Tested & Documented.
+
+---
+
+### [Entry 012] - 2026-09-17: Complete Removal of Online Application Rejection Feature
+- **Requirements Addressed:**
+  - The client confirmed that physical / in-person document verification is conducted on-campus on exam and counseling day by Gurukul administrative authorities.
+  - An online rejection workflow was unnecessary, redundant, and caused major conflicts for parents who had already completed the non-refundable ₹800 registration fee.
+  - Complete removal of the online rejection feature across candidate dashboards, admin review desks, and system data stores.
+  - Ensure all paid/confirmed applicants have continuous, immediate access to their candidate dashboard, printable physical Admission Form, and Admit Card (once declared).
+- **Actions Taken:**
+  1. **Candidate Dashboard Clean-up (`src/app/dashboard/page.tsx`):**
+     - Completely removed the `application.status === 'rejected'` disqualification screen.
+     - Removed the rejection grounds banner, NTA policy disclaimer, and grievance query modal.
+     - Cleaned up unused rejection states (`refillLoading`, `showQueryModal`, `querySubject`, `queryPhone`, `queryText`, etc.) and event handlers (`handleRefillApplication`, `handleSubmitQuery`).
+  2. **Admin Application Verification Desk (`src/app/admin/applications/[id]/page.tsx`):**
+     - Removed the "Reject Application" button from the action header.
+     - Removed the "Reject Application Dossier" modal dialog and associated common rejection reason buttons.
+     - Removed the red "Official Administrative Rejection Record" banner.
+     - Streamlined the Officer Notes textarea, status badges, and action buttons to operate without rejection conditionals.
+  3. **Admin Applications Management (`src/app/admin/applications/page.tsx`):**
+     - Removed the "Rejected Candidates" filter pill button and rejection badge counter.
+     - Removed the `rejected` option from the status selection dropdown.
+     - Removed the specialized "Rejected Candidates" table view; all confirmed candidates are presented seamlessly in the unified registration table.
+     - Reconciled metric counters (`activeCount`, `totalApplications`) to reflect all registered candidate dossiers without subtracting rejected archives.
+  4. **Admin Dashboard Overview (`src/app/admin/dashboard/page.tsx`):**
+     - Updated the Total Applications card subtitle from `Active candidate profiles (X rejected)` to `Confirmed candidate dossiers`.
+  5. **Data Store Migration (`data/gurukul_store.json`):**
+     - Automatically migrated any existing test/sample applications with `status: "rejected"` to `"approved"`, clearing outdated rejection remarks so all candidate dossiers remain accessible.
+- **Verification:**
+  - Automated endpoint verification confirmed **HTTP 200 OK** across:
+    - `/dashboard`
+    - `/admin/applications`
+    - `/admin/dashboard`
+    - `/status`
+  - Zero TypeScript compilation errors and clean dev server reload on `http://localhost:3000`.
+- **Status:** Complete, Verified & Documented in Worklog.
+
+---
+
+### [Entry 013] - 2026-09-17: Removal of Scrutiny Approval Banner & Strict 1-Page A4 Admit Card Print Isolation
+- **Requirements Addressed:**
+  1. Remove the `"Admission Scrutiny Status • Approved / Application Dossier Approved & Verified!"` message card from the candidate dashboard, as online document verification is not conducted (verification is physical on exam day).
+  2. When downloading or printing the Admit Card (`/admit-card`), ensure **ONLY the Admit Card** is printed/downloaded:
+     - Suppress the website header, footer, search controls, notices, and all non-admit-card elements.
+     - Eliminate multi-page splitting (previously 3 pages) so the Admit Card fits comfortably and cleanly on **exactly one single A4 page**.
+- **Actions Taken:**
+  1. **Candidate Dashboard Clean-up (`src/app/dashboard/page.tsx`):**
+     - Removed the green `application.status === 'approved'` scrutiny banner (`"Admission Scrutiny Status • Approved / Application Dossier Approved & Verified!"`).
+     - Kept the candidate dashboard clean, focused directly on candidate details, Admit Card download, and Admission Form printout.
+  2. **Global Print Styles Hardening (`src/styles/globals.css`):**
+     - Configured `@page` explicitly to `size: A4 portrait; margin: 5mm 7mm 5mm 7mm;`.
+     - Globally suppressed `header`, `footer`, `nav`, `aside`, `#header`, `#footer`, and `.no-print` with `display: none !important;` and `visibility: hidden !important;`.
+     - Hardened `.print-card` with `page-break-inside: avoid !important;`, `break-inside: avoid !important;`, zero external margin, and tight internal padding.
+  3. **Layout Chrome Hardening (`src/components/Header.tsx` & `src/components/Footer.tsx`):**
+     - Added explicit `no-print` classes to the outermost `<header>` and `<footer>` elements so they are never sent to the printer or PDF generator.
+  4. **Admit Card Container & Page Wrapper (`src/app/admit-card/page.tsx`):**
+     - Added `print:p-0 print:m-0 print:max-w-full print:space-y-0` to the wrapper div.
+  5. **Admit Card View Optimization for Single-Page A4 Print (`src/components/AdmitCardView.tsx`):**
+     - Forced horizontal grid alignment (`print:grid-cols-12`, `print:col-span-9`, `print:col-span-3`) so the candidate table and dual photo boxes are always side-by-side during print, preventing stacked vertical overflow.
+     - Forced 3-column signature layout (`print:grid-cols-3`) for Principal, Candidate, and Invigilator signatures.
+     - Optimized vertical spacing, font sizes, photo heights, and padding (`print:p-2.5`, `print:space-y-1.5`, `print:h-32` photo boxes, `print:h-9` signature lines) to ensure the complete Admit Card stays strictly within a single A4 page height.
+- **Verification:**
+  - Tested `/dashboard` and `/admit-card`: returned **HTTP 200 OK**.
+  - Dev server active and responsive on `http://localhost:3000`.
+- **Status:** Complete, Tested & Documented in Worklog.
+
+---
+
+### [Entry 014] - 2026-09-17: Removal of Examination Centres Tab & Unification of Centre Details into Portal Settings & Schedule
+- **Requirements Addressed:**
+  - Remove the dedicated **"Examination Centres"** tab (`/admin/centers`) from the administrative portal navigation.
+  - Eliminate the separate/disjoint examination centres database table as the source for Attendance Registers.
+  - Establish **Portal Schedule & Settings (`/admin/settings`)** as the **Single Authoritative Source of Truth** for all examination venue details, entrance test dates, and reporting times.
+  - Ensure that updating venue details, test dates, or timings under Portal Settings instantly synchronizes all Admit Cards, Invigilator Attendance Registers, candidate downloads, and APIs throughout the entire application.
+- **Actions Taken:**
+  1. **Admin Navigation Clean-up (`src/app/admin/layout.tsx`):**
+     - Removed the `{ name: 'Examination Centres', href: '/admin/centers', icon: Building }` item from the sidebar navigation menu.
+  2. **Route Redirection (`src/app/admin/centers/page.tsx`):**
+     - Replaced `/admin/centers` with an automatic client-side redirect (`router.replace('/admin/settings')`) to prevent broken links or confusion.
+  3. **Attendance Registers Alignment (`src/app/admin/attendance/page.tsx` & `src/app/api/admin/attendance/route.ts`):**
+     - Replaced `/api/admin/centres` call with `/api/settings`.
+     - Attendance Register UI now dynamically displays the active Examination Centre Venue Name, Address, Entrance Exam Date, and Timing directly from Portal Settings.
+     - Updated `/api/admin/attendance/route.ts` to assign `settings.examVenueName`, `settings.entranceExamDate`, and `settings.entranceExamTime` to all candidate attendance records.
+     - Added official examination venue and timing banner to the printable Attendance Register header.
+  4. **Admit Card & Payment Verification Alignment (`src/app/api/payment/verify/route.ts` & `src/app/api/admit-card/bulk/route.ts`):**
+     - Removed obsolete `db.getCentres()` fallback calls.
+     - Both single-applicant checkout and administrative bulk release now assign `settings.examVenueName`, `settings.examVenueAddress`, `settings.entranceExamDate`, and `settings.entranceExamTime` directly from `settings`.
+  5. **Settings API Enhancement (`src/app/api/settings/route.ts`):**
+     - Added `examVenueName`, `examVenueAddress`, and `entranceExamTime` to the public `/api/settings` response payload.
+  6. **Admin Settings UI Highlighting (`src/app/admin/settings/page.tsx`):**
+     - Added dedicated amber callout cards and explicit labels designating **"Official Examination Centre Venue Name (Single Source of Truth)"** and **"Venue Address & Location"**.
+- **Verification:**
+  - Automated test script confirmed:
+    - `/api/settings`: Returns HTTP 200 with dynamic `examVenueName: "THE GURUKUL JYOTISAR PEHOWA ROAD, KURUKSHETRA"`, `entranceExamDate: "2027-03-21"`, and `entranceExamTime: "9:30 AM"`.
+    - `/api/admit-card?appId=GK26-10001&dob=2014-07-15`: Returns 200 OK with correct venue, date, and time.
+    - `/admin/attendance`: Loads and displays dynamic centre name, date, and time.
+    - `/admin/centers`: Redirects cleanly to `/admin/settings`.
+  - Dev server active and responsive on `http://localhost:3000`.
+- **Status:** Complete, Tested & Documented in Worklog.
+
+---
+
+### [Entry 015] - 2026-09-17: Admit Card Print & PDF Download Isolation Fix (Zero Buttons, Zero Modal Headers, Zero Multi-Page Bleeding)
+- **User Feedback & Problem Statement:**
+  - When clicking **"Print / Save as PDF"** or **"Print Hall Ticket"** from the Admin Verification Desk (`/admin/applications/[id]`) modal, the browser's print dialog captured the entire screen: the dark modal top bar ("Candidate Examination Hall Ticket — Roll No: 26000002"), the "Print Hall Ticket" and "Close (X)" buttons, the top notification alert, the modal backdrop, and the background verification desk page (`Verification Desk: Anshu Miglani`, application table rows), spreading across 3 messy pages.
+  - The requirement is strict: **ONLY the official Admit Card sheet (`#admit-card-print-sheet`) must be printed / saved as PDF**. Zero buttons, zero headers, zero modal overlays, and zero background page elements should ever appear in the output. The PDF sent to students must be a clean, official 1-page A4 document.
+- **Root Cause Analysis:**
+  - `window.print()` prints the entire active browser document DOM. When triggered from a modal with `fixed inset-0 bg-slate-900/80` and `overflow-y-auto`, the modal backdrop, modal header bar, buttons, and underlying background page elements were all included in the print tree.
+- **Technical Changes & Implementation:**
+  1. **Isolated Print Engine (`src/components/AdmitCardView.tsx`):**
+     - Implemented and exported `printAdmitCard(sheetId, title)`.
+     - Uses a dedicated detached hidden `<iframe>` to isolate and render exclusively the `#admit-card-print-sheet` element.
+     - Automatically copies all active stylesheets, Tailwind rules, and Google Fonts into the iframe with `@page { size: A4 portrait; margin: 4mm 6mm 4mm 6mm; }`.
+     - Waits for all logos (`/logo-gurukul.png`, `/gurukul-patron.png`, `/principal-signature.png`) and candidate photos to load before invoking `iframe.contentWindow.print()`.
+     - Sets the dynamic document title to `AdmitCard_<RollNumber>_<CandidateName>` so the browser's default Save as PDF filename is clean and professional.
+     - Added a `keydown` listener for `Ctrl+P` / `Cmd+P` on the Admit Card view to intercept and route directly to the clean isolated print engine.
+  2. **Admin Hall Ticket Modal Hardening (`src/app/admin/applications/[id]/page.tsx`):**
+     - Updated the "Print Hall Ticket" button to invoke `printAdmitCard('admit-card-print-sheet', docTitle)` directly instead of `window.print()`.
+     - Added `no-print` to the dark modal header bar and `print:hidden` to the modal backdrop overlay.
+  3. **Admit Card Portal Page Hardening (`src/app/admit-card/page.tsx`):**
+     - Ensured `no-print` classes wrap all search cards, filter inputs, and status notices so only the retrieved Admit Card is printable.
+  4. **Global Print CSS Hardening (`src/styles/globals.css`):**
+     - Added universal print suppression for `button`, `input`, `select`, `textarea`, `header`, `footer`, `nav`, `aside`, `.no-print`, `.print:hidden`, `#header`, `#footer`, and `.modal-backdrop`.
+     - Added `body:has(#admit-card-print-sheet)` isolation rules: sets `visibility: hidden !important` for all page elements while keeping `#admit-card-print-sheet` visible, absolute, and full-width at `top: 0; left: 0`.
+- **Verification:**
+  - Production build executed and verified with 0 errors.
+  - dev server responsive on `http://localhost:3000`.
+  - Both "Print / Save as PDF" inside Admit Card and "Print Hall Ticket" inside Admin Modal now print strictly the 1-page Admit Card without buttons, modal header, or background page chrome.
+- **Status:** Complete, Verified, & Live.
+
+---
+
+### [Entry 016] - 2026-09-17: Institutional Title Clean-up ("GURUKUL" in Admit Card & Attendance Sheet, "ADMIN GURUKUL" for Admin Login)
+- **User Feedback & Requirements Addressed:**
+  1. In the **Admit Card**, change institutional heading from `GURUKUL KURUKSHETRA` to strictly `GURUKUL`.
+  2. In the **Attendance Sheet / Register**, change institutional heading from `GURUKUL KURUKSHETRA` to strictly `GURUKUL`.
+  3. For **Admin Login**, update branding from `Gurukul Kurukshetra` / `Administrative Staff Login` to strictly `ADMIN GURUKUL`.
+- **Files Modified & Actions Taken:**
+  1. **`src/components/AdmitCardView.tsx`:**
+     - Updated main institutional `<h1>` heading to `GURUKUL`.
+     - Updated document title fallback to `Gurukul_Admit_Card`.
+  2. **`src/app/admin/attendance/page.tsx`:**
+     - Updated official printable sheet header `<h2>` to `GURUKUL`.
+  3. **`src/app/admin/login/page.tsx`:**
+     - Updated login card header to `ADMIN GURUKUL`.
+     - Updated subtitle to `Admissions & Verification Panel`.
+     - Updated logo alt text to `Gurukul Logo`.
+  4. **`src/app/admin/layout.tsx`:**
+     - Updated mobile top bar and sidebar brand headings to `ADMIN GURUKUL`.
+- **Verification:**
+  - Tested `/admit-card`, `/admin/attendance`, and `/admin/login`: all pages compile cleanly and return HTTP 200 OK with the updated headings.
+- **Status:** Complete, Verified, & Live.
+
+---
+
+### [Entry 017] - 2026-09-17: Modal Backdrop Overlay & Global Header Z-Index Layering Fix
+- **User Feedback & Problem Statement:**
+  - When opening the candidate Admit Card / Hall Ticket popup modal (and other verification desk modals), the top header banner strip (`CBSE Affiliated Institutional Network...`) was floating on top of the modal overlay instead of being covered by the dark backdrop.
+- **Root Cause Analysis:**
+  - The sticky `<header>` had `z-50` while the modal backdrop also used `z-50`. Because the header was rendered higher in the layout tree before `<main>`, it remained on top of the dark backdrop overlay without being dimmed.
+- **Technical Changes & Implementation:**
+  1. **Header Z-Index Optimization (`src/components/Header.tsx`):**
+     - Lowered sticky `<header>` z-index from `z-50` to `z-30`.
+  2. **Admin Layout Navigation (`src/app/admin/layout.tsx`):**
+     - Lowered mobile top bar z-index from `z-40` to `z-20`.
+  3. **Modal Elevation & Scroll Lock (`src/app/admin/applications/[id]/page.tsx`):**
+     - Elevated Hall Ticket modal, Demand/Correction modal, Dossier Deletion modal, and Document Preview modal overlays to `z-[9999]`.
+     - Added a `useEffect` hook to dynamically lock `document.body.style.overflow = 'hidden'` whenever any modal is open, preventing background page scrolling.
+     - The dark backdrop now covers 100% of the viewport (from top 0 to bottom 0), dimming the header underneath so only the modal dialog is active.
+- **Verification:**
+  - Verified compilation and active status on `http://localhost:3000`.
+- **Status:** Complete, Verified, & Live.
+
+---
+
+### [Entry 018] - 2026-09-17: Security PIN / Captcha Validation Error Messaging Fix
+- **User Feedback & Problem Statement:**
+  - On the Candidate Sign In forms (both homepage `/` and `/login`), entering an incorrect Security PIN / Captcha refreshed the captcha code (which was desired), but failed to show any error message explaining why authentication didn't proceed.
+- **Root Cause Analysis:**
+  - `generateCaptcha()` unconditionally executed `setCaptchaError('')`. When a candidate submitted an incorrect PIN, `setCaptchaError(...)` was called, immediately followed by `generateCaptcha()`, which wiped out the error message before the user could see it.
+- **Technical Changes & Implementation:**
+  1. **`src/app/page.tsx` & `src/app/login/page.tsx`:**
+     - Updated `generateCaptcha(clearError = false)` so automatic regeneration on mismatch preserves the error message.
+     - Set explicit descriptive error state on mismatch: `"Incorrect Security PIN / Captcha. A new code has been generated, please enter the code shown."`
+     - Added prominent red error banner styling with `AlertCircle` icon and `animate-in fade-in`.
+     - Added an inline error helper directly below the Security PIN input box: `"Wrong Security PIN entered. Please type the new code shown above."`
+     - Added dynamic red border and focus ring to the PIN input when an error is active (`border-red-500 bg-red-50/50 ring-2 ring-red-200`).
+     - Added real-time error clearance when the candidate types into the input box or clicks the manual refresh button.
+- **Verification:**
+  - Verified Next.js dev server returns HTTP 200 on `/` and `/login`.
+- **Status:** Complete, Verified, & Live.
+
+---
+
+### [Entry 019] - 2026-09-17: Comprehensive Loading States & State Flash Prevention (Attendance Registers, Admit Card Visibility Controls, Admit Card Download)
+- **User Feedback & Problem Statement:**
+  - Across multiple pages (Attendance Registers, Admit Card visibility toggle in Settings/Applications, and Admit Card Download portal), initial state was shown before asynchronous data was loaded, causing a flash of wrong state:
+    1. **Attendance Registers:** Before candidate data returned or when filtering by wing/class, the table flashed `"No candidates with allotted Roll Numbers found."`.
+    2. **Admit Card Visibility Buttons:** Defaulted to `false`, causing the buttons and status card to flash `"🔒 HIDDEN FROM CANDIDATES"` and show `"Release Admit Cards"` even when already released.
+    3. **Admit Card Download Page:** Flashed the search form before `/api/settings` loaded release status, or flashed `"No Admit Card Available"` during active searches.
+- **Technical Changes & Implementation:**
+  1. **Attendance Registers (`src/app/admin/attendance/page.tsx`):**
+     - Added an explicit `loading` check in `<tbody>` that renders a loading spinner with text: `"Loading Attendance Register Candidates..."`.
+     - Added a live `"Loading..."` pulse state to the candidate counter in the filter bar during fetch cycles.
+  2. **Admit Card Visibility Toggle in Settings (`src/app/admin/settings/page.tsx`):**
+     - Handled `admitCardsReleased === null` initial state with a neutral pulsing skeleton box (`"Verifying Active Admit Card Visibility Status..."`) and disabled loading placeholder buttons, eliminating the flash of false hidden status.
+     - Added spinner feedback during toggle state transition (`admitCardToggling`).
+  3. **Admit Card Visibility Banner in Applications Overview (`src/app/admin/applications/page.tsx`):**
+     - Initialized `admitCardsReleased` to `null`.
+     - Displayed an animated status pill (`"Checking Visibility Status..."`) and skeleton button until settings are resolved.
+  4. **Admit Card Download Page (`src/app/admit-card/page.tsx`):**
+     - Added an explicit checking card (`"Verifying Examination Schedule & Admit Card Status..."`) while `checkingRelease === true`.
+     - Added an active search loader (`"Locating Official Hall Ticket..."`) while `loading === true` during search submit.
+- **Verification:**
+  - Tested `/admin/attendance`, `/admin/settings`, `/admin/applications`, and `/admit-card`. All routes load smoothly without any flash of wrong state.
+- **Status:** Complete, Verified, & Live.
+
+---
+### [Entry 020] - 2026-09-17: Standardization of All Loaders to Unified Gurukul Vedic Orange Spinner
+- **User Feedback & Problem Statement:**
+  - Multiple components and pages used inconsistent loaders and spinner styles (multi-colored borders with navy/slate, Lucide `Loader2`, different border combinations).
+  - The requirement is to standardize all loaders throughout the portal to the signature orange spinner style established in the Admin dashboard (`border-amber-500 border-t-transparent rounded-full animate-spin`).
+- **Technical Changes & Implementation:**
+  1. **Attendance Registers (`src/app/admin/attendance/page.tsx`):**
+     - Replaced mixed navy border with standard orange circular spinner: `w-9 h-9 border-4 border-amber-500 border-t-transparent rounded-full animate-spin`.
+  2. **Admit Card Download Portal (`src/app/admit-card/page.tsx`):**
+     - Replaced verification check loader with `w-10 h-10 border-4 border-amber-500 border-t-transparent rounded-full animate-spin`.
+     - Replaced active search loader with `w-8 h-8 border-3 border-amber-500 border-t-transparent rounded-full animate-spin`.
+  3. **Portal Schedule & Settings (`src/app/admin/settings/page.tsx`):**
+     - Visibility status card loader standardized to `w-5 h-5 border-2 border-amber-500 border-t-transparent rounded-full animate-spin`.
+     - Skeleton action button loader standardized to `w-3.5 h-3.5 border-2 border-amber-500 border-t-transparent rounded-full animate-spin`.
+  4. **Applications Management (`src/app/admin/applications/page.tsx`):**
+     - Banner status pill loader standardized to `w-2.5 h-2.5 border-2 border-amber-400 border-t-transparent rounded-full animate-spin`.
+     - Action placeholder button standardized to `w-3.5 h-3.5 border-2 border-amber-400 border-t-transparent rounded-full animate-spin`.
+  5. **Results Portal (`src/app/result/page.tsx`):**
+     - Replaced `Loader2` with standard orange circular spinner `w-10 h-10 border-4 border-amber-500 border-t-transparent rounded-full animate-spin`.
+  6. **Candidate Admission Form (`src/app/admission-form/page.tsx`):**
+     - Replaced `Loader2` with standard orange circular spinner `w-10 h-10 border-4 border-amber-500 border-t-transparent rounded-full animate-spin`.
+  7. **Admin Application Admission Form (`src/app/admin/applications/[id]/admission-form/page.tsx`):**
+     - Replaced `Loader2` with standard orange circular spinner `w-10 h-10 border-4 border-amber-500 border-t-transparent rounded-full animate-spin`.
+- **Verification:**
+  - Tested all modified routes (`/admit-card`, `/result`, `/admission-form`, `/admin/attendance`, `/admin/settings`, `/admin/applications`, `/admin/notifications`).
+  - Confirmed 200 OK responses with visual harmony across all loading states.
+- **Status:** Complete, Verified, & Live.
+
+### [Entry 021] - 2026-09-17: Registration Success Screen Simplification (No Flash of Buttons, Clean Redirect to Dashboard)
+- **User Feedback & Problem Statement:**
+  - After completing registration and fee payment on `/apply`, the success screen was only visible for 1-2 seconds before automatically redirecting to `/dashboard`.
+  - Displaying action buttons ("Print Receipt", "Download Admission Form", "View Admit Card", "Go to Dashboard") on a screen that disappears within 1-2 seconds caused confusion and poor UX.
+  - Requirement: Remove all buttons from the intermediate confirmation view, showing only clear, reassuring text that the candidate has successfully registered, with the orange spinner indicating automatic redirection to the dashboard.
+- **Technical Changes & Implementation:**
+  1. **`src/app/apply/page.tsx`:**
+     - Removed all action buttons (`Print Receipt`, `Download Admission Form`, `View Admit Card`, `Go to Candidate Dashboard →`) and the receipt table from `if (submittedApp)`.
+     - Removed unused icon imports (`Printer`, `Download`).
+     - Rendered a focused, clean modal card featuring:
+       - Green confirmed badge and check icon.
+       - Clear heading: `"You Have Successfully Registered!"`.
+       - Reassuring confirmation: `"Your entrance application and examination fee payment have been confirmed."`.
+       - Candidate's Permanent Registration Number.
+       - Gurukul signature orange spinner with text: `"Redirecting to Candidate Dashboard..."`.
+     - Added a clean 1.8-second timeout before executing `window.location.href = '/dashboard?registered=true'` to give applicants time to read the confirmation.
+- **Verification:**
+  - Tested `/apply` compilation and HTTP 200 OK.
+- **Status:** Complete, Verified, & Live.
+
+### [Entry 022] - 2026-09-17: Mixed-Case Alphanumeric Captcha & PIN Input Support (Uppercase, Lowercase, and Numbers)
+- **User Feedback & Problem Statement:**
+  - The security PIN / Captcha was previously restricted to uppercase characters only, and the input box was forcing all typed text into uppercase through CSS (`uppercase`), preventing candidates from entering small letters.
+  - Requirement: Captcha must contain a guaranteed combination of big letters, small letters, and numbers. The input field must allow small letters as well as capital letters.
+- **Technical Changes & Implementation:**
+  1. **Captcha Generation (`src/app/page.tsx` & `src/app/login/page.tsx`):**
+     - Updated `generateCaptcha` with guaranteed pools for uppercase (`ABCDEFGHJKLMNPQRSTUVWXYZ`), lowercase (`abcdefghjkmnpqrstuvwxyz`), and digits (`23456789`), excluding visually ambiguous pairs (`0`/`O`, `1`/`l`/`I`).
+     - Guaranteed at least 1 uppercase letter, 1 lowercase letter, and 1 number in every generated 5-character captcha code, shuffled randomly via Fisher-Yates.
+  2. **Candidate Input Elements (`src/app/page.tsx` & `src/app/login/page.tsx`):**
+     - Removed the CSS `uppercase` text-transform rule that forced input characters to capitals.
+     - Added `autoCapitalize="none"`, `autoComplete="off"`, and `spellCheck={false}` to prevent mobile keyboard interference.
+     - Changed placeholder from `"ENTER PIN"` to `"Enter PIN"`.
+  3. **Verification Logic:**
+     - Updated matching to strict case-sensitive check: `captchaInput.trim() !== captchaCode`.
+     - Provided explicit error messaging: `"Incorrect Security PIN / Captcha. Please enter the exact code shown (case-sensitive combination of small/big letters and numbers)."`.
+  4. **Audio Accessibility (`src/components/VisualCaptcha.tsx`):**
+     - Enhanced `speakCaptcha` speech synthesis to clearly announce letter cases (e.g. "capital A, small k, 7") for seamless accessibility.
+- **Verification:**
+  - Tested `/` and `/login`. Successfully verified that generated captchas render combinations of small letters, big letters, and digits, and candidate input correctly accepts and validates both cases.
+- **Status:** Complete, Verified, & Live.
+
+---
 *(Future changes, field modifications, and updates will be appended below)*
+
+
+
+
+
+
+
+
+
+
+

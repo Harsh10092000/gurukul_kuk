@@ -17,7 +17,6 @@ import {
   User,
   ExternalLink,
   Phone,
-  LogOut,
   BookmarkCheck,
   ArrowRight,
   Upload,
@@ -43,15 +42,6 @@ export default function ApplicantDashboard() {
   const [loading, setLoading] = useState(true);
   const [draftSaved, setDraftSaved] = useState(false);
 
-  // Rejection & Grievance State
-  const [refillLoading, setRefillLoading] = useState(false);
-  const [showQueryModal, setShowQueryModal] = useState(false);
-  const [querySubject, setQuerySubject] = useState('Ground of Rejection Clarification');
-  const [queryPhone, setQueryPhone] = useState('');
-  const [queryText, setQueryText] = useState('');
-  const [queryLoading, setQueryLoading] = useState(false);
-  const [querySuccess, setQuerySuccess] = useState(false);
-  const [queryError, setQueryError] = useState<string | null>(null);
 
   // Document upload & resubmission state
   const [uploadedDocs, setUploadedDocs] = useState<{ [key: string]: string }>({});
@@ -230,101 +220,6 @@ export default function ApplicantDashboard() {
     return s;
   };
 
-  const handleRefillApplication = () => {
-    setModalState({
-      isOpen: true,
-      title: 'Refill Fresh Application?',
-      message: 'Your previous rejected application details will be cleared and you can start a fresh application from Step 1.\n\nAre you sure you want to proceed?',
-      variant: 'warning',
-      confirmText: 'Start Fresh',
-      cancelText: 'Cancel',
-      onConfirm: async () => {
-        setModalState((prev) => ({ ...prev, isOpen: false }));
-        setRefillLoading(true);
-        try {
-          const res = await fetch('/api/applications/refill', {
-            method: 'POST',
-          });
-          const data = await res.json();
-          if (data.success) {
-            // Purge any local draft from storage
-            try {
-              if (currentUser?.id) {
-                localStorage.removeItem(`gurukul_draft_${currentUser.id}`);
-              }
-              localStorage.removeItem('gurukul_application_draft');
-            } catch { }
-
-            // Redirect directly to Step 1 of fresh application
-            window.location.href = '/apply?step=1&fresh=true';
-          } else {
-            setModalState({
-              isOpen: true,
-              title: 'Refill Failed',
-              message: data.error || 'Failed to initiate application refill. Please try again.',
-              variant: 'danger',
-              confirmText: 'Dismiss',
-              cancelText: '',
-              onConfirm: () => setModalState((prev) => ({ ...prev, isOpen: false })),
-            });
-            setRefillLoading(false);
-          }
-        } catch {
-          setModalState({
-            isOpen: true,
-            title: 'Connection Error',
-            message: 'Network error while resetting application form. Please check your connection and try again.',
-            variant: 'danger',
-            confirmText: 'Dismiss',
-            cancelText: '',
-            onConfirm: () => setModalState((prev) => ({ ...prev, isOpen: false })),
-          });
-          setRefillLoading(false);
-        }
-      },
-    });
-  };
-
-  const handleSubmitQuery = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setQueryError(null);
-
-    const cleanPhone = (queryPhone || currentUser?.phone || '').replace(/\D/g, '').slice(-10);
-    if (!cleanPhone || cleanPhone.length !== 10 || !/^[6-9]\d{9}$/.test(cleanPhone)) {
-      setQueryError('Please enter a valid 10-digit Indian mobile number (e.g. 9876543210).');
-      return;
-    }
-
-    if (!queryText.trim() || queryText.trim().length < 10) {
-      setQueryError('Please provide a detailed description (minimum 10 characters).');
-      return;
-    }
-
-    setQueryLoading(true);
-    try {
-      const res = await fetch('/api/applications/query', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          subject: querySubject,
-          phone: cleanPhone,
-          query: queryText.trim(),
-          applicationNumber: application?.applicationNumber || application?.registrationNumber || '',
-        }),
-      });
-      const data = await res.json();
-      if (data.success) {
-        setQuerySuccess(true);
-        setQueryText('');
-      } else {
-        setQueryError(data.error || 'Failed to submit grievance query.');
-      }
-    } catch {
-      setQueryError('Network error while submitting query. Please try again.');
-    } finally {
-      setQueryLoading(false);
-    }
-  };
 
   if (loading) {
     return (
@@ -350,7 +245,7 @@ export default function ApplicantDashboard() {
               Welcome, {currentUser?.name || 'Candidate'}
             </h1>
             <p className="text-xs sm:text-sm text-slate-300">
-              Gurukul Kurukshetra Online Entrance Examination Portal • Academic Session 2026-27
+              Gurukul Kurukshetra Online Entrance Examination Portal • Academic Session 2027-28
             </p>
           </div>
           <Link
@@ -380,308 +275,11 @@ export default function ApplicantDashboard() {
               href="/apply"
               className="inline-flex items-center gap-2 bg-gradient-to-r from-gurukul-600 to-amber-600 hover:from-gurukul-700 hover:to-amber-700 text-white font-extrabold px-8 py-3.5 rounded-2xl shadow-lg hover:shadow-xl transition text-sm"
             >
-              <span>Begin Application Form 2026-27</span>
+              <span>Begin Application Form 2027-28</span>
               <ArrowRight className="w-4 h-4" />
             </Link>
           </div>
         </div>
-      </div>
-    );
-  }
-
-  // REJECTED APPLICATION VIEW: Strict NTA Examination Authority Model
-  // When an application is rejected, ALL previous details and tabs are blocked.
-  // Candidate sees ONLY the authoritative Rejection Screen & Modal Dialog with Refill and Raise Query options.
-  if (application.status === 'rejected') {
-    return (
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 py-10 space-y-8 font-sans">
-        {/* Top Header Card */}
-        <div className="bg-gradient-to-r from-red-950 via-slate-900 to-red-900 text-white rounded-3xl p-6 sm:p-8 shadow-xl border border-red-800/40 relative overflow-hidden flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
-          <div className="space-y-2 z-10">
-            <div className="flex items-center gap-2.5 flex-wrap">
-              <span className="bg-red-500/90 text-white text-[11px] font-black px-3 py-1 rounded-full uppercase tracking-wider font-mono shadow-sm flex items-center gap-1.5">
-                <XCircle className="w-3.5 h-3.5" />
-                Admission Scrutiny Finding
-              </span>
-              <span className="bg-white/20 text-xs font-bold px-3 py-1 rounded-full font-mono">
-                Ref: {application.applicationNumber || application.registrationNumber}
-              </span>
-            </div>
-            <h1 className="text-2xl sm:text-3xl font-black text-white">
-              Application Dossier Disqualified
-            </h1>
-            <p className="text-xs sm:text-sm text-red-200">
-              Gurukul Kurukshetra Online Entrance Examination Portal • Academic Session 2026-27
-            </p>
-          </div>
-
-          <div className="z-10 flex gap-2">
-            <button
-              onClick={() => {
-                fetch('/api/auth/logout', { method: 'POST' }).then(() => {
-                  window.location.href = '/login';
-                });
-              }}
-              className="bg-white/10 hover:bg-white/20 text-white text-xs font-bold px-4 py-2.5 rounded-xl transition flex items-center gap-1.5 border border-white/20"
-            >
-              <LogOut className="w-3.5 h-3.5" />
-              <span>Sign Out</span>
-            </button>
-          </div>
-        </div>
-
-        {/* Authoritative NTA Rejection Modal Card */}
-        <div className="bg-white rounded-3xl border-2 border-red-200 shadow-xl overflow-hidden">
-          {/* Official Red Header Band */}
-          <div className="bg-red-600 text-white p-5 sm:p-6 flex items-center gap-4">
-            <div className="w-12 h-12 rounded-2xl bg-white/10 border border-white/30 flex items-center justify-center flex-shrink-0">
-              <AlertTriangle className="w-7 h-7 text-amber-300" />
-            </div>
-            <div>
-              <div className="text-[10px] font-mono uppercase tracking-widest text-red-200 font-extrabold">
-                Central Examination & Scrutiny Board
-              </div>
-              <h2 className="text-lg sm:text-xl font-black tracking-wide">
-                APPLICATION FORM REJECTED / DISQUALIFIED
-              </h2>
-            </div>
-          </div>
-
-          <div className="p-6 sm:p-8 space-y-6">
-            {/* Candidate summary details */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 bg-slate-50 border border-slate-200 rounded-2xl p-4 text-xs">
-              <div>
-                <span className="text-slate-400 block font-medium">Candidate Name</span>
-                <strong className="text-slate-900">{application.personalInfo?.fullName || currentUser?.name || 'Candidate'}</strong>
-              </div>
-              <div>
-                <span className="text-slate-400 block font-medium">Application No</span>
-                <strong className="font-mono text-gurukul-navy">{application.applicationNumber || application.registrationNumber}</strong>
-              </div>
-              <div>
-                <span className="text-slate-400 block font-medium">Class Applied</span>
-                <strong className="text-slate-900">{application.classApplying}</strong>
-              </div>
-              <div>
-                <span className="text-slate-400 block font-medium">Decision Status</span>
-                <span className="inline-block text-[11px] font-extrabold text-red-700 bg-red-100 px-2 py-0.5 rounded-md">
-                  REJECTED
-                </span>
-              </div>
-            </div>
-
-            {/* Official Ground of Rejection Alert Box */}
-            <div className="bg-red-50/90 border-2 border-red-300 rounded-2xl p-5 sm:p-6 space-y-2">
-              <div className="flex items-center gap-2 text-red-900 font-black text-xs uppercase tracking-wider">
-                <AlertCircle className="w-4 h-4 text-red-600" />
-                <span>Official Committee Remarks / Ground for Rejection:</span>
-              </div>
-              <div className="text-sm font-bold text-red-950 bg-white p-4 rounded-xl border border-red-200 leading-relaxed font-sans">
-                &ldquo;{application.remarks || 'Application does not meet the prescribed age criteria, minimum qualifying eligibility, or documentation standards.'}&rdquo;
-              </div>
-            </div>
-
-            {/* Official NTA Policy Disclaimer */}
-            <div className="bg-slate-50 border-l-4 border-gurukul-navy rounded-r-2xl p-4 text-xs text-slate-600 space-y-2">
-              <p className="font-bold text-slate-800">
-                Important Regulatory Notice (Admission Session 2026-27):
-              </p>
-              <ul className="list-disc list-inside space-y-1 text-slate-600 leading-relaxed">
-                <li>All particulars, documents, and records linked with this submission have been officially annulled.</li>
-                <li>No Admit Card or Examination Roll Number will be generated for this rejected dossier.</li>
-                <li>You may <strong>Refill a Fresh Application Form</strong> with correct details before the deadline, or submit an official Grievance if you believe this decision requires review.</li>
-              </ul>
-            </div>
-
-            {/* Primary Action Buttons */}
-            <div className="flex flex-col sm:flex-row gap-4 pt-2">
-              <button
-                onClick={handleRefillApplication}
-                disabled={refillLoading}
-                className="flex-1 bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-700 hover:to-teal-800 text-white font-extrabold text-sm px-6 py-4 rounded-2xl shadow-lg hover:shadow-xl transition flex items-center justify-center gap-2.5 disabled:opacity-50"
-              >
-                {refillLoading ? (
-                  <>
-                    <RefreshCw className="w-4 h-4 animate-spin" />
-                    <span>Purging Old Record & Preparing Fresh Form...</span>
-                  </>
-                ) : (
-                  <>
-                    <RefreshCw className="w-4 h-4" />
-                    <span>Refill Fresh Application Form</span>
-                  </>
-                )}
-              </button>
-
-              <button
-                onClick={() => {
-                  if (!queryPhone && currentUser?.phone) {
-                    setQueryPhone(currentUser.phone.replace(/\D/g, '').slice(-10));
-                  }
-                  setShowQueryModal(true);
-                }}
-                className="bg-white hover:bg-slate-50 text-gurukul-navy font-black text-sm px-6 py-4 rounded-2xl border-2 border-slate-300 shadow-sm transition flex items-center justify-center gap-2"
-              >
-                <HelpCircle className="w-4 h-4 text-gurukul-600" />
-                <span>Raise Query / Grievance to Helpdesk</span>
-              </button>
-            </div>
-          </div>
-
-          {/* Helpdesk Contact Footer */}
-          <div className="bg-slate-100 p-4 px-6 border-t border-slate-200 text-center text-xs text-slate-600 flex flex-wrap justify-between items-center gap-2">
-            <span>Admission Helpdesk: <strong>+91-1744-259114 / 9896328329</strong></span>
-            <span>Official Email: <strong>admissions@gurukulkurukshetra.com</strong></span>
-          </div>
-        </div>
-
-        {/* Grievance Submission Modal */}
-        {showQueryModal && (
-          <div className="fixed inset-0 bg-slate-900/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-            <div className="bg-white rounded-3xl max-w-lg w-full p-6 sm:p-8 space-y-5 shadow-2xl border border-slate-200 animate-in fade-in zoom-in-95 duration-200">
-              <div className="flex justify-between items-start border-b border-slate-100 pb-4">
-                <div>
-                  <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-gurukul-600 bg-amber-50 px-2.5 py-0.5 rounded-full">
-                    Grievance Redressal Mechanism
-                  </span>
-                  <h3 className="text-lg font-black text-gurukul-navy mt-1">
-                    Submit Candidate Query / Grievance
-                  </h3>
-                </div>
-                <button
-                  onClick={() => {
-                    setShowQueryModal(false);
-                    setQuerySuccess(false);
-                    setQueryError(null);
-                  }}
-                  className="p-1 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-100"
-                >
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
-
-              {querySuccess ? (
-                <div className="p-6 bg-emerald-50 border-2 border-emerald-300 rounded-2xl text-center space-y-3">
-                  <CheckCircle2 className="w-12 h-12 text-emerald-600 mx-auto" />
-                  <h4 className="text-base font-black text-emerald-950">
-                    Grievance Lodged Successfully!
-                  </h4>
-                  <p className="text-xs text-emerald-800 leading-relaxed max-w-sm mx-auto">
-                    Your query has been assigned to the Examination Controller. An update will be communicated to your registered mobile number and email.
-                  </p>
-                  <div className="pt-2">
-                    <button
-                      onClick={() => {
-                        setShowQueryModal(false);
-                        setQuerySuccess(false);
-                      }}
-                      className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs px-6 py-2.5 rounded-xl transition shadow-sm"
-                    >
-                      Close
-                    </button>
-                  </div>
-                </div>
-              ) : (
-                <form onSubmit={handleSubmitQuery} className="space-y-4 text-xs">
-                  {queryError && (
-                    <div className="p-3 bg-red-50 border border-red-200 text-red-800 rounded-xl font-bold">
-                      {queryError}
-                    </div>
-                  )}
-
-                  <div>
-                    <label className="block font-bold text-slate-700 mb-1">
-                      Query Subject / Category
-                    </label>
-                    <select
-                      value={querySubject}
-                      onChange={(e) => setQuerySubject(e.target.value)}
-                      className="w-full border rounded-xl p-2.5 font-semibold text-slate-800 outline-none focus:ring-2 focus:ring-amber-500"
-                    >
-                      <option value="Ground of Rejection Clarification">Ground of Rejection Clarification</option>
-                      <option value="Document Resubmission Permission">Document Resubmission Permission</option>
-                      <option value="Eligibility Criteria Review">Eligibility Criteria Review</option>
-                      <option value="Technical Error During Form Submission">Technical Error During Form Submission</option>
-                      <option value="Other Admission Query">Other Admission Query</option>
-                    </select>
-                  </div>
-
-                  <div>
-                    <div className="flex justify-between items-center mb-1">
-                      <label className="block font-bold text-slate-700">
-                        Contact Mobile Number <span className="text-red-500">*</span>
-                      </label>
-                      <span className="text-[10px] font-mono text-slate-400">
-                        {queryPhone.length}/10 digits
-                      </span>
-                    </div>
-                    <div className="relative">
-                      <span className="absolute left-3.5 top-2.5 font-bold text-slate-400 select-none text-xs">
-                        +91
-                      </span>
-                      <input
-                        type="tel"
-                        inputMode="numeric"
-                        pattern="[6-9][0-9]{9}"
-                        maxLength={10}
-                        value={queryPhone}
-                        onChange={(e) => {
-                          const val = e.target.value.replace(/\D/g, '').slice(0, 10);
-                          setQueryPhone(val);
-                        }}
-                        placeholder="9876543210"
-                        className="w-full border rounded-xl pl-12 pr-3 py-2.5 font-semibold text-slate-800 outline-none focus:ring-2 focus:ring-amber-500 font-mono text-xs tracking-wider"
-                      />
-                    </div>
-                    <p className="text-[10px] text-slate-400 mt-1">
-                      Enter 10-digit mobile number (numbers only, starts with 6, 7, 8, or 9)
-                    </p>
-                  </div>
-
-                  <div>
-                    <label className="block font-bold text-slate-700 mb-1">
-                      Detailed Query / Clarification <span className="text-red-500">*</span>
-                    </label>
-                    <textarea
-                      rows={4}
-                      value={queryText}
-                      onChange={(e) => setQueryText(e.target.value)}
-                      placeholder="Please explain in detail why you believe your application should be reviewed or what clarification you need from the committee..."
-                      className="w-full border rounded-xl p-3 font-normal text-slate-800 outline-none focus:ring-2 focus:ring-amber-500 resize-none"
-                    />
-                  </div>
-
-                  <div className="flex justify-end gap-2.5 pt-2">
-                    <button
-                      type="button"
-                      onClick={() => setShowQueryModal(false)}
-                      className="px-4 py-2.5 rounded-xl border border-slate-200 text-slate-600 font-bold hover:bg-slate-50 transition"
-                    >
-                      Cancel
-                    </button>
-                    <button
-                      type="submit"
-                      disabled={queryLoading}
-                      className="bg-gurukul-navy hover:bg-slate-900 text-white font-extrabold px-6 py-2.5 rounded-xl transition flex items-center gap-2 disabled:opacity-50"
-                    >
-                      {queryLoading ? (
-                        <>
-                          <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                          <span>Submitting...</span>
-                        </>
-                      ) : (
-                        <>
-                          <Send className="w-3.5 h-3.5 text-amber-400" />
-                          <span>Submit Grievance</span>
-                        </>
-                      )}
-                    </button>
-                  </div>
-                </form>
-              )}
-            </div>
-          </div>
-        )}
       </div>
     );
   }
@@ -718,7 +316,7 @@ export default function ApplicantDashboard() {
               Welcome, {currentUser?.name || application.personalInfo?.fullName || 'Candidate'}
             </h1>
             <p className="text-xs sm:text-sm text-slate-300">
-              Gurukul Kurukshetra Online Entrance Examination Portal • Academic Session 2026-27
+              Gurukul Kurukshetra Online Entrance Examination Portal • Academic Session 2027-28
             </p>
           </div>
 
@@ -942,7 +540,7 @@ export default function ApplicantDashboard() {
             Welcome, {currentUser?.name || application.personalInfo?.fullName || 'Candidate'}
           </h1>
           <p className="text-xs sm:text-sm text-slate-300">
-            GURUKUL Online Entrance Examination Portal • Session 2026-27
+            GURUKUL Online Entrance Examination Portal • Session 2027-28
           </p>
         </div>
 
@@ -1003,30 +601,6 @@ export default function ApplicantDashboard() {
         </div>
       )}
 
-      {/* Status Notification Banner: Approved */}
-      {application.status === 'approved' && (
-        <div className="bg-gradient-to-r from-emerald-500/10 via-emerald-50 to-teal-50 border-2 border-emerald-400 rounded-3xl p-6 sm:p-7 shadow-sm flex items-start gap-3.5">
-          <div className="p-2.5 bg-emerald-500 text-white rounded-2xl shadow-sm flex-shrink-0">
-            <CheckCircle2 className="w-6 h-6" />
-          </div>
-          <div className="space-y-1">
-            <span className="bg-emerald-100 text-emerald-950 text-[10px] font-black uppercase px-2.5 py-0.5 rounded-full border border-emerald-300 font-mono">
-              Admission Scrutiny Status • Approved
-            </span>
-            <h3 className="text-lg font-black text-emerald-950 mt-1">
-              🎉 Application Dossier Approved &amp; Verified!
-            </h3>
-            <p className="text-xs text-emerald-800 mt-0.5 max-w-2xl leading-relaxed">
-              The Central Admissions Committee has officially verified and approved your credentials for <strong>{application.classApplying}</strong>.
-              {application.remarks && (
-                <span className="block mt-1.5 font-medium italic text-emerald-900 bg-white/70 px-3 py-1.5 rounded-lg border border-emerald-200/80">
-                  &ldquo;{application.remarks}&rdquo;
-                </span>
-              )}
-            </p>
-          </div>
-        </div>
-      )}
 
       {/* Application Status Timeline Card */}
       <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
@@ -1264,3 +838,4 @@ export default function ApplicantDashboard() {
     </div>
   );
 }
+

@@ -4,16 +4,16 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
-import { 
-  UserPlus, 
-  LogIn, 
-  Calendar, 
-  FileText, 
-  Award, 
-  Download, 
-  ShieldCheck, 
-  Clock, 
-  ArrowRight, 
+import {
+  UserPlus,
+  LogIn,
+  Calendar,
+  FileText,
+  Award,
+  Download,
+  ShieldCheck,
+  Clock,
+  ArrowRight,
   AlertCircle,
   Search,
   BookOpen,
@@ -41,7 +41,7 @@ export default function ExamPortalGateway() {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [captchaInput, setCaptchaInput] = useState('');
-  const [captchaCode, setCaptchaCode] = useState('7N9K2');
+  const [captchaCode, setCaptchaCode] = useState('7Nk9x');
   const [captchaError, setCaptchaError] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -61,16 +61,36 @@ export default function ExamPortalGateway() {
 
   const [portalSettings, setPortalSettings] = useState<any>(null);
 
-  // Generate random 5-character alphanumeric captcha
-  const generateCaptcha = () => {
-    const chars = '23456789ABCDEFGHJKLMNPQRSTUVWXYZ';
-    let result = '';
-    for (let i = 0; i < 5; i++) {
-      result += chars.charAt(Math.floor(Math.random() * chars.length));
+  // Generate random 5-character alphanumeric captcha with combination of uppercase, lowercase, and numbers
+  const generateCaptcha = (clearError: boolean = false) => {
+    const uppercase = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
+    const lowercase = 'abcdefghjkmnpqrstuvwxyz';
+    const numbers = '23456789';
+    const allChars = uppercase + lowercase + numbers;
+
+    // Guaranteed mix: at least 1 uppercase, 1 lowercase, 1 number
+    const guaranteed = [
+      uppercase[Math.floor(Math.random() * uppercase.length)],
+      lowercase[Math.floor(Math.random() * lowercase.length)],
+      numbers[Math.floor(Math.random() * numbers.length)],
+    ];
+
+    // Fill remaining positions to reach 5 characters
+    for (let i = guaranteed.length; i < 5; i++) {
+      guaranteed.push(allChars[Math.floor(Math.random() * allChars.length)]);
     }
-    setCaptchaCode(result);
+
+    // Shuffle characters randomly
+    for (let i = guaranteed.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [guaranteed[i], guaranteed[j]] = [guaranteed[j], guaranteed[i]];
+    }
+
+    setCaptchaCode(guaranteed.join(''));
     setCaptchaInput('');
-    setCaptchaError('');
+    if (clearError) {
+      setCaptchaError('');
+    }
   };
 
   useEffect(() => {
@@ -102,7 +122,7 @@ export default function ExamPortalGateway() {
           setPortalSettings(data.settings);
         }
       })
-      .catch(() => {});
+      .catch(() => { });
 
     // Check if user is already authenticated
     fetch('/api/auth/me')
@@ -123,10 +143,10 @@ export default function ExamPortalGateway() {
     setError('');
     setCaptchaError('');
 
-    // Verify Captcha
-    if (captchaInput.trim().toUpperCase() !== captchaCode.toUpperCase()) {
-      setCaptchaError('Security PIN does not match. Please try again.');
-      generateCaptcha();
+    // Verify Captcha (Case-sensitive combination of small/capital letters and numbers)
+    if (captchaInput.trim() !== captchaCode) {
+      generateCaptcha(false);
+      setCaptchaError('Incorrect Security PIN / Captcha.');
       return;
     }
 
@@ -150,7 +170,7 @@ export default function ExamPortalGateway() {
       // Purge any un-scoped legacy draft from browser
       try {
         localStorage.removeItem('gurukul_application_draft');
-      } catch (e) {}
+      } catch (e) { }
 
       if (data.user.role === 'admin') {
         router.push('/admin/dashboard');
@@ -231,7 +251,7 @@ export default function ExamPortalGateway() {
         {/* Page Title & Context Header */}
         <div className="text-center max-w-2xl mx-auto mb-8 space-y-1.5">
           <span className="bg-gurukul-navy text-amber-300 text-[11px] font-bold px-3 py-1 rounded-full uppercase tracking-wider font-mono">
-            Session 2026-27
+            Session 2027-28
           </span>
           <h1 className="text-2xl sm:text-3xl font-black text-gurukul-navy tracking-tight">
             Entrance Examination Portal
@@ -293,7 +313,7 @@ export default function ExamPortalGateway() {
                         setLoggedInUser(null);
                         try {
                           localStorage.removeItem('gurukul_application_draft');
-                        } catch (e) {}
+                        } catch (e) { }
                         window.location.reload();
                       }}
                       className="py-3 px-5 bg-red-600 hover:bg-red-700 text-white font-bold rounded-xl text-xs transition flex items-center justify-center gap-1.5"
@@ -312,8 +332,8 @@ export default function ExamPortalGateway() {
                   )}
 
                   {captchaError && (
-                    <div className="p-3.5 rounded-xl bg-amber-50 border border-amber-200 text-amber-800 text-xs flex items-center gap-2">
-                      <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                    <div className="p-3.5 rounded-xl bg-red-50 border-2 border-red-300 text-red-800 text-xs flex items-center gap-2.5 font-bold shadow-sm animate-in fade-in">
+                      <AlertCircle className="w-4 h-4 flex-shrink-0 text-red-600" />
                       <span>{captchaError}</span>
                     </div>
                   )}
@@ -384,15 +404,22 @@ export default function ExamPortalGateway() {
                         Security PIN (Case Sensitive) *
                       </label>
                       <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
-                        <VisualCaptcha code={captchaCode} onRefresh={generateCaptcha} />
+                        <VisualCaptcha code={captchaCode} onRefresh={() => generateCaptcha(true)} />
                         <input
                           type="text"
                           required
                           value={captchaInput}
-                          onChange={(e) => setCaptchaInput(e.target.value)}
-                          placeholder="ENTER PIN"
+                          onChange={(e) => {
+                            setCaptchaInput(e.target.value);
+                            if (captchaError) setCaptchaError('');
+                          }}
+                          placeholder="Enter PIN"
                           maxLength={6}
-                          className="flex-1 py-2.5 px-3 text-sm border border-slate-300 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none transition font-mono uppercase font-bold text-slate-900"
+                          autoCapitalize="none"
+                          autoComplete="off"
+                          spellCheck={false}
+                          className={`flex-1 py-2.5 px-3 text-sm border rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none transition font-mono font-bold text-slate-900 ${captchaError ? 'border-red-500 bg-red-50/50 ring-2 ring-red-200' : 'border-slate-300'
+                            }`}
                         />
                       </div>
                     </div>
@@ -465,11 +492,10 @@ export default function ExamPortalGateway() {
                 <div className="pt-6 mt-4 border-t border-slate-100">
                   <Link
                     href={phaseInfo.registrationCard.actionHref}
-                    className={`w-full py-3 ${
-                      phaseInfo.registrationCard.isPrimary
-                        ? 'bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-gurukul-navy'
-                        : 'bg-gurukul-navy hover:bg-slate-800 text-amber-300'
-                    } font-black text-xs rounded-xl shadow transition flex items-center justify-center gap-2 uppercase tracking-wide`}
+                    className={`w-full py-3 ${phaseInfo.registrationCard.isPrimary
+                      ? 'bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-gurukul-navy'
+                      : 'bg-gurukul-navy hover:bg-slate-800 text-amber-300'
+                      } font-black text-xs rounded-xl shadow transition flex items-center justify-center gap-2 uppercase tracking-wide`}
                   >
                     <span>{phaseInfo.registrationCard.actionText}</span>
                     <ArrowRight className="w-4 h-4" />
@@ -571,7 +597,7 @@ export default function ExamPortalGateway() {
             <div className="flex items-center gap-2">
               <Calendar className="w-5 h-5 text-gurukul-600" />
               <h3 className="font-black text-sm sm:text-base text-gurukul-navy">
-                Important Examination Schedule (Session 2026-27)
+                Important Examination Schedule (Session 2027-28)
               </h3>
             </div>
             <span className="text-[11px] text-amber-700 bg-amber-50 border border-amber-200 px-2.5 py-1 rounded font-bold">
@@ -637,3 +663,4 @@ export default function ExamPortalGateway() {
     </div>
   );
 }
+

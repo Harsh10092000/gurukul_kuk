@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
@@ -52,7 +52,7 @@ export default function AdmitCardReleasePopup() {
               Official Notice
             </span>
             <span className="font-bold">
-              Admit Cards for Entrance Examination 2026-27 have been Officially Released!
+              Admit Cards for Entrance Examination 2027-28 have been Officially Released!
             </span>
             <span className="hidden md:inline text-amber-100/90 ml-1.5">
               All registered candidates can now access and print their Hall Ticket.
@@ -88,3 +88,4 @@ export default function AdmitCardReleasePopup() {
     </div>
   );
 }
+

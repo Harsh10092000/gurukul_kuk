@@ -87,7 +87,7 @@ export default function AdmissionFormView({
               CBSE Affiliated Institutional Network • Haryana
             </p>
             <div className="mt-1 bg-gurukul-navy text-white text-[11px] font-black tracking-wider uppercase py-0.5 px-3 rounded inline-block">
-              Official Admission Verification & Enrolment Form (Session 2026-27)
+              Official Admission Verification & Enrolment Form (Session 2027-28)
             </div>
           </div>
 
@@ -331,13 +331,18 @@ export default function AdmissionFormView({
             </div>
           </div>
 
-          <div className="flex justify-between pt-3 px-2 font-bold text-[8.5px] border-t border-slate-200 mt-2">
+          <div className="flex justify-between items-end pt-3 px-2 font-bold text-[8.5px] border-t border-slate-200 mt-2">
             <span>Scrutiny Clerk Sign: __________________</span>
             <span>Exam Controller Sign: __________________</span>
-            <span>Principal / Director Signature & Seal: __________________</span>
+            <div className="flex flex-col items-center">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/principal-signature.png" alt="Principal Signature" className="h-6 w-auto object-contain mb-0.5" />
+              <span>Principal / Director Signature &amp; Seal</span>
+            </div>
           </div>
         </div>
       </div>
     </div>
   );
 }
+

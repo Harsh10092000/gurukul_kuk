@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { Search, Award, AlertCircle, FileText, ArrowLeft, Loader2, ShieldAlert } from 'lucide-react';
+import { Search, Award, AlertCircle, FileText, ArrowLeft, ShieldAlert } from 'lucide-react';
 import ScorecardView from '@/components/ScorecardView';
 import { ExamResult } from '@/lib/types';
 
@@ -90,7 +90,7 @@ export default function ResultPage() {
     return (
       <div className="min-h-[70vh] flex items-center justify-center bg-slate-50 font-sans">
         <div className="text-center space-y-3">
-          <Loader2 className="w-10 h-10 animate-spin text-amber-500 mx-auto" />
+          <div className="w-10 h-10 border-4 border-amber-500 border-t-transparent rounded-full animate-spin mx-auto" />
           <p className="text-xs font-bold text-slate-600">Verifying Examination Result Records...</p>
         </div>
       </div>
@@ -112,7 +112,7 @@ export default function ResultPage() {
             Entrance Results Not Yet Declared
           </h2>
           <p className="text-xs sm:text-sm text-slate-600 leading-relaxed max-w-md mx-auto">
-            The official entrance examination results and merit scorecards for Session 2026-27 have not been declared by the Examination Controller yet.
+            The official entrance examination results and merit scorecards for Session 2027-28 have not been declared by the Examination Controller yet.
           </p>
           <p className="text-xs text-slate-400">
             Please check back after official announcement notifications are issued to registered candidates.
@@ -142,7 +142,7 @@ export default function ResultPage() {
           Merit Assessment
         </span>
         <h1 className="text-2xl sm:text-3xl font-black text-gurukul-navy">
-          Entrance Examination Result &amp; Scorecard 2026-27
+          Entrance Examination Result &amp; Scorecard 2027-28
         </h1>
         <p className="text-xs sm:text-sm text-slate-500">
           Official merit rank and score breakdown declared by Gurukul Kurukshetra Examination Cell.
@@ -247,3 +247,4 @@ export default function ResultPage() {
     </div>
   );
 }
+

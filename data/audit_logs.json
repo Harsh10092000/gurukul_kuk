@@ -3,1087 +3,257 @@
     "userId": "usr-admin-1",
     "userName": "Principal / Exam Controller",
     "userRole": "admin",
+    "action": "SYSTEM_SETTINGS_UPDATE",
+    "entity": "SystemSettings",
+    "details": {
+      "previous": {
+        "portalOpen": true,
+        "resultsDeclared": false,
+        "academicSession": "2027-2028",
+        "applicationFee": 800,
+        "registrationStartDate": "2026-09-01",
+        "registrationEndDate": "2027-01-31",
+        "admitCardReleaseDate": "2027-03-01",
+        "entranceExamDate": "2027-03-22",
+        "entranceExamTime": "10:30 AM",
+        "examVenueName": "THE GURUKUL JYOTISAR PEHOWA ROAD, KURUKSHETRA",
+        "examVenueAddress": "136119, Haryana",
+        "resultDeclarationDate": "2027-04-05",
+        "counselingStartDate": "2027-04-15",
+        "helplinePhone": "+91-1744-259114 / +91-9896328329",
+        "helplineEmail": "admissions@gurukulkurukshetra.com",
+        "admitCardsReleased": true,
+        "admitCardsReleasedAt": "2026-09-17T06:06:05.902Z"
+      },
+      "updated": {
+        "portalOpen": true,
+        "resultsDeclared": false,
+        "academicSession": "2027-2028",
+        "applicationFee": 800,
+        "registrationStartDate": "2026-09-01",
+        "registrationEndDate": "2027-01-31",
+        "admitCardReleaseDate": "2027-03-01",
+        "entranceExamDate": "2027-03-22",
+        "entranceExamTime": "10:30 AM",
+        "examVenueName": "THE GURUKUL JYOTISAR PEHOWA ROAD, KURUKSHETRA",
+        "examVenueAddress": "136119, Haryana",
+        "resultDeclarationDate": "2027-04-05",
+        "counselingStartDate": "2027-04-15",
+        "helplinePhone": "+91-1744-259114 / +91-9896328329",
+        "helplineEmail": "admissions@gurukuladmissions.org",
+        "admitCardsReleased": true,
+        "admitCardsReleasedAt": "2026-09-17T06:06:05.902Z"
+      }
+    },
+    "id": "audit-1789626804812-s3h92",
+    "timestamp": "2026-09-17T06:33:24.812Z"
+  },
+  {
+    "userId": "usr-admin-1",
+    "userName": "Principal / Exam Controller",
+    "userRole": "admin",
     "action": "UPDATE_FORM_SCHEDULE",
     "entity": "FormSchedule",
     "details": {
       "previous": {
-        "startDate": "2026-09-01T00:00:00.000Z",
-        "endDate": "2026-09-30T18:29:59.000Z",
-        "statusOverride": "extended",
+        "startDate": "2026-08-31T18:30:00.000Z",
+        "endDate": "2027-01-31T18:29:59.000Z",
+        "statusOverride": "auto",
         "timezone": "Asia/Kolkata (IST)",
         "announcementNotice": "",
         "reopenedCount": 1,
-        "lastUpdated": "2026-09-16T11:32:54.042Z",
+        "lastUpdated": "2026-09-17T06:32:57.083Z",
         "updatedBy": "Principal / Exam Controller (usr-admin-1)"
       },
       "new": {
         "startDate": "2026-08-31T18:30:00.000Z",
-        "endDate": "2026-09-30T12:59:00.000Z",
+        "endDate": "2027-01-31T18:29:59.000Z",
+        "statusOverride": "auto",
+        "timezone": "Asia/Kolkata (IST)",
+        "announcementNotice": "",
+        "reopenedCount": 1,
+        "lastUpdated": "2026-09-17T06:33:24.801Z",
+        "updatedBy": "Principal / Exam Controller (usr-admin-1)"
+      }
+    },
+    "id": "audit-1789626804802-pt9wn",
+    "timestamp": "2026-09-17T06:33:24.802Z"
+  },
+  {
+    "userId": "usr-admin-1",
+    "userName": "Principal / Exam Controller",
+    "userRole": "admin",
+    "action": "SYSTEM_SETTINGS_UPDATE",
+    "entity": "SystemSettings",
+    "details": {
+      "previous": {
+        "portalOpen": true,
+        "resultsDeclared": false,
+        "academicSession": "2027-2028",
+        "applicationFee": 800,
+        "registrationStartDate": "2026-09-01",
+        "registrationEndDate": "2027-01-31",
+        "admitCardReleaseDate": "2027-03-01",
+        "entranceExamDate": "2027-03-22",
+        "entranceExamTime": "10:30 AM",
+        "examVenueName": "THE GURUKUL JYOTISAR PEHOWA ROD, KURUKSHETRA",
+        "examVenueAddress": "136119, Haryanaa",
+        "resultDeclarationDate": "2027-04-05",
+        "counselingStartDate": "2027-04-15",
+        "helplinePhone": "+91-1744-259114 / +91-9896328329",
+        "helplineEmail": "admissions@gurukulkurukshetra.com",
+        "admitCardsReleased": true,
+        "admitCardsReleasedAt": "2026-09-17T06:06:05.902Z"
+      },
+      "updated": {
+        "portalOpen": true,
+        "resultsDeclared": false,
+        "academicSession": "2027-2028",
+        "applicationFee": 800,
+        "registrationStartDate": "2026-09-01",
+        "registrationEndDate": "2027-01-31",
+        "admitCardReleaseDate": "2027-03-01",
+        "entranceExamDate": "2027-03-22",
+        "entranceExamTime": "10:30 AM",
+        "examVenueName": "THE GURUKUL JYOTISAR PEHOWA ROAD, KURUKSHETRA",
+        "examVenueAddress": "136119, Haryana",
+        "resultDeclarationDate": "2027-04-05",
+        "counselingStartDate": "2027-04-15",
+        "helplinePhone": "+91-1744-259114 / +91-9896328329",
+        "helplineEmail": "admissions@gurukulkurukshetra.com",
+        "admitCardsReleased": true,
+        "admitCardsReleasedAt": "2026-09-17T06:06:05.902Z"
+      }
+    },
+    "id": "audit-1789626777095-7sz56",
+    "timestamp": "2026-09-17T06:32:57.095Z"
+  },
+  {
+    "userId": "usr-admin-1",
+    "userName": "Principal / Exam Controller",
+    "userRole": "admin",
+    "action": "UPDATE_FORM_SCHEDULE",
+    "entity": "FormSchedule",
+    "details": {
+      "previous": {
+        "startDate": "2026-08-31T18:30:00.000Z",
+        "endDate": "2027-01-31T18:29:59.000Z",
+        "statusOverride": "auto",
+        "timezone": "Asia/Kolkata (IST)",
+        "announcementNotice": "",
+        "reopenedCount": 1,
+        "lastUpdated": "2026-09-17T06:31:54.386Z",
+        "updatedBy": "Principal / Exam Controller (usr-admin-1)"
+      },
+      "new": {
+        "startDate": "2026-08-31T18:30:00.000Z",
+        "endDate": "2027-01-31T18:29:59.000Z",
+        "statusOverride": "auto",
+        "timezone": "Asia/Kolkata (IST)",
+        "announcementNotice": "",
+        "reopenedCount": 1,
+        "lastUpdated": "2026-09-17T06:32:57.083Z",
+        "updatedBy": "Principal / Exam Controller (usr-admin-1)"
+      }
+    },
+    "id": "audit-1789626777084-2yqli",
+    "timestamp": "2026-09-17T06:32:57.084Z"
+  },
+  {
+    "userId": "usr-admin-1",
+    "userName": "Principal / Exam Controller",
+    "userRole": "admin",
+    "action": "SYSTEM_SETTINGS_UPDATE",
+    "entity": "SystemSettings",
+    "details": {
+      "previous": {
+        "portalOpen": true,
+        "resultsDeclared": false,
+        "academicSession": "2027-2028",
+        "applicationFee": 800,
+        "registrationStartDate": "2026-09-01",
+        "registrationEndDate": "2027-01-31",
+        "admitCardReleaseDate": "2027-03-01",
+        "entranceExamDate": "2027-03-21",
+        "entranceExamTime": "9:30 AM",
+        "examVenueName": "THE GURUKUL JYOTISAR PEHOWA ROAD, KURUKSHETRA",
+        "examVenueAddress": "136119, Haryana",
+        "resultDeclarationDate": "2027-04-05",
+        "counselingStartDate": "2027-04-15",
+        "helplinePhone": "+91-1744-259114 / +91-9896328329",
+        "helplineEmail": "admissions@gurukulkurukshetra.com",
+        "admitCardsReleased": true,
+        "admitCardsReleasedAt": "2026-09-17T06:06:05.902Z"
+      },
+      "updated": {
+        "portalOpen": true,
+        "resultsDeclared": false,
+        "academicSession": "2027-2028",
+        "applicationFee": 800,
+        "registrationStartDate": "2026-09-01",
+        "registrationEndDate": "2027-01-31",
+        "admitCardReleaseDate": "2027-03-01",
+        "entranceExamDate": "2027-03-22",
+        "entranceExamTime": "10:30 AM",
+        "examVenueName": "THE GURUKUL JYOTISAR PEHOWA ROD, KURUKSHETRA",
+        "examVenueAddress": "136119, Haryanaa",
+        "resultDeclarationDate": "2027-04-05",
+        "counselingStartDate": "2027-04-15",
+        "helplinePhone": "+91-1744-259114 / +91-9896328329",
+        "helplineEmail": "admissions@gurukulkurukshetra.com",
+        "admitCardsReleased": true,
+        "admitCardsReleasedAt": "2026-09-17T06:06:05.902Z"
+      }
+    },
+    "id": "audit-1789626714396-sc8ot",
+    "timestamp": "2026-09-17T06:31:54.396Z"
+  },
+  {
+    "userId": "usr-admin-1",
+    "userName": "Principal / Exam Controller",
+    "userRole": "admin",
+    "action": "UPDATE_FORM_SCHEDULE",
+    "entity": "FormSchedule",
+    "details": {
+      "previous": {
+        "startDate": "2026-08-31T18:30:00.000Z",
+        "endDate": "2026-09-30T18:29:59.000Z",
         "statusOverride": "auto",
         "timezone": "Asia/Kolkata (IST)",
         "announcementNotice": "",
         "reopenedCount": 1,
         "lastUpdated": "2026-09-16T11:33:40.987Z",
         "updatedBy": "Principal / Exam Controller (usr-admin-1)"
-      }
-    },
-    "id": "audit-1789558420988-ffjif",
-    "timestamp": "2026-09-16T11:33:40.988Z"
-  },
-  {
-    "userId": "usr-admin-1",
-    "userName": "Principal / Exam Controller",
-    "userRole": "admin",
-    "action": "SYSTEM_SETTINGS_UPDATE",
-    "entity": "SystemSettings",
-    "details": {
-      "previous": {
-        "portalOpen": true,
-        "academicSession": "2026-2027",
-        "applicationFee": 800,
-        "registrationStartDate": "2026-09-01",
-        "registrationEndDate": "2026-10-06",
-        "admitCardReleaseDate": "2026-11-20",
-        "entranceExamDate": "2026-12-10",
-        "resultDeclarationDate": "2026-12-25",
-        "counselingStartDate": "2027-01-10",
-        "helplinePhone": "+91-1744-259114 / +91-9896328329",
-        "helplineEmail": "admissions@gurukulkurukshetra.com",
-        "resultsDeclared": false,
-        "admitCardsReleased": false,
-        "admitCardsReleasedAt": "2026-09-16T10:50:31.901Z"
-      },
-      "updated": {
-        "portalOpen": true,
-        "resultsDeclared": false,
-        "academicSession": "2026-2027",
-        "applicationFee": 800,
-        "registrationStartDate": "2026-09-01",
-        "registrationEndDate": "2026-09-30",
-        "admitCardReleaseDate": "2026-11-20",
-        "entranceExamDate": "2026-12-10",
-        "resultDeclarationDate": "2026-12-25",
-        "counselingStartDate": "2027-01-10",
-        "helplinePhone": "+91-1744-259114 / +91-9896328329",
-        "helplineEmail": "admissions@gurukulkurukshetra.com",
-        "admitCardsReleased": false,
-        "admitCardsReleasedAt": "2026-09-16T10:50:31.901Z"
-      }
-    },
-    "id": "audit-1789558374054-ssu52",
-    "timestamp": "2026-09-16T11:32:54.054Z"
-  },
-  {
-    "userId": "usr-admin-1",
-    "userName": "Principal / Exam Controller",
-    "userRole": "admin",
-    "action": "UPDATE_FORM_SCHEDULE",
-    "entity": "FormSchedule",
-    "details": {
-      "previous": {
-        "startDate": "2026-08-31T18:30:00.000Z",
-        "endDate": "2026-10-06T05:57:00.000Z",
-        "statusOverride": "extended",
-        "timezone": "Asia/Kolkata (IST)",
-        "announcementNotice": "Online Application has been reopened & extended until 6 oct 2026.",
-        "reopenedCount": 1,
-        "lastUpdated": "2026-09-16T11:32:12.154Z",
-        "updatedBy": "Principal / Exam Controller (usr-admin-1)"
       },
       "new": {
-        "startDate": "2026-09-01T00:00:00.000Z",
-        "endDate": "2026-09-30T18:29:59.000Z",
-        "statusOverride": "extended",
-        "timezone": "Asia/Kolkata (IST)",
-        "announcementNotice": "",
-        "reopenedCount": 1,
-        "lastUpdated": "2026-09-16T11:32:54.042Z",
-        "updatedBy": "Principal / Exam Controller (usr-admin-1)"
-      }
-    },
-    "id": "audit-1789558374044-k5w6f",
-    "timestamp": "2026-09-16T11:32:54.044Z"
-  },
-  {
-    "userId": "usr-admin-1",
-    "userName": "Principal / Exam Controller",
-    "userRole": "admin",
-    "action": "REOPEN_FORM",
-    "entity": "FormSchedule",
-    "details": {
-      "previous": {
-        "startDate": "2026-09-01T00:00:00.000Z",
-        "endDate": "2026-09-30T23:59:59.000+05:30",
+        "startDate": "2026-08-31T18:30:00.000Z",
+        "endDate": "2027-01-31T18:29:59.000Z",
         "statusOverride": "auto",
         "timezone": "Asia/Kolkata (IST)",
         "announcementNotice": "",
-        "reopenedCount": 0,
-        "lastUpdated": "2026-09-16T11:18:00.000Z",
-        "updatedBy": "Principal / Exam Controller (usr-admin-1)"
-      },
-      "new": {
-        "startDate": "2026-08-31T18:30:00.000Z",
-        "endDate": "2026-10-06T05:57:00.000Z",
-        "statusOverride": "extended",
-        "timezone": "Asia/Kolkata (IST)",
-        "announcementNotice": "Online Application has been reopened & extended until 6 oct 2026.",
         "reopenedCount": 1,
-        "lastUpdated": "2026-09-16T11:32:12.154Z",
+        "lastUpdated": "2026-09-17T06:31:54.386Z",
         "updatedBy": "Principal / Exam Controller (usr-admin-1)"
       }
     },
-    "id": "audit-1789558332155-qxiu6",
-    "timestamp": "2026-09-16T11:32:12.155Z"
+    "id": "audit-1789626714387-wr0uq",
+    "timestamp": "2026-09-17T06:31:54.387Z"
   },
   {
-    "userId": "usr-admin-1",
-    "userName": "Principal / Exam Controller",
-    "userRole": "admin",
-    "action": "SYSTEM_SETTINGS_UPDATE",
-    "entity": "SystemSettings",
-    "details": {
-      "previous": {
-        "portalOpen": true,
-        "academicSession": "2026-2027",
-        "applicationFee": 800,
-        "registrationStartDate": "2026-09-01",
-        "registrationEndDate": "2026-09-14",
-        "admitCardReleaseDate": "2026-11-20",
-        "entranceExamDate": "2026-12-10",
-        "resultDeclarationDate": "2026-12-25",
-        "counselingStartDate": "2027-01-10",
-        "helplinePhone": "+91-1744-259114 / +91-9896328329",
-        "helplineEmail": "admissions@gurukulkurukshetra.com",
-        "resultsDeclared": false,
-        "admitCardsReleased": false,
-        "admitCardsReleasedAt": "2026-09-16T09:37:31.367Z"
-      },
-      "updated": {
-        "portalOpen": true,
-        "resultsDeclared": false,
-        "academicSession": "2026-2027",
-        "applicationFee": 800,
-        "registrationStartDate": "2026-09-01",
-        "registrationEndDate": "2026-09-30",
-        "admitCardReleaseDate": "2026-11-20",
-        "entranceExamDate": "2026-12-10",
-        "resultDeclarationDate": "2026-12-25",
-        "counselingStartDate": "2027-01-10",
-        "helplinePhone": "+91-1744-259114 / +91-9896328329",
-        "helplineEmail": "admissions@gurukulkurukshetra.com",
-        "admitCardsReleased": false,
-        "admitCardsReleasedAt": "2026-09-16T09:37:31.367Z"
-      }
-    },
-    "id": "audit-1789555626233-lt0bb",
-    "timestamp": "2026-09-16T10:47:06.233Z"
-  },
-  {
-    "userId": "usr-admin-1",
-    "userName": "Principal / Exam Controller",
-    "userRole": "admin",
-    "action": "UPDATE_FORM_SCHEDULE",
-    "entity": "FormSchedule",
-    "details": {
-      "previous": {
-        "startDate": "2026-09-01T00:00:00.000Z",
-        "endDate": "2026-09-14T00:00:00.000Z",
-        "statusOverride": "auto",
-        "timezone": "Asia/Kolkata (IST)",
-        "announcementNotice": "Online Application for Session 2026-27 closed on 15 September 2026. Scrutiny of applications & roll number allotment in progress. Hall Tickets (Admit Cards) will be available on 20 November 2026.",
-        "reopenedCount": 0,
-        "lastUpdated": "2026-09-16T10:43:43.460Z",
-        "updatedBy": "Principal / Exam Controller (usr-admin-1)"
-      },
-      "new": {
-        "startDate": "2026-09-01T00:00:00.000Z",
-        "endDate": "2026-09-30T00:00:00.000Z",
-        "statusOverride": "auto",
-        "timezone": "Asia/Kolkata (IST)",
-        "announcementNotice": "Online Application for Session 2026-27 closed on 15 September 2026. Scrutiny of applications & roll number allotment in progress. Hall Tickets (Admit Cards) will be available on 20 November 2026.",
-        "reopenedCount": 0,
-        "lastUpdated": "2026-09-16T10:47:06.219Z",
-        "updatedBy": "Principal / Exam Controller (usr-admin-1)"
-      }
-    },
-    "id": "audit-1789555626220-hzkc4",
-    "timestamp": "2026-09-16T10:47:06.220Z"
-  },
-  {
-    "userId": "usr-admin-1",
-    "userName": "Principal / Exam Controller",
-    "userRole": "admin",
-    "action": "SYSTEM_SETTINGS_UPDATE",
-    "entity": "SystemSettings",
-    "details": {
-      "previous": {
-        "portalOpen": true,
-        "academicSession": "2026-2027",
-        "applicationFee": 800,
-        "registrationStartDate": "2026-09-01",
-        "registrationEndDate": "2026-09-30",
-        "admitCardReleaseDate": "2026-11-20",
-        "entranceExamDate": "2026-12-10",
-        "resultDeclarationDate": "2026-12-25",
-        "counselingStartDate": "2027-01-10",
-        "helplinePhone": "+91-1744-259114 / +91-9896328329",
-        "helplineEmail": "admissions@gurukulkurukshetra.com",
-        "resultsDeclared": false,
-        "admitCardsReleased": false,
-        "admitCardsReleasedAt": "2026-09-16T09:37:31.367Z"
-      },
-      "updated": {
-        "portalOpen": true,
-        "resultsDeclared": false,
-        "academicSession": "2026-2027",
-        "applicationFee": 800,
-        "registrationStartDate": "2026-09-01",
-        "registrationEndDate": "2026-09-14",
-        "admitCardReleaseDate": "2026-11-20",
-        "entranceExamDate": "2026-12-10",
-        "resultDeclarationDate": "2026-12-25",
-        "counselingStartDate": "2027-01-10",
-        "helplinePhone": "+91-1744-259114 / +91-9896328329",
-        "helplineEmail": "admissions@gurukulkurukshetra.com",
-        "admitCardsReleased": false,
-        "admitCardsReleasedAt": "2026-09-16T09:37:31.367Z"
-      }
-    },
-    "id": "audit-1789555423473-ayrrg",
-    "timestamp": "2026-09-16T10:43:43.473Z"
-  },
-  {
-    "userId": "usr-admin-1",
-    "userName": "Principal / Exam Controller",
-    "userRole": "admin",
-    "action": "UPDATE_FORM_SCHEDULE",
-    "entity": "FormSchedule",
-    "details": {
-      "previous": {
-        "startDate": "2026-09-01T00:00:00.000Z",
-        "endDate": "2026-09-30T00:00:00.000Z",
-        "statusOverride": "auto",
-        "timezone": "Asia/Kolkata (IST)",
-        "announcementNotice": "Online Application for Session 2026-27 closed on 15 September 2026. Scrutiny of applications & roll number allotment in progress. Hall Tickets (Admit Cards) will be available on 20 November 2026.",
-        "reopenedCount": 0,
-        "lastUpdated": "2026-09-16T10:18:38.175Z",
-        "updatedBy": "Principal / Exam Controller (usr-admin-1)"
-      },
-      "new": {
-        "startDate": "2026-09-01T00:00:00.000Z",
-        "endDate": "2026-09-14T00:00:00.000Z",
-        "statusOverride": "auto",
-        "timezone": "Asia/Kolkata (IST)",
-        "announcementNotice": "Online Application for Session 2026-27 closed on 15 September 2026. Scrutiny of applications & roll number allotment in progress. Hall Tickets (Admit Cards) will be available on 20 November 2026.",
-        "reopenedCount": 0,
-        "lastUpdated": "2026-09-16T10:43:43.460Z",
-        "updatedBy": "Principal / Exam Controller (usr-admin-1)"
-      }
-    },
-    "id": "audit-1789555423461-3r2on",
-    "timestamp": "2026-09-16T10:43:43.461Z"
-  },
-  {
-    "userId": "usr-admin-1",
-    "userName": "Principal / Exam Controller",
-    "userRole": "admin",
-    "action": "SYSTEM_SETTINGS_UPDATE",
-    "entity": "SystemSettings",
-    "details": {
-      "previous": {
-        "portalOpen": true,
-        "academicSession": "2026-2027",
-        "applicationFee": 800,
-        "registrationStartDate": "2026-09-01",
-        "registrationEndDate": "2026-09-15",
-        "admitCardReleaseDate": "2026-11-20",
-        "entranceExamDate": "2026-12-10",
-        "resultDeclarationDate": "2026-12-25",
-        "counselingStartDate": "2027-01-10",
-        "helplinePhone": "+91-1744-259114 / +91-9896328329",
-        "helplineEmail": "admissions@gurukulkurukshetra.com",
-        "resultsDeclared": false,
-        "admitCardsReleased": false,
-        "admitCardsReleasedAt": "2026-09-16T09:37:31.367Z"
-      },
-      "updated": {
-        "portalOpen": true,
-        "resultsDeclared": false,
-        "academicSession": "2026-2027",
-        "applicationFee": 800,
-        "registrationStartDate": "2026-09-01",
-        "registrationEndDate": "2026-09-30",
-        "admitCardReleaseDate": "2026-11-20",
-        "entranceExamDate": "2026-12-10",
-        "resultDeclarationDate": "2026-12-25",
-        "counselingStartDate": "2027-01-10",
-        "helplinePhone": "+91-1744-259114 / +91-9896328329",
-        "helplineEmail": "admissions@gurukulkurukshetra.com",
-        "admitCardsReleased": false,
-        "admitCardsReleasedAt": "2026-09-16T09:37:31.367Z"
-      }
-    },
-    "id": "audit-1789553918195-8oe9c",
-    "timestamp": "2026-09-16T10:18:38.195Z"
-  },
-  {
-    "userId": "usr-admin-1",
-    "userName": "Principal / Exam Controller",
-    "userRole": "admin",
-    "action": "UPDATE_FORM_SCHEDULE",
-    "entity": "FormSchedule",
-    "details": {
-      "previous": {
-        "startDate": "2026-09-01T00:00:00.000Z",
-        "endDate": "2026-09-15T23:59:59.000Z",
-        "statusOverride": "auto",
-        "timezone": "Asia/Kolkata (IST)",
-        "announcementNotice": "Online Application for Session 2026-27 closed on 15 September 2026. Scrutiny of applications & roll number allotment in progress. Hall Tickets (Admit Cards) will be available on 20 November 2026.",
-        "reopenedCount": 0,
-        "lastUpdated": "2026-09-16T10:00:00.000Z",
-        "updatedBy": "Principal / Exam Controller (usr-admin-1)"
-      },
-      "new": {
-        "startDate": "2026-09-01T00:00:00.000Z",
-        "endDate": "2026-09-30T00:00:00.000Z",
-        "statusOverride": "auto",
-        "timezone": "Asia/Kolkata (IST)",
-        "announcementNotice": "Online Application for Session 2026-27 closed on 15 September 2026. Scrutiny of applications & roll number allotment in progress. Hall Tickets (Admit Cards) will be available on 20 November 2026.",
-        "reopenedCount": 0,
-        "lastUpdated": "2026-09-16T10:18:38.175Z",
-        "updatedBy": "Principal / Exam Controller (usr-admin-1)"
-      }
-    },
-    "id": "audit-1789553918183-sqsm0",
-    "timestamp": "2026-09-16T10:18:38.184Z"
-  },
-  {
-    "userId": "usr-admin-1",
-    "userName": "Principal / Exam Controller",
-    "userRole": "admin",
-    "action": "SYSTEM_SETTINGS_UPDATE",
-    "entity": "SystemSettings",
-    "details": {
-      "previous": {
-        "portalOpen": true,
-        "academicSession": "2026-2027",
-        "applicationFee": 800,
-        "registrationStartDate": "2026-09-01",
-        "registrationEndDate": "2026-10-31",
-        "admitCardReleaseDate": "2026-11-20",
-        "entranceExamDate": "2026-12-10",
-        "resultDeclarationDate": "2026-12-25",
-        "counselingStartDate": "2027-01-10",
-        "helplinePhone": "+91-1744-259114 / +91-9896328329",
-        "helplineEmail": "admissions@gurukulkurukshetra.com",
-        "resultsDeclared": true,
-        "admitCardsReleased": false,
-        "admitCardsReleasedAt": "2026-09-16T09:37:31.367Z"
-      },
-      "updated": {
-        "portalOpen": true,
-        "resultsDeclared": true,
-        "academicSession": "2026-2027",
-        "applicationFee": 800,
-        "registrationStartDate": "2026-09-01",
-        "registrationEndDate": "2026-10-15",
-        "admitCardReleaseDate": "2026-11-20",
-        "entranceExamDate": "2026-12-10",
-        "resultDeclarationDate": "2026-12-25",
-        "counselingStartDate": "2027-01-10",
-        "helplinePhone": "+91-1744-259114 / +91-9896328329",
-        "helplineEmail": "admissions@gurukulkurukshetra.com",
-        "admitCardsReleased": false,
-        "admitCardsReleasedAt": "2026-09-16T09:37:31.367Z"
-      }
-    },
-    "id": "audit-1789551947303-w2id3",
-    "timestamp": "2026-09-16T09:45:47.303Z"
-  },
-  {
-    "userId": "usr-admin-1",
-    "userName": "Principal / Exam Controller",
-    "userRole": "admin",
-    "action": "UPDATE_FORM_SCHEDULE",
-    "entity": "FormSchedule",
-    "details": {
-      "previous": {
-        "startDate": "2026-09-01T00:00:00.000Z",
-        "endDate": "2026-10-31T00:00:00.000Z",
-        "statusOverride": "open",
-        "timezone": "Asia/Kolkata (IST)",
-        "announcementNotice": "Online Application for Entrance Examination Session 2026-27 is active for Classes 5th, 6th, 7th, 8th, 9th, 11th & NDA Wing.",
-        "reopenedCount": 0,
-        "lastUpdated": "2026-09-15T09:54:08.419Z",
-        "updatedBy": "Principal / Exam Controller (usr-admin-1)"
-      },
-      "new": {
-        "startDate": "2026-09-01T00:00:00.000Z",
-        "endDate": "2026-10-15T00:00:00.000Z",
-        "statusOverride": "open",
-        "timezone": "Asia/Kolkata (IST)",
-        "announcementNotice": "Online Application for Entrance Examination Session 2026-27 is active for Classes 5th, 6th, 7th, 8th, 9th, 11th & NDA Wing.",
-        "reopenedCount": 0,
-        "lastUpdated": "2026-09-16T09:45:47.291Z",
-        "updatedBy": "Principal / Exam Controller (usr-admin-1)"
-      }
-    },
-    "id": "audit-1789551947293-ipwpv",
-    "timestamp": "2026-09-16T09:45:47.293Z"
-  },
-  {
-    "userId": "usr-1789382464422-yll78",
-    "userName": "Harish",
-    "userRole": "applicant",
-    "action": "PASSWORD_RESET_SUCCESS",
-    "entity": "User",
-    "details": {
-      "identifier": "anshu.calinfo@gmail.com"
-    },
-    "id": "audit-1789472898786-j08g2",
-    "timestamp": "2026-09-15T11:48:18.787Z"
-  },
-  {
-    "userId": "usr-1789466049534-cj7bo",
-    "userName": "Test Candidate User",
-    "userRole": "applicant",
-    "action": "PASSWORD_RESET_SUCCESS",
-    "entity": "User",
-    "details": {
-      "identifier": "9812377592"
-    },
-    "id": "audit-1789466054290-84pmb",
-    "timestamp": "2026-09-15T09:54:14.290Z"
-  },
-  {
-    "userId": "usr-admin-1",
-    "userName": "Principal / Exam Controller",
-    "userRole": "admin",
-    "action": "SYSTEM_SETTINGS_UPDATE",
-    "entity": "SystemSettings",
-    "details": {
-      "previous": {
-        "portalOpen": true,
-        "academicSession": "2026-2027",
-        "applicationFee": 1200,
-        "registrationStartDate": "2026-09-01",
-        "registrationEndDate": "2026-10-31",
-        "admitCardReleaseDate": "2026-11-20",
-        "entranceExamDate": "2026-12-10",
-        "resultDeclarationDate": "2026-12-25",
-        "counselingStartDate": "2027-01-10",
-        "helplinePhone": "+91-1744-259114 / +91-9896328329",
-        "helplineEmail": "admissions@gurukulkurukshetra.com",
-        "resultsDeclared": false
-      },
-      "updated": {
-        "portalOpen": true,
-        "academicSession": "2026-2027",
-        "applicationFee": 1200,
-        "registrationStartDate": "2026-09-01",
-        "registrationEndDate": "2026-10-31",
-        "admitCardReleaseDate": "2026-11-20",
-        "entranceExamDate": "2026-12-10",
-        "resultDeclarationDate": "2026-12-25",
-        "counselingStartDate": "2027-01-10",
-        "helplinePhone": "+91-1744-259114 / +91-9896328329",
-        "helplineEmail": "admissions@gurukulkurukshetra.com",
-        "resultsDeclared": false
-      }
-    },
-    "id": "audit-1789466048430-hjlmb",
-    "timestamp": "2026-09-15T09:54:08.430Z"
-  },
-  {
-    "userId": "usr-admin-1",
-    "userName": "Principal / Exam Controller",
-    "userRole": "admin",
-    "action": "UPDATE_FORM_SCHEDULE",
-    "entity": "FormSchedule",
-    "details": {
-      "previous": {
-        "startDate": "2026-09-01T00:00:00.000Z",
-        "endDate": "2026-10-31T00:00:00.000Z",
-        "statusOverride": "open",
-        "timezone": "Asia/Kolkata (IST)",
-        "announcementNotice": "Online Application for Entrance Examination Session 2026-27 is active for Classes 5th, 6th, 7th, 8th, 9th, 11th & NDA Wing.",
-        "reopenedCount": 0,
-        "lastUpdated": "2026-09-15T09:50:05.388Z",
-        "updatedBy": "Principal / Exam Controller (usr-admin-1)"
-      },
-      "new": {
-        "startDate": "2026-09-01T00:00:00.000Z",
-        "endDate": "2026-10-31T00:00:00.000Z",
-        "statusOverride": "open",
-        "timezone": "Asia/Kolkata (IST)",
-        "announcementNotice": "Online Application for Entrance Examination Session 2026-27 is active for Classes 5th, 6th, 7th, 8th, 9th, 11th & NDA Wing.",
-        "reopenedCount": 0,
-        "lastUpdated": "2026-09-15T09:54:08.419Z",
-        "updatedBy": "Principal / Exam Controller (usr-admin-1)"
-      }
-    },
-    "id": "audit-1789466048420-kzr8k",
-    "timestamp": "2026-09-15T09:54:08.420Z"
-  },
-  {
-    "userId": "usr-1789465805605-gqmvp",
-    "userName": "Test Candidate User",
-    "userRole": "applicant",
-    "action": "PASSWORD_RESET_SUCCESS",
-    "entity": "User",
-    "details": {
-      "identifier": "9812395771"
-    },
-    "id": "audit-1789465808801-jg49t",
-    "timestamp": "2026-09-15T09:50:08.801Z"
-  },
-  {
-    "userId": "usr-admin-1",
-    "userName": "Principal / Exam Controller",
-    "userRole": "admin",
-    "action": "SYSTEM_SETTINGS_UPDATE",
-    "entity": "SystemSettings",
-    "details": {
-      "previous": {
-        "portalOpen": true,
-        "academicSession": "2026-2027",
-        "applicationFee": 1200,
-        "registrationStartDate": "2026-09-01",
-        "registrationEndDate": "2026-10-31",
-        "admitCardReleaseDate": "2026-11-20",
-        "entranceExamDate": "2026-12-10",
-        "resultDeclarationDate": "2026-12-25",
-        "counselingStartDate": "2027-01-10",
-        "helplinePhone": "+91-1744-259114 / +91-9896328329",
-        "helplineEmail": "admissions@gurukulkurukshetra.com",
-        "resultsDeclared": false
-      },
-      "updated": {
-        "portalOpen": true,
-        "academicSession": "2026-2027",
-        "applicationFee": 1200,
-        "registrationStartDate": "2026-09-01",
-        "registrationEndDate": "2026-10-31",
-        "admitCardReleaseDate": "2026-11-20",
-        "entranceExamDate": "2026-12-10",
-        "resultDeclarationDate": "2026-12-25",
-        "counselingStartDate": "2027-01-10",
-        "helplinePhone": "+91-1744-259114 / +91-9896328329",
-        "helplineEmail": "admissions@gurukulkurukshetra.com",
-        "resultsDeclared": false
-      }
-    },
-    "id": "audit-1789465805398-nfnbq",
-    "timestamp": "2026-09-15T09:50:05.398Z"
-  },
-  {
-    "userId": "usr-admin-1",
-    "userName": "Principal / Exam Controller",
-    "userRole": "admin",
-    "action": "UPDATE_FORM_SCHEDULE",
-    "entity": "FormSchedule",
-    "details": {
-      "previous": {
-        "startDate": "2026-09-01T00:00:00.000Z",
-        "endDate": "2026-10-31T00:00:00.000Z",
-        "statusOverride": "open",
-        "timezone": "Asia/Kolkata (IST)",
-        "announcementNotice": "Online Application for Entrance Examination Session 2026-27 is active for Classes 5th, 6th, 7th, 8th, 9th, 11th & NDA Wing.",
-        "reopenedCount": 0,
-        "lastUpdated": "2026-09-15T09:48:17.261Z",
-        "updatedBy": "Principal / Exam Controller (usr-admin-1)"
-      },
-      "new": {
-        "startDate": "2026-09-01T00:00:00.000Z",
-        "endDate": "2026-10-31T00:00:00.000Z",
-        "statusOverride": "open",
-        "timezone": "Asia/Kolkata (IST)",
-        "announcementNotice": "Online Application for Entrance Examination Session 2026-27 is active for Classes 5th, 6th, 7th, 8th, 9th, 11th & NDA Wing.",
-        "reopenedCount": 0,
-        "lastUpdated": "2026-09-15T09:50:05.388Z",
-        "updatedBy": "Principal / Exam Controller (usr-admin-1)"
-      }
-    },
-    "id": "audit-1789465805389-yo3nx",
-    "timestamp": "2026-09-15T09:50:05.389Z"
-  },
-  {
-    "userId": "usr-admin-1",
-    "userName": "Principal / Exam Controller",
-    "userRole": "admin",
-    "action": "SYSTEM_SETTINGS_UPDATE",
-    "entity": "SystemSettings",
-    "details": {
-      "previous": {
-        "portalOpen": true,
-        "academicSession": "2026-2027",
-        "applicationFee": 1200,
-        "registrationStartDate": "2026-09-01",
-        "registrationEndDate": "2026-10-31",
-        "admitCardReleaseDate": "2026-11-20",
-        "entranceExamDate": "2026-12-10",
-        "resultDeclarationDate": "2026-12-25",
-        "counselingStartDate": "2027-01-10",
-        "helplinePhone": "+91-1744-259114 / +91-9896328329",
-        "helplineEmail": "admissions@gurukulkurukshetra.com",
-        "resultsDeclared": false
-      },
-      "updated": {
-        "portalOpen": true,
-        "academicSession": "2026-2027",
-        "applicationFee": 1200,
-        "registrationStartDate": "2026-09-01",
-        "registrationEndDate": "2026-10-31",
-        "admitCardReleaseDate": "2026-11-20",
-        "entranceExamDate": "2026-12-10",
-        "resultDeclarationDate": "2026-12-25",
-        "counselingStartDate": "2027-01-10",
-        "helplinePhone": "+91-1744-259114 / +91-9896328329",
-        "helplineEmail": "admissions@gurukulkurukshetra.com",
-        "resultsDeclared": false
-      }
-    },
-    "id": "audit-1789465697272-2wq95",
-    "timestamp": "2026-09-15T09:48:17.272Z"
-  },
-  {
-    "userId": "usr-admin-1",
-    "userName": "Principal / Exam Controller",
-    "userRole": "admin",
-    "action": "UPDATE_FORM_SCHEDULE",
-    "entity": "FormSchedule",
-    "details": {
-      "previous": {
-        "startDate": "2026-09-01T00:00:00.000Z",
-        "endDate": "2026-10-31T00:00:00.000Z",
-        "statusOverride": "open",
-        "timezone": "Asia/Kolkata (IST)",
-        "announcementNotice": "Online Application for Entrance Examination Session 2026-27 is active for Classes 5th, 6th, 7th, 8th, 9th, 11th & NDA Wing.",
-        "reopenedCount": 0,
-        "lastUpdated": "2026-09-15T09:47:08.616Z",
-        "updatedBy": "Principal / Exam Controller (usr-admin-1)"
-      },
-      "new": {
-        "startDate": "2026-09-01T00:00:00.000Z",
-        "endDate": "2026-10-31T00:00:00.000Z",
-        "statusOverride": "open",
-        "timezone": "Asia/Kolkata (IST)",
-        "announcementNotice": "Online Application for Entrance Examination Session 2026-27 is active for Classes 5th, 6th, 7th, 8th, 9th, 11th & NDA Wing.",
-        "reopenedCount": 0,
-        "lastUpdated": "2026-09-15T09:48:17.261Z",
-        "updatedBy": "Principal / Exam Controller (usr-admin-1)"
-      }
-    },
-    "id": "audit-1789465697262-bmaxv",
-    "timestamp": "2026-09-15T09:48:17.262Z"
-  },
-  {
-    "userId": "usr-admin-1",
-    "userName": "Principal / Exam Controller",
-    "userRole": "admin",
-    "action": "SYSTEM_SETTINGS_UPDATE",
-    "entity": "SystemSettings",
-    "details": {
-      "previous": {
-        "portalOpen": true,
-        "academicSession": "2026-2027",
-        "applicationFee": 1200,
-        "registrationStartDate": "2026-09-01",
-        "registrationEndDate": "2026-10-31",
-        "admitCardReleaseDate": "2026-11-15",
-        "entranceExamDate": "2026-12-06",
-        "resultDeclarationDate": "2026-12-20",
-        "counselingStartDate": "2027-01-05",
-        "helplinePhone": "+91-1744-259114 / +91-9896328329",
-        "helplineEmail": "admissions@gurukulkurukshetra.com",
-        "resultsDeclared": false
-      },
-      "updated": {
-        "portalOpen": true,
-        "academicSession": "2026-2027",
-        "applicationFee": 1200,
-        "registrationStartDate": "2026-09-01",
-        "registrationEndDate": "2026-10-31",
-        "admitCardReleaseDate": "2026-11-20",
-        "entranceExamDate": "2026-12-10",
-        "resultDeclarationDate": "2026-12-25",
-        "counselingStartDate": "2027-01-10",
-        "helplinePhone": "+91-1744-259114 / +91-9896328329",
-        "helplineEmail": "admissions@gurukulkurukshetra.com",
-        "resultsDeclared": false
-      }
-    },
-    "id": "audit-1789465628624-7xit4",
-    "timestamp": "2026-09-15T09:47:08.624Z"
-  },
-  {
-    "userId": "usr-admin-1",
-    "userName": "Principal / Exam Controller",
-    "userRole": "admin",
-    "action": "UPDATE_FORM_SCHEDULE",
-    "entity": "FormSchedule",
-    "details": {
-      "previous": {
-        "startDate": "2026-08-31T18:30:00.000Z",
-        "endDate": "2026-12-30T18:29:00.000Z",
-        "statusOverride": "open",
-        "timezone": "Asia/Kolkata (IST)",
-        "announcementNotice": "Online Application for Entrance Examination Session 2026-27 is active for Classes 5th, 6th, 7th, 8th, 9th, 11th & NDA Wing.",
-        "reopenedCount": 0,
-        "lastUpdated": "2026-09-15T09:02:54.023Z",
-        "updatedBy": "Principal / Exam Controller (usr-admin-1)"
-      },
-      "new": {
-        "startDate": "2026-09-01T00:00:00.000Z",
-        "endDate": "2026-10-31T00:00:00.000Z",
-        "statusOverride": "open",
-        "timezone": "Asia/Kolkata (IST)",
-        "announcementNotice": "Online Application for Entrance Examination Session 2026-27 is active for Classes 5th, 6th, 7th, 8th, 9th, 11th & NDA Wing.",
-        "reopenedCount": 0,
-        "lastUpdated": "2026-09-15T09:47:08.616Z",
-        "updatedBy": "Principal / Exam Controller (usr-admin-1)"
-      }
-    },
-    "id": "audit-1789465628617-uqr6p",
-    "timestamp": "2026-09-15T09:47:08.617Z"
-  },
-  {
-    "userId": "usr-admin-1",
-    "userName": "Principal / Exam Controller",
-    "userRole": "admin",
-    "action": "UPDATE_FORM_SCHEDULE",
-    "entity": "FormSchedule",
-    "details": {
-      "previous": {
-        "startDate": "2026-08-31T18:30:00.000Z",
-        "endDate": "2026-12-30T18:29:00.000Z",
-        "statusOverride": "open",
-        "timezone": "Asia/Kolkata (IST)",
-        "announcementNotice": "Online Application for Entrance Examination Session 2026-27 is active for Classes 5th, 6th, 7th, 8th, 9th, 11th & NDA Wing.",
-        "reopenedCount": 0,
-        "lastUpdated": "2026-09-15T09:02:53.804Z",
-        "updatedBy": "Principal / Exam Controller (usr-admin-1)"
-      },
-      "new": {
-        "startDate": "2026-08-31T18:30:00.000Z",
-        "endDate": "2026-12-30T18:29:00.000Z",
-        "statusOverride": "open",
-        "timezone": "Asia/Kolkata (IST)",
-        "announcementNotice": "Online Application for Entrance Examination Session 2026-27 is active for Classes 5th, 6th, 7th, 8th, 9th, 11th & NDA Wing.",
-        "reopenedCount": 0,
-        "lastUpdated": "2026-09-15T09:02:54.023Z",
-        "updatedBy": "Principal / Exam Controller (usr-admin-1)"
-      }
-    },
-    "id": "audit-1789462974024-pyq7w",
-    "timestamp": "2026-09-15T09:02:54.024Z"
-  },
-  {
-    "userId": "usr-admin-1",
-    "userName": "Principal / Exam Controller",
-    "userRole": "admin",
-    "action": "UPDATE_FORM_SCHEDULE",
-    "entity": "FormSchedule",
-    "details": {
-      "previous": {
-        "startDate": "2026-08-31T18:30:00.000Z",
-        "endDate": "2026-12-30T18:29:00.000Z",
-        "statusOverride": "open",
-        "timezone": "Asia/Kolkata (IST)",
-        "announcementNotice": "Online Application for Entrance Examination Session 2026-27 is active for Classes 5th, 6th, 7th, 8th, 9th, 11th & NDA Wing.",
-        "reopenedCount": 0,
-        "lastUpdated": "2026-09-15T09:02:53.619Z",
-        "updatedBy": "Principal / Exam Controller (usr-admin-1)"
-      },
-      "new": {
-        "startDate": "2026-08-31T18:30:00.000Z",
-        "endDate": "2026-12-30T18:29:00.000Z",
-        "statusOverride": "open",
-        "timezone": "Asia/Kolkata (IST)",
-        "announcementNotice": "Online Application for Entrance Examination Session 2026-27 is active for Classes 5th, 6th, 7th, 8th, 9th, 11th & NDA Wing.",
-        "reopenedCount": 0,
-        "lastUpdated": "2026-09-15T09:02:53.804Z",
-        "updatedBy": "Principal / Exam Controller (usr-admin-1)"
-      }
-    },
-    "id": "audit-1789462973805-bjlne",
-    "timestamp": "2026-09-15T09:02:53.805Z"
-  },
-  {
-    "userId": "usr-admin-1",
-    "userName": "Principal / Exam Controller",
-    "userRole": "admin",
-    "action": "UPDATE_FORM_SCHEDULE",
-    "entity": "FormSchedule",
-    "details": {
-      "previous": {
-        "startDate": "2026-08-31T18:30:00.000Z",
-        "endDate": "2026-12-30T18:29:00.000Z",
-        "statusOverride": "open",
-        "timezone": "Asia/Kolkata (IST)",
-        "announcementNotice": "Online Application for Entrance Examination Session 2026-27 is active for Classes 5th, 6th, 7th, 8th, 9th, 11th & NDA Wing.",
-        "reopenedCount": 0,
-        "lastUpdated": "2026-09-15T09:02:53.432Z",
-        "updatedBy": "Principal / Exam Controller (usr-admin-1)"
-      },
-      "new": {
-        "startDate": "2026-08-31T18:30:00.000Z",
-        "endDate": "2026-12-30T18:29:00.000Z",
-        "statusOverride": "open",
-        "timezone": "Asia/Kolkata (IST)",
-        "announcementNotice": "Online Application for Entrance Examination Session 2026-27 is active for Classes 5th, 6th, 7th, 8th, 9th, 11th & NDA Wing.",
-        "reopenedCount": 0,
-        "lastUpdated": "2026-09-15T09:02:53.619Z",
-        "updatedBy": "Principal / Exam Controller (usr-admin-1)"
-      }
-    },
-    "id": "audit-1789462973620-17r1o",
-    "timestamp": "2026-09-15T09:02:53.620Z"
-  },
-  {
-    "userId": "usr-admin-1",
-    "userName": "Principal / Exam Controller",
-    "userRole": "admin",
-    "action": "UPDATE_FORM_SCHEDULE",
-    "entity": "FormSchedule",
-    "details": {
-      "previous": {
-        "startDate": "2026-08-31T18:30:00.000Z",
-        "endDate": "2026-12-30T18:29:00.000Z",
-        "statusOverride": "open",
-        "timezone": "Asia/Kolkata (IST)",
-        "announcementNotice": "Online Application for Entrance Examination Session 2026-27 is active for Classes 5th, 6th, 7th, 8th, 9th, 11th & NDA Wing.",
-        "reopenedCount": 0,
-        "lastUpdated": "2026-09-15T09:02:53.261Z",
-        "updatedBy": "Principal / Exam Controller (usr-admin-1)"
-      },
-      "new": {
-        "startDate": "2026-08-31T18:30:00.000Z",
-        "endDate": "2026-12-30T18:29:00.000Z",
-        "statusOverride": "open",
-        "timezone": "Asia/Kolkata (IST)",
-        "announcementNotice": "Online Application for Entrance Examination Session 2026-27 is active for Classes 5th, 6th, 7th, 8th, 9th, 11th & NDA Wing.",
-        "reopenedCount": 0,
-        "lastUpdated": "2026-09-15T09:02:53.432Z",
-        "updatedBy": "Principal / Exam Controller (usr-admin-1)"
-      }
-    },
-    "id": "audit-1789462973433-58jg2",
-    "timestamp": "2026-09-15T09:02:53.433Z"
-  },
-  {
-    "userId": "usr-admin-1",
-    "userName": "Principal / Exam Controller",
-    "userRole": "admin",
-    "action": "UPDATE_FORM_SCHEDULE",
-    "entity": "FormSchedule",
-    "details": {
-      "previous": {
-        "startDate": "2026-08-31T18:30:00.000Z",
-        "endDate": "2026-12-30T18:29:00.000Z",
-        "statusOverride": "open",
-        "timezone": "Asia/Kolkata (IST)",
-        "announcementNotice": "Online Application for Entrance Examination Session 2026-27 is active for Classes 5th, 6th, 7th, 8th, 9th, 11th & NDA Wing.",
-        "reopenedCount": 0,
-        "lastUpdated": "2026-09-15T09:02:52.729Z",
-        "updatedBy": "Principal / Exam Controller (usr-admin-1)"
-      },
-      "new": {
-        "startDate": "2026-08-31T18:30:00.000Z",
-        "endDate": "2026-12-30T18:29:00.000Z",
-        "statusOverride": "open",
-        "timezone": "Asia/Kolkata (IST)",
-        "announcementNotice": "Online Application for Entrance Examination Session 2026-27 is active for Classes 5th, 6th, 7th, 8th, 9th, 11th & NDA Wing.",
-        "reopenedCount": 0,
-        "lastUpdated": "2026-09-15T09:02:53.261Z",
-        "updatedBy": "Principal / Exam Controller (usr-admin-1)"
-      }
-    },
-    "id": "audit-1789462973262-qx61b",
-    "timestamp": "2026-09-15T09:02:53.262Z"
-  },
-  {
-    "userId": "usr-admin-1",
-    "userName": "Principal / Exam Controller",
-    "userRole": "admin",
-    "action": "UPDATE_FORM_SCHEDULE",
-    "entity": "FormSchedule",
-    "details": {
-      "previous": {
-        "startDate": "2026-08-31T18:30:00.000Z",
-        "endDate": "2026-12-30T18:29:00.000Z",
-        "statusOverride": "open",
-        "timezone": "Asia/Kolkata (IST)",
-        "announcementNotice": "Online Application for Entrance Examination Session 2026-27 is active for Classes 5th, 6th, 7th, 8th, 9th, 11th & NDA Wing.",
-        "reopenedCount": 0,
-        "lastUpdated": "2026-09-15T09:02:48.148Z",
-        "updatedBy": "Principal / Exam Controller (usr-admin-1)"
-      },
-      "new": {
-        "startDate": "2026-08-31T18:30:00.000Z",
-        "endDate": "2026-12-30T18:29:00.000Z",
-        "statusOverride": "open",
-        "timezone": "Asia/Kolkata (IST)",
-        "announcementNotice": "Online Application for Entrance Examination Session 2026-27 is active for Classes 5th, 6th, 7th, 8th, 9th, 11th & NDA Wing.",
-        "reopenedCount": 0,
-        "lastUpdated": "2026-09-15T09:02:52.729Z",
-        "updatedBy": "Principal / Exam Controller (usr-admin-1)"
-      }
-    },
-    "id": "audit-1789462972730-yijbx",
-    "timestamp": "2026-09-15T09:02:52.730Z"
-  },
-  {
-    "userId": "usr-admin-1",
-    "userName": "Principal / Exam Controller",
-    "userRole": "admin",
-    "action": "UPDATE_FORM_SCHEDULE",
-    "entity": "FormSchedule",
-    "details": {
-      "previous": {
-        "startDate": "2026-09-01T00:00:00.000Z",
-        "endDate": "2026-12-31T23:59:59.000Z",
-        "statusOverride": "open",
-        "timezone": "Asia/Kolkata (IST)",
-        "announcementNotice": "Online Application for Entrance Examination Session 2026-27 is active for Classes 5th, 6th, 7th, 8th, 9th, 11th & NDA Wing.",
-        "reopenedCount": 0,
-        "lastUpdated": "2026-09-14T07:20:00.000Z",
-        "updatedBy": "system"
-      },
-      "new": {
-        "startDate": "2026-08-31T18:30:00.000Z",
-        "endDate": "2026-12-30T18:29:00.000Z",
-        "statusOverride": "open",
-        "timezone": "Asia/Kolkata (IST)",
-        "announcementNotice": "Online Application for Entrance Examination Session 2026-27 is active for Classes 5th, 6th, 7th, 8th, 9th, 11th & NDA Wing.",
-        "reopenedCount": 0,
-        "lastUpdated": "2026-09-15T09:02:48.148Z",
-        "updatedBy": "Principal / Exam Controller (usr-admin-1)"
-      }
-    },
-    "id": "audit-1789462968149-24el5",
-    "timestamp": "2026-09-15T09:02:48.149Z"
-  },
-  {
-    "userId": "usr-1789376532796-ephcj",
-    "userName": "Satvik Saini",
-    "userRole": "applicant",
-    "action": "PASSWORD_RESET_SUCCESS",
-    "entity": "User",
-    "details": {
-      "identifier": "satviksaini77777@gmail.com"
-    },
-    "id": "audit-1789462823652-13tjy",
-    "timestamp": "2026-09-15T09:00:23.652Z"
-  },
-  {
-    "userId": "usr-1789376532796-ephcj",
-    "userName": "Satvik Saini",
-    "userRole": "applicant",
-    "action": "REFILL_APPLICATION_INITIATED",
-    "entity": "Application",
-    "details": {
-      "purgedApplicationId": "app-1789452516861",
-      "previousStatus": "rejected"
-    },
-    "id": "audit-1789454782969-a5pms",
-    "timestamp": "2026-09-15T06:46:22.969Z"
-  },
-  {
-    "userId": "usr-1789376532796-ephcj",
-    "userName": "Satvik Saini",
+    "userId": "usr-1789622467590-tx091",
+    "userName": "Anshu Miglani",
     "userRole": "applicant",
     "action": "CANDIDATE_GRIEVANCE_SUBMITTED",
     "entity": "HelpdeskTicket",
     "details": {
-      "ticketId": "GRV-834786",
-      "applicationNumber": "GK26-10006",
+      "ticketId": "GRV-667184",
+      "applicationNumber": "NILB-00001",
       "subject": "Ground of Rejection Clarification",
-      "query": "hello mans",
-      "contactPhone": "7676767676",
-      "submittedAt": "2026-09-15T06:13:54.786Z"
+      "query": "what is the reason behind it, please tell me",
+      "contactPhone": "8877987979",
+      "submittedAt": "2026-09-17T05:24:27.198Z"
     },
-    "id": "audit-1789452834786-c18xr",
-    "timestamp": "2026-09-15T06:13:54.786Z"
-  },
-  {
-    "userId": "usr-1789376532796-ephcj",
-    "userName": "Satvik Saini",
-    "userRole": "applicant",
-    "action": "REFILL_APPLICATION_INITIATED",
-    "entity": "Application",
-    "details": {
-      "purgedApplicationId": "app-1789451530772",
-      "previousStatus": "rejected"
-    },
-    "id": "audit-1789452516792-qd1wk",
-    "timestamp": "2026-09-15T06:08:36.792Z"
-  },
-  {
-    "userId": "usr-1789372007949-qcafl",
-    "userName": "Anshu Miglani",
-    "userRole": "applicant",
-    "action": "PASSWORD_RESET_SUCCESS",
-    "entity": "User",
-    "details": {
-      "identifier": "anshutemp10@gmail.com"
-    },
-    "id": "audit-1789385420555-zrgxq",
-    "timestamp": "2026-09-14T11:30:20.555Z"
-  },
-  {
-    "userId": "usr-1789376532796-ephcj",
-    "userName": "satvik",
-    "userRole": "applicant",
-    "action": "PASSWORD_RESET_SUCCESS",
-    "entity": "User",
-    "details": {
-      "identifier": "satviksaini77777@gmail.com"
-    },
-    "id": "audit-1789379352656-a10vk",
-    "timestamp": "2026-09-14T09:49:12.656Z"
-  },
-  {
-    "userId": "usr-1789372007949-qcafl",
-    "userName": "Anshu Miglani",
-    "userRole": "applicant",
-    "action": "PASSWORD_RESET_SUCCESS",
-    "entity": "User",
-    "details": {
-      "identifier": "gk26-10004"
-    },
-    "id": "audit-1789379112289-kgmv7",
-    "timestamp": "2026-09-14T09:45:12.289Z"
-  },
-  {
-    "userId": "usr-admin-1",
-    "userName": "Principal / Exam Controller",
-    "userRole": "admin",
-    "action": "UPDATE_FORM_SCHEDULE",
-    "entity": "FormSchedule",
-    "details": {
-      "previous": {
-        "startDate": "2026-09-01T00:00:00.000Z",
-        "endDate": "2026-10-31T23:59:59.000Z",
-        "statusOverride": "auto",
-        "timezone": "Asia/Kolkata (IST)",
-        "announcementNotice": "Online Application for Entrance Examination Session 2026-27 is active for Classes 5th, 6th, 7th, 8th, 9th, 11th & NDA Wing.",
-        "reopenedCount": 0,
-        "lastUpdated": "2026-09-14T06:50:44.781Z",
-        "updatedBy": "system"
-      },
-      "new": {
-        "startDate": "2026-08-31T18:30:00.000Z",
-        "endDate": "2026-10-31T18:29:00.000Z",
-        "statusOverride": "auto",
-        "timezone": "Asia/Kolkata (IST)",
-        "announcementNotice": "Online Application for Entrance Examination Session 2026-27 is active for Classes 5th, 6th, 7th, 8th, 9th, 11th & NDA Wing.",
-        "reopenedCount": 0,
-        "lastUpdated": "2026-09-14T07:16:46.075Z",
-        "updatedBy": "Principal / Exam Controller (usr-admin-1)"
-      }
-    },
-    "id": "audit-1789370206076-5fge9",
-    "timestamp": "2026-09-14T07:16:46.076Z"
+    "id": "audit-1789622667200-izy66",
+    "timestamp": "2026-09-17T05:24:27.200Z"
   }
 ]

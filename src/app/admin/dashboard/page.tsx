@@ -50,7 +50,7 @@ export default function AdminDashboard() {
             Admissions & Examination Analytics
           </h1>
           <p className="text-xs text-slate-500">
-            Real-time candidate metrics for Gurukul Kurukshetra Session 2026-27
+            Real-time candidate metrics for Gurukul Kurukshetra Session 2027-28
           </p>
         </div>
 
@@ -85,7 +85,7 @@ export default function AdminDashboard() {
             {stats?.totalApplications || 0}
           </div>
           <p className="text-[11px] text-slate-400">
-            Active candidate profiles {stats?.rejected ? `(${stats.rejected} rejected)` : ''}
+            Confirmed candidate dossiers
           </p>
         </div>
 
@@ -256,3 +256,4 @@ export default function AdminDashboard() {
     </div>
   );
 }
+

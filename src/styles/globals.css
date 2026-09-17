@@ -83,23 +83,89 @@ img {
 
 /* Print Styles for Official Admit Card & Scorecard */
 @media print {
-  body {
+  @page {
+    size: A4 portrait;
+    margin: 4mm 6mm 4mm 6mm;
+  }
+
+  /* Completely suppress all layout chrome, headers, footers, navigation, modals, and buttons */
+  header,
+  footer,
+  nav,
+  aside,
+  button,
+  input,
+  select,
+  textarea,
+  .no-print,
+  .print\:hidden,
+  #header,
+  #footer,
+  .modal-backdrop {
+    display: none !important;
+    height: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    visibility: hidden !important;
+  }
+
+  html, body {
     background: #ffffff !important;
     color: #000000 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    height: auto !important;
+    min-height: auto !important;
+    width: 100% !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
   }
-  .no-print {
-    display: none !important;
+
+  main {
+    margin: 0 !important;
+    padding: 0 !important;
+    display: block !important;
+    width: 100% !important;
   }
+
   .print-only {
     display: block !important;
   }
+
   .page-break {
     page-break-after: always;
   }
+
   .print-card {
-    border: 2px solid #000 !important;
+    border: 2px solid #000000 !important;
     box-shadow: none !important;
+    margin: 0 auto !important;
+    padding: 6px 10px !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+
+  /* Ensure only the admit card sheet is visible when printing if present */
+  body:has(#admit-card-print-sheet) * {
+    visibility: hidden !important;
+  }
+
+  body:has(#admit-card-print-sheet) #admit-card-print-sheet,
+  body:has(#admit-card-print-sheet) #admit-card-print-sheet * {
+    visibility: visible !important;
+  }
+
+  body:has(#admit-card-print-sheet) #admit-card-print-sheet {
+    position: absolute !important;
+    left: 0 !important;
+    top: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
     margin: 0 !important;
-    padding: 16px !important;
+    background: #ffffff !important;
+    border: 2px solid #000000 !important;
+    box-shadow: none !important;
   }
 }

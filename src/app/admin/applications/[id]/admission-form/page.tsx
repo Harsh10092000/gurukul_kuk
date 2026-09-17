@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
 import AdmissionFormView from '@/components/AdmissionFormView';
 import { Application, AdmitCard } from '@/lib/types';
-import { Loader2, AlertCircle } from 'lucide-react';
+import { AlertCircle } from 'lucide-react';
 
 export default function AdminApplicationAdmissionFormPage() {
   const params = useParams();
@@ -37,7 +37,7 @@ export default function AdminApplicationAdmissionFormPage() {
     return (
       <div className="min-h-[70vh] flex items-center justify-center font-sans">
         <div className="text-center space-y-3">
-          <Loader2 className="w-10 h-10 animate-spin text-amber-500 mx-auto" />
+          <div className="w-10 h-10 border-4 border-amber-500 border-t-transparent rounded-full animate-spin mx-auto" />
           <p className="text-xs font-bold text-slate-600">Loading Official Admission Form...</p>
         </div>
       </div>

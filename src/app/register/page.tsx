@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import React, { useState } from 'react';
 import Link from 'next/link';
@@ -354,7 +354,7 @@ export default function RegisterPage() {
               Online Registration Closed
             </h2>
             <p className="text-xs sm:text-sm text-slate-600 leading-relaxed">
-              {scheduleStatus.message || 'Online applications for Entrance Examination Session 2026-27 have concluded. New candidate registrations are currently closed.'}
+              {scheduleStatus.message || 'Online applications for Entrance Examination Session 2027-28 have concluded. New candidate registrations are currently closed.'}
             </p>
           </div>
 
@@ -408,7 +408,7 @@ export default function RegisterPage() {
             />
           </div>
           <span className="text-[10px] font-bold uppercase tracking-wider text-gurukul-600 bg-amber-100 px-3 py-1 rounded-full inline-block">
-            Entrance Session 2026-27
+            Entrance Session 2027-28
           </span>
           <h2 className="text-2xl font-black tracking-tight text-gurukul-navy">
             Candidate Registration
@@ -570,3 +570,4 @@ export default function RegisterPage() {
     </div>
   );
 }
+

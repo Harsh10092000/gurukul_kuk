@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
@@ -211,7 +211,7 @@ export default function StatusPage() {
             Track Registration &amp; Application Status
           </h1>
           <p className="text-xs sm:text-sm text-slate-500 max-w-2xl mx-auto">
-            Real-time tracking for Gurukul Entrance Examination Session 2026-27. Verify scrutiny status, fee payment, hall ticket release, and results.
+            Real-time tracking for Gurukul Entrance Examination Session 2027-28. Verify scrutiny status, fee payment, hall ticket release, and results.
           </p>
         </div>
 
@@ -570,3 +570,4 @@ export default function StatusPage() {
     </div>
   );
 }
+

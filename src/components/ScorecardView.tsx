@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import React from 'react';
 import Image from 'next/image';
@@ -28,7 +28,7 @@ export default function ScorecardView({ result }: ScorecardViewProps) {
         <div>
           <h2 className="text-amber-900 font-bold text-lg flex items-center gap-2">
             <Award className="w-5 h-5 text-gurukul-600" />
-            Official Entrance Result &amp; Scorecard (2026-27)
+            Official Entrance Result &amp; Scorecard (2027-28)
           </h2>
           <p className="text-xs text-amber-800">
             Official merit assessment result for Gurukul Kurukshetra Entrance Examination • {isGirlsWing ? 'Aryakulam Nilokheri (Girls Wing)' : 'Gurukul Nilokheri & Jyotisar (Boys Wing)'}.
@@ -69,7 +69,7 @@ export default function ScorecardView({ result }: ScorecardViewProps) {
                 (Affiliated to CBSE New Delhi - Affiliation No. 530006)
               </p>
               <div className="mt-2 inline-block bg-gurukul-navy text-white text-xs sm:text-sm font-black tracking-wider px-4 py-1 rounded">
-                ENTRANCE EXAMINATION RESULT &amp; MERIT SCORECARD • 2026-27
+                ENTRANCE EXAMINATION RESULT &amp; MERIT SCORECARD • 2027-28
               </div>
             </div>
 
@@ -211,3 +211,4 @@ export default function ScorecardView({ result }: ScorecardViewProps) {
     </div>
   );
 }
+

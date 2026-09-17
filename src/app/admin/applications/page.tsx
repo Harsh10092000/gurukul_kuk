@@ -41,7 +41,7 @@ export default function AdminApplicationsPage() {
   const [pageSize, setPageSize] = useState(10);
 
   // Bulk Admit Card Issuance State
-  const [admitCardsReleased, setAdmitCardsReleased] = useState(false);
+  const [admitCardsReleased, setAdmitCardsReleased] = useState<boolean | null>(null);
   const [admitCardsReleasedAt, setAdmitCardsReleasedAt] = useState<string | null>(null);
   const [bulkLoading, setBulkLoading] = useState(false);
   const [bulkSuccessMsg, setBulkSuccessMsg] = useState('');
@@ -166,7 +166,7 @@ export default function AdminApplicationsPage() {
     const matchesClass = selectedClass === 'All' || app.classApplying === selectedClass;
     const matchesStatus =
       selectedStatus === 'All'
-        ? app.status !== 'rejected' // Active filter: excludes rejected archives
+        ? true
         : app.status === selectedStatus;
 
     return matchesSearch && matchesClass && matchesStatus;
@@ -200,11 +200,10 @@ export default function AdminApplicationsPage() {
   };
 
   // Authoritative metrics derived from registered applications only
-  const activeCount = registeredApplications.filter((a) => a.status !== 'rejected').length;
+  const activeCount = registeredApplications.length;
   const submittedCount = registeredApplications.filter((a) => a.status === 'submitted' || a.status === 'under_review').length;
   const approvedCount = registeredApplications.filter((a) => a.status === 'approved').length;
   const correctionCount = registeredApplications.filter((a) => a.status === 'correction_needed').length;
-  const rejectedCount = registeredApplications.filter((a) => a.status === 'rejected').length;
 
   return (
     <div className="space-y-6">
@@ -215,7 +214,7 @@ export default function AdminApplicationsPage() {
             Candidate Application Management
           </h1>
           <p className="text-xs text-slate-500">
-            Review, verify, and process registered candidate dossiers for Entrance Session 2026-27
+            Review, verify, and process registered candidate dossiers for Entrance Session 2027-28
           </p>
         </div>
 
@@ -241,7 +240,12 @@ export default function AdminApplicationsPage() {
             <span className="text-[11px] font-mono font-bold tracking-wider uppercase text-amber-400">
               Examination Board Desk
             </span>
-            {admitCardsReleased ? (
+            {admitCardsReleased === null ? (
+              <span className="bg-slate-700/60 text-slate-300 border border-slate-600 text-[10px] font-bold px-2.5 py-0.5 rounded-full flex items-center gap-1.5 animate-pulse">
+                <div className="w-2.5 h-2.5 border-2 border-amber-400 border-t-transparent rounded-full animate-spin" />
+                Checking Visibility Status...
+              </span>
+            ) : admitCardsReleased ? (
               <span className="bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-[10px] font-bold px-2.5 py-0.5 rounded-full flex items-center gap-1">
                 <Check className="w-3 h-3 text-emerald-400" /> Admit Cards: Released &amp; Visible
               </span>
@@ -255,14 +259,21 @@ export default function AdminApplicationsPage() {
             Admit Card Release &amp; Candidate Visibility Control
           </h2>
           <p className="text-xs text-slate-300 leading-relaxed">
-            {admitCardsReleased
-              ? `Admit cards and examination roll numbers are officially released and visible to candidates. Announcement is active on website.`
+            {admitCardsReleased === null
+              ? 'Connecting to Examination Board server to verify live admit card availability...'
+              : admitCardsReleased
+              ? 'Admit cards and examination roll numbers are officially released and visible to candidates. Announcement is active on website.'
               : 'Admit cards are held in progress by default and hidden from candidates. When the Admissions Board is ready, click below to release Admit Cards for all registered students.'}
           </p>
         </div>
 
         <div className="flex-shrink-0 flex flex-wrap gap-2.5 w-full md:w-auto">
-          {admitCardsReleased ? (
+          {admitCardsReleased === null ? (
+            <div className="h-10 px-4 rounded-xl bg-slate-800/80 border border-slate-700 text-slate-400 font-bold text-xs flex items-center justify-center gap-2 animate-pulse">
+              <div className="w-3.5 h-3.5 border-2 border-amber-400 border-t-transparent rounded-full animate-spin" />
+              <span>Checking Status...</span>
+            </div>
+          ) : admitCardsReleased ? (
             <button
               type="button"
               onClick={() => handleToggleAdmitCards(false)}
@@ -346,23 +357,6 @@ export default function AdminApplicationsPage() {
         >
           Correction Needed ({correctionCount})
         </button>
-        <button
-          onClick={() => { setSelectedStatus('rejected'); setCurrentPage(1); }}
-          className={`px-3.5 py-1.5 rounded-xl transition flex items-center gap-1.5 ${
-            selectedStatus === 'rejected'
-              ? 'bg-red-600 text-white shadow-sm font-black'
-              : 'bg-white text-red-700 border border-red-200 hover:bg-red-50'
-          }`}
-        >
-          <span>Rejected Candidates</span>
-          <span
-            className={`px-1.5 py-0.2 rounded-full font-mono text-[10px] font-bold ${
-              selectedStatus === 'rejected' ? 'bg-white text-red-700' : 'bg-red-100 text-red-800'
-            }`}
-          >
-            {rejectedCount}
-          </span>
-        </button>
       </div>
 
       {/* Filter & Search Toolbar */}
@@ -404,7 +398,7 @@ export default function AdminApplicationsPage() {
           >
             <option value="All">All Registered Candidates (Confirmed)</option>
             <option value="registered">Registered (Fee Paid ₹800)</option>
-            <option value="rejected">Rejected Candidates (Archive)</option>
+            <option value="approved">Approved &amp; Verified</option>
           </select>
         </div>
       </div>
@@ -414,16 +408,14 @@ export default function AdminApplicationsPage() {
         <div className="p-4 border-b border-slate-100 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 text-xs">
           <div className="flex items-center gap-2">
             <span className="font-bold text-slate-800">
-              {selectedStatus === 'rejected' ? 'Rejected Candidate Dossiers' : 'Showing'} {filteredApps.length} Candidates
+              Showing {filteredApps.length} Candidates
             </span>
             <span className="bg-slate-100 text-slate-600 px-2.5 py-0.5 rounded-full font-semibold text-[11px]">
-              {selectedStatus === 'All' ? 'All Active' : selectedStatus.replace('_', ' ')}
+              {selectedStatus === 'All' ? 'All Confirmed' : selectedStatus.replace('_', ' ')}
             </span>
           </div>
           <div className="text-slate-500 text-[11px] font-medium">
-            {selectedStatus === 'All'
-              ? `Active in portal: ${filteredApps.length} of ${registeredApplications.length} registered dossiers (${rejectedCount} rejected)`
-              : `Filter matches: ${filteredApps.length} of ${registeredApplications.length} registered dossiers in system`}
+            Total active in portal: {filteredApps.length} of {registeredApplications.length} registered dossiers
           </div>
         </div>
 
@@ -432,86 +424,6 @@ export default function AdminApplicationsPage() {
         ) : filteredApps.length === 0 ? (
           <div className="py-16 text-center text-xs text-slate-400">
             No registered candidate applications match the selected criteria.
-          </div>
-        ) : selectedStatus === 'rejected' ? (
-          /* Specialized Rejected Candidates Table View */
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs">
-              <thead className="bg-red-50 text-red-900 uppercase font-bold text-[10px] border-b border-red-200">
-                <tr>
-                  <th className="py-3 px-4">Application No.</th>
-                  <th className="py-3 px-4">Candidate Profile & Contact</th>
-                  <th className="py-3 px-4">Class</th>
-                  <th className="py-3 px-4">Ground / Reason for Rejection</th>
-                  <th className="py-3 px-4">Rejection Timestamp</th>
-                  <th className="py-3 px-4">Portal Status</th>
-                  <th className="py-3 px-4 text-right">Action</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-red-100">
-                {paginatedApps.map((app) => (
-                  <tr key={app.id} className="hover:bg-red-50/40 bg-rose-50/20">
-                    <td className="py-3.5 px-4 font-mono font-bold text-slate-900">
-                      {app.applicationNumber || app.registrationNumber}
-                    </td>
-                    <td className="py-3.5 px-4">
-                      <div className="font-bold text-slate-900 uppercase">
-                        {app.personalInfo?.fullName || (app as any).applicantName || 'Applicant'}
-                      </div>
-                      <div className="text-[11px] text-slate-600">
-                        {app.personalInfo?.candidateEmail || 'N/A'}
-                      </div>
-                      <div className="text-[11px] font-mono text-slate-500">
-                        📞 {app.parentInfo?.fatherPhone || app.personalInfo?.candidateMobile || 'N/A'}
-                      </div>
-                    </td>
-                    <td className="py-3.5 px-4">
-                      <span className="bg-amber-100 text-amber-900 font-bold px-2 py-0.5 rounded text-[11px]">
-                        {app.classApplying}
-                      </span>
-                    </td>
-                    <td className="py-3.5 px-4 max-w-sm">
-                      <div className="p-2.5 bg-white border border-red-200 rounded-xl text-xs font-semibold text-red-900 leading-relaxed shadow-xs">
-                        {app.remarks || 'Documentation or eligibility criteria mismatch.'}
-                      </div>
-                    </td>
-                    <td className="py-3.5 px-4 font-mono text-[11px] text-slate-600 whitespace-nowrap">
-                      {new Date(app.updatedAt || app.createdAt).toLocaleString('en-IN', {
-                        dateStyle: 'medium',
-                        timeStyle: 'short',
-                      })}
-                    </td>
-                    <td className="py-3.5 px-4 whitespace-nowrap">
-                      <span className="text-[10px] font-bold px-2.5 py-1 rounded-full uppercase bg-rose-100 text-rose-800 border border-rose-300 block w-fit">
-                        REJECTED
-                      </span>
-                      <span className="text-[10px] text-slate-400 block mt-0.5">
-                        Dossier Annulled
-                      </span>
-                    </td>
-                    <td className="py-3.5 px-4 text-right whitespace-nowrap">
-                      <div className="flex items-center justify-end gap-1.5">
-                        <Link
-                          href={`/admin/applications/${app.id}`}
-                          className="bg-gurukul-navy hover:bg-gurukul-navyLight text-white font-bold px-3 py-1.5 rounded-lg text-xs transition inline-flex items-center gap-1.5 shadow-sm"
-                        >
-                          <Eye className="w-3.5 h-3.5" />
-                          <span>Inspect Dossier</span>
-                        </Link>
-                        <button
-                          type="button"
-                          onClick={() => setAppToDelete(app)}
-                          className="p-1.5 bg-slate-50 hover:bg-red-50 text-slate-400 hover:text-red-600 border border-slate-200 hover:border-red-300 rounded-lg transition"
-                          title="Delete Candidate Application"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
           </div>
         ) : (
           /* Standard Applications Table View */
@@ -565,20 +477,9 @@ export default function AdminApplicationsPage() {
                       </span>
                     </td>
                     <td className="py-3.5 px-4">
-                      <span
-                        className={`text-[10px] font-bold px-2.5 py-1 rounded-full uppercase ${
-                          app.status === 'rejected'
-                            ? 'bg-rose-100 text-rose-800'
-                            : 'bg-emerald-100 text-emerald-800'
-                        }`}
-                      >
-                        {app.status === 'rejected' ? 'REJECTED' : 'REGISTERED'}
+                      <span className="text-[10px] font-bold px-2.5 py-1 rounded-full uppercase bg-emerald-100 text-emerald-800">
+                        REGISTERED
                       </span>
-                      {app.status === 'rejected' && app.remarks && (
-                        <div className="text-[10px] text-red-600 line-clamp-1 mt-0.5 font-medium" title={app.remarks}>
-                          Reason: {app.remarks}
-                        </div>
-                      )}
                     </td>
                     <td className="py-3.5 px-4 text-right">
                       <div className="flex items-center justify-end gap-1.5">
@@ -723,7 +624,7 @@ export default function AdminApplicationsPage() {
                   Generate &amp; Release Admit Cards for ALL Candidates
                 </h3>
                 <p className="text-[11px] text-slate-500">
-                  Entrance Session 2026-27 • Examination Board
+                  Entrance Session 2027-28 • Examination Board
                 </p>
               </div>
             </div>
@@ -768,3 +669,4 @@ export default function AdminApplicationsPage() {
     </div>
   );
 }
+

@@ -73,7 +73,7 @@ export default function AdminLoginPage() {
           <div className="w-16 h-16 mx-auto flex items-center justify-center">
             <Image
               src="/logo-gurukul.png"
-              alt="Gurukul Kurukshetra Logo"
+              alt="Gurukul Logo"
               width={64}
               height={64}
               className="brand-logo-img object-contain"
@@ -82,11 +82,11 @@ export default function AdminLoginPage() {
           <div className="inline-flex items-center gap-1.5 bg-amber-500/20 text-amber-300 px-3 py-1 rounded-full text-xs font-bold border border-amber-500/30">
             <ShieldCheck className="w-4 h-4" /> Official Examination Cell
           </div>
-          <h2 className="text-2xl font-black tracking-tight text-white">
-            Administrative Staff Login
+          <h2 className="text-2xl font-black tracking-tight text-white uppercase">
+            ADMIN GURUKUL
           </h2>
           <p className="text-xs text-slate-400">
-            Gurukul Kurukshetra • Admissions & Verification Panel
+            Admissions &amp; Verification Panel
           </p>
         </div>
 

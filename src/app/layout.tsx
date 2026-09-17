@@ -1,4 +1,4 @@
-import type { Metadata } from 'next';
+﻿import type { Metadata } from 'next';
 import { Inter, Merriweather } from 'next/font/google';
 import '@/styles/globals.css';
 import Header from '@/components/Header';
@@ -16,7 +16,7 @@ const merriweather = Merriweather({
 });
 
 export const metadata: Metadata = {
-  title: 'GURUKUL - Entrance Examination & Admission Portal (2026-27)',
+  title: 'GURUKUL - Entrance Examination & Admission Portal (2027-28)',
   description:
     'Official Online Entrance Examination and Admission Portal for GURUKUL (Nilokheri, Jyotisar, Aryakulam). Apply online for Classes 6th, 7th, 8th, 9th, and 11th with online ₹800 fee payment, immediate application form, and admit card download.',
   icons: {
@@ -77,3 +77,4 @@ export default function RootLayout({
     </html>
   );
 }
+

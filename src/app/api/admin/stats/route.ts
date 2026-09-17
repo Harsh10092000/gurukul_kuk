@@ -15,7 +15,6 @@ export async function GET() {
 
     const applications = await db.getApplications();
     const settings = await db.getSettings();
-    const centres = await db.getCentres();
 
     // Authoritative Single Source of Truth Metrics
     const metrics = computeApplicationMetrics(applications);
@@ -48,7 +47,7 @@ export async function GET() {
         ...metrics,
         totalApplications: metrics.active, // Active candidates count (reconciled with Applications desk)
         totalDossiers: metrics.total,      // Total historical dossiers including rejected
-        totalCentres: centres.length,
+        totalCentres: 1,
         classCounts,
         stateCounts,
       },

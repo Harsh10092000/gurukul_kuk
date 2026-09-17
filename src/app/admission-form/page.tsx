@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import AdmissionFormView from '@/components/AdmissionFormView';
 import { Application, AdmitCard } from '@/lib/types';
-import { FileText, ArrowLeft, Loader2, ShieldAlert } from 'lucide-react';
+import { FileText, ArrowLeft, ShieldAlert } from 'lucide-react';
 
 export default function CandidateAdmissionFormPage() {
   const [application, setApplication] = useState<Application | null>(null);
@@ -42,7 +42,7 @@ export default function CandidateAdmissionFormPage() {
     return (
       <div className="min-h-[80vh] flex items-center justify-center bg-slate-100 font-sans">
         <div className="text-center space-y-3">
-          <Loader2 className="w-10 h-10 animate-spin text-amber-500 mx-auto" />
+          <div className="w-10 h-10 border-4 border-amber-500 border-t-transparent rounded-full animate-spin mx-auto" />
           <p className="text-xs font-bold text-slate-600">Checking Verification Status & Dossier...</p>
         </div>
       </div>
@@ -61,7 +61,7 @@ export default function CandidateAdmissionFormPage() {
           href="/apply"
           className="inline-block py-2.5 px-6 bg-gurukul-600 text-white font-bold text-xs rounded-xl shadow"
         >
-          Apply Online 2026-27
+          Apply Online 2027-28
         </Link>
       </div>
     );
@@ -76,3 +76,4 @@ export default function CandidateAdmissionFormPage() {
     />
   );
 }
+

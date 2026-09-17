@@ -18,11 +18,11 @@ export default function Footer() {
           setResultsDeclared(true);
         }
       })
-      .catch(() => {});
+      .catch(() => { });
   }, []);
 
   return (
-    <footer className="bg-gurukul-navy text-slate-300 border-t-4 border-gurukul-500">
+    <footer className="bg-gurukul-navy text-slate-300 border-t-4 border-gurukul-500 no-print">
       {/* Main Footer Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-8 py-12 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
         {/* Col 1: Institutional Identity */}
@@ -60,7 +60,7 @@ export default function Footer() {
         {/* Col 2: Quick Admission Links */}
         <div className="space-y-3">
           <h4 className="text-white font-bold text-sm uppercase tracking-wider border-b border-slate-700 pb-2">
-            Entrance 2026-27
+            Entrance 2027-28
           </h4>
           <ul className="space-y-2 text-xs">
             <li>
@@ -140,7 +140,7 @@ export default function Footer() {
             </div>
             <div className="flex items-center gap-2">
               <Mail className="w-4 h-4 text-amber-400 flex-shrink-0" />
-              <span>admissions@gurukulkurukshetra.com</span>
+              <span>admissions@gurukuladmissions.org</span>
             </div>
           </div>
         </div>
@@ -162,3 +162,4 @@ export default function Footer() {
     </footer>
   );
 }
+

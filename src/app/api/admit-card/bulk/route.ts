@@ -21,15 +21,12 @@ export async function POST(request: Request) {
     }
 
     const settings = await db.getSettings();
-    const examDate = settings.entranceExamDate || '06 December 2026';
     const releaseTime = new Date().toISOString();
 
-    const centres = await db.getCentres();
-    const primaryCentre = centres[0] || {
-      name: 'Gurukul Kurukshetra Main Campus',
-      address: 'Near 3rd Gate, Kurukshetra University, Kurukshetra, Haryana - 136119',
-      capacity: 3000,
-    };
+    const examCentreName = settings.examVenueName || 'THE GURUKUL JYOTISAR PEHOWA ROAD, KURUKSHETRA';
+    const examCentreAddress = settings.examVenueAddress || '136119, Haryana';
+    const examDate = settings.entranceExamDate || '21 March 2027';
+    const reportingTime = settings.entranceExamTime || '9:30 AM';
 
     // Group or sort candidates by class and registration number for clean, professional roll numbers
     paidApps.sort((a, b) => (a.registrationNumber || '').localeCompare(b.registrationNumber || ''));
@@ -59,9 +56,6 @@ export async function POST(request: Request) {
       const hallNumber = Math.ceil(seqNum / 30);
       const deskNumber = ((seqNum - 1) % 30) + 1;
 
-      const examCentreName = primaryCentre.name;
-      const examCentreAddress = primaryCentre.address;
-
       await db.generateOrReleaseAdmitCard({
         id: 'admit-' + app.id,
         applicationId: app.id,
@@ -74,7 +68,7 @@ export async function POST(request: Request) {
         examCentreName,
         examCentreAddress,
         examDate,
-        reportingTime: '08:30 AM',
+        reportingTime,
         examDuration: '10:00 AM to 12:30 PM (2.5 Hours)',
         roomNumber: `Hall-${hallNumber}, Desk ${deskNumber}`,
         candidatePhotoUrl: app.documents?.photo || '/logo-gurukul.png',

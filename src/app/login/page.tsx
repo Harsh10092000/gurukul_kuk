@@ -4,19 +4,19 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
-import { 
-  LogIn, 
-  Mail, 
-  Lock, 
-  AlertCircle, 
-  ArrowRight, 
-  ShieldCheck, 
-  RefreshCw, 
-  Eye, 
-  EyeOff, 
-  Phone, 
-  HelpCircle, 
-  CheckCircle2, 
+import {
+  LogIn,
+  Mail,
+  Lock,
+  AlertCircle,
+  ArrowRight,
+  ShieldCheck,
+  RefreshCw,
+  Eye,
+  EyeOff,
+  Phone,
+  HelpCircle,
+  CheckCircle2,
   Calendar,
   ExternalLink
 } from 'lucide-react';
@@ -32,19 +32,39 @@ export default function LoginPage() {
   const [loggedInUser, setLoggedInUser] = useState<any>(null);
 
   // Captcha state
-  const [captchaCode, setCaptchaCode] = useState('7K9N2');
+  const [captchaCode, setCaptchaCode] = useState('7Nk9x');
   const [captchaInput, setCaptchaInput] = useState('');
   const [captchaError, setCaptchaError] = useState('');
 
-  const generateCaptcha = () => {
-    const chars = '23456789ABCDEFGHJKLMNPQRSTUVWXYZ';
-    let result = '';
-    for (let i = 0; i < 5; i++) {
-      result += chars.charAt(Math.floor(Math.random() * chars.length));
+  const generateCaptcha = (clearError: boolean = false) => {
+    const uppercase = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
+    const lowercase = 'abcdefghjkmnpqrstuvwxyz';
+    const numbers = '23456789';
+    const allChars = uppercase + lowercase + numbers;
+
+    // Guaranteed mix: at least 1 uppercase, 1 lowercase, 1 number
+    const guaranteed = [
+      uppercase[Math.floor(Math.random() * uppercase.length)],
+      lowercase[Math.floor(Math.random() * lowercase.length)],
+      numbers[Math.floor(Math.random() * numbers.length)],
+    ];
+
+    // Fill remaining positions to reach 5 characters
+    for (let i = guaranteed.length; i < 5; i++) {
+      guaranteed.push(allChars[Math.floor(Math.random() * allChars.length)]);
     }
-    setCaptchaCode(result);
+
+    // Shuffle characters randomly
+    for (let i = guaranteed.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [guaranteed[i], guaranteed[j]] = [guaranteed[j], guaranteed[i]];
+    }
+
+    setCaptchaCode(guaranteed.join(''));
     setCaptchaInput('');
-    setCaptchaError('');
+    if (clearError) {
+      setCaptchaError('');
+    }
   };
 
   useEffect(() => {
@@ -61,7 +81,7 @@ export default function LoginPage() {
           }
         }
       })
-      .catch(() => {});
+      .catch(() => { });
   }, [router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -69,9 +89,9 @@ export default function LoginPage() {
     setError('');
     setCaptchaError('');
 
-    if (captchaInput.trim().toUpperCase() !== captchaCode.toUpperCase()) {
-      setCaptchaError('Security PIN / Captcha does not match. Please try again.');
-      generateCaptcha();
+    if (captchaInput.trim() !== captchaCode) {
+      generateCaptcha(false);
+      setCaptchaError('Incorrect Security PIN / Captcha.');
       return;
     }
 
@@ -95,7 +115,7 @@ export default function LoginPage() {
       // Purge any un-scoped legacy draft from browser
       try {
         localStorage.removeItem('gurukul_application_draft');
-      } catch (e) {}
+      } catch (e) { }
 
       if (data.user.role === 'admin') {
         router.push('/admin/dashboard');
@@ -122,14 +142,14 @@ export default function LoginPage() {
           <div className="flex items-center gap-2">
             <span className="bg-amber-100 text-amber-900 border border-amber-300 text-[11px] font-black uppercase px-3 py-1 rounded-full font-mono flex items-center gap-1.5">
               <Calendar className="w-3.5 h-3.5 text-amber-700" />
-              Academic Session 2026-27
+              Academic Session 2027-28
             </span>
           </div>
         </div>
 
         {/* Main 2-Column Portal Layout */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-          
+
           {/* Left Column (5 Cols): Institutional Information & Candidate Guidelines */}
           <div className="lg:col-span-5 space-y-6">
             <div className="bg-white border border-slate-200/80 rounded-3xl p-6 sm:p-7 shadow-sm space-y-5">
@@ -218,14 +238,14 @@ export default function LoginPage() {
           {/* Right Column (7 Cols): The Login Form Card */}
           <div className="lg:col-span-7">
             <div className="bg-white border border-slate-200 rounded-3xl p-6 sm:p-10 shadow-xl space-y-6">
-              
+
               {/* Card Title & Branding */}
               <div className="border-b border-slate-100 pb-5">
                 <div className="flex items-center justify-between gap-2 mb-1">
                   <span className="text-[11px] font-mono font-bold uppercase tracking-wider text-gurukul-600 bg-amber-50 border border-amber-200 px-3 py-0.5 rounded-full inline-block">
                     Official Entrance Examination Desk
                   </span>
-                  <span className="text-xs text-slate-500 font-medium">Session 2026-27</span>
+                  <span className="text-xs text-slate-500 font-medium">Session 2027-28</span>
                 </div>
                 <h2 className="text-2xl sm:text-3xl font-black tracking-tight text-gurukul-navy mt-1">
                   Candidate Portal Login
@@ -245,8 +265,8 @@ export default function LoginPage() {
 
               {/* Captcha Error */}
               {captchaError && (
-                <div className="p-3.5 rounded-xl bg-amber-50 border-2 border-amber-300 flex items-center gap-2.5 text-xs text-amber-900 font-semibold">
-                  <AlertCircle className="w-4 h-4 flex-shrink-0 text-amber-600" />
+                <div className="p-3.5 rounded-xl bg-red-50 border-2 border-red-300 flex items-center gap-2.5 text-xs text-red-800 font-bold shadow-sm animate-in fade-in">
+                  <AlertCircle className="w-4 h-4 flex-shrink-0 text-red-600" />
                   <span>{captchaError}</span>
                 </div>
               )}
@@ -313,15 +333,22 @@ export default function LoginPage() {
                     Security PIN (Case Sensitive) *
                   </label>
                   <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
-                    <VisualCaptcha code={captchaCode} onRefresh={generateCaptcha} />
+                    <VisualCaptcha code={captchaCode} onRefresh={() => generateCaptcha(true)} />
                     <input
                       type="text"
                       required
                       value={captchaInput}
-                      onChange={(e) => setCaptchaInput(e.target.value)}
-                      placeholder="ENTER PIN"
+                      onChange={(e) => {
+                        setCaptchaInput(e.target.value);
+                        if (captchaError) setCaptchaError('');
+                      }}
+                      placeholder="Enter PIN"
                       maxLength={6}
-                      className="flex-1 py-2.5 px-3 text-sm border border-slate-300 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none transition font-mono uppercase font-bold text-slate-900"
+                      autoCapitalize="none"
+                      autoComplete="off"
+                      spellCheck={false}
+                      className={`flex-1 py-2.5 px-3 text-sm border rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none transition font-mono font-bold text-slate-900 ${captchaError ? 'border-red-500 bg-red-50/50 ring-2 ring-red-200' : 'border-slate-300'
+                        }`}
                     />
                   </div>
                 </div>
@@ -371,3 +398,4 @@ export default function LoginPage() {
     </div>
   );
 }
+

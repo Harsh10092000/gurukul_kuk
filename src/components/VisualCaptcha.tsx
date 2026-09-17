@@ -120,8 +120,13 @@ export default function VisualCaptcha({ code, onRefresh, className = '' }: Visua
 
   const speakCaptcha = () => {
     if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
-      // Speak each character separately with spacing
-      const textToSpeak = code.split('').join(' . ');
+      // Speak each character separately with clear announcement of capital/small letters
+      const spokenParts = code.split('').map((char) => {
+        if (/[A-Z]/.test(char)) return `capital ${char}`;
+        if (/[a-z]/.test(char)) return `small ${char}`;
+        return char;
+      });
+      const textToSpeak = spokenParts.join(' , ');
       const utterance = new SpeechSynthesisUtterance(textToSpeak);
       utterance.rate = 0.8;
       utterance.pitch = 1.0;

@@ -66,7 +66,7 @@ export default function Header() {
     : '/';
 
   return (
-    <header className="w-full bg-white border-b border-slate-200 sticky top-0 z-50 shadow-sm">
+    <header className="w-full bg-white border-b border-slate-200 sticky top-0 z-30 shadow-sm no-print">
       {/* Top Banner Notice Strip */}
       <div className="bg-gurukul-navy text-slate-200 text-xs py-1.5 px-4 sm:px-8 border-b border-slate-700">
         <div className="max-w-7xl mx-auto flex flex-wrap justify-between items-center gap-2">
@@ -85,7 +85,7 @@ export default function Header() {
           </div>
           <div className="flex items-center gap-3">
             <span className="bg-amber-500/20 text-amber-300 px-2 py-0.5 rounded text-[11px] font-semibold flex items-center gap-1">
-              <Calendar className="w-3 h-3" /> Entrance Session: 2026-27
+              <Calendar className="w-3 h-3" /> Entrance Session: 2027-28
             </span>
             {currentUser?.role === 'admin' && (
               <Link 
@@ -120,7 +120,7 @@ export default function Header() {
               <span>तमसो मा ज्योतिर्गमय</span>
             </p>
             <p className="text-[11px] text-slate-500 hidden sm:block">
-              Entrance Examination &amp; Admission Portal (Session 2026-27)
+              Entrance Examination &amp; Admission Portal (Session 2027-28)
             </p>
           </div>
         </Link>
@@ -231,7 +231,7 @@ export default function Header() {
                 className="bg-gradient-to-r from-amber-500 to-gurukul-600 hover:from-amber-600 hover:to-gurukul-700 text-white font-bold px-4 py-2 rounded-xl text-xs shadow-md transition flex items-center gap-1.5"
               >
                 <span>New Registration</span>
-                <span className="bg-white/20 text-[10px] px-1.5 py-0.5 rounded font-mono">2026-27</span>
+                <span className="bg-white/20 text-[10px] px-1.5 py-0.5 rounded font-mono">2027-28</span>
               </Link>
             </div>
           ) : null}
@@ -363,7 +363,7 @@ export default function Header() {
                   onClick={() => setMobileMenuOpen(false)}
                   className="w-full text-center bg-gurukul-600 text-white font-bold py-2.5 rounded-lg shadow"
                 >
-                  Apply Online 2026-27
+                  Apply Online 2027-28
                 </Link>
                 <Link
                   href="/admin/login"
@@ -380,3 +380,4 @@ export default function Header() {
     </header>
   );
 }
+

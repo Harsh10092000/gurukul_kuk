@@ -97,7 +97,6 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     { name: 'Notification Center', href: '/admin/notifications', icon: Bell, badge: unreadNotifCount },
     { name: 'Results & Merit List', href: '/admin/results', icon: Award },
     { name: 'Attendance Registers', href: '/admin/attendance', icon: CheckSquare },
-    { name: 'Examination Centres', href: '/admin/centers', icon: Building },
     { name: 'Reports & Analytics', href: '/admin/reports', icon: FileSpreadsheet },
     { name: 'System Audit Logs', href: '/admin/audit-logs', icon: ShieldCheck },
     { name: 'Portal Schedule & Settings', href: '/admin/settings', icon: Settings },
@@ -106,12 +105,12 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   return (
     <div className="min-h-screen bg-slate-100 flex flex-col md:flex-row">
       {/* Mobile Top Bar */}
-      <div className="md:hidden bg-gurukul-navy text-white p-4 flex justify-between items-center sticky top-0 z-40 shadow-md">
+      <div className="md:hidden bg-gurukul-navy text-white p-4 flex justify-between items-center sticky top-0 z-20 shadow-md">
         <Link href="/admin/dashboard" className="flex items-center gap-2">
           <div className="w-8 h-8 flex items-center justify-center">
             <Image src="/logo-gurukul.png" alt="Logo" width={32} height={32} className="brand-logo-sm object-contain" />
           </div>
-          <span className="font-black text-sm tracking-tight">GURUKUL ADMIN</span>
+          <span className="font-black text-sm tracking-tight">ADMIN GURUKUL</span>
         </Link>
         <div className="flex items-center gap-2">
           <Link
@@ -162,7 +161,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             </div>
             <div>
               <h2 className="font-black text-sm tracking-tight text-white leading-snug">
-                GURUKUL
+                ADMIN GURUKUL
               </h2>
               <span className="text-[10px] font-mono text-amber-400 font-bold block">
                 ADMINISTRATION DESK

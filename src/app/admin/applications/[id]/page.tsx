@@ -26,7 +26,7 @@ import {
   AlertCircle
 } from 'lucide-react';
 import { Application, AdmitCard } from '@/lib/types';
-import AdmitCardView from '@/components/AdmitCardView';
+import AdmitCardView, { printAdmitCard } from '@/components/AdmitCardView';
 
 export default function ApplicationVerificationPage({ params }: { params: { id: string } }) {
   const router = useRouter();
@@ -36,7 +36,6 @@ export default function ApplicationVerificationPage({ params }: { params: { id: 
   const [actionLoading, setActionLoading] = useState(false);
   const [remarks, setRemarks] = useState('');
   const [showCorrectionModal, setShowCorrectionModal] = useState(false);
-  const [showRejectModal, setShowRejectModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showHallTicketModal, setShowHallTicketModal] = useState(false);
   const [selectedDocPreview, setSelectedDocPreview] = useState<{ title: string; url: string } | null>(null);
@@ -63,6 +62,17 @@ export default function ApplicationVerificationPage({ params }: { params: { id: 
       .catch(() => setLoading(false));
   }, [params.id]);
 
+  useEffect(() => {
+    if (showHallTicketModal || showCorrectionModal || showDeleteModal || selectedDocPreview) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [showHallTicketModal, showCorrectionModal, showDeleteModal, selectedDocPreview]);
+
   const formatDob = (dobStr?: string) => {
     if (!dobStr) return '—';
     const s = dobStr.trim();
@@ -78,7 +88,6 @@ export default function ApplicationVerificationPage({ params }: { params: { id: 
     setActionLoading(true);
     setErrorMsg('');
     setShowCorrectionModal(false);
-    setShowRejectModal(false);
     try {
       const res = await fetch(`/api/applications/${params.id}`, {
         method: 'PATCH',
@@ -102,7 +111,6 @@ export default function ApplicationVerificationPage({ params }: { params: { id: 
     } finally {
       setActionLoading(false);
       setShowCorrectionModal(false);
-      setShowRejectModal(false);
     }
   };
 
@@ -177,8 +185,6 @@ export default function ApplicationVerificationPage({ params }: { params: { id: 
                     ? 'bg-emerald-100 text-emerald-800'
                     : application.status === 'correction_needed'
                     ? 'bg-red-100 text-red-800'
-                    : application.status === 'rejected'
-                    ? 'bg-rose-100 text-rose-800'
                     : 'bg-amber-100 text-amber-800'
                 }`}
               >
@@ -192,54 +198,26 @@ export default function ApplicationVerificationPage({ params }: { params: { id: 
         </div>
 
         <div className="flex flex-wrap gap-2">
-          {/* When rejected: strictly show only Delete Dossier button */}
-          {application.status === 'rejected' ? (
-            <button
-              onClick={() => setShowDeleteModal(true)}
-              disabled={actionLoading}
-              className="bg-red-600 hover:bg-red-700 text-white font-bold px-4 py-2 rounded-xl text-xs shadow flex items-center gap-1.5 transition"
-              title="Permanently delete this rejected candidate record"
-            >
-              <Trash2 className="w-4 h-4" />
-              <span>Delete Dossier</span>
-            </button>
-          ) : (
-            <>
-              {/* Print Admission Form */}
-              <Link
-                href={`/admin/applications/${application.id}/admission-form`}
-                className="bg-gurukul-navy hover:bg-slate-800 text-amber-300 font-bold px-3.5 py-2 rounded-xl text-xs shadow flex items-center gap-1.5 transition border border-amber-400/40"
-                title="Generate & print official physical Admission Verification & Enrolment Form"
-              >
-                <Printer className="w-4 h-4" />
-                <span>Print Admission Form</span>
-              </Link>
+          {/* Print Admission Form */}
+          <Link
+            href={`/admin/applications/${application.id}/admission-form`}
+            className="bg-gurukul-navy hover:bg-slate-800 text-amber-300 font-bold px-3.5 py-2 rounded-xl text-xs shadow flex items-center gap-1.5 transition border border-amber-400/40"
+            title="Generate & print official physical Admission Verification & Enrolment Form"
+          >
+            <Printer className="w-4 h-4" />
+            <span>Print Admission Form</span>
+          </Link>
 
-              {/* Reject Application */}
-              <button
-                onClick={() => {
-                  setRemarks('');
-                  setShowRejectModal(true);
-                }}
-                disabled={actionLoading}
-                className="bg-red-600 hover:bg-red-700 text-white font-bold px-3 py-2 rounded-xl text-xs shadow flex items-center gap-1.5 transition"
-              >
-                <XCircle className="w-4 h-4" />
-                <span>Reject Application</span>
-              </button>
-
-              {/* Delete Dossier */}
-              <button
-                onClick={() => setShowDeleteModal(true)}
-                disabled={actionLoading}
-                className="bg-slate-100 hover:bg-red-50 text-red-600 hover:text-red-700 border border-red-200 font-bold px-3 py-2 rounded-xl text-xs shadow-sm flex items-center gap-1.5 transition"
-                title="Permanently delete this candidate application"
-              >
-                <Trash2 className="w-4 h-4" />
-                <span>Delete Dossier</span>
-              </button>
-            </>
-          )}
+          {/* Delete Dossier */}
+          <button
+            onClick={() => setShowDeleteModal(true)}
+            disabled={actionLoading}
+            className="bg-slate-100 hover:bg-red-50 text-red-600 hover:text-red-700 border border-red-200 font-bold px-3 py-2 rounded-xl text-xs shadow-sm flex items-center gap-1.5 transition"
+            title="Permanently delete this candidate application"
+          >
+            <Trash2 className="w-4 h-4" />
+            <span>Delete Dossier</span>
+          </button>
         </div>
       </div>
 
@@ -257,66 +235,7 @@ export default function ApplicationVerificationPage({ params }: { params: { id: 
         </div>
       )}
 
-      {/* Official Disqualification & Rejection Record Banner */}
-      {application.status === 'rejected' && (
-        <div className="bg-rose-50 border-2 border-rose-300 rounded-3xl p-6 shadow-sm space-y-4">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-rose-200/80 pb-4">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-2xl bg-rose-600 text-white flex items-center justify-center flex-shrink-0 shadow">
-                <XCircle className="w-6 h-6" />
-              </div>
-              <div>
-                <span className="text-[10px] font-mono uppercase tracking-wider font-extrabold text-rose-700 bg-rose-100 px-2.5 py-0.5 rounded-full">
-                  Admission Dossier Rejected / Disqualified
-                </span>
-                <h3 className="text-base font-black text-rose-950 mt-1">
-                  Official Administrative Rejection Record
-                </h3>
-              </div>
-            </div>
 
-            <div className="text-xs font-mono text-rose-700 sm:text-right">
-              <span className="block text-[10px] text-rose-500 font-bold uppercase">Rejection Recorded At</span>
-              <span>
-                {new Date(application.updatedAt).toLocaleString('en-IN', {
-                  dateStyle: 'medium',
-                  timeStyle: 'short',
-                })}
-              </span>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
-            <div className="md:col-span-2 space-y-1.5">
-              <span className="text-rose-600 text-[10px] font-bold uppercase tracking-wider block">
-                Official Committee Ground / Reason for Rejection
-              </span>
-              <div className="p-3.5 bg-white border border-rose-200 rounded-2xl text-xs font-bold text-rose-900 leading-relaxed shadow-xs">
-                {application.remarks || 'Documentation or eligibility criteria mismatch.'}
-              </div>
-            </div>
-
-            <div className="space-y-1.5">
-              <span className="text-rose-600 text-[10px] font-bold uppercase tracking-wider block">
-                Candidate Contact & Portal Status
-              </span>
-              <div className="p-3 bg-white border border-rose-200 rounded-2xl text-[11px] space-y-1 text-slate-700 shadow-xs">
-                <div>Email: <strong>{application.personalInfo?.candidateEmail || 'Registered Email'}</strong></div>
-                <div>Mobile: <strong>{application.parentInfo?.fatherPhone || application.personalInfo?.candidateMobile || 'N/A'}</strong></div>
-                <div className="text-rose-700 font-bold pt-1 border-t border-slate-100">
-                  ⚠️ Candidate notified via Email & Portal Rejection Dialog.
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div className="pt-2 text-xs">
-            <p className="text-rose-700 text-[11px] leading-relaxed">
-              As per regulatory standards, any Admit Card issued for this application has been revoked. This application is archived as rejected; you may delete the dossier if required.
-            </p>
-          </div>
-        </div>
-      )}
 
       {/* Main Grid: Details + Document Inspector */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -585,19 +504,16 @@ export default function ApplicationVerificationPage({ params }: { params: { id: 
                 rows={3}
                 value={remarks}
                 onChange={(e) => setRemarks(e.target.value)}
-                disabled={application.status === 'rejected'}
-                placeholder={application.status === 'rejected' ? 'Application is rejected.' : 'Add verification notes or instructions for candidate...'}
-                className="w-full p-2.5 text-xs border rounded-xl outline-none focus:ring-2 focus:ring-amber-500 disabled:bg-slate-100 disabled:text-slate-500"
+                placeholder="Add verification notes or instructions for candidate..."
+                className="w-full p-2.5 text-xs border rounded-xl outline-none focus:ring-2 focus:ring-amber-500"
               />
-              {application.status !== 'rejected' && (
-                <button
-                  onClick={() => updateStatus(application.status, remarks)}
-                  disabled={actionLoading}
-                  className="w-full py-2 bg-slate-800 hover:bg-slate-900 text-white font-bold text-xs rounded-xl transition"
-                >
-                  Save Officer Remarks
-                </button>
-              )}
+              <button
+                onClick={() => updateStatus(application.status, remarks)}
+                disabled={actionLoading}
+                className="w-full py-2 bg-slate-800 hover:bg-slate-900 text-white font-bold text-xs rounded-xl transition"
+              >
+                Save Officer Remarks
+              </button>
             </div>
           </div>
         </div>
@@ -605,7 +521,7 @@ export default function ApplicationVerificationPage({ params }: { params: { id: 
 
       {/* Demand Details / Correction Modal */}
       {showCorrectionModal && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[9999] flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
             <h3 className="font-bold text-slate-900 text-base flex items-center gap-2">
               <AlertTriangle className="w-5 h-5 text-amber-500" />
@@ -677,82 +593,10 @@ export default function ApplicationVerificationPage({ params }: { params: { id: 
         </div>
       )}
 
-      {/* Reject Application Modal */}
-      {showRejectModal && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
-            <h3 className="font-bold text-red-700 text-base flex items-center gap-2">
-              <XCircle className="w-5 h-5 text-red-600" />
-              Reject Application Dossier
-            </h3>
-            <p className="text-xs text-slate-500">
-              Provide the official ground for rejection. The candidate will see this reason on their dashboard and will have the opportunity to submit revised details.
-            </p>
-
-            <div>
-              <label className="block text-[11px] font-bold text-slate-700 uppercase mb-1.5">
-                Common Rejection Reasons:
-              </label>
-              <div className="flex flex-wrap gap-1.5">
-                {[
-                  'Age criteria not met for selected class',
-                  'Ineligible previous academic qualification',
-                  'Aadhaar or identity details mismatch',
-                  'Incomplete / fraudulent documentation',
-                  'Invalid category / reservation certificate',
-                ].map((reason) => (
-                  <button
-                    key={reason}
-                    type="button"
-                    onClick={() => setRemarks(`Application rejected: ${reason}.`)}
-                    className="text-[11px] bg-red-50 hover:bg-red-100 text-red-800 px-2.5 py-1 rounded-lg border border-red-200 transition"
-                  >
-                    {reason}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-[11px] font-bold text-slate-700 uppercase mb-1.5">
-                Rejection Grounds & Remarks:
-              </label>
-              <textarea
-                rows={3}
-                value={remarks}
-                onChange={(e) => setRemarks(e.target.value)}
-                placeholder="Explain reason for rejection..."
-                className="w-full p-2.5 text-xs border rounded-xl outline-none focus:ring-2 focus:ring-red-500 font-medium"
-              />
-            </div>
-
-            <div className="flex justify-end gap-2 pt-2 border-t">
-              <button
-                type="button"
-                onClick={() => setShowRejectModal(false)}
-                className="px-4 py-2 border rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-50"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setShowRejectModal(false);
-                  updateStatus('rejected', remarks);
-                }}
-                disabled={actionLoading}
-                className="px-5 py-2 bg-red-600 hover:bg-red-700 text-white font-bold text-xs rounded-xl shadow"
-              >
-                Confirm Rejection & Notify
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Delete Application Modal */}
       {showDeleteModal && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[9999] flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4">
             <h3 className="font-bold text-red-700 text-base flex items-center gap-2">
               <Trash2 className="w-5 h-5 text-red-600" />
@@ -792,7 +636,7 @@ export default function ApplicationVerificationPage({ params }: { params: { id: 
 
       {/* Full Document Viewer Modal */}
       {selectedDocPreview && (
-        <div className="fixed inset-0 bg-slate-900/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div className="fixed inset-0 bg-slate-900/80 backdrop-blur-sm z-[9999] flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl max-w-2xl w-full p-5 shadow-2xl space-y-3">
             <div className="flex justify-between items-center border-b pb-2">
               <h4 className="font-bold text-sm text-slate-900 flex items-center gap-2">
@@ -840,10 +684,10 @@ export default function ApplicationVerificationPage({ params }: { params: { id: 
 
       {/* Admin Instant Admit Card / Hall Ticket Modal */}
       {showHallTicketModal && admitCard && (
-        <div className="fixed inset-0 bg-slate-900/80 backdrop-blur-sm z-50 flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
+        <div className="fixed inset-0 bg-slate-900/85 backdrop-blur-sm z-[9999] flex items-center justify-center p-3 sm:p-4 overflow-y-auto print:hidden">
           <div className="bg-white rounded-3xl max-w-4xl w-full max-h-[94vh] flex flex-col shadow-2xl border border-slate-200 overflow-hidden my-auto animate-in fade-in zoom-in-95 duration-200">
             {/* Modal Header Bar */}
-            <div className="p-4 bg-gurukul-navy text-white flex justify-between items-center px-6 border-b border-amber-500/40">
+            <div className="no-print p-4 bg-gurukul-navy text-white flex justify-between items-center px-6 border-b border-amber-500/40">
               <div className="flex items-center gap-2.5">
                 <ShieldCheck className="w-5 h-5 text-amber-400" />
                 <div>
@@ -858,7 +702,10 @@ export default function ApplicationVerificationPage({ params }: { params: { id: 
               <div className="flex items-center gap-2.5">
                 <button
                   type="button"
-                  onClick={() => window.print()}
+                  onClick={() => {
+                    const docTitle = `AdmitCard_${admitCard.rollNumber || admitCard.applicationNumber}_${(admitCard.candidateName || 'Candidate').replace(/\s+/g, '_')}`;
+                    printAdmitCard('admit-card-print-sheet', docTitle);
+                  }}
                   className="bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-bold px-3.5 py-1.5 rounded-lg flex items-center gap-1.5 transition shadow-sm"
                 >
                   <Printer className="w-3.5 h-3.5" />

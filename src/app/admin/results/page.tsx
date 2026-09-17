@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import React, { useState, useEffect } from 'react';
 import { 
@@ -266,7 +266,7 @@ export default function AdminResultsPage() {
         <div className="lg:col-span-7 bg-white border border-slate-200 rounded-2xl p-6 shadow-sm space-y-4">
           <div className="flex justify-between items-center border-b pb-3">
             <h3 className="font-bold text-slate-900 text-sm flex items-center gap-2">
-              <CheckCircle className="w-4 h-4 text-emerald-600" /> Published Results &amp; Merit List (2026-27)
+              <CheckCircle className="w-4 h-4 text-emerald-600" /> Published Results &amp; Merit List (2027-28)
             </h3>
             <span className="text-xs font-mono text-slate-400 font-semibold">
               {resultsList.filter((res) => {
@@ -341,3 +341,4 @@ export default function AdminResultsPage() {
     </div>
   );
 }
+

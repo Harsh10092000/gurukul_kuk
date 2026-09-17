@@ -15,7 +15,6 @@ import {
   ArrowLeft,
   AlertCircle,
   ShieldCheck,
-  Printer,
   FileCheck,
   Check,
   FileText,
@@ -24,8 +23,7 @@ import {
   ShieldAlert,
   Trash2,
   Crop,
-  Eye,
-  Download
+  Eye
 } from 'lucide-react';
 import { INDIAN_STATES_AND_DISTRICTS } from '@/lib/indianLocations';
 import {
@@ -643,8 +641,10 @@ export default function ApplyPage() {
         localStorage.removeItem('gurukul_application_draft');
       } catch { }
 
-      // Directly move candidate to dashboard
-      window.location.href = '/dashboard?registered=true';
+      // Smoothly redirect candidate to dashboard after 1.8 seconds
+      setTimeout(() => {
+        window.location.href = '/dashboard?registered=true';
+      }, 1800);
     } catch {
       setError('An error occurred during payment processing. Please check your internet connection.');
       setLoading(false);
@@ -663,105 +663,36 @@ export default function ApplyPage() {
 
   const currentDistricts = INDIAN_STATES_AND_DISTRICTS[formData.state] || ['Other'];
 
-  // SCREEN: Official Payment & Registration Confirmed Card
+  // SCREEN: Registration Confirmed Screen (Shows for 1-2 sec without any buttons before redirect)
   if (submittedApp) {
     const regNo = submittedApp.registrationNumber || submittedApp.applicationNumber;
     return (
-      <div className="max-w-3xl mx-auto my-12 px-4">
-        <div className="bg-white border-2 border-emerald-500 rounded-3xl shadow-2xl p-6 sm:p-10 space-y-6 text-center">
+      <div className="max-w-xl mx-auto my-20 px-4 font-sans">
+        <div className="bg-white border-2 border-emerald-500 rounded-3xl shadow-2xl p-8 sm:p-12 space-y-6 text-center">
           <div className="w-16 h-16 bg-emerald-100 text-emerald-600 rounded-2xl flex items-center justify-center mx-auto shadow-inner">
             <CheckCircle className="w-10 h-10" />
           </div>
 
-          <div>
+          <div className="space-y-2">
             <span className="text-xs font-mono font-black uppercase tracking-wider bg-emerald-100 text-emerald-800 px-3.5 py-1 rounded-full">
-              Officially Registered &amp; Confirmed
+              Registration Successful
             </span>
-            <h2 className="text-2xl sm:text-3xl font-black text-gurukul-navy mt-3">
-              Registration Successful!
+            <h2 className="text-2xl sm:text-3xl font-black text-gurukul-navy pt-2">
+              You Have Successfully Registered!
             </h2>
-            <p className="text-xs sm:text-sm text-slate-500 mt-1">
-              Your application has been registered and entrance examination fee payment of <strong>₹800</strong> has been confirmed.
+            <p className="text-sm text-slate-600">
+              Your entrance application and examination fee payment have been confirmed.
             </p>
+            {regNo && (
+              <p className="text-xs font-mono font-bold text-slate-600 pt-1">
+                Permanent Registration No: <span className="text-gurukul-navy font-black">{regNo}</span>
+              </p>
+            )}
           </div>
 
-          {/* Official Printable Fee Receipt Card */}
-          <div className="bg-slate-50 border-2 border-slate-300 rounded-2xl p-6 text-left space-y-4 font-mono text-xs">
-            <div className="flex justify-between items-center border-b pb-3 font-sans">
-              <div>
-                <h4 className="font-black text-gurukul-navy text-base">GURUKUL</h4>
-                <p className="text-[11px] text-slate-500">Official E-Payment Receipt • Entrance Session 2026-27</p>
-              </div>
-              <div className="text-right">
-                <span className="bg-emerald-100 text-emerald-800 text-[10px] font-bold px-2 py-0.5 rounded uppercase">
-                  PAID - ₹800
-                </span>
-                <p className="text-[10px] text-slate-400 mt-0.5">{new Date().toLocaleDateString('en-IN')}</p>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
-              <div>
-                <span className="text-slate-500 block text-[10px]">Official Registration ID:</span>
-                <span className="font-bold text-gurukul-navy text-base">{regNo}</span>
-              </div>
-              <div>
-                <span className="text-slate-500 block text-[10px]">Candidate Full Name:</span>
-                <span className="font-bold text-slate-900">{formData.fullName}</span>
-              </div>
-              <div>
-                <span className="text-slate-500 block text-[10px]">Gender:</span>
-                <span className="font-bold text-slate-900">{formData.gender}</span>
-              </div>
-              <div>
-                <span className="text-slate-500 block text-[10px]">Class &amp; Stream:</span>
-                <span className="font-bold text-slate-900">{formData.applyingClass} {formData.stream ? `(${formData.stream})` : ''}</span>
-              </div>
-              <div>
-                <span className="text-slate-500 block text-[10px]">Preferred Study Location:</span>
-                <span className="font-bold text-slate-900">{formData.firstPreference}</span>
-              </div>
-              <div>
-                <span className="text-slate-500 block text-[10px]">Payment Transaction ID:</span>
-                <span className="font-bold text-slate-900">{submittedApp.transactionId}</span>
-              </div>
-            </div>
-          </div>
-
-          {/* Immediate Action Buttons: Admission Form & Admit Card */}
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
-            <button
-              onClick={() => window.print()}
-              className="w-full sm:w-auto px-5 py-3 bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs rounded-xl border border-slate-300 transition flex items-center justify-center gap-2"
-            >
-              <Printer className="w-4 h-4" />
-              <span>Print Receipt</span>
-            </button>
-
-            <Link
-              href="/admission-form"
-              className="w-full sm:w-auto px-6 py-3 bg-gurukul-navy hover:bg-slate-900 text-white font-black text-xs rounded-xl shadow transition flex items-center justify-center gap-2"
-            >
-              <Download className="w-4 h-4 text-amber-400" />
-              <span>Download Admission Form</span>
-            </Link>
-
-            <Link
-              href="/admit-card"
-              className="w-full sm:w-auto px-6 py-3 bg-gradient-to-r from-amber-500 to-gurukul-600 hover:from-amber-600 hover:to-gurukul-700 text-white font-black text-xs rounded-xl shadow-lg transition flex items-center justify-center gap-2"
-            >
-              <span>View Admit Card</span>
-              <ArrowRight className="w-4 h-4" />
-            </Link>
-          </div>
-
-          <div className="pt-2">
-            <Link
-              href="/dashboard"
-              className="text-xs text-slate-500 hover:text-slate-900 font-bold underline"
-            >
-              Go to Candidate Dashboard →
-            </Link>
+          <div className="pt-4 flex flex-col items-center justify-center space-y-3">
+            <div className="w-8 h-8 border-3 border-amber-500 border-t-transparent rounded-full animate-spin" />
+            <p className="text-xs font-bold text-slate-500">Redirecting to Candidate Dashboard...</p>
           </div>
         </div>
       </div>
@@ -774,7 +705,7 @@ export default function ApplyPage() {
       <div className="mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <span className="text-[10px] font-bold uppercase tracking-wider text-gurukul-600 bg-amber-100 px-3 py-1 rounded-full">
-            Entrance Session 2026-27
+            Entrance Session 2027-28
           </span>
           <h1 className="text-2xl sm:text-3xl font-black text-gurukul-navy mt-1">
             GURUKUL Online Entrance Application
@@ -859,7 +790,7 @@ export default function ApplyPage() {
                     Pre-Application Advisory &amp; Candidate Undertaking
                   </h2>
                   <p className="text-xs text-slate-500 font-medium">
-                    (In accordance with Entrance Examination Standards for Session 2026-27)
+                    (In accordance with Entrance Examination Standards for Session 2027-28)
                   </p>
                 </div>
               </div>
@@ -889,7 +820,7 @@ export default function ApplyPage() {
                   <strong className="text-slate-900 font-bold block mb-0.5">
                     Prohibition of Duplicate Registrations &amp; Aadhaar Misuse:
                   </strong>
-                  A candidate can submit only ONE application form for the academic session 2026-27. Duplicate registrations are automatically blocked.
+                  A candidate can submit only ONE application form for the academic session 2027-28. Duplicate registrations are automatically blocked.
                 </div>
               </div>
 
@@ -928,7 +859,7 @@ export default function ApplyPage() {
                   className="mt-1 w-4 h-4 text-gurukul-600 rounded border-slate-300 focus:ring-amber-500 cursor-pointer flex-shrink-0"
                 />
                 <span className="text-xs text-slate-800 font-bold leading-relaxed">
-                  I have carefully read, understood, and accept all the instructions, eligibility criteria, and examination guidelines for the GURUKUL Entrance Examination 2026-27. I solemnly declare that all particulars furnished by me in this application are authentic and true.
+                  I have carefully read, understood, and accept all the instructions, eligibility criteria, and examination guidelines for the GURUKUL Entrance Examination 2027-28. I solemnly declare that all particulars furnished by me in this application are authentic and true.
                 </span>
               </label>
             </div>

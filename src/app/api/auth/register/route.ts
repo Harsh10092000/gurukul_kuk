@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server';
+﻿import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { hashPassword, signToken, getAuthCookieOptions } from '@/lib/auth';
 import { checkFormStatus } from '@/lib/formSchedule';
@@ -11,7 +11,7 @@ export async function POST(request: Request) {
     if (!formStatus.isOpen) {
       return NextResponse.json(
         { 
-          error: `Applications for Entrance Session 2026-27 are currently closed. Reason: ${formStatus.message}`,
+          error: `Applications for Entrance Session 2027-28 are currently closed. Reason: ${formStatus.message}`,
           formStatus 
         },
         { status: 403 }
@@ -139,3 +139,4 @@ export async function POST(request: Request) {
     );
   }
 }
+

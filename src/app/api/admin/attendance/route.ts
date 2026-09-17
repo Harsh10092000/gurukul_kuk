@@ -18,6 +18,11 @@ export async function GET(req: Request) {
 
     const applications = await db.getApplications();
     const admitCards = await db.getAdmitCards();
+    const settings = await db.getSettings();
+
+    const officialVenueName = settings.examVenueName || 'THE GURUKUL JYOTISAR PEHOWA ROAD, KURUKSHETRA';
+    const officialExamDate = settings.entranceExamDate || '21 March 2027';
+    const officialExamTime = settings.entranceExamTime || '9:30 AM';
 
     // Exclude all applications in draft state or incomplete/un-submitted registrations
     const eligibleApplications = applications.filter((app) => {
@@ -42,15 +47,16 @@ export async function GET(req: Request) {
         rollNumber: card?.rollNumber || app.rollNumber || 'PENDING',
         fullName: app.personalInfo?.fullName || 'N/A',
         fatherName: app.parentInfo?.fatherName || 'N/A',
+        aadharNo: app.personalInfo?.aadhaarNumber || '—',
         classApplying: app.classApplying,
         stream: (app as any).stream || '',
         gender: isGirl ? 'Female' : 'Male',
         categoryWing: isGirl ? 'Girls Wing (Aryakulam)' : 'Boys Wing (Gurukul)',
         photo: app.documents?.photo || '',
         signature: app.documents?.signature || '',
-        centreName: card?.examCentreName || app.studyLocation?.firstPreference || app.examCentrePref?.preferredCenter1 || 'Gurukul Nilokheri',
-        examDate: card?.examDate || '06 December 2026',
-        reportingTime: card?.reportingTime || '08:30 AM',
+        centreName: officialVenueName,
+        examDate: officialExamDate,
+        reportingTime: officialExamTime,
         roomNumber: card?.roomNumber || 'Hall A',
         status: app.status,
       };

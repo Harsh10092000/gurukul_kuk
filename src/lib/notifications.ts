@@ -1,4 +1,4 @@
-import nodemailer from 'nodemailer';
+﻿import nodemailer from 'nodemailer';
 
 export interface NotificationPayload {
   to: string;
@@ -73,7 +73,7 @@ export async function sendNotification(payload: NotificationPayload) {
           <div class="container">
             <div class="header">
               <h1>GURUKUL</h1>
-              <p>ENTRANCE EXAMINATION • SESSION 2026-27</p>
+              <p>ENTRANCE EXAMINATION • SESSION 2027-28</p>
             </div>
             <div class="content">
               <div class="greeting">Dear ${name || 'Candidate'},</div>
@@ -103,7 +103,7 @@ export async function sendNotification(payload: NotificationPayload) {
 
     case 'FEE_PAYMENT_RECEIPT':
       subject = `Official Payment Receipt: GURUKUL Entrance Registration (${data.registrationNumber})`;
-      message = `Dear ${name}, your application fee of Rs. ${data.amount || 800} for GURUKUL Entrance Examination (Session 2026-27) has been successfully received. Permanent Registration ID: ${data.registrationNumber}. Transaction ID: ${data.transactionId}. Please retain this receipt for candidate login, admission form and admit card download.`;
+      message = `Dear ${name}, your application fee of Rs. ${data.amount || 800} for GURUKUL Entrance Examination (Session 2027-28) has been successfully received. Permanent Registration ID: ${data.registrationNumber}. Transaction ID: ${data.transactionId}. Please retain this receipt for candidate login, admission form and admit card download.`;
       htmlContent = `
         <!DOCTYPE html>
         <html>
@@ -135,7 +135,7 @@ export async function sendNotification(payload: NotificationPayload) {
           <div class="container">
             <div class="header">
               <h1>GURUKUL</h1>
-              <p>OFFICIAL ENTRANCE EXAMINATION FEE RECEIPT (2026-27)</p>
+              <p>OFFICIAL ENTRANCE EXAMINATION FEE RECEIPT (2027-28)</p>
               <div class="sub">CBSE Affiliated Institutional Network (Haryana)</div>
             </div>
             <div class="badge-box">
@@ -287,7 +287,7 @@ export async function sendNotification(payload: NotificationPayload) {
           <div class="container">
             <div class="header">
               <h1>GURUKUL KURUKSHETRA</h1>
-              <p>OFFICIAL E-RECEIPT & REGISTRATION CONFIRMATION (2026-27)</p>
+              <p>OFFICIAL E-RECEIPT & REGISTRATION CONFIRMATION (2027-28)</p>
             </div>
             <div class="content">
               <p style="font-size: 15px; font-weight: 600; color: #0f172a;">Dear ${name || 'Candidate'},</p>
@@ -302,7 +302,7 @@ export async function sendNotification(payload: NotificationPayload) {
               </div>
 
               <table class="receipt-table">
-                <tr><td>Class Applied</td><td>${data.classApplying || 'Entrance 2026-27'}</td></tr>
+                <tr><td>Class Applied</td><td>${data.classApplying || 'Entrance 2027-28'}</td></tr>
                 <tr><td>Fee Amount Paid</td><td>₹${data.amount || 1200} (Confirmed)</td></tr>
                 <tr><td>Transaction ID</td><td>${data.transactionId || 'TXN_GK_CONFIRMED'}</td></tr>
                 <tr><td>Payment Date</td><td>${new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}</td></tr>
@@ -324,7 +324,7 @@ export async function sendNotification(payload: NotificationPayload) {
 
     case 'FORGOT_REGISTRATION_RECOVERY':
       subject = `Gurukul Kurukshetra - Your Registration Number: ${data.registrationNumber}`;
-      message = `Dear ${name || 'Candidate'}, as requested, your permanent Registration Number for Gurukul Kurukshetra Entrance Examination (Session 2026-27) is ${data.registrationNumber}. Please use this Registration Number and your password to sign in to the portal at http://localhost:3000/.`;
+      message = `Dear ${name || 'Candidate'}, as requested, your permanent Registration Number for Gurukul Kurukshetra Entrance Examination (Session 2027-28) is ${data.registrationNumber}. Please use this Registration Number and your password to sign in to the portal at http://localhost:3000/.`;
       htmlContent = `
         <!DOCTYPE html>
         <html>
@@ -348,19 +348,19 @@ export async function sendNotification(payload: NotificationPayload) {
           <div class="container">
             <div class="header">
               <h1>GURUKUL KURUKSHETRA</h1>
-              <p>ACCOUNT RECOVERY & REGISTRATION DETAILS (2026-27)</p>
+              <p>ACCOUNT RECOVERY & REGISTRATION DETAILS (2027-28)</p>
             </div>
             <div class="content">
               <p style="font-size: 15px; font-weight: 600; color: #0f172a;">Dear ${name || 'Candidate'},</p>
               <p style="font-size: 14px; line-height: 1.6; color: #475569;">
-                You recently requested to retrieve your forgotten Registration Number for the <strong>Gurukul Kurukshetra Entrance Examination 2026-27</strong>.
+                You recently requested to retrieve your forgotten Registration Number for the <strong>Gurukul Kurukshetra Entrance Examination 2027-28</strong>.
               </p>
               
               <div class="reg-box">
                 <div class="reg-label">Your Permanent Registration Number</div>
                 <div class="reg-code">${data.registrationNumber}</div>
                 <div style="font-size: 12px; color: #2563eb; font-weight: 600; margin-top: 4px;">
-                  Class: ${data.className || 'Entrance 2026-27'}
+                  Class: ${data.className || 'Entrance 2027-28'}
                 </div>
               </div>
 
@@ -384,7 +384,7 @@ export async function sendNotification(payload: NotificationPayload) {
 
     case 'APPLICATION_SUBMITTED':
       subject = 'Gurukul Kurukshetra – Application Submitted Successfully';
-      message = `Dear ${name || 'Candidate'},\n\nYour application for Entrance Examination 2026-27 has been successfully submitted.\n\nRegistration Number:\n${data.registrationNumber || data.applicationNumber}\n\nPlease keep this registration number safe for future reference.\n\nRegards,\nGurukul Kurukshetra\nAdmissions / Examination Department`;
+      message = `Dear ${name || 'Candidate'},\n\nYour application for Entrance Examination 2027-28 has been successfully submitted.\n\nRegistration Number:\n${data.registrationNumber || data.applicationNumber}\n\nPlease keep this registration number safe for future reference.\n\nRegards,\nGurukul Kurukshetra\nAdmissions / Examination Department`;
       htmlContent = `
         <!DOCTYPE html>
         <html>
@@ -407,12 +407,12 @@ export async function sendNotification(payload: NotificationPayload) {
           <div class="container">
             <div class="header">
               <h1>GURUKUL KURUKSHETRA</h1>
-              <p>ENTRANCE EXAMINATION (SESSION 2026-27)</p>
+              <p>ENTRANCE EXAMINATION (SESSION 2027-28)</p>
             </div>
             <div class="content">
               <p style="font-size: 15px; font-weight: 600; color: #0f172a; margin-top: 0;">Dear ${name || 'Candidate'},</p>
               <p style="font-size: 14px; line-height: 1.6; color: #334155;">
-                Your application for Entrance Examination 2026-27 has been successfully submitted.
+                Your application for Entrance Examination 2027-28 has been successfully submitted.
               </p>
               
               <div class="reg-box">
@@ -467,7 +467,7 @@ export async function sendNotification(payload: NotificationPayload) {
 
     case 'APPLICATION_APPROVED':
       subject = `Gurukul Kurukshetra - Application Dossier Approved: ${data.applicationNumber}`;
-      message = `Dear ${name}, congratulations! Your application dossier (${data.applicationNumber}) for Gurukul Kurukshetra Entrance Examination (Session 2026-27) has been officially approved and verified by the Admissions Committee. You can log in to download your Admission Form.`;
+      message = `Dear ${name}, congratulations! Your application dossier (${data.applicationNumber}) for Gurukul Kurukshetra Entrance Examination (Session 2027-28) has been officially approved and verified by the Admissions Committee. You can log in to download your Admission Form.`;
       htmlContent = `
         <div style="font-family: sans-serif; padding: 20px; color: #1e293b; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 12px;">
           <h2 style="color: #166534; margin-top: 0;">🎉 Application Dossier Approved & Verified!</h2>
@@ -480,7 +480,7 @@ export async function sendNotification(payload: NotificationPayload) {
       break;
 
     case 'APPLICATION_REJECTED':
-      subject = `Official Notice: Application Rejected / Disqualified - Gurukul Kurukshetra Entrance 2026-27 (${data.applicationNumber})`;
+      subject = `Official Notice: Application Rejected / Disqualified - Gurukul Kurukshetra Entrance 2027-28 (${data.applicationNumber})`;
       message = `Dear ${name}, this is an official notification that your entrance examination application (${data.applicationNumber}) has been REJECTED by the Admissions & Scrutiny Committee. Reason for Rejection: "${data.remarks || 'Documentation or eligibility criteria mismatch'}". As per guidelines, all previous details submitted under this dossier have been annulled. You may log in to the candidate portal at http://localhost:3000/login to refill a fresh application form or raise an official query before the application window closes.`;
       htmlContent = `
         <!DOCTYPE html>
@@ -513,7 +513,7 @@ export async function sendNotification(payload: NotificationPayload) {
           <div class="container">
             <div class="header">
               <h1>GURUKUL KURUKSHETRA</h1>
-              <p>ADMISSIONS & ENTRANCE EXAMINATION CELL (SESSION 2026-27)</p>
+              <p>ADMISSIONS & ENTRANCE EXAMINATION CELL (SESSION 2027-28)</p>
               <div class="sub">CBSE Affiliation No. 530006 • Established 1912 • Kurukshetra, Haryana</div>
             </div>
             <div class="alert-banner">
@@ -522,7 +522,7 @@ export async function sendNotification(payload: NotificationPayload) {
             <div class="content">
               <p style="font-size: 15px; font-weight: 600; color: #0f172a; margin-top: 0;">Dear ${name || 'Candidate'},</p>
               <p style="font-size: 13px; line-height: 1.6; color: #475569;">
-                This is to officially inform you that following scrutiny by the Admissions & Examination Committee, your application dossier for the <strong>Gurukul Kurukshetra Entrance Examination (2026-27)</strong> has been <strong>REJECTED</strong>.
+                This is to officially inform you that following scrutiny by the Admissions & Examination Committee, your application dossier for the <strong>Gurukul Kurukshetra Entrance Examination (2027-28)</strong> has been <strong>REJECTED</strong>.
               </p>
 
               <table class="info-table">
@@ -612,3 +612,4 @@ export async function sendNotification(payload: NotificationPayload) {
     message,
   };
 }
+

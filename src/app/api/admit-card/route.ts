@@ -29,7 +29,7 @@ export async function GET(request: Request) {
       return NextResponse.json({
         admitCard: null,
         released: false,
-        message: 'Admit cards for Entrance Examination 2026-27 have not been declared/published by the administration yet.',
+        message: 'Admit cards for Entrance Examination 2027-28 have not been declared/published by the administration yet.',
       });
     }
 
@@ -115,9 +115,16 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Application not found' }, { status: 404 });
     }
 
-    // Generate class-based roll number: e.g. 26 + class code + 4-digit serial
+    const settings = await db.getSettings();
+
+    // Generate class-based roll number: e.g. 27 + class code + 4-digit serial
     const classNum = application.classApplying.replace(/\D/g, '') || '06';
-    const rollNumber = `26${classNum.padStart(2, '0')}${Math.floor(1000 + Math.random() * 9000)}`;
+    const rollNumber = `27${classNum.padStart(2, '0')}${Math.floor(1000 + Math.random() * 9000)}`;
+
+    const defaultVenue = settings.examVenueName || 'The Gurukul Jyotisar Pehowa Road, Kurukshetra';
+    const defaultAddress = settings.examVenueAddress || '136119, Haryana';
+    const defaultDate = settings.entranceExamDate || '21 March 2027';
+    const defaultTime = settings.entranceExamTime || '9:30 AM';
 
     const admitCard = await db.generateOrReleaseAdmitCard({
       id: 'admit-' + Date.now(),
@@ -126,21 +133,25 @@ export async function POST(request: Request) {
       rollNumber,
       candidateName: application.personalInfo.fullName,
       fatherName: application.parentInfo.fatherName,
+      motherName: application.parentInfo.motherName,
+      previousSchoolName: application.academicInfo?.previousSchoolName || application.personalInfo?.previousSchoolName,
+      aadhaarNumber: application.personalInfo?.aadhaarNumber,
       classApplying: application.classApplying,
       stream: application.stream,
-      examCentreName: examCentreName || application.studyLocation?.firstPreference || application.studyLocationPref?.firstPreference || application.examCentrePref?.preferredCenter1 || 'Gurukul Nilokheri',
-      examCentreAddress: 'Campus Admissions & Examination Hall, Haryana',
-      examDate: examDate || '06 December 2026',
-      reportingTime: reportingTime || '08:30 AM',
-      examDuration: '10:00 AM to 12:30 PM (2.5 Hours)',
+      examCentreName: examCentreName || defaultVenue,
+      examCentreAddress: defaultAddress,
+      examDate: examDate || defaultDate,
+      reportingTime: reportingTime || defaultTime,
+      examDuration: '9:30 AM to 12:00 PM (2.5 Hours)',
       roomNumber: roomNumber || 'Hall-A, Desk ' + Math.floor(1 + Math.random() * 50),
       candidatePhotoUrl: application.documents?.photo || '/logo-gurukul.png',
       isReleased: true,
       instructions: [
-        'Bring printed copy of this Admit Card along with original Aadhaar Card.',
-        'Candidates must arrive at least 45 minutes prior to the examination time.',
-        'Electronic gadgets, smart watches, and calculators are strictly prohibited.',
-        'Blue/Black ballpoint pens only to be used for OMR / answer sheets.',
+        'Kindly reach exam venue well in time as mentioned on admit card.',
+        'Paste Your Recent Coloured Photograph On Admit Card.',
+        'Please bring Black or Blue Ball point pen and one Cardboard with you.',
+        'A coloured print out of admit card.',
+        'Please bring Valid ID proof or ADHAAR Card on the day of examination.',
       ],
       createdAt: new Date().toISOString(),
     });

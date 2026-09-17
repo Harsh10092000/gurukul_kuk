@@ -39,7 +39,7 @@ export default function AdminSettingsPage() {
     endDate: '2026-10-31T23:59',
     statusOverride: 'auto',
     timezone: 'Asia/Kolkata (IST)',
-    announcementNotice: 'Online Application for Entrance Examination Session 2026-27 is active for Classes 5th, 6th, 7th, 8th, 9th, 11th & NDA Wing.',
+    announcementNotice: 'Online Application for Entrance Examination Session 2027-28 is active for Classes 5th, 6th, 7th, 8th, 9th, 11th & NDA Wing.',
     reopenedCount: 0,
     lastUpdated: new Date().toISOString(),
     updatedBy: 'system',
@@ -52,14 +52,17 @@ export default function AdminSettingsPage() {
   const [academicSettings, setAcademicSettings] = useState<SystemSettings>({
     portalOpen: true,
     resultsDeclared: false,
-    academicSession: '2026-2027',
+    academicSession: '2027-2028',
     applicationFee: 1200,
     registrationStartDate: '2026-09-01',
-    registrationEndDate: '2026-10-31',
-    admitCardReleaseDate: '2026-11-15',
-    entranceExamDate: '2026-12-06',
-    resultDeclarationDate: '2026-12-20',
-    counselingStartDate: '2027-01-05',
+    registrationEndDate: '2027-01-31',
+    admitCardReleaseDate: '2027-03-01',
+    entranceExamDate: '2027-03-21',
+    entranceExamTime: '9:30 AM',
+    examVenueName: 'THE GURUKUL JYOTISAR PEHOWA ROAD, KURUKSHETRA',
+    examVenueAddress: '136119, Haryana',
+    resultDeclarationDate: '2027-04-05',
+    counselingStartDate: '2027-04-15',
     helplinePhone: '+91-1744-259114 / +91-9896328329',
     helplineEmail: 'admissions@gurukulkurukshetra.com',
   });
@@ -462,7 +465,7 @@ export default function AdminSettingsPage() {
             </p>
           </div>
           <span className="text-[11px] font-bold px-3 py-1 bg-gurukul-50 text-gurukul-700 border border-gurukul-200 rounded-full w-fit">
-            Session: {academicSettings.academicSession || '2026-2027'}
+            Session: {academicSettings.academicSession || '2027-2028'}
           </span>
         </div>
 
@@ -478,10 +481,10 @@ export default function AdminSettingsPage() {
                 required
                 value={academicSettings.academicSession}
                 onChange={(e) => setAcademicSettings({ ...academicSettings, academicSession: e.target.value })}
-                placeholder="2026-2027"
+                placeholder="2027-2028"
                 className="w-full p-2.5 border rounded-xl outline-none focus:ring-2 focus:ring-amber-500 font-semibold"
               />
-              <p className="text-[10px] text-slate-400 mt-1">e.g., 2026-2027 or 2026-27</p>
+              <p className="text-[10px] text-slate-400 mt-1">e.g., 2027-2028 or 2027-28</p>
             </div>
 
             {/* Application Fee */}
@@ -571,7 +574,54 @@ export default function AdminSettingsPage() {
                 onChange={(e) => setAcademicSettings({ ...academicSettings, entranceExamDate: e.target.value })}
                 className="w-full p-2.5 border rounded-xl outline-none focus:ring-2 focus:ring-amber-500 font-mono"
               />
-              <p className="text-[10px] text-slate-400 mt-1">Official entrance test day</p>
+              <p className="text-[10px] text-slate-400 mt-1">Official entrance test day (Admit Cards &amp; Attendance)</p>
+            </div>
+
+            {/* Written Entrance Exam Time */}
+            <div>
+              <label className="block font-bold text-slate-700 uppercase mb-1">
+                Entrance Exam Reporting Time *
+              </label>
+              <input
+                type="text"
+                placeholder="e.g. 9:30 AM"
+                value={academicSettings.entranceExamTime || '9:30 AM'}
+                onChange={(e) => setAcademicSettings({ ...academicSettings, entranceExamTime: e.target.value })}
+                className="w-full p-2.5 border rounded-xl outline-none focus:ring-2 focus:ring-amber-500 font-mono"
+              />
+              <p className="text-[10px] text-slate-400 mt-1">Synchronized across Admit Cards &amp; Attendance Registers</p>
+            </div>
+
+            {/* Dynamic Entrance Exam Venue Name */}
+            <div className="md:col-span-2 bg-amber-50/60 p-3.5 rounded-2xl border border-amber-200">
+              <label className="block font-black text-amber-950 uppercase mb-1 text-xs">
+                Official Examination Centre Venue Name (Single Source of Truth) *
+              </label>
+              <input
+                type="text"
+                placeholder="e.g. THE GURUKUL JYOTISAR PEHOWA ROAD, KURUKSHETRA"
+                value={academicSettings.examVenueName || ''}
+                onChange={(e) => setAcademicSettings({ ...academicSettings, examVenueName: e.target.value })}
+                className="w-full p-2.5 border border-amber-300 rounded-xl outline-none focus:ring-2 focus:ring-amber-500 font-mono text-xs font-bold bg-white text-slate-900"
+              />
+              <p className="text-[10px] text-amber-800 font-medium mt-1">
+                Authoritative venue name displayed on all Candidate Admit Cards, Invigilator Attendance Registers, and portal downloads.
+              </p>
+            </div>
+
+            {/* Dynamic Entrance Exam Venue Address */}
+            <div className="md:col-span-1 bg-amber-50/60 p-3.5 rounded-2xl border border-amber-200">
+              <label className="block font-black text-amber-950 uppercase mb-1 text-xs">
+                Venue Address &amp; Location *
+              </label>
+              <input
+                type="text"
+                placeholder="e.g. 136119, Haryana"
+                value={academicSettings.examVenueAddress || ''}
+                onChange={(e) => setAcademicSettings({ ...academicSettings, examVenueAddress: e.target.value })}
+                className="w-full p-2.5 border border-amber-300 rounded-xl outline-none focus:ring-2 focus:ring-amber-500 font-mono text-xs font-bold bg-white text-slate-900"
+              />
+              <p className="text-[10px] text-amber-800 font-medium mt-1">Printed in Admit Card bottom venue banner</p>
             </div>
 
             {/* Result Declaration Date */}
@@ -875,52 +925,81 @@ export default function AdminSettingsPage() {
           </div>
         </div>
 
-        <div className={`p-4 rounded-2xl flex items-start gap-3 transition ${
-          admitCardsReleased
-            ? 'bg-emerald-50 border border-emerald-300'
-            : 'bg-rose-50 border border-rose-300'
-        }`}>
-          {admitCardsReleased ? (
-            <Eye className="w-5 h-5 text-emerald-600 flex-shrink-0 mt-0.5" />
-          ) : (
-            <EyeOff className="w-5 h-5 text-rose-500 flex-shrink-0 mt-0.5" />
-          )}
-          <div className="text-xs">
-            <p className={`font-black text-sm ${
-              admitCardsReleased ? 'text-emerald-900' : 'text-rose-900'
-            }`}>
-              Admit Cards are currently{' '}
-              <span className="uppercase">{admitCardsReleased ? '✅ VISIBLE TO CANDIDATES' : '🔒 HIDDEN FROM CANDIDATES'}</span>
-            </p>
-            <p className={`mt-0.5 font-medium ${
-              admitCardsReleased ? 'text-emerald-700' : 'text-rose-700'
-            }`}>
-              {admitCardsReleased
-                ? 'Registered candidates can download Hall Tickets from the portal and their dashboard.'
-                : 'Admit Card downloads are locked in progress and hidden from students until released.'}
-            </p>
+        {admitCardsReleased === null ? (
+          <div className="p-4 rounded-2xl bg-slate-100 border border-slate-200 flex items-center gap-3 animate-pulse">
+            <div className="w-5 h-5 border-2 border-amber-500 border-t-transparent rounded-full animate-spin flex-shrink-0" />
+            <div className="text-xs space-y-1">
+              <p className="font-bold text-slate-700">Verifying Active Admit Card Visibility Status...</p>
+              <p className="text-slate-400">Fetching current live status from portal settings server</p>
+            </div>
           </div>
-        </div>
+        ) : (
+          <div className={`p-4 rounded-2xl flex items-start gap-3 transition ${
+            admitCardsReleased
+              ? 'bg-emerald-50 border border-emerald-300'
+              : 'bg-rose-50 border border-rose-300'
+          }`}>
+            {admitCardsReleased ? (
+              <Eye className="w-5 h-5 text-emerald-600 flex-shrink-0 mt-0.5" />
+            ) : (
+              <EyeOff className="w-5 h-5 text-rose-500 flex-shrink-0 mt-0.5" />
+            )}
+            <div className="text-xs">
+              <p className={`font-black text-sm ${
+                admitCardsReleased ? 'text-emerald-900' : 'text-rose-900'
+              }`}>
+                Admit Cards are currently{' '}
+                <span className="uppercase">{admitCardsReleased ? '✅ VISIBLE TO CANDIDATES' : '🔒 HIDDEN FROM CANDIDATES'}</span>
+              </p>
+              <p className={`mt-0.5 font-medium ${
+                admitCardsReleased ? 'text-emerald-700' : 'text-rose-700'
+              }`}>
+                {admitCardsReleased
+                  ? 'Registered candidates can download Hall Tickets from the portal and their dashboard.'
+                  : 'Admit Card downloads are locked in progress and hidden from students until released.'}
+              </p>
+            </div>
+          </div>
+        )}
 
         <div className="flex flex-wrap gap-3 pt-1">
-          <button
-            type="button"
-            disabled={admitCardToggling || admitCardsReleased === true}
-            onClick={() => handleToggleAdmitCards(true)}
-            className="flex items-center gap-2 px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold text-xs rounded-xl shadow transition"
-          >
-            <Eye className="w-3.5 h-3.5" />
-            Release Admit Cards (Make Visible to All Candidates)
-          </button>
-          <button
-            type="button"
-            disabled={admitCardToggling || admitCardsReleased === false}
-            onClick={() => handleToggleAdmitCards(false)}
-            className="flex items-center gap-2 px-5 py-2.5 bg-rose-600 hover:bg-rose-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold text-xs rounded-xl shadow transition"
-          >
-            <EyeOff className="w-3.5 h-3.5" />
-            Stop Showing / Hide Admit Cards from Candidates
-          </button>
+          {admitCardsReleased === null ? (
+            <div className="flex gap-3">
+              <div className="h-10 px-5 bg-slate-200 rounded-xl animate-pulse flex items-center justify-center text-slate-500 text-xs font-bold gap-2">
+                <div className="w-3.5 h-3.5 border-2 border-amber-500 border-t-transparent rounded-full animate-spin" />
+                <span>Checking Visibility Status...</span>
+              </div>
+            </div>
+          ) : (
+            <>
+              <button
+                type="button"
+                disabled={admitCardToggling || admitCardsReleased === true}
+                onClick={() => handleToggleAdmitCards(true)}
+                className="flex items-center gap-2 px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold text-xs rounded-xl shadow transition"
+              >
+                {admitCardToggling ? (
+                  <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                ) : (
+                  <Eye className="w-3.5 h-3.5" />
+                )}
+                <span>Release Admit Cards (Make Visible to All Candidates)</span>
+              </button>
+              <button
+                type="button"
+                disabled={admitCardToggling || admitCardsReleased === false}
+                onClick={() => handleToggleAdmitCards(false)}
+                className="flex items-center gap-2 px-5 py-2.5 bg-rose-600 hover:bg-rose-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold text-xs rounded-xl shadow transition"
+              >
+                {admitCardToggling ? (
+                  <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                ) : (
+                  <EyeOff className="w-3.5 h-3.5" />
+                )}
+                <span>Stop Showing / Hide Admit Cards from Candidates</span>
+              </button>
+            </>
+          )}
         </div>
 
         <p className="text-[10px] text-slate-400 border-t border-slate-100 pt-3">
@@ -930,3 +1009,4 @@ export default function AdminSettingsPage() {
     </div>
   );
 }
+

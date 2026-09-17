@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import React, { useState } from 'react';
 import Link from 'next/link';
@@ -103,7 +103,7 @@ export default function ContactPage() {
             Contact Admissions Cell
           </h1>
           <p className="text-xs sm:text-sm text-slate-600 leading-relaxed">
-            Have questions regarding Entrance Examination 2026-27, eligibility, syllabus, or admit cards? Send us a message or contact our helpdesk directly.
+            Have questions regarding Entrance Examination 2027-28, eligibility, syllabus, or admit cards? Send us a message or contact our helpdesk directly.
           </p>
         </div>
 
@@ -369,3 +369,4 @@ export default function ContactPage() {
     </div>
   );
 }
+

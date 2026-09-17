@@ -49,14 +49,17 @@ interface FallbackStore {
 const DEFAULT_SETTINGS: SystemSettings = {
   portalOpen: true,
   resultsDeclared: false,
-  academicSession: '2026-2027',
+  academicSession: '2027-2028',
   applicationFee: 800,
   registrationStartDate: '2026-09-01',
-  registrationEndDate: '2026-09-15',
-  admitCardReleaseDate: '2026-11-20',
-  entranceExamDate: '2026-12-10',
-  resultDeclarationDate: '2026-12-25',
-  counselingStartDate: '2027-01-10',
+  registrationEndDate: '2027-01-31',
+  admitCardReleaseDate: '2027-03-01',
+  entranceExamDate: '2027-03-21',
+  entranceExamTime: '9:30 AM',
+  examVenueName: 'THE GURUKUL JYOTISAR PEHOWA ROAD, KURUKSHETRA',
+  examVenueAddress: '136119, Haryana',
+  resultDeclarationDate: '2027-04-05',
+  counselingStartDate: '2027-04-15',
   helplinePhone: '+91-1744-259114 / +91-9896328329',
   helplineEmail: 'admissions@gurukulkurukshetra.com',
 };
@@ -65,11 +68,11 @@ const DEFAULT_CENTRES: ExamCentre[] = [
   {
     id: 'center-1',
     code: 'GK-01',
-    name: 'Gurukul Kurukshetra Main Campus',
+    name: 'The Gurukul Jyotisar Pehowa Road, Kurukshetra',
     city: 'Kurukshetra',
     state: 'Haryana',
     capacity: 3000,
-    address: 'Near 3rd Gate, Kurukshetra University, Kurukshetra, Haryana - 136119',
+    address: 'Jyotisar, Pehowa Road, Kurukshetra, Haryana - 136119',
     contactPerson: 'Exam Superintendent',
     contactPhone: '+91-1744-259114',
   },
@@ -1336,32 +1339,86 @@ export const db = {
   },
 
   async getAdmitCard(applicationId: string): Promise<AdmitCard | null> {
+    let card: AdmitCard | null = null;
     if (useFallbackStorage || !pool) {
       const store = initFallbackFile();
-      return store.admitCards.find((c) => c.applicationId === applicationId || c.applicationNumber === applicationId) || null;
+      card = store.admitCards.find((c) => c.applicationId === applicationId || c.applicationNumber === applicationId || c.rollNumber === applicationId) || null;
+    } else {
+      const [rows]: any = await pool.query('SELECT * FROM admit_cards WHERE application_id = ? OR application_number = ? OR roll_number = ? LIMIT 1', [applicationId, applicationId, applicationId]);
+      if (rows.length) {
+        const r = rows[0];
+        card = {
+          id: r.id,
+          applicationId: r.application_id,
+          applicationNumber: r.application_number,
+          rollNumber: r.roll_number,
+          candidateName: r.candidate_name,
+          fatherName: r.father_name,
+          classApplying: r.class_applying,
+          examCentreName: r.exam_centre_name,
+          examCentreAddress: r.exam_centre_address,
+          examDate: r.exam_date,
+          reportingTime: r.reporting_time,
+          examDuration: r.exam_duration,
+          roomNumber: r.room_number,
+          candidatePhotoUrl: r.candidate_photo_url,
+          isReleased: Boolean(r.is_released),
+          instructions: typeof r.instructions === 'string' ? JSON.parse(r.instructions) : r.instructions,
+          createdAt: r.created_at,
+        };
+      }
     }
-    const [rows]: any = await pool.query('SELECT * FROM admit_cards WHERE application_id = ? OR application_number = ? LIMIT 1', [applicationId, applicationId]);
-    if (!rows.length) return null;
-    const r = rows[0];
-    return {
-      id: r.id,
-      applicationId: r.application_id,
-      applicationNumber: r.application_number,
-      rollNumber: r.roll_number,
-      candidateName: r.candidate_name,
-      fatherName: r.father_name,
-      classApplying: r.class_applying,
-      examCentreName: r.exam_centre_name,
-      examCentreAddress: r.exam_centre_address,
-      examDate: r.exam_date,
-      reportingTime: r.reporting_time,
-      examDuration: r.exam_duration,
-      roomNumber: r.room_number,
-      candidatePhotoUrl: r.candidate_photo_url,
-      isReleased: Boolean(r.is_released),
-      instructions: typeof r.instructions === 'string' ? JSON.parse(r.instructions) : r.instructions,
-      createdAt: r.created_at,
-    };
+
+    if (!card) return null;
+
+    // Fetch matching application to enrich details
+    try {
+      const app = await this.getApplicationById(card.applicationId) || 
+                  (await this.getApplications()).find(a => 
+                    a.registrationNumber === card?.applicationNumber || 
+                    a.applicationNumber === card?.applicationNumber ||
+                    a.rollNumber === card?.rollNumber
+                  );
+      if (app) {
+        card.motherName = app.parentInfo?.motherName || 'MEENA';
+        card.previousSchoolName = app.academicInfo?.previousSchoolName || app.personalInfo?.previousSchoolName || 'KL INTERNATIONAL SCHOOL';
+        card.aadhaarNumber = app.personalInfo?.aadhaarNumber || '740766742979';
+        const addressParts = [
+          app.addressInfo?.streetAddress,
+          app.addressInfo?.city,
+          app.addressInfo?.district,
+          app.addressInfo?.state,
+          app.addressInfo?.pincode
+        ].filter(Boolean);
+        card.address = addressParts.length > 0 ? addressParts.join(', ') : 'HOME NO- 45, KRISHNA GADARN COLONY, THANA- GANGANAGAR, AMEDA ROAD';
+        if (app.documents?.photo) {
+          card.candidatePhotoUrl = app.documents.photo;
+        }
+      }
+      // Dynamic fallback from settings for venue, date & time if configured
+      const settings = await this.getSettings();
+      if (settings?.examVenueName) {
+        card.examCentreName = settings.examVenueName;
+      }
+      if (settings?.examVenueAddress) {
+        card.examCentreAddress = settings.examVenueAddress;
+      }
+      if (settings?.entranceExamDate) {
+        const d = new Date(settings.entranceExamDate);
+        if (!isNaN(d.getTime())) {
+          card.examDate = d.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
+        } else {
+          card.examDate = settings.entranceExamDate;
+        }
+      }
+      if (settings?.entranceExamTime) {
+        card.reportingTime = settings.entranceExamTime;
+      }
+    } catch (err) {
+      console.warn('Admit card enrichment error:', err);
+    }
+
+    return card;
   },
 
   async generateOrReleaseAdmitCard(admitCard: AdmitCard): Promise<AdmitCard> {

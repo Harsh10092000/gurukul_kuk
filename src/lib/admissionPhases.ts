@@ -1,4 +1,4 @@
-export interface AdmissionPhaseInfo {
+﻿export interface AdmissionPhaseInfo {
   phaseId: 'REGISTRATION_UPCOMING' | 'REGISTRATION_ACTIVE' | 'REGISTRATION_EXTENDED' | 'REGISTRATION_CLOSED' | 'ADMIT_CARD_RELEASED' | 'EXAMINATION_PERIOD' | 'RESULTS_DECLARED' | 'COUNSELING_ACTIVE';
   portalOpen: boolean;
   banner: {
@@ -75,7 +75,7 @@ function parseDateToTime(dateStr?: string): number | null {
  */
 export function resolveAdmissionPhase(input: PhaseDatesInput): AdmissionPhaseInfo {
   const now = input.currentDate ? input.currentDate.getTime() : Date.now();
-  const session = input.academicSession || '2026-27';
+  const session = input.academicSession || '2027-28';
 
   // Format milestone dates for user display
   const regStartFormatted = formatDateString(input.registrationStartDate, '01 September 2026');
@@ -352,3 +352,4 @@ export function resolveAdmissionPhase(input: PhaseDatesInput): AdmissionPhaseInf
     registrationCard,
   };
 }
+

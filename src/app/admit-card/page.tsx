@@ -75,14 +75,14 @@ export default function AdmitCardPage() {
   };
 
   return (
-    <div className="max-w-5xl mx-auto px-4 py-10 space-y-6">
+    <div className="max-w-5xl mx-auto px-4 py-10 space-y-6 print:p-0 print:m-0 print:max-w-full print:space-y-0">
       {/* Header */}
       <div className="text-center space-y-2 no-print">
         <span className="text-xs font-bold uppercase tracking-wider text-gurukul-600 bg-amber-100 px-3 py-1 rounded-full">
           Hall Ticket Download
         </span>
         <h1 className="text-2xl sm:text-3xl font-black text-gurukul-navy">
-          Download Entrance Examination Admit Card 2026-27
+          Download Entrance Examination Admit Card 2027-28
         </h1>
         <p className="text-xs sm:text-sm text-slate-500">
           Enter your Registration ID (e.g. NILB-00001 or NILG-00001) or Roll Number to retrieve and print your Hall Ticket.
@@ -90,7 +90,15 @@ export default function AdmitCardPage() {
       </div>
 
       {/* Status Notice if Not Released */}
-      {!isReleased && !checkingRelease ? (
+      {checkingRelease ? (
+        <div className="max-w-xl mx-auto bg-white border border-slate-200 rounded-3xl p-10 text-center space-y-4 shadow-sm no-print">
+          <div className="w-10 h-10 border-4 border-amber-500 border-t-transparent rounded-full animate-spin mx-auto" />
+          <div className="space-y-1">
+            <h3 className="text-sm font-bold text-slate-800">Verifying Examination Schedule &amp; Admit Card Status...</h3>
+            <p className="text-xs text-slate-400">Connecting to Admissions Board examination server</p>
+          </div>
+        </div>
+      ) : !isReleased ? (
         <div className="max-w-xl mx-auto bg-amber-50 border-2 border-amber-300 rounded-3xl p-8 text-center space-y-4 shadow-sm no-print">
           <div className="w-14 h-14 bg-amber-100 text-amber-700 rounded-2xl flex items-center justify-center mx-auto shadow-inner">
             <Clock className="w-8 h-8" />
@@ -103,7 +111,7 @@ export default function AdmitCardPage() {
               Admit Cards Have Not Been Released Yet
             </h2>
             <p className="text-xs text-amber-900 leading-relaxed max-w-md mx-auto">
-              Admit Cards for Entrance Examination (Session 2026-27) are under preparation and will be generated &amp; released collectively by the Admissions Board for all candidates.
+              Admit Cards for Entrance Examination (Session 2027-28) are under preparation and will be generated &amp; released collectively by the Admissions Board for all candidates.
             </p>
           </div>
           <div className="pt-2">
@@ -174,10 +182,16 @@ export default function AdmitCardPage() {
         </>
       )}
 
-      {/* Render Admit Card */}
-      {admitCard ? (
+      {/* Render Search Loading or Admit Card */}
+      {loading ? (
+        <div className="max-w-xl mx-auto bg-white border border-slate-200 rounded-2xl p-8 text-center space-y-3 shadow-sm no-print">
+          <div className="w-8 h-8 border-3 border-amber-500 border-t-transparent rounded-full animate-spin mx-auto" />
+          <p className="text-xs font-bold text-slate-700 uppercase tracking-wider">Locating Official Hall Ticket...</p>
+          <p className="text-[11px] text-slate-400">Verifying candidate identity and retrieving examination roll number</p>
+        </div>
+      ) : admitCard ? (
         <AdmitCardView admitCard={admitCard} />
-      ) : searched && !loading ? (
+      ) : searched ? (
         <div className="text-center py-12 text-slate-500 text-sm no-print">
           <FileText className="w-12 h-12 text-slate-300 mx-auto mb-2" />
           <p className="font-semibold text-slate-700">No Admit Card Available</p>
@@ -195,3 +209,4 @@ export default function AdmitCardPage() {
     </div>
   );
 }
+

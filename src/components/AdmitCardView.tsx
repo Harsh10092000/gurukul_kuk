@@ -2,224 +2,451 @@
 
 import React from 'react';
 import Image from 'next/image';
-import { Printer, Download, CheckCircle, AlertTriangle, ShieldCheck, MapPin, Clock, Calendar } from 'lucide-react';
+import { Printer, CheckCircle } from 'lucide-react';
 import { AdmitCard } from '@/lib/types';
 
 interface AdmitCardViewProps {
   admitCard: AdmitCard;
 }
 
-export default function AdmitCardView({ admitCard }: AdmitCardViewProps) {
-  const handlePrint = () => {
+export function printAdmitCard(sheetId: string = 'admit-card-print-sheet', title?: string) {
+  const element = document.getElementById(sheetId);
+  if (!element) {
     window.print();
+    return;
+  }
+
+  // Remove any previous print iframe if it exists
+  const existingFrame = document.getElementById('admit-card-print-iframe');
+  if (existingFrame) {
+    existingFrame.remove();
+  }
+
+  const iframe = document.createElement('iframe');
+  iframe.id = 'admit-card-print-iframe';
+  iframe.style.position = 'fixed';
+  iframe.style.top = '0';
+  iframe.style.left = '0';
+  iframe.style.width = '0';
+  iframe.style.height = '0';
+  iframe.style.border = 'none';
+  iframe.style.opacity = '0';
+  iframe.style.pointerEvents = 'none';
+  iframe.style.zIndex = '-9999';
+  document.body.appendChild(iframe);
+
+  const doc = iframe.contentWindow?.document;
+  if (!doc) {
+    window.print();
+    return;
+  }
+
+  // Extract all CSS links and style tags from parent document
+  const headElements = Array.from(
+    document.querySelectorAll('link[rel="stylesheet"], style')
+  )
+    .map((el) => el.outerHTML)
+    .join('\n');
+
+  doc.open();
+  doc.write(`
+    <!DOCTYPE html>
+    <html lang="en">
+      <head>
+        <meta charset="utf-8" />
+        <title>${title || 'Gurukul_Admit_Card'}</title>
+        ${headElements}
+        <style>
+          @page {
+            size: A4 portrait;
+            margin: 4mm 6mm 4mm 6mm;
+          }
+          * {
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+            box-sizing: border-box !important;
+          }
+          html, body {
+            margin: 0 !important;
+            padding: 0 !important;
+            background: #ffffff !important;
+            color: #000000 !important;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif !important;
+            width: 100% !important;
+            height: auto !important;
+          }
+          .no-print, button {
+            display: none !important;
+          }
+          .print-card {
+            border: 2px solid #000000 !important;
+            box-shadow: none !important;
+            margin: 0 auto !important;
+            width: 100% !important;
+            max-width: 100% !important;
+            page-break-inside: avoid !important;
+            break-inside: avoid !important;
+          }
+        </style>
+      </head>
+      <body>
+        <div style="width: 100%; max-width: 100%; margin: 0 auto; background: #ffffff;">
+          ${element.outerHTML}
+        </div>
+      </body>
+    </html>
+  `);
+  doc.close();
+
+  const trigger = () => {
+    try {
+      iframe.contentWindow?.focus();
+      iframe.contentWindow?.print();
+    } catch (e) {
+      console.error('Error invoking iframe print', e);
+      window.print();
+    }
   };
 
+  // Wait for all images to be loaded
+  const imgs = iframe.contentDocument?.images;
+  const total = imgs ? imgs.length : 0;
+  if (total === 0) {
+    setTimeout(trigger, 250);
+  } else {
+    let loaded = 0;
+    let done = false;
+    const checkDone = () => {
+      loaded++;
+      if (loaded >= total && !done) {
+        done = true;
+        setTimeout(trigger, 250);
+      }
+    };
+    for (let i = 0; i < total; i++) {
+      const img = imgs![i];
+      if (img.complete) {
+        checkDone();
+      } else {
+        img.onload = checkDone;
+        img.onerror = checkDone;
+      }
+    }
+    setTimeout(() => {
+      if (!done) {
+        done = true;
+        trigger();
+      }
+    }, 1500);
+  }
+}
+
+export default function AdmitCardView({ admitCard }: AdmitCardViewProps) {
+  const handlePrint = () => {
+    const docTitle = `AdmitCard_${admitCard.rollNumber || admitCard.applicationNumber}_${(admitCard.candidateName || 'Candidate').replace(/\s+/g, '_')}`;
+    printAdmitCard('admit-card-print-sheet', docTitle);
+  };
+
+  // Listen to keyboard Ctrl+P / Cmd+P to trigger clean isolated print
+  React.useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'p') {
+        e.preventDefault();
+        handlePrint();
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [admitCard]);
+
+  // Dynamic Venue, Exam Date, and Timing values
+  const venueName = (admitCard.examCentreName || 'THE GURUKUL JYOTISAR PEHOWA ROAD, KURUKSHETRA').toUpperCase();
+  const venueAddress = admitCard.examCentreAddress || '136119, Haryana';
+  const examDate = admitCard.examDate || '21 March 2027';
+  const examTime = admitCard.reportingTime || '9:30 AM';
+
   return (
-    <div className="w-full max-w-4xl mx-auto my-6">
-      {/* Action Bar (Hidden when printing) */}
-      <div className="no-print bg-amber-50 border border-amber-200 rounded-xl p-4 mb-6 flex flex-wrap justify-between items-center gap-4">
+    <div className="w-full max-w-4xl mx-auto my-6 px-2 sm:px-4 font-sans text-slate-900 print:m-0 print:p-0 print:max-w-full">
+      {/* Top Action Bar (Hidden when printing) */}
+      <div className="no-print bg-amber-50 border border-amber-200 rounded-xl p-4 mb-6 flex flex-wrap justify-between items-center gap-4 shadow-sm">
         <div>
-          <h2 className="text-amber-900 font-bold text-lg flex items-center gap-2">
+          <h2 className="text-amber-900 font-bold text-base sm:text-lg flex items-center gap-2">
             <CheckCircle className="w-5 h-5 text-emerald-600" />
-            Official Admit Card Ready
+            Official Admit Card Ready (Session 2027-28)
           </h2>
-          <p className="text-xs text-amber-800">
-            Please print at least 2 copies of this Hall Ticket on A4 size white paper and carry it to the examination centre.
+          <p className="text-xs text-amber-800 mt-0.5">
+            Important: As per examination guidelines, please take a clear <strong>COLOUR PRINT OUT</strong> on A4 size paper.
           </p>
         </div>
         <div className="flex gap-3">
           <button
             onClick={handlePrint}
-            className="bg-gurukul-600 hover:bg-gurukul-700 text-white font-bold px-5 py-2.5 rounded-lg text-sm shadow-md flex items-center gap-2 transition"
+            id="admit-card-print-btn"
+            className="bg-gurukul-navy hover:bg-slate-900 text-white font-bold px-5 py-2.5 rounded-lg text-xs sm:text-sm shadow flex items-center gap-2 transition"
           >
-            <Printer className="w-4 h-4" />
+            <Printer className="w-4 h-4 text-amber-400" />
             <span>Print / Save as PDF</span>
           </button>
         </div>
       </div>
 
-      {/* The Printable Hall Ticket Sheet */}
-      <div className="bg-white border-2 border-slate-900 shadow-xl rounded-lg p-6 sm:p-8 print:p-4 print:border print:shadow-none print-card text-slate-900">
-        {/* Header Section */}
-        <div className="border-b-2 border-slate-900 pb-4 mb-5 text-center relative">
-          <div className="flex justify-between items-center gap-4">
-            <div className="w-20 h-20 sm:w-24 sm:h-24 flex-shrink-0 flex items-center justify-center">
-              <Image
-                src="/logo-gurukul.png"
-                alt="Gurukul Crest"
-                width={80}
-                height={80}
-                className="brand-logo-img object-contain"
-              />
-            </div>
+      {/* Printable Sheet (Standard A4 Official Layout matching PDF Template) */}
+      <div
+        id="admit-card-print-sheet"
+        className="bg-white border-2 border-black p-4 sm:p-7 print:p-2.5 print:border-2 print:border-black print-card text-black space-y-3 sm:space-y-3.5 print:space-y-1.5 leading-tight"
+      >
+        
+        {/* 1. Top Warning Box */}
+        <div className="border border-black py-1 print:py-0.5 px-2 text-center">
+          <span className="font-black text-xs sm:text-sm print:text-xs tracking-wider uppercase">
+            ADMIT CARD MUST BE PRINTED IN COLOR ONLY
+          </span>
+        </div>
 
-            <div className="flex-1 text-center px-2">
-              <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-gurukul-navy">
-                GURUKUL
-              </h1>
-              <p className="text-xs sm:text-sm font-serif font-bold text-gurukul-700">
-                तमसो मा ज्योतिर्गमय
-              </p>
-              <p className="text-[11px] text-slate-600 font-medium">
-                (CBSE Affiliated Institutional Network • Haryana)
-              </p>
-              <p className="text-[11px] text-slate-500">
-                Entrance Examination & Admission Counseling 2026-27
-              </p>
-              <div className="mt-2 inline-block bg-gurukul-navy text-white text-xs sm:text-sm font-black tracking-wider px-4 py-1 rounded">
-                ENTRANCE EXAMINATION (SESSION 2026-27) • ADMIT CARD
-              </div>
-            </div>
+        {/* 2. Date and Time of Entrance Test */}
+        <div className="border border-black py-1 print:py-0.5 px-3 text-center">
+          <span className="text-xs sm:text-[13px] print:text-xs font-bold">
+            Date and Time of Entrance Test: <strong className="font-black underline decoration-1 underline-offset-2">{examDate}</strong> &nbsp;&nbsp; Time: <strong className="font-black underline decoration-1 underline-offset-2">{examTime}</strong>
+          </span>
+        </div>
 
-            {/* Barcode representation */}
-            <div className="hidden sm:flex flex-col items-center justify-center p-2 border border-slate-300 rounded text-center w-28">
-              <div className="w-24 h-8 bg-slate-900 flex items-center justify-center text-[10px] text-white font-mono tracking-widest">
-                |||||||||||||
-              </div>
-              <span className="text-[10px] font-mono mt-1 font-bold">{admitCard.rollNumber}</span>
+        {/* 3. Ranking Banner Subtitle */}
+        <div className="text-center pt-0.5 print:pt-0">
+          <p className="text-[10px] sm:text-[11px] print:text-[9.5px] font-extrabold uppercase tracking-tight text-slate-800">
+            RANKED HARYANA&apos;S NO.1 BEST VINTAGE LEGACY BOYS BOARDING SCHOOL BY EDUCATION WORLD FOR THE YEAR 2025-26
+          </p>
+        </div>
+
+        {/* 4. Institutional Header Section with Dual Logos */}
+        <div className="flex items-center justify-between gap-3 pt-1 pb-2 print:pt-0.5 print:pb-1 border-b border-black">
+          {/* Left Crest Logo */}
+          <div className="w-20 h-20 sm:w-24 sm:h-24 print:w-16 print:h-16 flex-shrink-0 flex items-center justify-center">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="/logo-gurukul.png"
+              alt="Gurukul Crest"
+              className="max-h-20 sm:max-h-24 print:max-h-16 max-w-full object-contain"
+            />
+          </div>
+
+          {/* Center Institutional Details */}
+          <div className="flex-1 text-center px-1">
+            <h1 className="text-2xl sm:text-3xl print:text-xl font-black tracking-tight uppercase leading-none font-serif text-slate-900">
+              GURUKUL
+            </h1>
+            <p className="text-[11px] sm:text-xs print:text-[10px] font-semibold text-slate-700 mt-1 print:mt-0.5">
+              Affiliated to C.B.S.E. New Delhi up to 10+2 Level
+            </p>
+            <div className="mt-1.5 print:mt-1 inline-block border border-black bg-slate-50 text-black text-xs sm:text-sm print:text-xs font-black tracking-wider px-4 py-0.5 print:px-3 print:py-0.2 uppercase">
+              ADMIT CARD : 2027-28
             </div>
+            <p className="text-[11px] sm:text-xs print:text-[10px] font-bold text-slate-900 mt-1.5 print:mt-0.5 leading-snug">
+              Venue for Entrance Test: <span className="uppercase">{venueName}</span>
+            </p>
+          </div>
+
+          {/* Right Patron Portrait */}
+          <div className="w-20 h-20 sm:w-24 sm:h-24 print:w-16 print:h-16 flex-shrink-0 flex items-center justify-center">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="/gurukul-patron.png"
+              alt="Gurukul Patron"
+              className="max-h-20 sm:max-h-24 print:max-h-16 max-w-full object-contain rounded-full shadow-sm"
+            />
           </div>
         </div>
 
-        {/* Candidate & Exam Coordinates Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 border border-slate-300 p-4 rounded-lg bg-slate-50 mb-6">
-          {/* Main Info Columns (Col 1-3) */}
-          <div className="md:col-span-3 space-y-3">
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 text-xs">
-              <div>
-                <span className="text-slate-500 block font-medium">Roll Number:</span>
-                <span className={`font-mono font-black ${admitCard.rollNumber?.includes('allotted') ? 'text-xs text-amber-700 bg-amber-50 px-2 py-0.5 rounded border border-amber-300 inline-block' : 'text-lg text-gurukul-navy'}`}>
-                  {admitCard.rollNumber}
-                </span>
-              </div>
-              <div>
-                <span className="text-slate-500 block font-medium">Registration ID:</span>
-                <span className="font-mono font-bold text-sm text-slate-800">
-                  {admitCard.applicationNumber}
-                </span>
-              </div>
-              <div>
-                <span className="text-slate-500 block font-medium">Applying For:</span>
-                <span className="font-bold text-sm text-gurukul-700 bg-amber-100 px-2 py-0.5 rounded inline-block">
-                  {admitCard.classApplying}
-                </span>
+        {/* 5. Main Section: Candidate Details Table + Dual Photos */}
+        <div className="grid grid-cols-1 md:grid-cols-12 print:grid-cols-12 gap-3 print:gap-2 pt-1 print:pt-0.5">
+          {/* Candidate's Details Table (Left Side - 9 Columns / 75%) */}
+          <div className="md:col-span-9 print:col-span-9">
+            <div className="border border-black">
+              {/* Details Header Bar */}
+              <div className="bg-slate-100 border-b border-black text-center py-1 print:py-0.5 font-black text-xs sm:text-sm print:text-xs uppercase tracking-wider">
+                CANDIDATE&apos;S DETAILS
               </div>
 
-              <div>
-                <span className="text-slate-500 block font-medium">Candidate Name:</span>
-                <span className="font-bold text-sm text-slate-900 uppercase">
-                  {admitCard.candidateName}
-                </span>
-              </div>
-              <div>
-                <span className="text-slate-500 block font-medium">Father&apos;s Name:</span>
-                <span className="font-bold text-sm text-slate-900">
-                  {admitCard.fatherName}
-                </span>
-              </div>
-              <div>
-                <span className="text-slate-500 block font-medium">Room / Desk:</span>
-                <span className="font-bold text-sm text-slate-900">
-                  {admitCard.roomNumber || 'Hall-A'}
-                </span>
-              </div>
-            </div>
+              {/* Field Rows */}
+              <div className="divide-y divide-black text-[11px] sm:text-xs print:text-[10px]">
+                <div className="grid grid-cols-12">
+                  <div className="col-span-5 sm:col-span-4 p-1.5 print:py-0.5 print:px-1.5 font-bold border-r border-black bg-slate-50/70">
+                    Class Applying For
+                  </div>
+                  <div className="col-span-7 sm:col-span-8 p-1.5 print:py-0.5 print:px-1.5 font-bold uppercase">
+                    {admitCard.classApplying} {admitCard.stream ? `(${admitCard.stream})` : ''}
+                  </div>
+                </div>
 
-            {/* Exam Date & Venue Highlights */}
-            <div className="mt-4 pt-3 border-t border-slate-200 grid grid-cols-1 sm:grid-cols-2 gap-3 bg-white p-3 rounded border border-slate-200 text-xs">
-              <div>
-                <span className="font-bold text-slate-700 flex items-center gap-1">
-                  <Calendar className="w-3.5 h-3.5 text-gurukul-600" /> Exam Date & Timing:
-                </span>
-                <p className="font-extrabold text-sm text-gurukul-navy mt-0.5">
-                  {admitCard.examDate}
-                </p>
-                <p className="text-slate-600 text-xs flex items-center gap-1 mt-0.5">
-                  <Clock className="w-3 h-3 text-slate-400" />
-                  Reporting: {admitCard.reportingTime} ({admitCard.examDuration})
-                </p>
-              </div>
+                <div className="grid grid-cols-12">
+                  <div className="col-span-5 sm:col-span-4 p-1.5 print:py-0.5 print:px-1.5 font-bold border-r border-black bg-slate-50/70">
+                    Registration Number
+                  </div>
+                  <div className="col-span-7 sm:col-span-8 p-1.5 print:py-0.5 print:px-1.5 font-mono font-bold">
+                    {admitCard.applicationNumber}
+                  </div>
+                </div>
 
-              <div>
-                <span className="font-bold text-slate-700 flex items-center gap-1">
-                  <MapPin className="w-3.5 h-3.5 text-gurukul-600" /> Examination Centre:
-                </span>
-                <p className="font-bold text-xs text-slate-900 mt-0.5">
-                  {admitCard.examCentreName}
-                </p>
-                <p className="text-[11px] text-slate-500 leading-tight">
-                  {admitCard.examCentreAddress}
-                </p>
+                <div className="grid grid-cols-12">
+                  <div className="col-span-5 sm:col-span-4 p-1.5 print:py-0.5 print:px-1.5 font-bold border-r border-black bg-slate-50/70">
+                    Roll Number
+                  </div>
+                  <div className="col-span-7 sm:col-span-8 p-1.5 print:py-0.5 print:px-1.5 font-mono font-black text-sm print:text-xs text-slate-900">
+                    {admitCard.rollNumber}
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-12">
+                  <div className="col-span-5 sm:col-span-4 p-1.5 print:py-0.5 print:px-1.5 font-bold border-r border-black bg-slate-50/70">
+                    Candidate Name
+                  </div>
+                  <div className="col-span-7 sm:col-span-8 p-1.5 print:py-0.5 print:px-1.5 font-black uppercase">
+                    {admitCard.candidateName}
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-12">
+                  <div className="col-span-5 sm:col-span-4 p-1.5 print:py-0.5 print:px-1.5 font-bold border-r border-black bg-slate-50/70">
+                    Father&apos;s Name
+                  </div>
+                  <div className="col-span-7 sm:col-span-8 p-1.5 print:py-0.5 print:px-1.5 font-bold uppercase">
+                    {admitCard.fatherName}
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-12">
+                  <div className="col-span-5 sm:col-span-4 p-1.5 print:py-0.5 print:px-1.5 font-bold border-r border-black bg-slate-50/70">
+                    Mother&apos;s Name
+                  </div>
+                  <div className="col-span-7 sm:col-span-8 p-1.5 print:py-0.5 print:px-1.5 font-bold uppercase">
+                    {admitCard.motherName || 'MEENA'}
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-12">
+                  <div className="col-span-5 sm:col-span-4 p-1.5 print:py-0.5 print:px-1.5 font-bold border-r border-black bg-slate-50/70">
+                    Name of School Last Attended
+                  </div>
+                  <div className="col-span-7 sm:col-span-8 p-1.5 print:py-0.5 print:px-1.5 font-medium uppercase">
+                    {admitCard.previousSchoolName || 'KL INTERNATIONAL SCHOOL'}
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-12">
+                  <div className="col-span-5 sm:col-span-4 p-1.5 print:py-0.5 print:px-1.5 font-bold border-r border-black bg-slate-50/70">
+                    Aadhar No.
+                  </div>
+                  <div className="col-span-7 sm:col-span-8 p-1.5 print:py-0.5 print:px-1.5 font-mono font-bold">
+                    {admitCard.aadhaarNumber || '740766742979'}
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-12">
+                  <div className="col-span-5 sm:col-span-4 p-1.5 print:py-0.5 print:px-1.5 font-bold border-r border-black bg-slate-50/70">
+                    Permanent Address of the Student
+                  </div>
+                  <div className="col-span-7 sm:col-span-8 p-1.5 print:py-0.5 print:px-1.5 uppercase text-[10px] sm:text-[11px] print:text-[9.5px] leading-tight">
+                    {admitCard.address || 'HOME NO- 45, KRISHNA GADARN COLONY, THANA- GANGANAGAR, AMEDA ROAD'}
+                  </div>
+                </div>
               </div>
             </div>
           </div>
 
-          {/* Candidate Photo & Sign Box (Col 4) */}
-          <div className="flex flex-col items-center justify-between border-t md:border-t-0 md:border-l border-slate-300 pt-3 md:pt-0 md:pl-4">
-            <div className="w-28 h-36 border-2 border-dashed border-slate-400 rounded bg-slate-100 flex flex-col items-center justify-center relative overflow-hidden">
+          {/* Right Side: Dual Photo Boxes (Col 3 / 25%) */}
+          <div className="md:col-span-3 print:col-span-3 flex flex-row md:flex-col print:flex-col justify-between items-center gap-3 print:gap-1.5">
+            {/* Box 1 (Top): Uploaded Candidate Photograph */}
+            <div className="w-28 sm:w-32 h-36 sm:h-40 print:w-28 print:h-32 border border-black bg-slate-50 flex items-center justify-center relative overflow-hidden shadow-inner">
               {admitCard.candidatePhotoUrl ? (
-                <Image
+                /* eslint-disable-next-line @next/next/no-img-element */
+                <img
                   src={admitCard.candidatePhotoUrl}
                   alt="Candidate Photo"
-                  fill
-                  className="object-cover"
+                  className="w-full h-full object-cover"
                 />
               ) : (
-                <span className="text-[10px] text-slate-400 text-center px-1">
-                  Affix Passport Size Photo
-                </span>
+                <div className="text-center p-2 text-[10px] font-bold text-slate-400">
+                  Candidate Photo
+                </div>
               )}
             </div>
-            <div className="w-28 h-10 border border-slate-300 mt-2 bg-white flex items-center justify-center text-[9px] text-slate-400 font-mono">
-              Candidate Signature
+
+            {/* Box 2 (Bottom): Physical Paste Box with Watermark outline */}
+            <div className="w-28 sm:w-32 h-36 sm:h-40 print:w-28 print:h-32 border border-black bg-slate-50/60 flex flex-col items-center justify-center p-2 print:p-1 text-center relative">
+              {/* Silhouette / Watermark Icon */}
+              <div className="w-10 h-10 print:w-7 print:h-7 border-2 border-dashed border-slate-400 rounded-full mb-2 print:mb-1 flex items-center justify-center text-slate-400 opacity-60">
+                <span className="text-lg print:text-sm">👤</span>
+              </div>
+              <p className="text-[9px] sm:text-[10px] print:text-[8.5px] font-extrabold uppercase text-slate-600 leading-tight">
+                Paste Your Recent Coloured Photograph On Admit Card
+              </p>
             </div>
           </div>
         </div>
 
-        {/* Instructions Section */}
-        <div className="border border-slate-200 rounded-lg p-4 bg-slate-50 mb-6 text-xs text-slate-700">
-          <h3 className="font-bold text-slate-900 mb-2 flex items-center gap-1.5 uppercase text-[11px] tracking-wider">
-            <ShieldCheck className="w-4 h-4 text-gurukul-600" /> Important Instructions for Candidate
+        {/* 6. Signatures Verification Row */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 print:grid-cols-3 gap-3 print:gap-2 pt-3 print:pt-1.5 items-end">
+          {/* Principal's Signature */}
+          <div className="text-center">
+            <div className="h-14 print:h-9 border-b border-black flex items-center justify-center mx-auto max-w-[170px] pb-1 print:pb-0.5">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src="/principal-signature.png"
+                alt="Principal Signature"
+                className="max-h-12 print:max-h-8 w-auto object-contain"
+              />
+            </div>
+            <p className="mt-1 print:mt-0.5 font-bold text-[10px] sm:text-xs print:text-[9.5px] uppercase tracking-tight text-slate-900">
+              PRINCIPAL&apos;S SIGNATURE
+            </p>
+          </div>
+
+          {/* Candidate's Signature */}
+          <div className="text-center">
+            <div className="h-14 print:h-9 border-b border-black mx-auto max-w-[170px]"></div>
+            <p className="mt-1 print:mt-0.5 font-bold text-[10px] sm:text-xs print:text-[9.5px] uppercase tracking-tight text-slate-900">
+              CANDIDATE&apos;S SIGNATURE
+            </p>
+            <span className="text-[9px] print:text-[8px] text-slate-600 block">
+              (To be signed in the presence of Invigilator)
+            </span>
+          </div>
+
+          {/* Invigilator's Signature & Legal Statement */}
+          <div className="text-center">
+            <div className="h-14 print:h-9 border-b border-black mx-auto max-w-[200px]"></div>
+            <p className="mt-1 print:mt-0.5 font-bold text-[10px] sm:text-xs print:text-[9.5px] uppercase tracking-tight text-slate-900 leading-tight">
+              NAME AND SIGNATURE OF INVIGILATOR
+            </p>
+            <span className="text-[8px] sm:text-[9px] print:text-[7.5px] text-slate-600 block leading-tight mt-0.5">
+              (Candidate&apos;s Signature obtained in my presence and photograph verified by me)
+            </span>
+          </div>
+        </div>
+
+        {/* 7. Numbered Instructions Box */}
+        <div className="border border-black p-2.5 sm:p-3 print:p-1.5 bg-white mt-2 print:mt-1">
+          <h3 className="font-black text-center uppercase text-xs sm:text-[13px] print:text-[11px] tracking-wider mb-1.5 print:mb-0.5">
+            ADMIT CARD INSTRUCTIONS FOR THE CANDIDATES
           </h3>
-          <ol className="list-decimal list-inside space-y-1 text-[11px] leading-relaxed">
-            <li>
-              Candidate must report at the examination centre at the specified reporting time (<strong>{admitCard.reportingTime}</strong>). No entry will be permitted after the exam commencement.
-            </li>
-            <li>
-              Bring this printed Admit Card along with original Aadhaar Card or school identity card for physical verification.
-            </li>
-            <li>
-              Use only <strong>Blue or Black Ballpoint Pen</strong> to write answers/darken OMR circles. Pencils, gel pens, or correction fluids are strictly prohibited.
-            </li>
-            <li>
-              Possession of electronic gadgets, mobile phones, digital watches, or calculators inside the examination hall will lead to immediate disqualification.
-            </li>
-            <li>
-              Admissions to Gurukul are based strictly on merit followed by counseling and physical fitness verification.
-            </li>
+          <ol className="list-decimal list-inside space-y-1 print:space-y-0.5 text-[10px] sm:text-[11px] print:text-[9px] text-slate-900 font-medium leading-relaxed print:leading-tight pl-1 sm:pl-2">
+            <li>Kindly reach exam venue well in time as mentioned on admit card.</li>
+            <li>Paste Your Recent Coloured Photograph On Admit Card.</li>
+            <li>Please bring Black or Blue Ball point pen and one Cardboard with you.</li>
+            <li>A coloured print out of admit card.</li>
+            <li>Please bring Valid ID proof or ADHAAR Card on the day of examination.</li>
           </ol>
         </div>
 
-        {/* Signatures & Seal Verification */}
-        <div className="grid grid-cols-3 gap-4 pt-6 border-t border-slate-300 text-center text-xs">
-          <div>
-            <div className="h-10 border-b border-slate-400 mx-4"></div>
-            <p className="mt-1 font-semibold text-slate-600">Candidate&apos;s Signature</p>
-            <span className="text-[9px] text-slate-400">(In presence of invigilator)</span>
-          </div>
-          <div>
-            <div className="h-10 border-b border-slate-400 mx-4"></div>
-            <p className="mt-1 font-semibold text-slate-600">Invigilator&apos;s Signature</p>
-            <span className="text-[9px] text-slate-400">(Exam Room Incharge)</span>
-          </div>
-          <div>
-            <div className="h-10 flex items-center justify-center mx-4">
-              <span className="font-serif italic font-bold text-gurukul-800 text-sm">Gurukul Exam Cell</span>
-            </div>
-            <p className="mt-1 font-bold text-slate-900">Controller of Examinations</p>
-            <span className="text-[9px] text-slate-500">Gurukul Admission Cell</span>
-          </div>
+        {/* 8. Dynamic Bottom Venue Box */}
+        <div className="text-center pt-2 print:pt-1 border-t border-black">
+          <p className="font-black text-xs sm:text-sm print:text-xs uppercase tracking-wide text-slate-900">
+            VENUE: {venueName}
+          </p>
+          <p className="font-bold text-xs sm:text-sm print:text-[10.5px] text-slate-800 uppercase mt-0.5">
+            {venueAddress}
+          </p>
         </div>
+
       </div>
     </div>
   );

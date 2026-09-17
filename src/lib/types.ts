@@ -137,6 +137,10 @@ export interface AdmitCard {
   rollNumber: string;
   candidateName: string;
   fatherName: string;
+  motherName?: string;
+  previousSchoolName?: string;
+  aadhaarNumber?: string;
+  address?: string;
   classApplying: string;
   stream?: string;
   examCentreName: string;
@@ -201,6 +205,9 @@ export interface SystemSettings {
   registrationEndDate: string;
   admitCardReleaseDate: string;
   entranceExamDate: string;
+  entranceExamTime?: string;
+  examVenueName?: string;
+  examVenueAddress?: string;
   resultDeclarationDate: string;
   counselingStartDate: string;
   helplinePhone: string;

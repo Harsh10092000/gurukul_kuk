@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server';
+﻿import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { sendNotification } from '@/lib/notifications';
 
@@ -169,7 +169,7 @@ export async function POST(req: Request) {
           type: 'FORGOT_REGISTRATION_RECOVERY',
           data: {
             registrationNumber,
-            className: classApplying || 'Entrance Exam 2026-27',
+            className: classApplying || 'Entrance Exam 2027-28',
           },
         });
         console.log(`[Forgot Reg No] Dispatched registration number ${registrationNumber} to candidate email ${user.email}`);
@@ -194,3 +194,4 @@ export async function POST(req: Request) {
     );
   }
 }
+
