@@ -73,7 +73,7 @@ export default function CandidateAdmissionFormPage() {
 
   if (!isAdmin) {
     return (
-      <div className="min-h-[75vh] flex items-center justify-center p-4 font-sans bg-slate-50">
+      <div className="min-h-[75vh] flex items-center justify-center p-4 font-sans">
         <div className="max-w-md w-full portal-card p-6 sm:p-8 text-center space-y-4 shadow-md border-slate-300">
           <div className="w-14 h-14 rounded-full bg-portal-navy/10 text-portal-navy flex items-center justify-center mx-auto">
             <ShieldAlert className="w-7 h-7 text-portal-navy" />

@@ -188,7 +188,7 @@ export default function ForgotPasswordPage() {
 
   if (success) {
     return (
-      <div className="min-h-[85vh] flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8 bg-slate-50 font-sans">
+      <div className="min-h-[85vh] flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8 font-sans">
         <div className="max-w-md w-full space-y-4 bg-white p-8 rounded-xl shadow-xs border border-slate-200 text-center">
           <CheckCircle2 className="w-12 h-12 text-emerald-600 mx-auto" />
           <h2 className="text-xl font-bold text-portal-navy">
@@ -211,7 +211,7 @@ export default function ForgotPasswordPage() {
   }
 
   return (
-    <div className="min-h-[85vh] flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8 bg-slate-50 font-sans">
+    <div className="min-h-[85vh] flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8 font-sans">
       <div className="max-w-md w-full space-y-6 bg-white p-8 rounded-xl shadow-xs border border-slate-200">
         <div className="text-center space-y-1.5">
           <div className="w-12 h-12 mx-auto flex items-center justify-center">

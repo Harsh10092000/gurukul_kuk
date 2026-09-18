@@ -177,6 +177,22 @@ img {
 
   .page-break {
     page-break-after: always;
+    break-after: page;
+  }
+
+  .attendance-sheet-page {
+    page-break-after: always !important;
+    break-after: page !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+    display: block !important;
+    width: 100% !important;
+    margin-bottom: 0 !important;
+  }
+
+  .attendance-sheet-page:last-child {
+    page-break-after: auto !important;
+    break-after: auto !important;
   }
 
   .print-card {

@@ -226,7 +226,7 @@ export default function RegisterPage() {
   // Screen 2: OTP Verification Card
   if (step === 'otp') {
     return (
-      <div className="min-h-[85vh] flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8 bg-slate-50 font-sans">
+      <div className="min-h-[85vh] flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8 font-sans">
         <div className="max-w-md w-full space-y-6 bg-white p-8 rounded-xl shadow-xs border border-slate-200">
           <div className="text-center space-y-1.5">
             <span className="text-[10px] font-bold uppercase tracking-wider text-portal-navy bg-slate-100 px-3 py-1 rounded-full inline-block">
@@ -311,7 +311,7 @@ export default function RegisterPage() {
   // Closed Schedule Guard
   if (scheduleStatus && !scheduleStatus.isOpen) {
     return (
-      <div className="min-h-[85vh] flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8 bg-slate-50 font-sans">
+      <div className="min-h-[85vh] flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8 font-sans">
         <div className="max-w-md w-full space-y-5 bg-white p-8 rounded-xl shadow-xs border border-rose-200 text-center">
           <div className="space-y-1.5">
             <span className="text-[10px] font-bold uppercase tracking-wider text-rose-700 bg-rose-50 px-3 py-1 rounded-full inline-block border border-rose-200">
@@ -354,7 +354,7 @@ export default function RegisterPage() {
 
   // Screen 1: Details Entry
   return (
-    <div className="min-h-[85vh] flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8 bg-slate-50 font-sans">
+    <div className="min-h-[85vh] flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8 font-sans">
       <div className="max-w-md w-full space-y-6 bg-white p-8 rounded-xl shadow-xs border border-slate-200">
         <div className="text-center space-y-1.5">
           <div className="w-12 h-12 mx-auto flex items-center justify-center">

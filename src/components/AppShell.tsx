@@ -11,9 +11,9 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
 
   if (isAdminArea) {
     return (
-      <div className="min-h-screen w-full flex flex-col bg-slate-50 text-slate-900">
+      <div className="min-h-screen w-full flex flex-col text-slate-900">
         <Header />
-        <div className="flex-1 flex flex-col w-full">
+        <div className="flex-1 flex flex-col w-full bg-gradient-to-br from-[#dbeafe] via-[#fffdf8] via-45% to-[#fde1be]">
           {children}
         </div>
       </div>
@@ -21,9 +21,9 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <div className="min-h-screen flex flex-col bg-slate-50 text-slate-900">
+    <div className="min-h-screen flex flex-col text-slate-900">
       <Header />
-      <main className="flex-grow">{children}</main>
+      <main className="flex-grow bg-gradient-to-br from-[#dbeafe] via-[#fffdf8] via-45% to-[#fde1be] flex flex-col">{children}</main>
       <Footer />
     </div>
   );

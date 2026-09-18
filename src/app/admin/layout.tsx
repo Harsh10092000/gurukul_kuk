@@ -98,7 +98,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   ];
 
   return (
-    <div className="flex-1 min-h-screen w-full bg-slate-50 flex flex-col md:flex-row font-sans">
+    <div className="flex-1 min-h-screen w-full bg-transparent flex flex-col md:flex-row font-sans">
       {/* Mobile Top Bar */}
       <div className="md:hidden bg-portal-navy text-white p-3 flex justify-between items-center z-40 border-b border-slate-800 flex-shrink-0">
         <Link href="/admin/dashboard" className="flex items-center gap-2">
@@ -228,7 +228,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       </aside>
 
       {/* Main Content Area with Natural Scroll & Admin Footer */}
-      <div className="flex-1 flex flex-col min-w-0 bg-slate-50">
+      <div className="flex-1 flex flex-col min-w-0 bg-transparent">
         <main className="flex-1 p-4 sm:p-6 lg:p-8 w-full pb-16">
           <div className="max-w-6xl mx-auto">
             {children}

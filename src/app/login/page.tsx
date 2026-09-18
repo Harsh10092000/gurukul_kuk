@@ -110,7 +110,7 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-[85vh] bg-slate-50 py-8 sm:py-12 px-4 sm:px-6 lg:px-8 font-sans">
+    <div className="min-h-[85vh] py-8 sm:py-12 px-4 sm:px-6 lg:px-8 font-sans">
       <div className="max-w-5xl mx-auto">
         {/* Top Breadcrumb & Badge */}
         <div className="flex flex-wrap items-center justify-between gap-3 mb-6 border-b border-slate-200 pb-4">

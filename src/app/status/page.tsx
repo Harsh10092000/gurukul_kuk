@@ -185,7 +185,7 @@ export default function StatusPage() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 py-10 px-4 sm:px-6">
+    <div className="min-h-screen py-10 px-4 sm:px-6">
       <div className="max-w-4xl mx-auto space-y-6">
 
         {/* Page Header */}

@@ -158,7 +158,7 @@ export default function ExamPortalGateway() {
   });
 
   return (
-    <div className="w-full min-h-screen bg-slate-50 pb-16 font-sans">
+    <div className="w-full min-h-screen bg-gradient-to-br from-[#dbeafe] via-[#fffdf8] via-45% to-[#fde1be] pb-16 font-sans">
       {/* Dynamic Phase-Aware Announcement Strip */}
       {!scheduleLoaded ? (
         <div className="py-2 px-4 text-center text-xs font-semibold flex items-center justify-center gap-2 border-b bg-slate-100 text-slate-400">
