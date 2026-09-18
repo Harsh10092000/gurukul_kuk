@@ -13,12 +13,8 @@ import {
   AlertTriangle, 
   Mail, 
   Clock, 
-  ExternalLink,
-  Filter,
-  Sparkles,
-  ArrowRight,
-  ChevronLeft,
-  ChevronRight
+  ChevronLeft, 
+  ChevronRight 
 } from 'lucide-react';
 import { AdminNotification } from '@/lib/types';
 
@@ -126,17 +122,17 @@ export default function AdminNotificationCenterPage() {
   const getNotificationIcon = (type: AdminNotification['type']) => {
     switch (type) {
       case 'APPLICATION_APPROVED':
-        return <CheckCircle2 className="w-5 h-5 text-emerald-600" />;
+        return <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />;
       case 'APPLICATION_REJECTED':
-        return <XCircle className="w-5 h-5 text-rose-600" />;
+        return <XCircle className="w-5 h-5 text-rose-600 shrink-0" />;
       case 'CORRECTION_REQUIRED':
-        return <AlertTriangle className="w-5 h-5 text-amber-600" />;
+        return <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0" />;
       case 'CONTACT_ENQUIRY':
-        return <Mail className="w-5 h-5 text-blue-600" />;
+        return <Mail className="w-5 h-5 text-blue-600 shrink-0" />;
       case 'APPLICATION_SUBMITTED':
-        return <FileText className="w-5 h-5 text-gurukul-600" />;
+        return <FileText className="w-5 h-5 text-portal-navy shrink-0" />;
       default:
-        return <Sparkles className="w-5 h-5 text-purple-600" />;
+        return <Bell className="w-5 h-5 text-slate-600 shrink-0" />;
     }
   };
 
@@ -145,34 +141,36 @@ export default function AdminNotificationCenterPage() {
       {/* Top Title & Actions */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <div className="flex items-center gap-2">
-            <h1 className="text-2xl sm:text-3xl font-black text-gurukul-navy">
+          <div className="flex items-center gap-3">
+            <h1 className="text-2xl font-bold tracking-tight text-slate-900">
               Admin Notification Center
             </h1>
             {unreadCount > 0 && (
-              <span className="bg-red-600 text-white text-xs font-mono font-bold px-2.5 py-0.5 rounded-full shadow-sm">
+              <span className="bg-rose-50 text-rose-700 border border-rose-200 text-xs font-semibold px-2.5 py-0.5 rounded-full">
                 {unreadCount} Unread
               </span>
             )}
           </div>
-          <p className="text-xs text-slate-500">
+          <p className="text-xs text-slate-500 mt-1">
             Real-time event stream of application submissions, candidate status changes, rejections, and enquiries (Max 100 queue)
           </p>
         </div>
 
         <div className="flex items-center gap-2.5">
           <button
+            type="button"
             onClick={() => fetchNotifications()}
-            className="bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 font-bold px-3.5 py-2 rounded-xl text-xs shadow-sm flex items-center gap-1.5 transition"
+            className="btn-secondary text-xs h-9"
             title="Refresh list"
           >
-            <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin text-amber-500' : ''}`} />
+            <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin text-portal-navy' : ''}`} />
             <span>Refresh</span>
           </button>
           {unreadCount > 0 && (
             <button
+              type="button"
               onClick={handleMarkAllAsRead}
-              className="bg-amber-500 hover:bg-amber-600 text-gurukul-navy font-black px-4 py-2 rounded-xl text-xs shadow flex items-center gap-1.5 transition"
+              className="btn-primary text-xs h-9"
             >
               <CheckCheck className="w-4 h-4" />
               <span>Mark All as Read</span>
@@ -182,7 +180,7 @@ export default function AdminNotificationCenterPage() {
       </div>
 
       {/* Filter & Search Bar */}
-      <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm space-y-3 sm:space-y-0 sm:flex sm:items-center sm:justify-between sm:gap-4">
+      <div className="portal-card p-4 space-y-3 sm:space-y-0 sm:flex sm:items-center sm:justify-between sm:gap-4">
         {/* Search */}
         <div className="relative flex-1">
           <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-3 pointer-events-none" />
@@ -194,72 +192,77 @@ export default function AdminNotificationCenterPage() {
               setCurrentPage(1);
             }}
             placeholder="Search by title, candidate name, application no, reason..."
-            className="w-full pl-10 pr-3 py-2 text-xs border rounded-xl outline-none focus:ring-2 focus:ring-amber-500"
+            className="form-input-field pl-10 text-xs h-9"
           />
         </div>
 
         {/* Filter Pills */}
-        <div className="flex items-center gap-1.5 overflow-x-auto text-xs font-bold">
+        <div className="flex items-center gap-1.5 overflow-x-auto text-xs font-medium">
           <button
+            type="button"
             onClick={() => {
               setActiveFilter('all');
               setCurrentPage(1);
             }}
-            className={`px-3 py-1.5 rounded-xl transition whitespace-nowrap ${
+            className={`px-3 py-1.5 rounded-md transition whitespace-nowrap ${
               activeFilter === 'all'
-                ? 'bg-gurukul-navy text-white shadow-xs'
+                ? 'bg-portal-navy text-white shadow-xs font-semibold'
                 : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
             }`}
           >
             All ({notifications.length})
           </button>
           <button
+            type="button"
             onClick={() => {
               setActiveFilter('unread');
               setCurrentPage(1);
             }}
-            className={`px-3 py-1.5 rounded-xl transition whitespace-nowrap ${
+            className={`px-3 py-1.5 rounded-md transition whitespace-nowrap ${
               activeFilter === 'unread'
-                ? 'bg-gurukul-navy text-white shadow-xs'
+                ? 'bg-portal-navy text-white shadow-xs font-semibold'
                 : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
             }`}
           >
             Unread ({unreadCount})
           </button>
           <button
+            type="button"
             onClick={() => {
               setActiveFilter('applications');
               setCurrentPage(1);
             }}
-            className={`px-3 py-1.5 rounded-xl transition whitespace-nowrap ${
+            className={`px-3 py-1.5 rounded-md transition whitespace-nowrap ${
               activeFilter === 'applications'
-                ? 'bg-gurukul-navy text-white shadow-xs'
+                ? 'bg-portal-navy text-white shadow-xs font-semibold'
                 : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
             }`}
           >
             Applications
           </button>
           <button
+            type="button"
             onClick={() => {
               setActiveFilter('rejections');
               setCurrentPage(1);
             }}
-            className={`px-3 py-1.5 rounded-xl transition whitespace-nowrap ${
+            className={`px-3 py-1.5 rounded-md transition whitespace-nowrap ${
               activeFilter === 'rejections'
-                ? 'bg-gurukul-navy text-white shadow-xs'
+                ? 'bg-portal-navy text-white shadow-xs font-semibold'
                 : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
             }`}
           >
             Rejections
           </button>
           <button
+            type="button"
             onClick={() => {
               setActiveFilter('enquiries');
               setCurrentPage(1);
             }}
-            className={`px-3 py-1.5 rounded-xl transition whitespace-nowrap ${
+            className={`px-3 py-1.5 rounded-md transition whitespace-nowrap ${
               activeFilter === 'enquiries'
-                ? 'bg-gurukul-navy text-white shadow-xs'
+                ? 'bg-portal-navy text-white shadow-xs font-semibold'
                 : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
             }`}
           >
@@ -271,43 +274,43 @@ export default function AdminNotificationCenterPage() {
       {/* Notifications List */}
       <div className="space-y-3">
         {loading && notifications.length === 0 ? (
-          <div className="bg-white rounded-2xl p-16 text-center text-slate-400 space-y-3 border border-slate-200">
-            <div className="w-8 h-8 border-4 border-amber-500 border-t-transparent rounded-full animate-spin mx-auto" />
-            <p className="text-xs font-semibold">Loading notification feed...</p>
+          <div className="portal-card p-16 text-center text-slate-400 space-y-3">
+            <div className="w-8 h-8 border-3 border-portal-navy border-t-transparent rounded-full animate-spin mx-auto" />
+            <p className="text-xs font-medium">Loading notification feed...</p>
           </div>
         ) : filteredNotifications.length === 0 ? (
-          <div className="bg-white rounded-2xl p-16 text-center text-slate-400 space-y-2 border border-slate-200">
-            <CheckCheck className="w-12 h-12 mx-auto text-slate-300" />
-            <h3 className="font-bold text-slate-700 text-sm">No Notifications Found</h3>
-            <p className="text-xs">No administrative alerts match the current filter and search query.</p>
+          <div className="portal-card p-16 text-center text-slate-400 space-y-2">
+            <CheckCheck className="w-10 h-10 mx-auto text-slate-300" />
+            <h3 className="font-semibold text-slate-700 text-sm">No Notifications Found</h3>
+            <p className="text-xs text-slate-500">No administrative alerts match the current filter and search query.</p>
           </div>
         ) : (
           paginatedNotifications.map((notif) => (
             <div
               key={notif.id}
-              className={`bg-white rounded-2xl p-4 sm:p-5 border shadow-sm transition flex flex-col sm:flex-row sm:items-center justify-between gap-4 ${
+              className={`portal-card p-4 sm:p-5 transition flex flex-col sm:flex-row sm:items-center justify-between gap-4 ${
                 !notif.isRead
-                  ? 'border-amber-300 bg-amber-50/30'
-                  : 'border-slate-200 hover:border-slate-300'
+                  ? 'border-amber-300 bg-amber-50/20'
+                  : 'hover:border-slate-300'
               }`}
             >
               <div className="flex items-start gap-3.5 flex-1">
-                <div className="p-2 bg-slate-100 rounded-xl mt-0.5">
+                <div className="p-2 bg-slate-50 rounded-lg border border-slate-200 mt-0.5 shrink-0">
                   {getNotificationIcon(notif.type)}
                 </div>
 
-                <div className="space-y-1.5 flex-1">
+                <div className="space-y-1.5 flex-1 min-w-0">
                   <div className="flex flex-wrap items-center gap-2">
                     <h3
                       className={`text-sm ${
-                        !notif.isRead ? 'font-black text-slate-900' : 'font-bold text-slate-800'
+                        !notif.isRead ? 'font-bold text-slate-900' : 'font-semibold text-slate-800'
                       }`}
                     >
                       {notif.title}
                     </h3>
 
                     {!notif.isRead && (
-                      <span className="bg-amber-100 text-amber-900 border border-amber-300 text-[10px] font-bold px-2 py-0.2 rounded-full">
+                      <span className="bg-amber-100 text-amber-900 border border-amber-300 text-[10px] font-semibold px-2 py-0.5 rounded-full">
                         NEW
                       </span>
                     )}
@@ -329,28 +332,28 @@ export default function AdminNotificationCenterPage() {
                   {notif.metadata && (
                     <div className="flex flex-wrap items-center gap-2 pt-1 text-xs">
                       {notif.metadata.candidateName && (
-                        <span className="bg-slate-100 text-slate-800 font-bold px-2 py-0.5 rounded-md text-[11px]">
-                          👤 {notif.metadata.candidateName}
+                        <span className="bg-slate-100 text-slate-800 font-medium px-2 py-0.5 rounded text-[11px]">
+                          Candidate: {notif.metadata.candidateName}
                         </span>
                       )}
                       {notif.metadata.applicationNumber && (
-                        <span className="font-mono bg-slate-100 text-slate-800 font-bold px-2 py-0.5 rounded-md text-[11px] border border-slate-200">
+                        <span className="font-mono bg-slate-100 text-slate-800 font-semibold px-2 py-0.5 rounded text-[11px] border border-slate-200">
                           {notif.metadata.applicationNumber}
                         </span>
                       )}
                       {notif.metadata.classApplying && (
-                        <span className="bg-amber-100 text-amber-900 font-bold px-2 py-0.5 rounded-md text-[11px]">
-                          {notif.metadata.classApplying}
+                        <span className="bg-blue-50 text-blue-800 font-medium px-2 py-0.5 rounded text-[11px]">
+                          Class {notif.metadata.classApplying}
                         </span>
                       )}
                       {notif.metadata.phone && (
                         <span className="font-mono text-slate-500 text-[11px]">
-                          📞 {notif.metadata.phone}
+                          {notif.metadata.phone}
                         </span>
                       )}
                       {notif.metadata.rejectionReason && (
-                        <span className="bg-red-50 text-red-800 border border-red-200 font-bold px-2.5 py-0.5 rounded-md text-[11px]">
-                          Rejection Reason: {notif.metadata.rejectionReason}
+                        <span className="bg-rose-50 text-rose-800 border border-rose-200 font-medium px-2.5 py-0.5 rounded text-[11px]">
+                          Reason: {notif.metadata.rejectionReason}
                         </span>
                       )}
                     </div>
@@ -359,11 +362,12 @@ export default function AdminNotificationCenterPage() {
               </div>
 
               {/* Action Buttons */}
-              <div className="flex items-center gap-2 self-end sm:self-center">
+              <div className="flex items-center gap-2 self-end sm:self-center shrink-0">
                 {!notif.isRead && (
                   <button
+                    type="button"
                     onClick={() => handleMarkAsRead(notif.id)}
-                    className="text-xs font-bold text-slate-500 hover:text-slate-800 border border-slate-200 hover:bg-slate-100 px-3 py-1.5 rounded-xl transition"
+                    className="btn-secondary text-xs h-8 px-3"
                   >
                     Mark Read
                   </button>
@@ -375,10 +379,9 @@ export default function AdminNotificationCenterPage() {
                     onClick={() => {
                       if (!notif.isRead) handleMarkAsRead(notif.id);
                     }}
-                    className="bg-gurukul-navy hover:bg-slate-800 text-white font-bold text-xs px-3.5 py-1.5 rounded-xl shadow flex items-center gap-1.5 transition"
+                    className="btn-primary text-xs h-8 px-3"
                   >
-                    <span>View Dossier / Detail</span>
-                    <ArrowRight className="w-3.5 h-3.5" />
+                    <span>View Dossier</span>
                   </Link>
                 )}
               </div>
@@ -389,21 +392,22 @@ export default function AdminNotificationCenterPage() {
 
       {/* Pagination Bar */}
       {filteredNotifications.length > 0 && totalPages > 1 && (
-        <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-3 text-xs">
+        <div className="portal-card p-4 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs">
           <div className="text-slate-500 font-medium">
-            Showing <strong className="text-slate-800 font-bold">{startIndex + 1}</strong> to{' '}
-            <strong className="text-slate-800 font-bold">
+            Showing <strong className="text-slate-800">{startIndex + 1}</strong> to{' '}
+            <strong className="text-slate-800">
               {Math.min(startIndex + PAGE_SIZE, filteredNotifications.length)}
             </strong>{' '}
-            of <strong className="text-slate-800 font-bold">{filteredNotifications.length}</strong> alerts{' '}
+            of <strong className="text-slate-800">{filteredNotifications.length}</strong> alerts{' '}
             <span className="text-slate-400 font-mono">(Page {validPage} of {totalPages})</span>
           </div>
 
           <div className="flex items-center gap-1.5">
             <button
+              type="button"
               onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
               disabled={validPage === 1}
-              className="px-3 py-1.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed font-bold text-slate-700 flex items-center gap-1 transition shadow-xs"
+              className="btn-secondary text-xs h-8 px-2.5 disabled:opacity-40 disabled:cursor-not-allowed"
             >
               <ChevronLeft className="w-4 h-4" />
               <span>Prev</span>
@@ -413,10 +417,11 @@ export default function AdminNotificationCenterPage() {
               {Array.from({ length: totalPages }, (_, i) => i + 1).map((pageNum) => (
                 <button
                   key={pageNum}
+                  type="button"
                   onClick={() => setCurrentPage(pageNum)}
-                  className={`w-8 h-8 rounded-xl font-bold text-xs transition flex items-center justify-center ${
+                  className={`w-8 h-8 rounded-md font-semibold text-xs transition flex items-center justify-center ${
                     validPage === pageNum
-                      ? 'bg-gurukul-navy text-amber-400 shadow-sm border border-gurukul-navy'
+                      ? 'bg-portal-navy text-white shadow-xs border border-portal-navy'
                       : 'bg-white border border-slate-200 text-slate-700 hover:bg-slate-50'
                   }`}
                 >
@@ -426,9 +431,10 @@ export default function AdminNotificationCenterPage() {
             </div>
 
             <button
+              type="button"
               onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
               disabled={validPage === totalPages}
-              className="px-3 py-1.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed font-bold text-slate-700 flex items-center gap-1 transition shadow-xs"
+              className="btn-secondary text-xs h-8 px-2.5 disabled:opacity-40 disabled:cursor-not-allowed"
             >
               <span>Next</span>
               <ChevronRight className="w-4 h-4" />

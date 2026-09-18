@@ -1543,6 +1543,97 @@ export const db = {
     return result;
   },
 
+  async getAllResults(): Promise<ExamResult[]> {
+    if (useFallbackStorage || !pool) {
+      const store = initFallbackFile();
+      return store.results || [];
+    }
+    try {
+      const [rows]: any = await pool.query('SELECT * FROM results ORDER BY id DESC');
+      return rows.map((r: any) => ({
+        id: r.id,
+        applicationId: r.application_id,
+        applicationNumber: r.application_number,
+        rollNumber: r.roll_number,
+        candidateName: r.candidate_name,
+        dob: r.dob,
+        classApplying: r.class_applying,
+        subjects: typeof r.subjects === 'string' ? JSON.parse(r.subjects) : (r.subjects || []),
+        totalMarks: parseFloat(r.total_marks) || 0,
+        maxTotalMarks: parseFloat(r.max_total_marks) || 0,
+        percentage: parseFloat(r.percentage) || 0,
+        rank: parseInt(r.rank, 10) || 0,
+        qualifyingStatus: r.qualifying_status,
+        counselingDate: r.counseling_date,
+        counselingVenue: r.counseling_venue,
+        isPublished: Boolean(r.is_published),
+        remarks: r.remarks,
+      }));
+    } catch {
+      const store = initFallbackFile();
+      return store.results || [];
+    }
+  },
+
+  async getResultByRollAndDob(rollNumber: string, dob?: string): Promise<ExamResult | null> {
+    const cleanRoll = rollNumber.trim().toLowerCase();
+    const normalizeDate = (d: string) => d.trim().replace(/[/.-]/g, '');
+    const cleanDob = dob ? normalizeDate(dob) : '';
+
+    const results = await this.getAllResults();
+    const found = results.find((r) => {
+      const rRoll = (r.rollNumber || '').trim().toLowerCase();
+      const rApp = (r.applicationNumber || '').trim().toLowerCase();
+      const matchRoll = rRoll === cleanRoll || rApp === cleanRoll;
+      if (!matchRoll) return false;
+
+      if (!cleanDob) return true;
+
+      const rDob = r.dob ? normalizeDate(r.dob) : '';
+      if (rDob) {
+        // Match formatted YYYYMMDD vs DDMMYYYY or direct
+        if (rDob === cleanDob) return true;
+        // Check reverse date components (YYYYMMDD vs DDMMYYYY)
+        const d1 = cleanDob;
+        const d2 = rDob;
+        if (d1.length === 8 && d2.length === 8) {
+          // If d1 is YYYYMMDD (20140512) and d2 is DDMMYYYY (12052014)
+          const rev1 = d1.slice(6, 8) + d1.slice(4, 6) + d1.slice(0, 4);
+          const rev2 = d2.slice(6, 8) + d2.slice(4, 6) + d2.slice(0, 4);
+          if (rDob === rev1 || cleanDob === rev2) return true;
+        }
+        return false;
+      }
+
+      return true;
+    });
+
+    return found || null;
+  },
+
+  async clearResults(): Promise<void> {
+    if (useFallbackStorage || !pool) {
+      const store = initFallbackFile();
+      store.results = [];
+      saveFallbackStore(store);
+      return;
+    }
+    try {
+      await pool.query('DELETE FROM results');
+    } catch {
+      const store = initFallbackFile();
+      store.results = [];
+      saveFallbackStore(store);
+    }
+  },
+
+  async bulkSaveResults(results: ExamResult[]): Promise<{ count: number }> {
+    for (const r of results) {
+      await this.publishResult(r);
+    }
+    return { count: results.length };
+  },
+
   async createResult(result: ExamResult): Promise<ExamResult> {
     return this.publishResult(result);
   },

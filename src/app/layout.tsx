@@ -1,8 +1,8 @@
-﻿import type { Metadata } from 'next';
+import type { Metadata } from 'next';
 import { Inter, Merriweather } from 'next/font/google';
 import '@/styles/globals.css';
-import Header from '@/components/Header';
-import Footer from '@/components/Footer';
+import AppShell from '@/components/AppShell';
+import AdmitCardReleasePopup from '@/components/AdmitCardReleasePopup';
 
 const inter = Inter({
   subsets: ['latin'],
@@ -18,7 +18,7 @@ const merriweather = Merriweather({
 export const metadata: Metadata = {
   title: 'GURUKUL - Entrance Examination & Admission Portal (2027-28)',
   description:
-    'Official Online Entrance Examination and Admission Portal for GURUKUL (Nilokheri, Jyotisar, Aryakulam). Apply online for Classes 6th, 7th, 8th, 9th, and 11th with online ₹800 fee payment, immediate application form, and admit card download.',
+    'Official Online Entrance Examination and Admission Portal for GURUKUL (Nilokheri, Jyotisar, Aryakulam). Apply online for Classes 6th, 7th, 8th, 9th, and 11th with online ₹800 fee payment, immediate Admission form, and admit card download.',
   icons: {
     icon: '/favicon.ico',
     apple: '/logo-gurukul.png',
@@ -62,6 +62,7 @@ export default function RootLayout({
                   if (r && ((r.stack && r.stack.indexOf('chrome-extension://') !== -1) || (r.message && r.message.indexOf('M_ID') !== -1))) {
                     event.stopImmediatePropagation();
                     event.preventDefault();
+                    return true;
                   }
                 });
               }
@@ -69,12 +70,10 @@ export default function RootLayout({
           }}
         />
       </head>
-      <body className="font-sans min-h-screen flex flex-col bg-slate-50 text-slate-900">
-        <Header />
-        <main className="flex-grow">{children}</main>
-        <Footer />
+      <body className="font-sans text-slate-900 bg-slate-50 antialiased">
+        <AdmitCardReleasePopup />
+        <AppShell>{children}</AppShell>
       </body>
     </html>
   );
 }
-

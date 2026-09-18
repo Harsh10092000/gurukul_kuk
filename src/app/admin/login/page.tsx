@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
-import { ShieldCheck, Mail, Lock, AlertCircle, ArrowLeft } from 'lucide-react';
+import { AlertCircle } from 'lucide-react';
 
 export default function AdminLoginPage() {
   const router = useRouter();
@@ -14,7 +14,6 @@ export default function AdminLoginPage() {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    // If already logged in as admin, redirect directly to dashboard
     fetch('/api/auth/me')
       .then((res) => res.json())
       .then((data) => {
@@ -67,103 +66,119 @@ export default function AdminLoginPage() {
   };
 
   return (
-    <div className="min-h-[calc(100vh-250px)] flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8 bg-slate-900">
-      <div className="max-w-md w-full space-y-6 bg-slate-800/90 p-8 sm:p-10 rounded-2xl shadow-2xl border border-slate-700 text-white">
-        <div className="text-center space-y-2">
-          <div className="w-16 h-16 mx-auto flex items-center justify-center">
-            <Image
-              src="/logo-gurukul.png"
-              alt="Gurukul Logo"
-              width={64}
-              height={64}
-              className="brand-logo-img object-contain"
-            />
+    <div className="min-h-[85vh] flex items-center justify-center py-8 px-4 sm:px-6 lg:px-8 bg-slate-100 font-sans">
+      <div className="w-full max-w-3xl flex rounded-2xl overflow-hidden shadow-sm border border-slate-200 self-center">
+
+        {/* Left Panel — Navy Institution Branding */}
+        <div className="hidden md:flex flex-col justify-between w-2/5 portal-card-navy px-8 py-10">
+          <div className="space-y-6">
+            <div className="flex items-center gap-3">
+              <Image
+                src="/logo-gurukul.png"
+                alt="Gurukul Logo"
+                width={40}
+                height={40}
+                className="object-contain opacity-90"
+              />
+              <div>
+                <div className="text-white font-black text-lg tracking-tight leading-tight">GURUKUL</div>
+                <div className="text-slate-300 text-[10px] font-semibold uppercase tracking-widest">Kurukshetra</div>
+              </div>
+            </div>
+
+            <div className="space-y-3 pt-2">
+              <span className="portal-badge-gold text-[10px] uppercase">Administrative Console</span>
+              <h2 className="text-white font-bold text-lg leading-snug">
+                Examination &amp; Admissions Management Portal
+              </h2>
+              <p className="text-slate-300 text-xs leading-relaxed">
+                Restricted access for authorized Gurukul Examination Board officers and administrative staff only.
+              </p>
+            </div>
           </div>
-          <div className="inline-flex items-center gap-1.5 bg-amber-500/20 text-amber-300 px-3 py-1 rounded-full text-xs font-bold border border-amber-500/30">
-            <ShieldCheck className="w-4 h-4" /> Official Examination Cell
+
+          <div className="pt-8 border-t border-white/10 space-y-1.5">
+            <div className="text-[10px] text-slate-400 uppercase tracking-wider font-semibold">Gurukul Kurukshetra</div>
+            <p className="text-slate-400 text-[11px]">Session 2027-28 · CBSE Affiliated</p>
+            <p className="text-slate-500 text-[11px]">01744-259114 · 9896328329</p>
           </div>
-          <h2 className="text-2xl font-black tracking-tight text-white uppercase">
-            ADMIN GURUKUL
-          </h2>
-          <p className="text-xs text-slate-400">
-            Admissions &amp; Verification Panel
-          </p>
         </div>
 
-        {error && (
-          <div className="p-3.5 rounded-lg bg-red-900/50 border border-red-700 flex items-center gap-2.5 text-xs text-red-200">
-            <AlertCircle className="w-4 h-4 flex-shrink-0 text-red-400" />
-            <span>{error}</span>
-          </div>
-        )}
+        {/* Right Panel — Login Form */}
+        <div className="flex-1 bg-white px-8 py-10 flex flex-col justify-center space-y-6">
 
-        <form className="mt-6 space-y-4" onSubmit={handleSubmit}>
-          <div>
-            <label className="block text-xs font-bold text-slate-300 uppercase mb-1">
-              Staff Email Address
-            </label>
-            <div className="relative">
-              <Mail className="w-4 h-4 text-slate-400 absolute left-3 top-3.5 pointer-events-none" />
+          {/* Mobile header (hidden on md+) */}
+          <div className="flex md:hidden items-center gap-2 mb-1">
+            <Image src="/logo-gurukul.png" alt="Gurukul Logo" width={28} height={28} className="object-contain" />
+            <span className="font-black text-portal-navy text-sm tracking-tight">GURUKUL Admin</span>
+          </div>
+
+          <div className="space-y-1">
+            <h1 className="text-xl font-bold text-slate-900 tracking-tight">Sign in to Admin Console</h1>
+            <p className="text-xs text-slate-500">Enter your authorized staff credentials to continue.</p>
+          </div>
+
+          {error && (
+            <div className="p-3 rounded-lg bg-rose-50 border border-rose-200 flex items-center gap-2 text-xs text-rose-700 font-medium">
+              <AlertCircle className="w-4 h-4 flex-shrink-0 text-rose-600" />
+              <span>{error}</span>
+            </div>
+          )}
+
+          <form className="space-y-4" onSubmit={handleSubmit}>
+            <div>
+              <label className="form-label">
+                Staff Email Address <span className="text-rose-500">*</span>
+              </label>
               <input
                 type="email"
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="admin@gurukulkurukshetra.com"
-                className="w-full pl-10 pr-3 py-2.5 text-sm bg-slate-900 border border-slate-700 rounded-lg text-white placeholder-slate-500 focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none transition"
+                className="form-input-field"
               />
             </div>
-          </div>
 
-          <div>
-            <label className="block text-xs font-bold text-slate-300 uppercase mb-1">
-              Admin Security Password
-            </label>
-            <div className="relative">
-              <Lock className="w-4 h-4 text-slate-400 absolute left-3 top-3.5 pointer-events-none" />
+            <div>
+              <label className="form-label">
+                Admin Password <span className="text-rose-500">*</span>
+              </label>
               <input
                 type="password"
                 required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••"
-                className="w-full pl-10 pr-3 py-2.5 text-sm bg-slate-900 border border-slate-700 rounded-lg text-white placeholder-slate-500 focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none transition"
+                className="form-input-field"
               />
             </div>
+
+            <button
+              type="submit"
+              disabled={loading}
+              className="btn-primary w-full mt-2"
+            >
+              {loading ? 'Verifying Authorization...' : 'Sign In to Admin Console'}
+            </button>
+          </form>
+
+          <div className="pt-3 border-t border-slate-100 text-center space-y-2">
+            <button
+              type="button"
+              onClick={fillDemoAdmin}
+              className="text-xs text-portal-navy hover:underline font-medium"
+            >
+              Fill Demo Administrator Credentials
+            </button>
+            <div>
+              <Link href="/" className="text-xs text-slate-500 hover:text-slate-800 transition">
+                Return to Public Portal
+              </Link>
+            </div>
           </div>
-
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full mt-2 py-3 px-4 rounded-xl shadow-lg text-sm font-bold text-white bg-gradient-to-r from-amber-500 to-gurukul-600 hover:from-amber-600 hover:to-gurukul-700 transition flex items-center justify-center gap-2"
-          >
-            {loading ? (
-              <span>Verifying Admin Authorization...</span>
-            ) : (
-              <>
-                <ShieldCheck className="w-4 h-4" />
-                <span>Enter Administration Console</span>
-              </>
-            )}
-          </button>
-        </form>
-
-        {/* Demo fill button for reviewer convenience */}
-        <div className="pt-4 border-t border-slate-700 text-center">
-          <button
-            type="button"
-            onClick={fillDemoAdmin}
-            className="text-xs text-amber-300 bg-amber-500/10 border border-amber-500/30 px-3 py-1.5 rounded-lg hover:bg-amber-500/20 transition inline-flex items-center gap-1.5"
-          >
-            <span>💡 Fill Super-Admin Demo Credentials</span>
-          </button>
         </div>
 
-        <div className="pt-2 text-center text-xs text-slate-400">
-          <Link href="/" className="hover:text-amber-400 transition inline-flex items-center gap-1">
-            <ArrowLeft className="w-3.5 h-3.5" /> Back to Public Portal
-          </Link>
-        </div>
       </div>
     </div>
   );

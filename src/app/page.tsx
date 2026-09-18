@@ -5,24 +5,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import {
-  UserPlus,
-  LogIn,
-  Calendar,
-  FileText,
-  Award,
-  Download,
-  ShieldCheck,
-  Clock,
-  ArrowRight,
   AlertCircle,
-  Search,
-  BookOpen,
-  CheckCircle2,
-  Lock,
-  Mail,
-  Phone,
-  RefreshCw,
-  ChevronRight,
   Eye,
   EyeOff
 } from 'lucide-react';
@@ -32,7 +15,6 @@ import { resolveAdmissionPhase } from '@/lib/admissionPhases';
 export default function ExamPortalGateway() {
   const router = useRouter();
 
-  // Auth checking state
   const [checkingAuth, setCheckingAuth] = useState(true);
   const [loggedInUser, setLoggedInUser] = useState<any>(null);
 
@@ -56,31 +38,25 @@ export default function ExamPortalGateway() {
     announcementNotice?: string;
   } | null>(null);
 
-  // Whether schedule data has been fetched (avoid flash of wrong phase)
   const [scheduleLoaded, setScheduleLoaded] = useState(false);
-
   const [portalSettings, setPortalSettings] = useState<any>(null);
 
-  // Generate random 5-character alphanumeric captcha with combination of uppercase, lowercase, and numbers
   const generateCaptcha = (clearError: boolean = false) => {
     const uppercase = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
     const lowercase = 'abcdefghjkmnpqrstuvwxyz';
     const numbers = '23456789';
     const allChars = uppercase + lowercase + numbers;
 
-    // Guaranteed mix: at least 1 uppercase, 1 lowercase, 1 number
     const guaranteed = [
       uppercase[Math.floor(Math.random() * uppercase.length)],
       lowercase[Math.floor(Math.random() * lowercase.length)],
       numbers[Math.floor(Math.random() * numbers.length)],
     ];
 
-    // Fill remaining positions to reach 5 characters
     for (let i = guaranteed.length; i < 5; i++) {
       guaranteed.push(allChars[Math.floor(Math.random() * allChars.length)]);
     }
 
-    // Shuffle characters randomly
     for (let i = guaranteed.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1));
       [guaranteed[i], guaranteed[j]] = [guaranteed[j], guaranteed[i]];
@@ -96,35 +72,23 @@ export default function ExamPortalGateway() {
   useEffect(() => {
     generateCaptcha();
 
-    // Check form schedule
     fetch('/api/schedule')
       .then((res) => res.json())
       .then((data) => {
-        // API returns: { isOpen, status, message, startDate, endDate, announcementNotice, details, config }
-        if (data.details) {
-          setSchedule({
-            ...data.details,
-            startDate: data.details.startDate || data.startDate,
-            endDate: data.details.endDate || data.endDate,
-          });
-        } else if (data.isOpen !== undefined) {
-          setSchedule(data);
+        if (data.status) {
+          setSchedule(data.status);
         }
         setScheduleLoaded(true);
       })
-      .catch(() => { setScheduleLoaded(true); });
+      .catch(() => setScheduleLoaded(true));
 
-    // Fetch portal settings & academic milestone dates
     fetch('/api/settings')
       .then((res) => res.json())
       .then((data) => {
-        if (data.settings) {
-          setPortalSettings(data.settings);
-        }
+        if (data.settings) setPortalSettings(data.settings);
       })
       .catch(() => { });
 
-    // Check if user is already authenticated
     fetch('/api/auth/me')
       .then((res) => res.json())
       .then((data) => {
@@ -133,20 +97,17 @@ export default function ExamPortalGateway() {
         }
         setCheckingAuth(false);
       })
-      .catch(() => {
-        setCheckingAuth(false);
-      });
-  }, [router]);
+      .catch(() => setCheckingAuth(false));
+  }, []);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     setCaptchaError('');
 
-    // Verify Captcha (Case-sensitive combination of small/capital letters and numbers)
     if (captchaInput.trim() !== captchaCode) {
       generateCaptcha(false);
-      setCaptchaError('Incorrect Security PIN / Captcha.');
+      setCaptchaError('Incorrect Security PIN. Please re-enter.');
       return;
     }
 
@@ -161,13 +122,12 @@ export default function ExamPortalGateway() {
       const data = await res.json();
 
       if (!res.ok) {
-        setError(data.error || 'Authentication failed. Please check your credentials.');
+        setError(data.error || 'Login failed. Please check your credentials.');
         setLoading(false);
         generateCaptcha();
         return;
       }
 
-      // Purge any un-scoped legacy draft from browser
       try {
         localStorage.removeItem('gurukul_application_draft');
       } catch (e) { }
@@ -177,29 +137,10 @@ export default function ExamPortalGateway() {
       } else {
         router.push('/dashboard');
       }
-    } catch {
-      setError('An error occurred during authentication. Please try again.');
+    } catch (err) {
+      setError('An unexpected error occurred. Please try again.');
       setLoading(false);
       generateCaptcha();
-    }
-  };
-
-  const formatDateDisplay = (dateStr?: string, fallback: string = '') => {
-    if (!dateStr) return fallback;
-    try {
-      // Handles YYYY-MM-DD or full ISO
-      const parts = dateStr.split('-');
-      if (parts.length === 3 && parts[0].length === 4) {
-        const d = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
-        return d.toLocaleDateString('en-IN', { day: '2-digit', month: 'long', year: 'numeric' });
-      }
-      const d = new Date(dateStr);
-      if (!isNaN(d.getTime())) {
-        return d.toLocaleDateString('en-IN', { day: '2-digit', month: 'long', year: 'numeric' });
-      }
-      return dateStr || fallback;
-    } catch {
-      return dateStr || fallback;
     }
   };
 
@@ -218,18 +159,14 @@ export default function ExamPortalGateway() {
 
   return (
     <div className="w-full min-h-screen bg-slate-50 pb-16 font-sans">
-      {/* Sleek Dynamic Phase-Aware Announcement Strip */}
+      {/* Dynamic Phase-Aware Announcement Strip */}
       {!scheduleLoaded ? (
-        /* Neutral skeleton shown while /api/schedule is fetching — prevents wrong-phase flash */
         <div className="py-2 px-4 text-center text-xs font-semibold flex items-center justify-center gap-2 border-b bg-slate-100 text-slate-400">
-          <span className="text-[10px] uppercase px-2.5 py-0.5 rounded tracking-wide flex-shrink-0 bg-slate-200 animate-pulse">
-            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-          </span>
           <span className="bg-slate-200 animate-pulse rounded w-64 h-3 inline-block" />
         </div>
       ) : (
         <div className={`py-2 px-4 text-center text-xs font-semibold flex items-center justify-center gap-2 border-b transition ${phaseInfo.banner.containerStyle}`}>
-          <span className={`text-[10px] uppercase px-2.5 py-0.5 rounded tracking-wide flex-shrink-0 ${phaseInfo.banner.badgeStyle}`}>
+          <span className={`text-[10px] uppercase px-2 py-0.5 rounded tracking-wide flex-shrink-0 ${phaseInfo.banner.badgeStyle}`}>
             {phaseInfo.banner.badge}
           </span>
           <span className="truncate">
@@ -238,10 +175,9 @@ export default function ExamPortalGateway() {
           {phaseInfo.banner.link && (
             <Link
               href={phaseInfo.banner.link.href}
-              className="hover:underline flex items-center gap-1 font-bold ml-1 flex-shrink-0 group"
+              className="hover:underline font-semibold ml-1 flex-shrink-0"
             >
-              <span>{phaseInfo.banner.link.label}</span>
-              <span className="font-extrabold group-hover:translate-x-0.5 transition-transform">→</span>
+              {phaseInfo.banner.link.label}
             </Link>
           )}
         </div>
@@ -250,61 +186,59 @@ export default function ExamPortalGateway() {
       <div className="max-w-6xl mx-auto px-4 sm:px-6 pt-8">
         {/* Page Title & Context Header */}
         <div className="text-center max-w-2xl mx-auto mb-8 space-y-1.5">
-          <span className="bg-gurukul-navy text-amber-300 text-[11px] font-bold px-3 py-1 rounded-full uppercase tracking-wider font-mono">
+          <span className="bg-portal-navy text-portal-gold text-[11px] font-semibold px-3 py-1 rounded-full uppercase tracking-wider font-mono">
             Session 2027-28
           </span>
-          <h1 className="text-2xl sm:text-3xl font-black text-gurukul-navy tracking-tight">
-            Entrance Examination Portal
+          <h1 className="text-2xl sm:text-3xl font-black text-portal-navy tracking-tight">
+            Entrance Examination &amp; Admission Portal
           </h1>
           <p className="text-xs sm:text-sm text-slate-500">
-            Official Online Application, Verification & Candidate Management System
+            Online Registration, Application Verification &amp; Candidate Services
           </p>
         </div>
 
-        {/* Dual-Pane Gateway Layout (Clean & Balanced) */}
+        {/* Dual-Pane Gateway Layout */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
 
-          {/* Left Column (7 Cols): Registered Candidate Sign In Portal */}
-          <div className="lg:col-span-7 bg-white rounded-2xl border border-slate-200 shadow-md overflow-hidden">
-            {/* Form Header */}
-            <div className="bg-gurukul-navy text-white px-6 py-4 flex justify-between items-center border-b-2 border-amber-500">
-              <div className="flex items-center gap-2.5">
-                <LogIn className="w-5 h-5 text-amber-400" />
-                <h2 className="font-black text-base tracking-wide">
-                  Registered Candidate Sign In
+          {/* Left Column (7 Cols): Registered Candidate Sign In */}
+          <div className="lg:col-span-7 portal-card overflow-hidden">
+            <div className="portal-card-navy px-6 py-4 flex justify-between items-center">
+              <div>
+                <span className="portal-badge-gold text-[10px] mb-1 inline-block">Registered Candidates</span>
+                <h2 className="font-bold text-base text-white tracking-tight">
+                  Candidate Sign In
                 </h2>
               </div>
-              <span className="text-[10px] bg-white/10 text-amber-300 px-2.5 py-1 rounded font-bold uppercase">
-                Step 2: Sign In
+              <span className="text-[11px] text-slate-300 font-mono hidden sm:inline-block">
+                Session 2027-28
               </span>
             </div>
 
             <div className="p-6 sm:p-8 space-y-5">
-              <p className="text-xs text-slate-600">
-                Log in to complete your application, upload photo & signature, pay the entrance examination fee, download Admit Card, or check examination result.
+              <p className="text-xs text-slate-600 leading-relaxed">
+                Sign in to complete your form, upload documents, pay the entrance examination fee (₹800), download Admit Card, or check merit results.
               </p>
 
               {loggedInUser ? (
                 <div className="space-y-4 py-2">
-                  <div className="p-4 bg-amber-50 border-2 border-amber-300 rounded-2xl text-xs text-amber-950 space-y-2 shadow-sm">
-                    <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded bg-amber-200 text-amber-900 font-mono">
+                  <div className="p-4 bg-amber-50/80 border border-amber-200 rounded-xl text-xs text-amber-950 space-y-1.5">
+                    <span className="text-[10px] font-bold uppercase px-2 py-0.5 rounded bg-amber-200 text-amber-900 font-mono">
                       Active Session
                     </span>
-                    <h4 className="text-base font-black text-slate-900">
+                    <h4 className="text-sm font-bold text-slate-900">
                       Welcome, {loggedInUser.name}
                     </h4>
-                    <p className="text-xs text-slate-600 leading-relaxed">
-                      You are currently signed in to the Gurukul Kurukshetra portal. You can proceed directly to your centralized dashboard:
+                    <p className="text-xs text-slate-600">
+                      You are currently signed in. You can proceed directly to your centralized candidate dashboard:
                     </p>
                   </div>
 
                   <div className="flex flex-col sm:flex-row gap-3 pt-2">
                     <Link
                       href={loggedInUser.role === 'admin' ? '/admin/dashboard' : '/dashboard'}
-                      className="flex-1 py-3 bg-gurukul-navy hover:bg-slate-900 text-amber-300 font-extrabold text-xs rounded-xl text-center transition shadow flex items-center justify-center gap-2"
+                      className="flex-1 py-2.5 bg-portal-navy hover:bg-slate-900 text-portal-gold font-bold text-xs rounded-lg text-center transition shadow-xs"
                     >
-                      <span>{loggedInUser.role === 'admin' ? 'Open Admin Console' : 'Go to Candidate Dashboard'}</span>
-                      <ArrowRight className="w-4 h-4" />
+                      {loggedInUser.role === 'admin' ? 'Open Admin Console' : 'Go to Candidate Dashboard'}
                     </Link>
                     <button
                       type="button"
@@ -316,81 +250,71 @@ export default function ExamPortalGateway() {
                         } catch (e) { }
                         window.location.reload();
                       }}
-                      className="py-3 px-5 bg-red-600 hover:bg-red-700 text-white font-bold rounded-xl text-xs transition flex items-center justify-center gap-1.5"
+                      className="py-2.5 px-5 bg-slate-100 hover:bg-rose-50 text-slate-700 hover:text-rose-700 border border-slate-200 rounded-lg text-xs font-semibold transition"
                     >
-                      <span>Sign Out</span>
+                      Sign Out
                     </button>
                   </div>
                 </div>
               ) : (
                 <>
                   {error && (
-                    <div className="p-3.5 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs flex items-center gap-2">
+                    <div className="p-3 rounded-lg bg-rose-50 border border-rose-200 text-rose-700 text-xs flex items-center gap-2">
                       <AlertCircle className="w-4 h-4 flex-shrink-0" />
                       <span>{error}</span>
                     </div>
                   )}
 
                   {captchaError && (
-                    <div className="p-3.5 rounded-xl bg-red-50 border-2 border-red-300 text-red-800 text-xs flex items-center gap-2.5 font-bold shadow-sm animate-in fade-in">
-                      <AlertCircle className="w-4 h-4 flex-shrink-0 text-red-600" />
+                    <div className="p-3 rounded-lg bg-rose-50 border border-rose-200 text-rose-800 text-xs flex items-center gap-2 font-medium">
+                      <AlertCircle className="w-4 h-4 flex-shrink-0 text-rose-600" />
                       <span>{captchaError}</span>
                     </div>
                   )}
 
-                  {/* Login Form */}
+                  {/* Clean Login Form */}
                   <form onSubmit={handleLogin} className="space-y-4">
-                    {/* Field 1: Registration Number */}
                     <div>
                       <div className="flex justify-between items-center mb-1.5">
-                        <label className="block text-xs font-bold text-slate-800 uppercase tracking-wide">
-                          Registration No. / Registered Email / Phone *
+                        <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wide">
+                          Registration No. / Email / Mobile <span className="text-rose-500">*</span>
                         </label>
-                        <Link href="/forgot-registration" className="text-amber-700 hover:underline text-xs font-bold">
+                        <Link href="/forgot-registration" className="text-portal-gold hover:underline text-xs font-semibold">
                           Forgot Reg No?
                         </Link>
                       </div>
-                      <div className="relative">
-                        <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
-                          <Mail className="h-4 w-4 text-slate-400" />
-                        </div>
-                        <input
-                          type="text"
-                          required
-                          value={identifier}
-                          onChange={(e) => setIdentifier(e.target.value)}
-                          placeholder="e.g. GK26-10001 or 9876543210 or email"
-                          className="w-full pl-10 pr-3.5 py-2.5 text-sm border border-slate-300 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none transition font-medium"
-                        />
-                      </div>
+                      <input
+                        type="text"
+                        required
+                        value={identifier}
+                        onChange={(e) => setIdentifier(e.target.value)}
+                        placeholder="e.g. NILB-10001 or 9876543210 or email"
+                        className="form-input-field"
+                      />
                     </div>
 
-                    {/* Field 2: Password */}
                     <div>
                       <div className="flex justify-between items-center mb-1.5">
-                        <label className="block text-xs font-bold text-slate-800 uppercase tracking-wide">
-                          Password *
+                        <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wide">
+                          Password <span className="text-rose-500">*</span>
                         </label>
-                        <Link href="/forgot-password" className="text-gurukul-600 hover:underline text-xs font-bold">
+                        <Link href="/forgot-password" className="text-portal-navy hover:underline text-xs font-semibold">
                           Forgot Password?
                         </Link>
                       </div>
                       <div className="relative">
-                        <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
-                          <Lock className="h-4 w-4 text-slate-400" />
-                        </div>
                         <input
                           type={showPassword ? 'text' : 'password'}
                           required
                           value={password}
                           onChange={(e) => setPassword(e.target.value)}
-                          placeholder="••••••••"
-                          className="w-full pl-10 pr-10 py-2.5 text-sm border border-slate-300 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none transition"
+                          placeholder="Enter your password"
+                          className="form-input-field pr-10"
                         />
                         <button
                           type="button"
                           onClick={() => setShowPassword(!showPassword)}
-                          className="absolute right-3 top-3 text-slate-400 hover:text-slate-700"
+                          className="absolute right-3 top-2.5 text-slate-400 hover:text-slate-600"
                           title={showPassword ? 'Hide password' : 'Show password'}
                         >
                           {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
@@ -398,10 +322,10 @@ export default function ExamPortalGateway() {
                       </div>
                     </div>
 
-                    {/* Field 3: Visual Security Captcha */}
+                    {/* Security PIN Captcha */}
                     <div>
-                      <label className="block text-xs font-bold text-slate-800 uppercase tracking-wide mb-1.5">
-                        Security PIN (Case Sensitive) *
+                      <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wide mb-1.5">
+                        Security PIN (Case Sensitive) <span className="text-rose-500">*</span>
                       </label>
                       <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
                         <VisualCaptcha code={captchaCode} onRefresh={() => generateCaptcha(true)} />
@@ -418,69 +342,49 @@ export default function ExamPortalGateway() {
                           autoCapitalize="none"
                           autoComplete="off"
                           spellCheck={false}
-                          className={`flex-1 py-2.5 px-3 text-sm border rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none transition font-mono font-bold text-slate-900 ${captchaError ? 'border-red-500 bg-red-50/50 ring-2 ring-red-200' : 'border-slate-300'
-                            }`}
+                          className="form-input-field font-mono font-bold flex-1"
                         />
                       </div>
                     </div>
 
-                    {/* Submit Button */}
                     <button
                       type="submit"
                       disabled={loading}
-                      className="w-full py-3 bg-gurukul-navy hover:bg-slate-800 text-white font-extrabold text-sm rounded-xl shadow transition flex items-center justify-center gap-2 mt-3"
+                      className="btn-primary w-full mt-2"
                     >
-                      {loading ? (
-                        <span>Verifying Credentials...</span>
-                      ) : (
-                        <>
-                          <LogIn className="w-4 h-4 text-amber-400" />
-                          <span>Sign In to Candidate Portal</span>
-                        </>
-                      )}
+                      {loading ? 'Verifying Credentials...' : 'Sign In to Candidate Portal'}
                     </button>
                   </form>
                 </>
               )}
-
-
             </div>
           </div>
 
           {/* Right Column (5 Cols): New Candidate Registration & Quick Services */}
           <div className="lg:col-span-5 space-y-6">
 
-            {/* Step 1: New Candidate Registration Card (Phase-Aware) */}
+            {/* Step 1: New Candidate Registration Card */}
             {!scheduleLoaded ? (
-              /* Skeleton card while schedule API loads */
-              <div className="bg-white rounded-2xl border-2 border-slate-200 p-6 shadow-md space-y-4 animate-pulse">
-                <div className="flex justify-between items-center">
-                  <div className="w-10 h-10 rounded-xl bg-slate-200" />
-                  <div className="h-5 w-28 bg-slate-200 rounded-full" />
-                </div>
-                <div className="space-y-2 pt-2">
-                  <div className="h-6 w-48 bg-slate-200 rounded" />
-                  <div className="h-3 w-full bg-slate-100 rounded" />
-                  <div className="h-3 w-3/4 bg-slate-100 rounded" />
-                </div>
-                <div className="pt-6 mt-4 border-t border-slate-100">
-                  <div className="h-10 w-full bg-slate-200 rounded-xl" />
-                </div>
+              <div className="portal-card p-6 space-y-4 animate-pulse">
+                <div className="h-6 w-40 bg-slate-200 rounded" />
+                <div className="h-4 w-full bg-slate-100 rounded" />
+                <div className="h-10 w-full bg-slate-200 rounded-lg" />
               </div>
             ) : (
-              <div className={`bg-white rounded-2xl border-2 ${phaseInfo.registrationCard.isOpen ? 'border-amber-500/40' : 'border-rose-200'} p-6 shadow-md relative overflow-hidden flex flex-col justify-between`}>
-                <div className="space-y-4">
+              <div className="portal-card p-6 space-y-4 flex flex-col justify-between border-t-4 border-t-portal-gold">
+                <div className="space-y-3">
                   <div className="flex justify-between items-center">
-                    <div className={`w-10 h-10 rounded-xl ${phaseInfo.registrationCard.isOpen ? 'bg-amber-500 text-gurukul-navy' : 'bg-rose-100 text-rose-700'} flex items-center justify-center font-bold`}>
-                      <UserPlus className="w-5 h-5" />
-                    </div>
-                    <span className={`${phaseInfo.registrationCard.isOpen ? 'bg-amber-100 text-amber-900' : 'bg-rose-100 text-rose-800 border border-rose-300'} text-[10px] font-black uppercase px-3 py-1 rounded-full`}>
+                    <span className="text-xs font-mono font-bold uppercase tracking-wider text-portal-navy">
+                      Step 1: Registration
+                    </span>
+                    <span className={`text-[10px] font-bold uppercase px-2.5 py-0.5 rounded ${phaseInfo.registrationCard.isOpen ? 'portal-badge-emerald' : 'bg-rose-50 text-rose-800 border border-rose-200'
+                      }`}>
                       {phaseInfo.registrationCard.badge}
                     </span>
                   </div>
 
                   <div>
-                    <h3 className="text-xl font-black tracking-tight text-gurukul-navy">
+                    <h3 className="text-lg font-bold text-slate-900">
                       {phaseInfo.registrationCard.title}
                     </h3>
                     <p className="text-xs text-slate-600 mt-1 leading-relaxed">
@@ -489,102 +393,75 @@ export default function ExamPortalGateway() {
                   </div>
                 </div>
 
-                <div className="pt-6 mt-4 border-t border-slate-100">
+                <div className="pt-4 border-t border-slate-100">
                   <Link
                     href={phaseInfo.registrationCard.actionHref}
-                    className={`w-full py-3 ${phaseInfo.registrationCard.isPrimary
-                      ? 'bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-gurukul-navy'
-                      : 'bg-gurukul-navy hover:bg-slate-800 text-amber-300'
-                      } font-black text-xs rounded-xl shadow transition flex items-center justify-center gap-2 uppercase tracking-wide`}
+                    className="btn-primary w-full shadow-xs"
                   >
-                    <span>{phaseInfo.registrationCard.actionText}</span>
-                    <ArrowRight className="w-4 h-4" />
+                    {phaseInfo.registrationCard.actionText}
                   </Link>
                 </div>
               </div>
             )}
 
             {/* Candidate Quick Services Cards */}
-            <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm space-y-3">
-              <h4 className="text-xs font-bold uppercase tracking-wider text-slate-600 border-b pb-2 flex items-center gap-2">
-                <FileText className="w-4 h-4 text-gurukul-600" /> Candidate Quick Services
+            <div className="portal-card p-5 space-y-3">
+              <h4 className="text-xs font-semibold uppercase tracking-wider text-slate-500 border-b border-slate-100 pb-2">
+                Candidate Quick Services
               </h4>
 
               <div className="space-y-2">
                 <Link
                   href="/status"
-                  className="p-3 bg-slate-50 hover:bg-slate-100 rounded-xl border border-slate-200 transition flex items-center justify-between group"
+                  className="p-3 bg-slate-50 hover:bg-slate-100/80 rounded-lg border border-slate-200/80 transition flex items-center justify-between group"
                 >
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 rounded-lg bg-blue-50 text-blue-700">
-                      <Search className="w-4 h-4" />
-                    </div>
-                    <div>
-                      <h5 className="font-bold text-xs text-slate-800 group-hover:text-gurukul-600 transition">
-                        Track Application Status
-                      </h5>
-                      <p className="text-[10px] text-slate-500">View payment and verification state</p>
-                    </div>
+                  <div>
+                    <h5 className="font-semibold text-xs text-slate-800 group-hover:text-portal-navy transition">
+                      Track Application Status
+                    </h5>
+                    <p className="text-[11px] text-slate-500">View payment and verification progress</p>
                   </div>
-                  <ChevronRight className="w-4 h-4 text-slate-400 group-hover:translate-x-1 transition" />
                 </Link>
 
                 <Link
                   href="/admit-card"
-                  className="p-3 bg-slate-50 hover:bg-slate-100 rounded-xl border border-slate-200 transition flex items-center justify-between group"
+                  className="p-3 bg-slate-50 hover:bg-slate-100/80 rounded-lg border border-slate-200/80 transition flex items-center justify-between group"
                 >
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 rounded-lg bg-emerald-50 text-emerald-700">
-                      <Download className="w-4 h-4" />
-                    </div>
-                    <div>
-                      <h5 className="font-bold text-xs text-slate-800 group-hover:text-emerald-700 transition">
-                        Download Admit Card (Hall Ticket)
-                      </h5>
-                      <p className="text-[10px] text-slate-500">Available after roll number allotment</p>
-                    </div>
+                  <div>
+                    <h5 className="font-semibold text-xs text-slate-800 group-hover:text-portal-navy transition">
+                      Download Admit Card (Hall Ticket)
+                    </h5>
+                    <p className="text-[11px] text-slate-500">Available after central roll number release</p>
                   </div>
-                  <ChevronRight className="w-4 h-4 text-slate-400 group-hover:translate-x-1 transition" />
                 </Link>
 
                 {portalSettings?.resultsDeclared && (
                   <Link
                     href="/result"
-                    className="p-3 bg-slate-50 hover:bg-slate-100 rounded-xl border border-slate-200 transition flex items-center justify-between group"
+                    className="p-3 bg-slate-50 hover:bg-slate-100/80 rounded-lg border border-slate-200/80 transition flex items-center justify-between group"
                   >
-                    <div className="flex items-center gap-3">
-                      <div className="p-2 rounded-lg bg-amber-50 text-amber-700">
-                        <Award className="w-4 h-4" />
-                      </div>
-                      <div>
-                        <h5 className="font-bold text-xs text-slate-800 group-hover:text-amber-700 transition">
-                          View Entrance Result & Scorecard
-                        </h5>
-                        <p className="text-[10px] text-slate-500">Subject-wise marks & merit ranking</p>
-                      </div>
+                    <div>
+                      <h5 className="font-semibold text-xs text-slate-800 group-hover:text-portal-navy transition">
+                        View Entrance Result &amp; Scorecard
+                      </h5>
+                      <p className="text-[11px] text-slate-500">Subject-wise marks and merit ranking</p>
                     </div>
-                    <ChevronRight className="w-4 h-4 text-slate-400 group-hover:translate-x-1 transition" />
                   </Link>
                 )}
               </div>
             </div>
 
-            {/* Administrative Staff Access Card */}
-            <div className="bg-slate-900 text-white rounded-2xl p-4 border border-slate-800 flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-amber-500/20 text-amber-400 rounded-lg">
-                  <ShieldCheck className="w-5 h-5" />
-                </div>
-                <div>
-                  <h5 className="font-bold text-xs text-white">Administrative Portal</h5>
-                  <p className="text-[10px] text-slate-400">For Gurukul Admission Cell & Officers</p>
-                </div>
+            {/* Administrative Staff Access Strip */}
+            <div className="portal-card-navy p-4 rounded-xl flex items-center justify-between">
+              <div>
+                <h5 className="font-bold text-xs text-white">Administrative Portal</h5>
+                <p className="text-[11px] text-slate-300">Gurukul Examination Board &amp; Officers</p>
               </div>
               <Link
                 href="/admin/login"
-                className="text-xs bg-slate-800 hover:bg-slate-700 text-amber-300 border border-slate-700 font-bold px-3 py-1.5 rounded-lg transition"
+                className="text-xs bg-white/10 hover:bg-white/20 text-portal-gold font-semibold px-3 py-1.5 rounded-lg transition border border-white/10"
               >
-                Admin Sign In →
+                Staff Login
               </Link>
             </div>
 
@@ -592,48 +469,43 @@ export default function ExamPortalGateway() {
         </div>
 
         {/* Examination Schedule Section */}
-        <div className="mt-8 bg-white border border-slate-200 rounded-2xl p-6 shadow-sm space-y-4">
+        <div className="mt-8 portal-card p-6 space-y-4">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-3 border-b border-slate-100 gap-2">
-            <div className="flex items-center gap-2">
-              <Calendar className="w-5 h-5 text-gurukul-600" />
-              <h3 className="font-black text-sm sm:text-base text-gurukul-navy">
+            <div>
+              <span className="portal-badge-gold text-[10px] uppercase font-mono mb-1 inline-block">Official Timeline</span>
+              <h3 className="font-bold text-base text-slate-900">
                 Important Examination Schedule (Session 2027-28)
               </h3>
             </div>
-            <span className="text-[11px] text-amber-700 bg-amber-50 border border-amber-200 px-2.5 py-1 rounded font-bold">
-              Strictly Followed by GURUKUL Network
+            <span className="text-xs text-slate-500">
+              Gurukul Kurukshetra Institutional Schedule
             </span>
           </div>
 
           {!scheduleLoaded ? (
-            /* Skeleton grid while data loads */
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 animate-pulse">
               {[1, 2, 3, 4, 5].map((i) => (
-                <div key={i} className="p-3.5 bg-slate-100 border border-slate-200 rounded-xl space-y-2">
-                  <div className="flex justify-between items-center">
-                    <div className="h-3 w-12 bg-slate-200 rounded" />
-                    <div className="h-3 w-14 bg-slate-200 rounded" />
-                  </div>
+                <div key={i} className="p-3.5 bg-slate-100 rounded-lg space-y-2">
+                  <div className="h-3 w-12 bg-slate-200 rounded" />
                   <div className="h-4 w-full bg-slate-200 rounded" />
-                  <div className="h-3 w-20 bg-slate-200 rounded" />
                 </div>
               ))}
             </div>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
               {phaseInfo.stages.map((item, idx) => (
-                <div key={idx} className="p-3.5 bg-slate-50 border border-slate-200 rounded-xl space-y-1 hover:border-amber-400 transition">
+                <div key={idx} className="data-cell space-y-1">
                   <div className="flex justify-between items-center">
-                    <span className="text-[10px] font-mono font-bold text-slate-400 uppercase">
+                    <span className="text-[10px] font-mono font-semibold text-slate-400 uppercase">
                       Stage {item.stageNumber}
                     </span>
-                    <span className={`text-[9px] px-1.5 py-0.5 rounded font-bold ${item.badgeClass}`}>
+                    <span className={`text-[9px] px-2 py-0.5 rounded font-semibold ${item.badgeClass}`}>
                       {item.status}
                     </span>
                   </div>
-                  <h4 className="font-bold text-xs text-slate-900 leading-snug">{item.event}</h4>
-                  <p className="text-xs font-semibold text-gurukul-600 flex items-center gap-1 pt-1">
-                    <Clock className="w-3 h-3 text-amber-500" /> {item.date}
+                  <h4 className="font-semibold text-xs text-slate-900 leading-snug">{item.event}</h4>
+                  <p className="text-xs font-semibold text-portal-navy pt-0.5">
+                    {item.date}
                   </p>
                 </div>
               ))}
@@ -642,19 +514,18 @@ export default function ExamPortalGateway() {
         </div>
 
         {/* Candidate Information & Guidelines */}
-        <div className="mt-6 bg-white border border-slate-200 rounded-2xl p-6 text-xs text-slate-700 space-y-3">
-          <div className="flex items-center gap-2 font-bold text-slate-900 text-sm">
-            <BookOpen className="w-4 h-4 text-gurukul-600" />
-            <span>Key Guidelines for Entrance Examination Candidates:</span>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-slate-600 leading-relaxed pt-1">
+        <div className="mt-6 bg-white border border-slate-200 rounded-xl p-6 text-xs text-slate-700 space-y-3 shadow-xs">
+          <h4 className="font-bold text-slate-900 text-sm">
+            Key Guidelines for Entrance Examination Candidates
+          </h4>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-slate-600 leading-relaxed pt-1">
             <div className="space-y-1.5">
-              <p>• <strong>Registration ID Generation:</strong> A unique Registration ID (<code>NILB-xxxxx</code> for Boys, <code>NILG-xxxxx</code> for Girls) is generated server-side immediately upon successful ₹800 fee payment.</p>
-              <p>• <strong>Official Application Form &amp; Hall Ticket:</strong> Your official Admission Form and Entrance Admit Card are generated immediately upon completed registration.</p>
+              <p>• <strong>Registration ID:</strong> A permanent Registration ID (<code>NILB-xxxxx</code> for Boys, <code>NILG-xxxxx</code> for Girls) is allocated upon ₹800 fee confirmation.</p>
+              <p>• <strong>Admit Card &amp; Exam Day Rules:</strong> Candidates must download their Entrance Admit Card and bring a <strong>COLOURED printout</strong> along with <strong>ONE ORIGINAL Photo ID proof</strong> on examination day.</p>
             </div>
             <div className="space-y-1.5">
-              <p>• <strong>4 Mandatory Documents:</strong> Keep candidate passport photo, candidate signature, parent signature, and Aadhaar card ready with interactive cropper before payment.</p>
-              <p>• <strong>Entrance Fee:</strong> Online examination and registration fee of ₹800 must be paid online via Razorpay/Debit Card/UPI to confirm registration.</p>
+              <p>• <strong>4 Mandatory Documents:</strong> Keep passport photo, candidate signature, guardian signature, and Aadhaar card ready before submission.</p>
+              <p>• <strong>Entrance Fee:</strong> Online examination and registration fee of ₹800 is payable securely via UPI, Net Banking, or Debit Card.</p>
             </div>
           </div>
         </div>
@@ -663,4 +534,3 @@ export default function ExamPortalGateway() {
     </div>
   );
 }
-

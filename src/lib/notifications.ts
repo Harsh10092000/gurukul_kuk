@@ -3,19 +3,19 @@
 export interface NotificationPayload {
   to: string;
   name: string;
-  type: 
-    | 'APPLICATION_SUBMITTED' 
-    | 'PAYMENT_SUCCESS' 
-    | 'CORRECTION_REQUIRED' 
-    | 'APPLICATION_APPROVED'
-    | 'APPLICATION_REJECTED'
-    | 'ADMIT_CARD_RELEASED' 
-    | 'RESULT_DECLARED' 
-    | 'REGISTRATION_OTP' 
-    | 'REGISTRATION_CONFIRMATION'
-    | 'FORGOT_REGISTRATION_RECOVERY'
-    | 'FEE_PAYMENT_RECEIPT'
-    | 'ADMIN_NEW_REGISTRATION_ALERT';
+  type:
+  | 'APPLICATION_SUBMITTED'
+  | 'PAYMENT_SUCCESS'
+  | 'CORRECTION_REQUIRED'
+  | 'APPLICATION_APPROVED'
+  | 'APPLICATION_REJECTED'
+  | 'ADMIT_CARD_RELEASED'
+  | 'RESULT_DECLARED'
+  | 'REGISTRATION_OTP'
+  | 'REGISTRATION_CONFIRMATION'
+  | 'FORGOT_REGISTRATION_RECOVERY'
+  | 'FEE_PAYMENT_RECEIPT'
+  | 'ADMIN_NEW_REGISTRATION_ALERT';
   data: Record<string, string | number>;
 }
 
@@ -103,7 +103,7 @@ export async function sendNotification(payload: NotificationPayload) {
 
     case 'FEE_PAYMENT_RECEIPT':
       subject = `Official Payment Receipt: GURUKUL Entrance Registration (${data.registrationNumber})`;
-      message = `Dear ${name}, your application fee of Rs. ${data.amount || 800} for GURUKUL Entrance Examination (Session 2027-28) has been successfully received. Permanent Registration ID: ${data.registrationNumber}. Transaction ID: ${data.transactionId}. Please retain this receipt for candidate login, admission form and admit card download.`;
+      message = `Dear ${name}, your application fee of Rs. ${data.amount || 800} for GURUKUL Entrance Examination (Session 2027-28) has been successfully received. Permanent Registration ID: ${data.registrationNumber}. Transaction ID: ${data.transactionId}. Please retain this receipt for candidate login, Admission form and admit card download.`;
       htmlContent = `
         <!DOCTYPE html>
         <html>
@@ -481,7 +481,7 @@ export async function sendNotification(payload: NotificationPayload) {
 
     case 'APPLICATION_REJECTED':
       subject = `Official Notice: Application Rejected / Disqualified - Gurukul Kurukshetra Entrance 2027-28 (${data.applicationNumber})`;
-      message = `Dear ${name}, this is an official notification that your entrance examination application (${data.applicationNumber}) has been REJECTED by the Admissions & Scrutiny Committee. Reason for Rejection: "${data.remarks || 'Documentation or eligibility criteria mismatch'}". As per guidelines, all previous details submitted under this dossier have been annulled. You may log in to the candidate portal at http://localhost:3000/login to refill a fresh application form or raise an official query before the application window closes.`;
+      message = `Dear ${name}, this is an official notification that your entrance examination application (${data.applicationNumber}) has been REJECTED by the Admissions & Scrutiny Committee. Reason for Rejection: "${data.remarks || 'Documentation or eligibility criteria mismatch'}". As per guidelines, all previous details submitted under this dossier have been annulled. You may log in to the candidate portal at http://localhost:3000/login to refill a fresh Admission form or raise an official query before the application window closes.`;
       htmlContent = `
         <!DOCTYPE html>
         <html>
@@ -517,7 +517,7 @@ export async function sendNotification(payload: NotificationPayload) {
               <div class="sub">CBSE Affiliation No. 530006 • Established 1912 • Kurukshetra, Haryana</div>
             </div>
             <div class="alert-banner">
-              ⚠️ OFFICIAL NOTICE: APPLICATION FORM REJECTED / DISQUALIFIED
+              ⚠️ OFFICIAL NOTICE: Admission FORM REJECTED / DISQUALIFIED
             </div>
             <div class="content">
               <p style="font-size: 15px; font-weight: 600; color: #0f172a; margin-top: 0;">Dear ${name || 'Candidate'},</p>
@@ -541,7 +541,7 @@ export async function sendNotification(payload: NotificationPayload) {
               <div class="instruction-box">
                 <strong>Next Steps & Redressal Options:</strong>
                 <ul style="margin: 6px 0 0 0; padding-left: 20px;">
-                  <li><strong>Refill Application:</strong> As per examination bylaws, your previous particulars have been annulled. You may sign in to your portal account to <strong>Refill a fresh application form</strong> before the closing date.</li>
+                  <li><strong>Refill Application:</strong> As per examination bylaws, your previous particulars have been annulled. You may sign in to your portal account to <strong>Refill a fresh Admission form</strong> before the closing date.</li>
                   <li><strong>Raise Grievance:</strong> If you believe this rejection was made in error, you may submit an official query / grievance directly through the candidate portal.</li>
                 </ul>
               </div>

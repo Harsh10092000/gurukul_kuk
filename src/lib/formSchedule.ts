@@ -117,7 +117,7 @@ export function checkFormStatus(): FormStatusResult {
       startDate: schedule.startDate,
       endDate: schedule.endDate,
       timezone: schedule.timezone,
-      message: `Application form has been extended until ${formattedEnd} (${schedule.timezone}).`,
+      message: `Admission form has been extended until ${formattedEnd} (${schedule.timezone}).`,
       announcementNotice: `Notice: Online Application for Entrance Examination Session 2027-28 has been extended up to ${formattedEnd}.`,
     };
   }

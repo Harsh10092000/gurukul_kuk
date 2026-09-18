@@ -1,29 +1,14 @@
-'use client';
+﻿'use client';
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import {
-  User,
-  Users,
-  MapPin,
-  Building,
-  Upload,
-  CreditCard,
   CheckCircle,
-  ArrowRight,
-  ArrowLeft,
   AlertCircle,
-  ShieldCheck,
-  FileCheck,
-  Check,
-  FileText,
-  Save,
-  BookmarkCheck,
-  ShieldAlert,
   Trash2,
-  Crop,
-  Eye
+  BookmarkCheck,
+  Upload
 } from 'lucide-react';
 import { INDIAN_STATES_AND_DISTRICTS } from '@/lib/indianLocations';
 import {
@@ -186,7 +171,6 @@ export default function ApplyPage() {
           candidateEmail: user.email || prev.candidateEmail || '',
           candidateMobile: user.phone || prev.candidateMobile || '',
           whatsappNumber: user.phone || prev.whatsappNumber || '',
-          // Father phone starts empty per specification
           fatherPhone: prev.fatherPhone || '',
         }));
 
@@ -306,7 +290,6 @@ export default function ApplyPage() {
     reader.onload = () => {
       const result = reader.result as string;
       if (['photo', 'signature', 'parentSignature'].includes(field)) {
-        // Open the interactive NTA-style cropping modal
         const isPhoto = field === 'photo';
         setCropModal({
           isOpen: true,
@@ -316,7 +299,6 @@ export default function ApplyPage() {
           aspectRatio: isPhoto ? 3.5 / 4.5 : 3.5 / 1.5,
         });
       } else {
-        // Aadhaar Document
         setFormData((prev) => ({
           ...prev,
           aadhaarCard: result,
@@ -431,7 +413,6 @@ export default function ApplyPage() {
     }
 
     if (step === 2) {
-      // Candidate details validation
       const nameVal = validateName(formData.fullName, 'Candidate Full Name');
       if (!nameVal.isValid) {
         setError(nameVal.error || 'Invalid name');
@@ -470,7 +451,6 @@ export default function ApplyPage() {
     }
 
     if (step === 3) {
-      // Parents validation
       const fNameVal = validateName(formData.fatherName, "Father's Full Name");
       if (!fNameVal.isValid) {
         setError(fNameVal.error || 'Invalid Father Name');
@@ -503,7 +483,6 @@ export default function ApplyPage() {
     }
 
     if (step === 4) {
-      // Address validation
       if (!formData.streetAddress.trim()) {
         setError('Permanent Street Address is required.');
         return;
@@ -526,7 +505,6 @@ export default function ApplyPage() {
     }
 
     if (step === 5) {
-      // Preferred Study Location validation
       const locVal = validateStudyLocation(formData.gender, formData.firstPreference, formData.secondPreference);
       if (!locVal.isValid) {
         setError(locVal.error || 'Invalid Study Location Preference');
@@ -538,7 +516,6 @@ export default function ApplyPage() {
     }
 
     if (step === 6) {
-      // Documents validation (4 documents only)
       const docsVal = validateAllFourDocuments(formData);
       if (!docsVal.isValid) {
         setError(docsVal.error || 'All 4 documents are mandatory.');
@@ -636,12 +613,10 @@ export default function ApplyPage() {
 
       setSubmittedApp(data.application);
 
-      // Clean local storage
       try {
         localStorage.removeItem('gurukul_application_draft');
       } catch { }
 
-      // Smoothly redirect candidate to dashboard after 1.8 seconds
       setTimeout(() => {
         window.location.href = '/dashboard?registered=true';
       }, 1800);
@@ -651,48 +626,49 @@ export default function ApplyPage() {
     }
   };
 
-  const stepTitles = [
-    { num: 1, title: 'Instructions', icon: ShieldCheck },
-    { num: 2, title: 'Candidate', icon: User },
-    { num: 3, title: 'Parents', icon: Users },
-    { num: 4, title: 'Address', icon: MapPin },
-    { num: 5, title: 'Study Location', icon: Building },
-    { num: 6, title: 'Documents', icon: Upload },
-    { num: 7, title: 'Payment', icon: CreditCard },
+  const steps = [
+    { num: 1, label: 'Instructions' },
+    { num: 2, label: 'Candidate' },
+    { num: 3, label: 'Parents' },
+    { num: 4, label: 'Address' },
+    { num: 5, label: 'Campus' },
+    { num: 6, label: 'Documents' },
+    { num: 7, label: 'Payment' },
   ];
 
   const currentDistricts = INDIAN_STATES_AND_DISTRICTS[formData.state] || ['Other'];
 
-  // SCREEN: Registration Confirmed Screen (Shows for 1-2 sec without any buttons before redirect)
+  // SCREEN: Registration Confirmed Screen
   if (submittedApp) {
     const regNo = submittedApp.registrationNumber || submittedApp.applicationNumber;
     return (
-      <div className="max-w-xl mx-auto my-20 px-4 font-sans">
-        <div className="bg-white border-2 border-emerald-500 rounded-3xl shadow-2xl p-8 sm:p-12 space-y-6 text-center">
-          <div className="w-16 h-16 bg-emerald-100 text-emerald-600 rounded-2xl flex items-center justify-center mx-auto shadow-inner">
-            <CheckCircle className="w-10 h-10" />
+      <div className="max-w-md mx-auto my-16 px-4">
+        <div className="bg-white border border-slate-200 rounded-xl shadow-elevated p-8 text-center space-y-5">
+          <div className="w-14 h-14 bg-emerald-50 text-emerald-600 rounded-full flex items-center justify-center mx-auto border border-emerald-200">
+            <CheckCircle className="w-8 h-8" />
           </div>
 
           <div className="space-y-2">
-            <span className="text-xs font-mono font-black uppercase tracking-wider bg-emerald-100 text-emerald-800 px-3.5 py-1 rounded-full">
-              Registration Successful
+            <span className="text-xs font-semibold uppercase tracking-wider text-emerald-700 bg-emerald-50 px-3 py-1 rounded border border-emerald-200 inline-block">
+              Payment Confirmed
             </span>
-            <h2 className="text-2xl sm:text-3xl font-black text-gurukul-navy pt-2">
-              You Have Successfully Registered!
+            <h2 className="text-xl font-bold text-slate-900 pt-1">
+              Registration Successful
             </h2>
-            <p className="text-sm text-slate-600">
-              Your entrance application and examination fee payment have been confirmed.
+            <p className="text-xs text-slate-600">
+              Your entrance examination application and fee payment have been received.
             </p>
             {regNo && (
-              <p className="text-xs font-mono font-bold text-slate-600 pt-1">
-                Permanent Registration No: <span className="text-gurukul-navy font-black">{regNo}</span>
-              </p>
+              <div className="pt-2">
+                <span className="text-xs text-slate-500 block">Permanent Registration Number</span>
+                <span className="text-sm font-mono font-bold text-portal-navy tracking-wide">{regNo}</span>
+              </div>
             )}
           </div>
 
-          <div className="pt-4 flex flex-col items-center justify-center space-y-3">
-            <div className="w-8 h-8 border-3 border-amber-500 border-t-transparent rounded-full animate-spin" />
-            <p className="text-xs font-bold text-slate-500">Redirecting to Candidate Dashboard...</p>
+          <div className="pt-3 flex flex-col items-center justify-center space-y-2">
+            <div className="w-6 h-6 border-2 border-portal-navy border-t-transparent rounded-full animate-spin" />
+            <p className="text-xs text-slate-500">Redirecting to candidate dashboard...</p>
           </div>
         </div>
       </div>
@@ -700,183 +676,158 @@ export default function ApplyPage() {
   }
 
   return (
-    <div className="max-w-5xl mx-auto px-4 py-8 font-sans">
-      {/* Top Header */}
-      <div className="mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+    <div className="max-w-4xl mx-auto px-4 py-8">
+      {/* Header bar */}
+      <div className="mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-200 pb-4">
         <div>
-          <span className="text-[10px] font-bold uppercase tracking-wider text-gurukul-600 bg-amber-100 px-3 py-1 rounded-full">
+          <span className="text-[11px] font-semibold uppercase tracking-wider text-portal-navy bg-slate-100 px-2.5 py-0.5 rounded border border-slate-200">
             Entrance Session 2027-28
           </span>
-          <h1 className="text-2xl sm:text-3xl font-black text-gurukul-navy mt-1">
-            GURUKUL Online Entrance Application
+          <h1 className="text-xl sm:text-2xl font-bold text-slate-900 mt-1">
+            Online Entrance Application
           </h1>
           <p className="text-xs text-slate-500">
             Admissions for Gurukul Nilokheri, Gurukul Jyotisar, and Aryakulam Nilokheri
           </p>
         </div>
 
-        {/* Abandon / Cancel Button */}
-        <button
-          type="button"
-          onClick={() => setShowCancelModal(true)}
-          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-red-600 hover:bg-red-50 text-xs font-bold rounded-xl border border-red-200 transition self-start sm:self-center"
-        >
-          <Trash2 className="w-3.5 h-3.5" />
-          <span>Cancel Application</span>
-        </button>
+        <div className="flex items-center gap-2 self-start sm:self-auto">
+          {step > 1 && (
+            <button
+              type="button"
+              onClick={handleSaveDraft}
+              disabled={savingDraft}
+              className="btn-secondary text-xs px-3 py-1.5"
+            >
+              {savingDraft ? 'Saving...' : 'Save Draft'}
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={() => setShowCancelModal(true)}
+            className="text-xs text-rose-600 hover:text-rose-700 px-2.5 py-1.5 font-medium border border-rose-200 rounded hover:bg-rose-50 transition"
+          >
+            Cancel
+          </button>
+        </div>
       </div>
 
-      {/* Stepper Wizard Bar */}
-      <div className="mb-8 overflow-x-auto pb-2">
-        <div className="flex items-center justify-between min-w-[640px] border-b border-slate-200 pb-4">
-          {stepTitles.map((s) => {
-            const Icon = s.icon;
+      {/* Progress Stepper */}
+      <div className="mb-6 overflow-x-auto pb-2">
+        <div className="flex items-center justify-between min-w-[560px] bg-white border border-slate-200 rounded-lg p-3">
+          {steps.map((s, idx) => {
             const isActive = step === s.num;
             const isCompleted = step > s.num;
             return (
               <div
                 key={s.num}
-                className={`flex items-center gap-2 transition ${isActive
-                  ? 'text-gurukul-600 font-bold'
-                  : isCompleted
-                    ? 'text-emerald-600 font-semibold cursor-pointer'
-                    : 'text-slate-400 font-medium'
-                  }`}
                 onClick={() => isCompleted && setStep(s.num)}
+                className={`flex items-center gap-2 text-xs select-none ${isCompleted ? 'cursor-pointer text-slate-700 font-medium' : isActive ? 'text-portal-navy font-bold' : 'text-slate-400 font-normal'
+                  }`}
               >
                 <div
-                  className={`w-8 h-8 rounded-full flex items-center justify-center text-xs ${isActive
-                    ? 'bg-gurukul-600 text-white font-bold shadow-md'
+                  className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-semibold ${isActive
+                    ? 'bg-portal-navy text-white'
                     : isCompleted
-                      ? 'bg-emerald-100 text-emerald-700'
-                      : 'bg-slate-100 text-slate-500'
+                      ? 'bg-emerald-600 text-white'
+                      : 'bg-slate-100 text-slate-500 border border-slate-200'
                     }`}
                 >
-                  {isCompleted ? <CheckCircle className="w-4 h-4" /> : <Icon className="w-4 h-4" />}
+                  {isCompleted ? '✓' : s.num}
                 </div>
-                <span className="text-xs">{s.title}</span>
+                <span>{s.label}</span>
+                {idx < steps.length - 1 && (
+                  <div className="w-6 h-px bg-slate-200 ml-1 hidden sm:block" />
+                )}
               </div>
             );
           })}
         </div>
       </div>
 
-      {/* Messages */}
+      {/* Draft Saved Message */}
       {draftSavedMsg && (
-        <div className="mb-6 p-4 rounded-xl bg-emerald-50 border border-emerald-300 text-emerald-900 text-xs font-bold flex items-center gap-2 shadow-sm">
-          <BookmarkCheck className="w-5 h-5 text-emerald-600 flex-shrink-0" />
+        <div className="mb-4 p-3 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-medium flex items-center gap-2">
+          <BookmarkCheck className="w-4 h-4 text-emerald-600 flex-shrink-0" />
           <span>{draftSavedMsg}</span>
         </div>
       )}
 
+      {/* Error Banner */}
       {error && (
-        <div className="mb-6 p-4 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs flex items-center gap-2">
-          <AlertCircle className="w-5 h-5 flex-shrink-0" />
+        <div className="mb-4 p-3 rounded-lg bg-rose-50 border border-rose-200 text-rose-700 text-xs font-medium flex items-center gap-2">
+          <AlertCircle className="w-4 h-4 flex-shrink-0" />
           <span>{error}</span>
         </div>
       )}
 
-      {/* Form Steps Container */}
-      <div className="bg-white border border-slate-200 rounded-3xl shadow-xl p-6 sm:p-10">
-
-        {/* STEP 1: Declaration & Instructions */}
+      {/* Form Content Card */}
+      <div className="portal-card p-6 sm:p-8">
+        {/* STEP 1: Instructions & Declaration */}
         {step === 1 && (
-          <div className="space-y-6">
-            <div className="border-b border-amber-200 pb-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-              <div className="flex items-center gap-2.5">
-                <ShieldAlert className="w-6 h-6 text-amber-600 flex-shrink-0" />
+          <div className="space-y-5">
+            <div className="border-b border-slate-200 pb-3">
+              <h2 className="text-base font-bold text-slate-900">
+                Pre-Application Advisory &amp; Candidate Undertaking
+              </h2>
+              <p className="text-xs text-slate-500">
+                Read all conditions carefully before filling out the online application.
+              </p>
+            </div>
+
+            <div className="space-y-3 text-xs text-slate-700 bg-slate-50 p-4 rounded-lg border border-slate-200 leading-relaxed">
+              <div className="flex items-start gap-2">
+                <span className="font-bold text-slate-900">1.</span>
                 <div>
-                  <h2 className="text-base sm:text-lg font-black text-gurukul-navy">
-                    Pre-Application Advisory &amp; Candidate Undertaking
-                  </h2>
-                  <p className="text-xs text-slate-500 font-medium">
-                    (In accordance with Entrance Examination Standards for Session 2027-28)
-                  </p>
+                  <strong className="text-slate-900">Identity Veracity:</strong> Full name, date of birth, gender, and parents&apos; names must match the candidate&apos;s official school records and Aadhaar Card.
                 </div>
               </div>
-              <span className="text-[10px] font-black uppercase tracking-wider bg-amber-100 text-amber-900 border border-amber-300 px-3 py-1 rounded-full w-fit">
-                Mandatory Step
+              <div className="flex items-start gap-2">
+                <span className="font-bold text-slate-900">2.</span>
+                <div>
+                  <strong className="text-slate-900">Single Application Rule:</strong> Only one Admission form is permitted per candidate. Duplicate submissions are systematically rejected.
+                </div>
+              </div>
+              <div className="flex items-start gap-2">
+                <span className="font-bold text-slate-900">3.</span>
+                <div>
+                  <strong className="text-slate-900">Document Uploads:</strong> Candidate photo, candidate signature, parent/guardian signature, and Aadhaar copy must be legible files under 2 MB each.
+                </div>
+              </div>
+              <div className="flex items-start gap-2">
+                <span className="font-bold text-slate-900">4.</span>
+                <div>
+                  <strong className="text-slate-900">Application Fee:</strong> Registration is officially finalized only upon payment of the ₹800 non-refundable examination fee.
+                </div>
+              </div>
+            </div>
+
+            <label className="flex items-start gap-3 p-3.5 bg-slate-50 border border-slate-300 rounded-lg cursor-pointer">
+              <input
+                type="checkbox"
+                checked={ntaCheckbox}
+                onChange={(e) => setNtaCheckbox(e.target.checked)}
+                className="mt-0.5 w-4 h-4 text-portal-navy rounded border-slate-300 focus:ring-portal-navy"
+              />
+              <span className="text-xs text-slate-800 leading-normal">
+                I have read, understood, and accept all eligibility terms and examination guidelines for the Gurukul Entrance Examination 2027-28. I declare that all furnished particulars are accurate.
               </span>
-            </div>
-
-            <div className="space-y-3.5 text-xs text-slate-700 leading-relaxed bg-amber-50/60 p-5 sm:p-6 rounded-2xl border border-amber-200">
-              <div className="flex items-start gap-3">
-                <span className="w-5 h-5 rounded-full bg-amber-500 text-gurukul-navy font-black text-xs flex items-center justify-center flex-shrink-0 mt-0.5">
-                  1
-                </span>
-                <div>
-                  <strong className="text-slate-900 font-bold block mb-0.5">
-                    Official Identity Veracity:
-                  </strong>
-                  Candidate Full Name, Date of Birth, Gender, Father’s Name, Mother’s Name, and Aadhaar Card Number must strictly match the candidate’s official school records and Aadhaar Card.
-                </div>
-              </div>
-
-              <div className="flex items-start gap-3">
-                <span className="w-5 h-5 rounded-full bg-amber-500 text-gurukul-navy font-black text-xs flex items-center justify-center flex-shrink-0 mt-0.5">
-                  2
-                </span>
-                <div>
-                  <strong className="text-slate-900 font-bold block mb-0.5">
-                    Prohibition of Duplicate Registrations &amp; Aadhaar Misuse:
-                  </strong>
-                  A candidate can submit only ONE application form for the academic session 2027-28. Duplicate registrations are automatically blocked.
-                </div>
-              </div>
-
-              <div className="flex items-start gap-3">
-                <span className="w-5 h-5 rounded-full bg-amber-500 text-gurukul-navy font-black text-xs flex items-center justify-center flex-shrink-0 mt-0.5">
-                  3
-                </span>
-                <div>
-                  <strong className="text-slate-900 font-bold block mb-0.5">
-                    Mandatory Documents:
-                  </strong>
-                  Candidate Photograph, Candidate Signature, Parent/Guardian Signature, and Aadhaar Card copy must be clear and authentic.
-                </div>
-              </div>
-
-              <div className="flex items-start gap-3">
-                <span className="w-5 h-5 rounded-full bg-amber-500 text-gurukul-navy font-black text-xs flex items-center justify-center flex-shrink-0 mt-0.5">
-                  4
-                </span>
-                <div>
-                  <strong className="text-slate-900 font-bold block mb-0.5">
-                    Official Registration &amp; Fee:
-                  </strong>
-                  Candidate becomes officially registered ONLY after confirmed payment of the application fee of ₹800. An official Registration ID (NILB for boys, NILG for girls) is generated after successful payment.
-                </div>
-              </div>
-            </div>
-
-            {/* Mandatory Undertaking Checkbox */}
-            <div className="p-4 sm:p-5 bg-slate-50 border-2 border-slate-300 rounded-2xl space-y-3">
-              <label className="flex items-start gap-3 cursor-pointer select-none">
-                <input
-                  type="checkbox"
-                  checked={ntaCheckbox}
-                  onChange={(e) => setNtaCheckbox(e.target.checked)}
-                  className="mt-1 w-4 h-4 text-gurukul-600 rounded border-slate-300 focus:ring-amber-500 cursor-pointer flex-shrink-0"
-                />
-                <span className="text-xs text-slate-800 font-bold leading-relaxed">
-                  I have carefully read, understood, and accept all the instructions, eligibility criteria, and examination guidelines for the GURUKUL Entrance Examination 2027-28. I solemnly declare that all particulars furnished by me in this application are authentic and true.
-                </span>
-              </label>
-            </div>
+            </label>
           </div>
         )}
 
         {/* STEP 2: Candidate Details */}
         {step === 2 && (
-          <div className="space-y-6">
-            <h2 className="text-lg font-bold text-slate-900 border-b border-slate-100 pb-3 flex items-center gap-2">
-              <User className="w-5 h-5 text-gurukul-600" /> Step 2: Candidate Details
-            </h2>
+          <div className="space-y-5">
+            <div className="border-b border-slate-200 pb-3">
+              <h2 className="text-base font-bold text-slate-900">Step 2: Candidate Details</h2>
+              <p className="text-xs text-slate-500">Provide personal and academic background information.</p>
+            </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
-                  Candidate Full Name (As per AADHAAR CARD) *
+                <label className="form-label">
+                  Candidate Full Name (As per Aadhaar) <span className="text-rose-500">*</span>
                 </label>
                 <input
                   type="text"
@@ -884,14 +835,14 @@ export default function ApplyPage() {
                   required
                   value={formData.fullName}
                   onChange={handleChange}
-                  placeholder="As per candidate's Aadhaar Card"
-                  className="w-full px-3.5 py-2 text-sm border rounded-lg focus:ring-2 focus:ring-amber-500 outline-none font-medium"
+                  placeholder="Candidate full name"
+                  className="form-input-field"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
-                  Date of Birth (DD/MM/YYYY) *
+                <label className="form-label">
+                  Date of Birth <span className="text-rose-500">*</span>
                 </label>
                 <input
                   type="date"
@@ -900,20 +851,20 @@ export default function ApplyPage() {
                   max={todayString}
                   value={formData.dob}
                   onChange={handleChange}
-                  className="w-full px-3.5 py-2 text-sm border rounded-lg focus:ring-2 focus:ring-amber-500 outline-none"
+                  className="form-input-field"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
-                  Gender *
+                <label className="form-label">
+                  Gender <span className="text-rose-500">*</span>
                 </label>
                 <select
                   name="gender"
                   required
                   value={formData.gender}
                   onChange={handleChange}
-                  className="w-full px-3.5 py-2 text-sm border rounded-lg focus:ring-2 focus:ring-amber-500 outline-none"
+                  className="form-input-field"
                 >
                   <option value="Male">Male</option>
                   <option value="Female">Female</option>
@@ -921,15 +872,15 @@ export default function ApplyPage() {
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
-                  Social Category *
+                <label className="form-label">
+                  Social Category <span className="text-rose-500">*</span>
                 </label>
                 <select
                   name="category"
                   required
                   value={formData.category}
                   onChange={handleChange}
-                  className="w-full px-3.5 py-2 text-sm border rounded-lg focus:ring-2 focus:ring-amber-500 outline-none"
+                  className="form-input-field"
                 >
                   <option value="General">General</option>
                   <option value="OBC">OBC</option>
@@ -940,15 +891,15 @@ export default function ApplyPage() {
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
-                  Class Applying For *
+                <label className="form-label">
+                  Class Applying For <span className="text-rose-500">*</span>
                 </label>
                 <select
                   name="applyingClass"
                   required
                   value={formData.applyingClass}
                   onChange={handleChange}
-                  className="w-full px-3.5 py-2 text-sm border rounded-lg focus:ring-2 focus:ring-amber-500 outline-none font-bold text-gurukul-navy"
+                  className="form-input-field font-semibold"
                 >
                   <option value="Class 6">Class 6</option>
                   <option value="Class 7">Class 7</option>
@@ -960,15 +911,15 @@ export default function ApplyPage() {
 
               {formData.applyingClass.includes('11') && (
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
-                    Stream *
+                  <label className="form-label">
+                    Stream <span className="text-rose-500">*</span>
                   </label>
                   <select
                     name="stream"
                     required
                     value={formData.stream || 'Non Medical'}
                     onChange={handleChange}
-                    className="w-full px-3.5 py-2 text-sm border rounded-lg focus:ring-2 focus:ring-amber-500 outline-none bg-white font-semibold text-slate-800"
+                    className="form-input-field font-semibold"
                   >
                     <option value="Non Medical">Non Medical</option>
                     <option value="Medical">Medical</option>
@@ -979,8 +930,8 @@ export default function ApplyPage() {
               )}
 
               <div>
-                <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
-                  Previous School Name *
+                <label className="form-label">
+                  Previous School Name <span className="text-rose-500">*</span>
                 </label>
                 <input
                   type="text"
@@ -988,21 +939,21 @@ export default function ApplyPage() {
                   required
                   value={formData.previousSchoolName}
                   onChange={handleChange}
-                  placeholder="Name of last attended school"
-                  className="w-full px-3.5 py-2 text-sm border rounded-lg focus:ring-2 focus:ring-amber-500 outline-none font-medium"
+                  placeholder="Last attended school"
+                  className="form-input-field"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
-                  Previous Educational Board *
+                <label className="form-label">
+                  Previous Educational Board <span className="text-rose-500">*</span>
                 </label>
                 <select
                   name="previousBoard"
                   required
                   value={formData.previousBoard}
                   onChange={handleChange}
-                  className="w-full px-3.5 py-2 text-sm border rounded-lg focus:ring-2 focus:ring-amber-500 outline-none"
+                  className="form-input-field"
                 >
                   <option value="CBSE">CBSE</option>
                   <option value="ICSE">ICSE</option>
@@ -1014,8 +965,8 @@ export default function ApplyPage() {
 
               {formData.previousBoard === 'Others' && (
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
-                    Specify Educational Board *
+                  <label className="form-label">
+                    Specify Educational Board <span className="text-rose-500">*</span>
                   </label>
                   <input
                     type="text"
@@ -1024,14 +975,14 @@ export default function ApplyPage() {
                     value={formData.otherBoard}
                     onChange={handleChange}
                     placeholder="Enter board name"
-                    className="w-full px-3.5 py-2 text-sm border rounded-lg focus:ring-2 focus:ring-amber-500 outline-none font-medium border-amber-400"
+                    className="form-input-field"
                   />
                 </div>
               )}
 
               <div>
-                <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
-                  Aadhaar Card Number (12 Digits) *
+                <label className="form-label">
+                  Aadhaar Card Number (12 Digits) <span className="text-rose-500">*</span>
                 </label>
                 <input
                   type="text"
@@ -1042,12 +993,12 @@ export default function ApplyPage() {
                   value={formData.aadhaarNumber}
                   onChange={handleChange}
                   placeholder="12-digit UIDAI number"
-                  className="w-full px-3.5 py-2 text-sm border rounded-lg focus:ring-2 focus:ring-amber-500 outline-none font-mono"
+                  className="form-input-field font-mono"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
+                <label className="form-label">
                   PEN Number (Permanent Education Number)
                 </label>
                 <input
@@ -1055,13 +1006,13 @@ export default function ApplyPage() {
                   name="panNumber"
                   value={formData.panNumber}
                   onChange={handleChange}
-                  placeholder="Optional (if allotted by previous school)"
-                  className="w-full px-3.5 py-2 text-sm border rounded-lg focus:ring-2 focus:ring-amber-500 outline-none"
+                  placeholder="Optional (if allotted)"
+                  className="form-input-field"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
+                <label className="form-label">
                   Family ID (Parivar Pehchan Patra)
                 </label>
                 <input
@@ -1070,7 +1021,7 @@ export default function ApplyPage() {
                   value={formData.familyId}
                   onChange={handleChange}
                   placeholder="Optional (if applicable)"
-                  className="w-full px-3.5 py-2 text-sm border rounded-lg focus:ring-2 focus:ring-amber-500 outline-none"
+                  className="form-input-field"
                 />
               </div>
             </div>
@@ -1079,15 +1030,16 @@ export default function ApplyPage() {
 
         {/* STEP 3: Parent/Guardian Details */}
         {step === 3 && (
-          <div className="space-y-6">
-            <h2 className="text-lg font-bold text-slate-900 border-b border-slate-100 pb-3 flex items-center gap-2">
-              <Users className="w-5 h-5 text-gurukul-600" /> Step 3: Parent &amp; Guardian Particulars
-            </h2>
+          <div className="space-y-5">
+            <div className="border-b border-slate-200 pb-3">
+              <h2 className="text-base font-bold text-slate-900">Step 3: Parent &amp; Guardian Particulars</h2>
+              <p className="text-xs text-slate-500">Provide official contact details for parents or guardians.</p>
+            </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
-                  Father&apos;s Full Name *
+                <label className="form-label">
+                  Father&apos;s Full Name <span className="text-rose-500">*</span>
                 </label>
                 <input
                   type="text"
@@ -1096,13 +1048,13 @@ export default function ApplyPage() {
                   value={formData.fatherName}
                   onChange={handleChange}
                   placeholder="Father's full name"
-                  className="w-full px-3.5 py-2 text-sm border rounded-lg focus:ring-2 focus:ring-amber-500 outline-none font-medium"
+                  className="form-input-field"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
-                  Father&apos;s Occupation (Optional)
+                <label className="form-label">
+                  Father&apos;s Occupation
                 </label>
                 <input
                   type="text"
@@ -1110,16 +1062,16 @@ export default function ApplyPage() {
                   value={formData.fatherOccupation}
                   onChange={handleChange}
                   placeholder="e.g. Service, Business, Agriculture"
-                  className="w-full px-3.5 py-2 text-sm border rounded-lg focus:ring-2 focus:ring-amber-500 outline-none font-medium"
+                  className="form-input-field"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
-                  Father&apos;s Mobile Phone *
+                <label className="form-label">
+                  Father&apos;s Mobile Phone <span className="text-rose-500">*</span>
                 </label>
                 <div className="relative">
-                  <span className="absolute left-3 top-2 text-xs font-bold text-slate-400">+91</span>
+                  <span className="absolute left-3 top-2.5 text-xs font-semibold text-slate-400">+91</span>
                   <input
                     type="tel"
                     name="fatherPhone"
@@ -1128,14 +1080,14 @@ export default function ApplyPage() {
                     value={formData.fatherPhone}
                     onChange={handleChange}
                     placeholder="10-digit mobile number"
-                    className="w-full pl-11 pr-3 py-2 text-sm border rounded-lg focus:ring-2 focus:ring-amber-500 outline-none font-mono"
+                    className="form-input-field pl-10 font-mono"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
-                  Mother&apos;s Full Name *
+                <label className="form-label">
+                  Mother&apos;s Full Name <span className="text-rose-500">*</span>
                 </label>
                 <input
                   type="text"
@@ -1144,13 +1096,13 @@ export default function ApplyPage() {
                   value={formData.motherName}
                   onChange={handleChange}
                   placeholder="Mother's full name"
-                  className="w-full px-3.5 py-2 text-sm border rounded-lg focus:ring-2 focus:ring-amber-500 outline-none font-medium"
+                  className="form-input-field"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
-                  Mother&apos;s Occupation (Optional)
+                <label className="form-label">
+                  Mother&apos;s Occupation
                 </label>
                 <input
                   type="text"
@@ -1158,20 +1110,20 @@ export default function ApplyPage() {
                   value={formData.motherOccupation}
                   onChange={handleChange}
                   placeholder="e.g. Homemaker, Teacher, Doctor"
-                  className="w-full px-3.5 py-2 text-sm border rounded-lg focus:ring-2 focus:ring-amber-500 outline-none font-medium"
+                  className="form-input-field"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
-                  Annual Family Income *
+                <label className="form-label">
+                  Annual Family Income <span className="text-rose-500">*</span>
                 </label>
                 <select
                   name="annualIncome"
                   required
                   value={formData.annualIncome}
                   onChange={handleChange}
-                  className="w-full px-3.5 py-2 text-sm border rounded-lg focus:ring-2 focus:ring-amber-500 outline-none"
+                  className="form-input-field"
                 >
                   <option value="">Select Income Bracket</option>
                   <option value="Below ₹1,50,000">Below ₹1,50,000</option>
@@ -1183,7 +1135,7 @@ export default function ApplyPage() {
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
+                <label className="form-label">
                   Guardian&apos;s Name (If applicable)
                 </label>
                 <input
@@ -1192,12 +1144,12 @@ export default function ApplyPage() {
                   value={formData.guardianName}
                   onChange={handleChange}
                   placeholder="Optional"
-                  className="w-full px-3.5 py-2 text-sm border rounded-lg focus:ring-2 focus:ring-amber-500 outline-none"
+                  className="form-input-field"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
+                <label className="form-label">
                   Guardian&apos;s Relation
                 </label>
                 <input
@@ -1206,7 +1158,7 @@ export default function ApplyPage() {
                   value={formData.guardianRelation}
                   onChange={handleChange}
                   placeholder="e.g. Uncle, Grandparent"
-                  className="w-full px-3.5 py-2 text-sm border rounded-lg focus:ring-2 focus:ring-amber-500 outline-none"
+                  className="form-input-field"
                 />
               </div>
             </div>
@@ -1215,15 +1167,16 @@ export default function ApplyPage() {
 
         {/* STEP 4: Permanent Address */}
         {step === 4 && (
-          <div className="space-y-6">
-            <h2 className="text-lg font-bold text-slate-900 border-b border-slate-100 pb-3 flex items-center gap-2">
-              <MapPin className="w-5 h-5 text-gurukul-600" /> Step 4: Permanent &amp; Correspondence Address
-            </h2>
+          <div className="space-y-5">
+            <div className="border-b border-slate-200 pb-3">
+              <h2 className="text-base font-bold text-slate-900">Step 4: Permanent &amp; Correspondence Address</h2>
+              <p className="text-xs text-slate-500">Provide official residential and communication address.</p>
+            </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="sm:col-span-2">
-                <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
-                  Street / House Address *
+                <label className="form-label">
+                  Street / House Address <span className="text-rose-500">*</span>
                 </label>
                 <input
                   type="text"
@@ -1232,13 +1185,13 @@ export default function ApplyPage() {
                   value={formData.streetAddress}
                   onChange={handleChange}
                   placeholder="House No., Building Name, Street / Sector"
-                  className="w-full px-3.5 py-2 text-sm border rounded-lg focus:ring-2 focus:ring-amber-500 outline-none font-medium"
+                  className="form-input-field"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
-                  City / Town / Village *
+                <label className="form-label">
+                  City / Town / Village <span className="text-rose-500">*</span>
                 </label>
                 <input
                   type="text"
@@ -1247,20 +1200,20 @@ export default function ApplyPage() {
                   value={formData.city}
                   onChange={handleChange}
                   placeholder="City"
-                  className="w-full px-3.5 py-2 text-sm border rounded-lg focus:ring-2 focus:ring-amber-500 outline-none font-medium"
+                  className="form-input-field"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
-                  State / UT *
+                <label className="form-label">
+                  State / UT <span className="text-rose-500">*</span>
                 </label>
                 <select
                   name="state"
                   required
                   value={formData.state}
                   onChange={handleChange}
-                  className="w-full px-3.5 py-2 text-sm border rounded-lg focus:ring-2 focus:ring-amber-500 outline-none font-medium"
+                  className="form-input-field"
                 >
                   {Object.keys(INDIAN_STATES_AND_DISTRICTS).map((st) => (
                     <option key={st} value={st}>{st}</option>
@@ -1269,15 +1222,15 @@ export default function ApplyPage() {
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
-                  District *
+                <label className="form-label">
+                  District <span className="text-rose-500">*</span>
                 </label>
                 <select
                   name="district"
                   required
                   value={formData.district}
                   onChange={handleChange}
-                  className="w-full px-3.5 py-2 text-sm border rounded-lg focus:ring-2 focus:ring-amber-500 outline-none font-medium"
+                  className="form-input-field"
                 >
                   {currentDistricts.map((d) => (
                     <option key={d} value={d}>{d}</option>
@@ -1286,8 +1239,8 @@ export default function ApplyPage() {
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
-                  PIN Code (6 Digits) *
+                <label className="form-label">
+                  PIN Code (6 Digits) <span className="text-rose-500">*</span>
                 </label>
                 <input
                   type="text"
@@ -1298,31 +1251,32 @@ export default function ApplyPage() {
                   value={formData.pincode}
                   onChange={handleChange}
                   placeholder="6-digit PIN code"
-                  className="w-full px-3.5 py-2 text-sm border rounded-lg focus:ring-2 focus:ring-amber-500 outline-none font-mono font-bold"
+                  className="form-input-field font-mono"
                 />
               </div>
             </div>
           </div>
         )}
 
-        {/* STEP 5: Preferred Study Location */}
+        {/* STEP 5: Study Location Preference */}
         {step === 5 && (
-          <div className="space-y-6">
-            <h2 className="text-lg font-bold text-slate-900 border-b border-slate-100 pb-3 flex items-center gap-2">
-              <Building className="w-5 h-5 text-gurukul-600" /> Step 5: Preferred Study Location
-            </h2>
+          <div className="space-y-5">
+            <div className="border-b border-slate-200 pb-3">
+              <h2 className="text-base font-bold text-slate-900">Step 5: Preferred Study Location</h2>
+              <p className="text-xs text-slate-500">Select campus preferences for admission.</p>
+            </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
-                  1st Preference Study Location *
+                <label className="form-label">
+                  1st Preference Study Location <span className="text-rose-500">*</span>
                 </label>
                 {formData.gender === 'Female' ? (
                   <input
                     type="text"
                     disabled
                     value={formData.firstPreference || 'Gurukul Nilokheri'}
-                    className="w-full px-3.5 py-2.5 text-sm border rounded-lg bg-slate-100 text-slate-700 font-bold cursor-not-allowed"
+                    className="form-input-field bg-slate-50 text-slate-700 font-semibold cursor-not-allowed"
                   />
                 ) : (
                   <select
@@ -1330,7 +1284,7 @@ export default function ApplyPage() {
                     required
                     value={formData.firstPreference}
                     onChange={handleChange}
-                    className="w-full px-3.5 py-2.5 text-sm border rounded-lg focus:ring-2 focus:ring-amber-500 outline-none font-bold text-gurukul-navy"
+                    className="form-input-field font-semibold"
                   >
                     <option value="">Select 1st Preference</option>
                     {STUDY_LOCATIONS_BOYS.map((loc) => (
@@ -1341,7 +1295,7 @@ export default function ApplyPage() {
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
+                <label className="form-label">
                   2nd Preference Study Location {formData.gender === 'Female' ? '(Not Applicable)' : '(Optional)'}
                 </label>
                 {formData.gender === 'Female' ? (
@@ -1349,14 +1303,14 @@ export default function ApplyPage() {
                     type="text"
                     disabled
                     value="Not Applicable for Girls"
-                    className="w-full px-3.5 py-2.5 text-sm border rounded-lg bg-slate-100 text-slate-400 font-medium cursor-not-allowed"
+                    className="form-input-field bg-slate-50 text-slate-400 cursor-not-allowed"
                   />
                 ) : (
                   <select
                     name="secondPreference"
                     value={formData.secondPreference}
                     onChange={handleChange}
-                    className="w-full px-3.5 py-2.5 text-sm border rounded-lg focus:ring-2 focus:ring-amber-500 outline-none font-medium text-slate-800"
+                    className="form-input-field"
                   >
                     <option value="">None / No Second Choice</option>
                     {STUDY_LOCATIONS_BOYS.filter((l) => l !== formData.firstPreference).map((loc) => (
@@ -1369,123 +1323,122 @@ export default function ApplyPage() {
           </div>
         )}
 
-        {/* STEP 6: Mandatory 4 Documents Upload */}
+        {/* STEP 6: Mandatory Documents Upload */}
         {step === 6 && (
-          <div className="space-y-6">
-            <h2 className="text-lg font-bold text-slate-900 border-b border-slate-100 pb-3 flex items-center gap-2">
-              <Upload className="w-5 h-5 text-gurukul-600" /> Step 6: Mandatory Documents (All 4 Required)
-            </h2>
+          <div className="space-y-5">
+            <div className="border-b border-slate-200 pb-3">
+              <h2 className="text-base font-bold text-slate-900">Step 6: Upload Documents</h2>
+              <p className="text-xs text-slate-500">
+                Upload clear scans or photographs (JPG, PNG, or PDF, max 2 MB each). All 4 documents are required.
+              </p>
+            </div>
 
-            <p className="text-xs text-slate-500">
-              Please upload clear documents (JPG, PNG, or PDF, max 2 MB each).
-            </p>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-              {/* Document 1: Candidate Photograph */}
-              <div className="p-4 border-2 border-dashed border-slate-300 rounded-2xl hover:border-amber-400 transition space-y-3 bg-slate-50">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {/* Document 1: Photo */}
+              <div className="p-4 border border-slate-200 rounded-lg bg-slate-50 space-y-3">
                 <div className="flex justify-between items-center">
-                  <span className="text-xs font-bold text-slate-800">1. Candidate Photograph *</span>
-                  {formData.photo && <span className="text-[10px] font-bold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded">Uploaded</span>}
+                  <span className="text-xs font-semibold text-slate-800">1. Candidate Photograph <span className="text-rose-500">*</span></span>
+                  {formData.photo && <span className="text-[10px] font-semibold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded">Uploaded</span>}
                 </div>
                 {formData.photo ? (
                   <div className="flex items-center gap-3">
-                    <img src={formData.photo} alt="Photo" className="w-16 h-20 object-cover rounded-lg border shadow-sm" />
+                    <img src={formData.photo} alt="Candidate" className="w-16 h-20 object-cover rounded border border-slate-200" />
                     <div className="flex-1 text-xs">
-                      <span className="font-semibold text-slate-800 block truncate">{formData.photoName}</span>
-                      <label className="text-amber-600 hover:underline font-bold cursor-pointer inline-block mt-1">
+                      <span className="font-medium text-slate-800 block truncate">{formData.photoName}</span>
+                      <label className="text-portal-navy hover:underline font-semibold cursor-pointer inline-block mt-1">
                         Change Photo
                         <input type="file" accept="image/jpeg,image/png" className="hidden" onChange={(e) => handleFileUpload(e, 'photo', 'photoName')} />
                       </label>
                     </div>
                   </div>
                 ) : (
-                  <label className="w-full py-4 border border-slate-300 bg-white hover:bg-amber-50/50 rounded-xl cursor-pointer flex flex-col items-center justify-center gap-1 transition">
-                    <Upload className="w-6 h-6 text-amber-500" />
-                    <span className="text-xs font-bold text-slate-700">Upload Photograph</span>
-                    <span className="text-[10px] text-slate-400">JPG or PNG (&le; 2 MB)</span>
+                  <label className="w-full py-5 border border-dashed border-slate-300 bg-white hover:bg-slate-50 rounded-lg cursor-pointer flex flex-col items-center justify-center gap-1 transition">
+                    <Upload className="w-5 h-5 text-slate-400" />
+                    <span className="text-xs font-semibold text-slate-700">Select Photograph</span>
+                    <span className="text-[10px] text-slate-400">JPG or PNG (max 2 MB)</span>
                     <input type="file" accept="image/jpeg,image/png" className="hidden" onChange={(e) => handleFileUpload(e, 'photo', 'photoName')} />
                   </label>
                 )}
               </div>
 
               {/* Document 2: Candidate Signature */}
-              <div className="p-4 border-2 border-dashed border-slate-300 rounded-2xl hover:border-amber-400 transition space-y-3 bg-slate-50">
+              <div className="p-4 border border-slate-200 rounded-lg bg-slate-50 space-y-3">
                 <div className="flex justify-between items-center">
-                  <span className="text-xs font-bold text-slate-800">2. Candidate Signature *</span>
-                  {formData.signature && <span className="text-[10px] font-bold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded">Uploaded</span>}
+                  <span className="text-xs font-semibold text-slate-800">2. Candidate Signature <span className="text-rose-500">*</span></span>
+                  {formData.signature && <span className="text-[10px] font-semibold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded">Uploaded</span>}
                 </div>
                 {formData.signature ? (
                   <div className="flex items-center gap-3">
-                    <img src={formData.signature} alt="Signature" className="w-24 h-12 object-contain bg-white rounded-lg border shadow-sm" />
+                    <img src={formData.signature} alt="Signature" className="w-24 h-12 object-contain bg-white rounded border border-slate-200" />
                     <div className="flex-1 text-xs">
-                      <span className="font-semibold text-slate-800 block truncate">{formData.signatureName}</span>
-                      <label className="text-amber-600 hover:underline font-bold cursor-pointer inline-block mt-1">
+                      <span className="font-medium text-slate-800 block truncate">{formData.signatureName}</span>
+                      <label className="text-portal-navy hover:underline font-semibold cursor-pointer inline-block mt-1">
                         Change Signature
                         <input type="file" accept="image/jpeg,image/png" className="hidden" onChange={(e) => handleFileUpload(e, 'signature', 'signatureName')} />
                       </label>
                     </div>
                   </div>
                 ) : (
-                  <label className="w-full py-4 border border-slate-300 bg-white hover:bg-amber-50/50 rounded-xl cursor-pointer flex flex-col items-center justify-center gap-1 transition">
-                    <Upload className="w-6 h-6 text-amber-500" />
-                    <span className="text-xs font-bold text-slate-700">Upload Candidate Signature</span>
-                    <span className="text-[10px] text-slate-400">JPG or PNG (&le; 2 MB)</span>
+                  <label className="w-full py-5 border border-dashed border-slate-300 bg-white hover:bg-slate-50 rounded-lg cursor-pointer flex flex-col items-center justify-center gap-1 transition">
+                    <Upload className="w-5 h-5 text-slate-400" />
+                    <span className="text-xs font-semibold text-slate-700">Select Signature</span>
+                    <span className="text-[10px] text-slate-400">JPG or PNG (max 2 MB)</span>
                     <input type="file" accept="image/jpeg,image/png" className="hidden" onChange={(e) => handleFileUpload(e, 'signature', 'signatureName')} />
                   </label>
                 )}
               </div>
 
               {/* Document 3: Parent Signature */}
-              <div className="p-4 border-2 border-dashed border-slate-300 rounded-2xl hover:border-amber-400 transition space-y-3 bg-slate-50">
+              <div className="p-4 border border-slate-200 rounded-lg bg-slate-50 space-y-3">
                 <div className="flex justify-between items-center">
-                  <span className="text-xs font-bold text-slate-800">3. Parent / Guardian Signature *</span>
-                  {formData.parentSignature && <span className="text-[10px] font-bold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded">Uploaded</span>}
+                  <span className="text-xs font-semibold text-slate-800">3. Parent / Guardian Signature <span className="text-rose-500">*</span></span>
+                  {formData.parentSignature && <span className="text-[10px] font-semibold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded">Uploaded</span>}
                 </div>
                 {formData.parentSignature ? (
                   <div className="flex items-center gap-3">
-                    <img src={formData.parentSignature} alt="Parent Signature" className="w-24 h-12 object-contain bg-white rounded-lg border shadow-sm" />
+                    <img src={formData.parentSignature} alt="Parent Signature" className="w-24 h-12 object-contain bg-white rounded border border-slate-200" />
                     <div className="flex-1 text-xs">
-                      <span className="font-semibold text-slate-800 block truncate">{formData.parentSignatureName}</span>
-                      <label className="text-amber-600 hover:underline font-bold cursor-pointer inline-block mt-1">
+                      <span className="font-medium text-slate-800 block truncate">{formData.parentSignatureName}</span>
+                      <label className="text-portal-navy hover:underline font-semibold cursor-pointer inline-block mt-1">
                         Change Signature
                         <input type="file" accept="image/jpeg,image/png" className="hidden" onChange={(e) => handleFileUpload(e, 'parentSignature', 'parentSignatureName')} />
                       </label>
                     </div>
                   </div>
                 ) : (
-                  <label className="w-full py-4 border border-slate-300 bg-white hover:bg-amber-50/50 rounded-xl cursor-pointer flex flex-col items-center justify-center gap-1 transition">
-                    <Upload className="w-6 h-6 text-amber-500" />
-                    <span className="text-xs font-bold text-slate-700">Upload Parent Signature</span>
-                    <span className="text-[10px] text-slate-400">JPG or PNG (&le; 2 MB)</span>
+                  <label className="w-full py-5 border border-dashed border-slate-300 bg-white hover:bg-slate-50 rounded-lg cursor-pointer flex flex-col items-center justify-center gap-1 transition">
+                    <Upload className="w-5 h-5 text-slate-400" />
+                    <span className="text-xs font-semibold text-slate-700">Select Parent Signature</span>
+                    <span className="text-[10px] text-slate-400">JPG or PNG (max 2 MB)</span>
                     <input type="file" accept="image/jpeg,image/png" className="hidden" onChange={(e) => handleFileUpload(e, 'parentSignature', 'parentSignatureName')} />
                   </label>
                 )}
               </div>
 
               {/* Document 4: Aadhaar Card */}
-              <div className="p-4 border-2 border-dashed border-slate-300 rounded-2xl hover:border-amber-400 transition space-y-3 bg-slate-50">
+              <div className="p-4 border border-slate-200 rounded-lg bg-slate-50 space-y-3">
                 <div className="flex justify-between items-center">
-                  <span className="text-xs font-bold text-slate-800">4. Aadhaar / ID Proof *</span>
-                  {formData.aadhaarCard && <span className="text-[10px] font-bold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded">Uploaded</span>}
+                  <span className="text-xs font-semibold text-slate-800">4. Aadhaar / ID Document <span className="text-rose-500">*</span></span>
+                  {formData.aadhaarCard && <span className="text-[10px] font-semibold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded">Uploaded</span>}
                 </div>
                 {formData.aadhaarCard ? (
                   <div className="flex items-center gap-3">
-                    <div className="w-16 h-14 bg-white border rounded-lg flex items-center justify-center text-slate-600 font-mono text-[10px] font-bold shadow-sm">
+                    <div className="w-14 h-12 bg-white border border-slate-200 rounded flex items-center justify-center text-slate-500 font-mono text-[10px] font-bold">
                       DOC
                     </div>
                     <div className="flex-1 text-xs">
-                      <span className="font-semibold text-slate-800 block truncate">{formData.aadhaarCardName}</span>
-                      <label className="text-amber-600 hover:underline font-bold cursor-pointer inline-block mt-1">
-                        Change File
+                      <span className="font-medium text-slate-800 block truncate">{formData.aadhaarCardName}</span>
+                      <label className="text-portal-navy hover:underline font-semibold cursor-pointer inline-block mt-1">
+                        Change Document
                         <input type="file" accept="image/jpeg,image/png,application/pdf" className="hidden" onChange={(e) => handleFileUpload(e, 'aadhaarCard', 'aadhaarCardName')} />
                       </label>
                     </div>
                   </div>
                 ) : (
-                  <label className="w-full py-4 border border-slate-300 bg-white hover:bg-amber-50/50 rounded-xl cursor-pointer flex flex-col items-center justify-center gap-1 transition">
-                    <Upload className="w-6 h-6 text-amber-500" />
-                    <span className="text-xs font-bold text-slate-700">Choose Aadhaar File</span>
-                    <span className="text-[10px] text-slate-400">PDF, JPG, or PNG (&le; 2 MB)</span>
+                  <label className="w-full py-5 border border-dashed border-slate-300 bg-white hover:bg-slate-50 rounded-lg cursor-pointer flex flex-col items-center justify-center gap-1 transition">
+                    <Upload className="w-5 h-5 text-slate-400" />
+                    <span className="text-xs font-semibold text-slate-700">Select Aadhaar File</span>
+                    <span className="text-[10px] text-slate-400">PDF, JPG, or PNG (max 2 MB)</span>
                     <input type="file" accept="image/jpeg,image/png,application/pdf" className="hidden" onChange={(e) => handleFileUpload(e, 'aadhaarCard', 'aadhaarCardName')} />
                   </label>
                 )}
@@ -1496,69 +1449,68 @@ export default function ApplyPage() {
 
         {/* STEP 7: Application Review & Fee Payment */}
         {step === 7 && (
-          <div className="space-y-6">
-            <h2 className="text-lg font-bold text-slate-900 border-b border-slate-100 pb-3 flex items-center gap-2">
-              <CreditCard className="w-5 h-5 text-gurukul-600" /> Step 7: Application Review &amp; Fee Payment
-            </h2>
+          <div className="space-y-5">
+            <div className="border-b border-slate-200 pb-3">
+              <h2 className="text-base font-bold text-slate-900">Step 7: Application Review &amp; Fee Payment</h2>
+              <p className="text-xs text-slate-500">Review your particulars and complete the examination fee payment.</p>
+            </div>
 
-            {/* Summary Review Card */}
-            <div className="border border-slate-200 rounded-2xl p-5 bg-slate-50 space-y-4 text-xs">
+            {/* Particulars Summary */}
+            <div className="border border-slate-200 rounded-lg p-4 bg-slate-50 text-xs">
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                 <div>
-                  <span className="text-slate-500 block">Candidate Name:</span>
-                  <span className="font-bold text-slate-900 text-sm">{formData.fullName}</span>
+                  <span className="text-slate-500 block text-[11px]">Candidate Name</span>
+                  <span className="font-bold text-slate-900">{formData.fullName}</span>
                 </div>
                 <div>
-                  <span className="text-slate-500 block">Gender &amp; DOB:</span>
-                  <span className="font-bold text-slate-900">{formData.gender} • {formData.dob}</span>
+                  <span className="text-slate-500 block text-[11px]">Gender &amp; DOB</span>
+                  <span className="font-medium text-slate-900">{formData.gender} • {formData.dob}</span>
                 </div>
                 <div>
-                  <span className="text-slate-500 block">Class Applied:</span>
-                  <span className="font-bold text-gurukul-700 bg-amber-100 px-2 py-0.5 rounded inline-block">
+                  <span className="text-slate-500 block text-[11px]">Class Applied</span>
+                  <span className="font-semibold text-portal-navy">
                     {formData.applyingClass} {formData.stream ? `(${formData.stream})` : ''}
                   </span>
                 </div>
                 <div>
-                  <span className="text-slate-500 block">Father&apos;s Name:</span>
-                  <span className="font-semibold text-slate-800">{formData.fatherName}</span>
+                  <span className="text-slate-500 block text-[11px]">Father&apos;s Name</span>
+                  <span className="font-medium text-slate-900">{formData.fatherName}</span>
                 </div>
                 <div>
-                  <span className="text-slate-500 block">1st Preference Study Location:</span>
-                  <span className="font-bold text-gurukul-navy">{formData.firstPreference}</span>
+                  <span className="text-slate-500 block text-[11px]">Study Location</span>
+                  <span className="font-semibold text-slate-900">{formData.firstPreference}</span>
                 </div>
                 <div>
-                  <span className="text-slate-500 block">Permanent Residence:</span>
-                  <span className="font-semibold text-slate-800">{formData.city}, {formData.state}</span>
+                  <span className="text-slate-500 block text-[11px]">Residence</span>
+                  <span className="font-medium text-slate-900">{formData.city}, {formData.state}</span>
                 </div>
               </div>
             </div>
 
-            {/* Fee Breakdown Card */}
-            <div className="border-2 border-amber-300 bg-amber-50/70 rounded-2xl p-6 space-y-3">
-              <div className="flex justify-between items-center pb-3 border-b border-amber-200">
+            {/* Fee Card */}
+            <div className="border border-slate-200 bg-white rounded-lg p-5">
+              <div className="flex justify-between items-center pb-3 border-b border-slate-100">
                 <div>
-                  <h3 className="font-bold text-slate-900 text-sm sm:text-base">
+                  <h3 className="font-semibold text-slate-900 text-sm">
                     Entrance Examination Application Fee
                   </h3>
-                  <p className="text-xs text-slate-600">
-                    Official registration is completed immediately upon successful payment
+                  <p className="text-xs text-slate-500">
+                    Official registration is confirmed immediately upon successful transaction
                   </p>
                 </div>
                 <div className="text-right">
-                  <span className="text-2xl sm:text-3xl font-black text-gurukul-navy">₹800</span>
+                  <span className="text-2xl font-bold text-portal-navy">₹800</span>
                 </div>
               </div>
 
-              <div className="flex items-center justify-between text-xs text-slate-700 pt-1">
-                <div className="flex items-center gap-1.5 text-emerald-700 font-semibold">
-                  <ShieldCheck className="w-4 h-4" /> 256-Bit Encrypted Payment Verification
-                </div>
-                <span className="text-[11px] text-slate-500">Supports UPI, NetBanking, Cards</span>
+              <div className="flex items-center justify-between text-xs text-slate-500 pt-3">
+                <span>Secure payment gateway</span>
+                <span>UPI, NetBanking, Debit &amp; Credit Cards</span>
               </div>
             </div>
 
-            {/* Undertaking Declaration Checkbox */}
-            <label className="flex items-start gap-2.5 pt-2 text-xs text-slate-700 cursor-pointer select-none bg-white p-4 rounded-xl border border-slate-200 hover:border-amber-300 transition shadow-sm">
+            {/* Final Declaration Undertaking */}
+            <label className="flex items-start gap-2.5 text-xs text-slate-700 cursor-pointer p-3.5 bg-slate-50 rounded-lg border border-slate-200">
               <input
                 type="checkbox"
                 checked={declarationAgreed}
@@ -1566,26 +1518,25 @@ export default function ApplyPage() {
                   setDeclarationAgreed(e.target.checked);
                   if (e.target.checked) setError('');
                 }}
-                className="mt-0.5 h-4 w-4 rounded text-emerald-600 focus:ring-emerald-500 border-slate-300 cursor-pointer flex-shrink-0"
+                className="mt-0.5 h-4 w-4 rounded text-portal-navy focus:ring-portal-navy border-slate-300"
               />
-              <span className={declarationAgreed ? 'text-slate-900 font-semibold' : 'text-slate-600 font-normal'}>
-                I hereby declare that the particulars provided in this application are authentic and true. I understand that admission is strictly merit-based on entrance examination performance. <span className="text-red-500 font-bold">*</span>
+              <span className="leading-normal">
+                I hereby declare that the particulars provided in this application are authentic and true. I understand that admission is strictly merit-based on entrance examination performance. <span className="text-rose-500 font-bold">*</span>
               </span>
             </label>
           </div>
         )}
 
-        {/* Navigation Buttons */}
-        <div className="mt-8 pt-5 border-t border-slate-200 flex flex-wrap justify-between items-center gap-3">
-          <div className="flex items-center gap-2">
+        {/* Step Navigation Bar */}
+        <div className="mt-8 pt-4 border-t border-slate-200 flex flex-wrap justify-between items-center gap-3">
+          <div>
             {step > 1 && (
               <button
                 type="button"
                 onClick={prevStep}
-                className="px-5 py-2.5 border border-slate-300 rounded-xl text-slate-700 font-bold text-xs hover:bg-slate-50 transition flex items-center gap-1.5"
+                className="btn-secondary text-xs px-4 py-2"
               >
-                <ArrowLeft className="w-4 h-4" />
-                <span>Previous Step</span>
+                Previous Step
               </button>
             )}
           </div>
@@ -1594,67 +1545,54 @@ export default function ApplyPage() {
             <button
               type="button"
               onClick={nextStep}
-              className="px-6 py-2.5 bg-gurukul-600 hover:bg-gurukul-700 text-white font-bold text-xs rounded-xl shadow transition flex items-center gap-1.5"
+              className="btn-primary text-xs px-5 py-2"
             >
-              <span>{step === 1 ? 'Accept Declaration & Continue' : 'Save & Continue'}</span>
-              <ArrowRight className="w-4 h-4" />
+              {step === 1 ? 'Accept Declaration & Continue' : 'Save & Continue'}
             </button>
           ) : (
             <button
               type="button"
               disabled={loading || !declarationAgreed}
               onClick={handleSubmitPayment}
-              className={`px-8 py-3 rounded-xl shadow-lg transition flex items-center gap-2 font-extrabold text-sm ${!declarationAgreed || loading
-                ? 'bg-slate-300 text-slate-500 cursor-not-allowed shadow-none'
-                : 'bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-700 hover:to-emerald-800 text-white hover:shadow-xl'
+              className={`btn-primary text-xs px-6 py-2.5 font-bold ${!declarationAgreed || loading ? 'opacity-50 cursor-not-allowed' : ''
                 }`}
             >
-              {loading ? (
-                <span>Verifying Payment...</span>
-              ) : (
-                <>
-                  <CreditCard className="w-4 h-4" />
-                  <span>Pay ₹800 &amp; Complete Registration</span>
-                </>
-              )}
+              {loading ? 'Processing Payment...' : 'Pay ₹800 & Submit Application'}
             </button>
           )}
         </div>
       </div>
 
-      {/* Cancel Confirmation Modal */}
+      {/* Cancel Application Modal */}
       {showCancelModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/70 p-4">
-          <div className="bg-white rounded-3xl p-6 max-w-sm w-full space-y-4 text-center shadow-2xl border">
-            <div className="w-12 h-12 bg-red-100 text-red-600 rounded-2xl flex items-center justify-center mx-auto">
-              <Trash2 className="w-6 h-6" />
-            </div>
-            <h3 className="font-black text-lg text-slate-900">Cancel Application?</h3>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4">
+          <div className="bg-white rounded-xl p-6 max-w-sm w-full space-y-4 shadow-elevated border border-slate-200">
+            <h3 className="font-bold text-base text-slate-900">Discard Application?</h3>
             <p className="text-xs text-slate-600 leading-relaxed">
-              Are you sure you want to cancel? All temporary information entered will be permanently removed, and you will not be registered.
+              Are you sure you want to cancel? Any draft information will be discarded and you will not be registered for the entrance examination.
             </p>
-            <div className="flex gap-2 pt-2">
+            <div className="flex gap-2 pt-1">
               <button
                 type="button"
                 onClick={() => setShowCancelModal(false)}
-                className="flex-1 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl"
+                className="flex-1 btn-secondary text-xs py-2"
               >
-                Continue Application
+                Keep Editing
               </button>
               <button
                 type="button"
                 onClick={handleCancelApplication}
                 disabled={cancelLoading}
-                className="flex-1 py-2.5 bg-red-600 hover:bg-red-700 text-white font-bold text-xs rounded-xl"
+                className="flex-1 btn-danger text-xs py-2"
               >
-                {cancelLoading ? 'Canceling...' : 'Yes, Discard'}
+                {cancelLoading ? 'Canceling...' : 'Discard'}
               </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* Interactive NTA Cropper Modal */}
+      {/* Cropper Modal */}
       <ImageCropperModal
         isOpen={cropModal.isOpen}
         imageSrc={cropModal.imageSrc}

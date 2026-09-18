@@ -1,25 +1,14 @@
-﻿'use client';
+'use client';
 
 import React, { useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { 
-  UserPlus, 
-  Mail, 
-  Lock, 
-  Phone, 
-  User, 
   AlertCircle, 
-  ArrowRight, 
-  CheckCircle, 
-  Copy, 
-  Check,
-  ShieldCheck,
-  Eye,
-  EyeOff,
-  KeyRound,
-  RotateCcw
+  Eye, 
+  EyeOff, 
+  RotateCcw 
 } from 'lucide-react';
 
 export default function RegisterPage() {
@@ -45,7 +34,6 @@ export default function RegisterPage() {
   // UI state
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const [registeredSuccess, setRegisteredSuccess] = useState(false);
   const [scheduleStatus, setScheduleStatus] = useState<{
     isOpen: boolean;
     message?: string;
@@ -79,25 +67,21 @@ export default function RegisterPage() {
     return () => clearInterval(interval);
   }, [step, resendTimer]);
 
-  // Validate form details and request OTP
   const handleInitiateRegistration = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
 
-    // 1. Name validation
     if (!name.trim() || name.trim().length < 2) {
       setError('Please enter candidate’s full name as per Aadhaar Card.');
       return;
     }
 
-    // 2. Email validation (RFC 5322 standard regex)
     const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
     if (!emailRegex.test(email.trim())) {
       setError('Please enter a valid email address (e.g., student@example.com).');
       return;
     }
 
-    // 3. Indian Phone number validation
     const cleanPhone = phone.replace(/\D/g, '').slice(-10);
     const phoneRegex = /^[6-9]\d{9}$/;
     if (!phoneRegex.test(cleanPhone)) {
@@ -105,13 +89,11 @@ export default function RegisterPage() {
       return;
     }
 
-    // 4. Password validation
     if (password.length < 6) {
       setError('Password must be at least 6 characters long.');
       return;
     }
 
-    // 5. Confirm password match
     if (password !== confirmPassword) {
       setError('Passwords do not match. Please ensure both password fields are identical.');
       return;
@@ -120,7 +102,6 @@ export default function RegisterPage() {
     setLoading(true);
 
     try {
-      // Send OTP to email / WhatsApp
       const res = await fetch('/api/auth/otp', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -150,7 +131,6 @@ export default function RegisterPage() {
     }
   };
 
-  // Resend OTP handler
   const handleResendOtp = async () => {
     setError('');
     setLoading(true);
@@ -183,13 +163,12 @@ export default function RegisterPage() {
     }
   };
 
-  // Verify OTP and complete registration
   const handleVerifyAndRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
 
     if (!otp.trim() || otp.trim().length !== 6) {
-      setError('Please enter the 6-digit OTP received on your email / WhatsApp.');
+      setError('Please enter the 6-digit OTP received on your email / mobile.');
       return;
     }
 
@@ -197,7 +176,6 @@ export default function RegisterPage() {
     const cleanPhone = phone.replace(/\D/g, '').slice(-10);
 
     try {
-      // 1. Verify OTP first
       const verifyRes = await fetch('/api/auth/otp', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -215,7 +193,6 @@ export default function RegisterPage() {
         return;
       }
 
-      // 2. Complete Account Creation
       const regRes = await fetch('/api/auth/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -235,12 +212,10 @@ export default function RegisterPage() {
         return;
       }
 
-      // 3. Success! Purge any previous user's draft from browser so new candidate starts clean
       try {
         localStorage.removeItem('gurukul_application_draft');
       } catch (e) {}
 
-      // Requirement: Redirect directly to Declaration & Instructions
       router.push('/apply');
     } catch {
       setError('An error occurred during account registration. Please try again.');
@@ -251,16 +226,13 @@ export default function RegisterPage() {
   // Screen 2: OTP Verification Card
   if (step === 'otp') {
     return (
-      <div className="min-h-[85vh] flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8 bg-slate-100">
-        <div className="max-w-md w-full space-y-6 bg-white p-8 sm:p-10 rounded-3xl shadow-xl border border-slate-200">
-          <div className="text-center space-y-2">
-            <div className="w-14 h-14 bg-amber-100 text-gurukul-600 rounded-2xl flex items-center justify-center mx-auto">
-              <KeyRound className="w-7 h-7" />
-            </div>
-            <span className="text-[10px] font-bold uppercase tracking-wider text-gurukul-600 bg-amber-100 px-3 py-1 rounded-full inline-block">
+      <div className="min-h-[85vh] flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8 bg-slate-50 font-sans">
+        <div className="max-w-md w-full space-y-6 bg-white p-8 rounded-xl shadow-xs border border-slate-200">
+          <div className="text-center space-y-1.5">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-portal-navy bg-slate-100 px-3 py-1 rounded-full inline-block">
               Security Step 2: Verification
             </span>
-            <h2 className="text-2xl font-black tracking-tight text-gurukul-navy">
+            <h2 className="text-xl font-bold tracking-tight text-portal-navy">
               Enter Verification Code
             </h2>
             <p className="text-xs text-slate-500">
@@ -271,9 +243,8 @@ export default function RegisterPage() {
             </p>
           </div>
 
-
           {error && (
-            <div className="p-3.5 rounded-xl bg-red-50 border border-red-200 flex items-center gap-2.5 text-xs text-red-700">
+            <div className="p-3 rounded-lg bg-rose-50 border border-rose-200 flex items-center gap-2 text-xs text-rose-700">
               <AlertCircle className="w-4 h-4 flex-shrink-0" />
               <span>{error}</span>
             </div>
@@ -281,8 +252,8 @@ export default function RegisterPage() {
 
           <form onSubmit={handleVerifyAndRegister} className="space-y-4">
             <div>
-              <label className="block text-xs font-bold text-slate-700 uppercase mb-1.5 text-center">
-                Enter 6-Digit OTP *
+              <label className="form-label text-center">
+                Enter 6-Digit OTP <span className="text-rose-500">*</span>
               </label>
               <input
                 type="text"
@@ -291,16 +262,16 @@ export default function RegisterPage() {
                 value={otp}
                 onChange={(e) => setOtp(e.target.value.replace(/\D/g, ''))}
                 placeholder="• • • • • •"
-                className="w-full text-center text-2xl font-mono font-black tracking-[0.5em] py-3 border-2 border-slate-300 rounded-xl focus:border-amber-500 focus:ring-2 focus:ring-amber-200 outline-none transition"
+                className="w-full text-center text-2xl font-mono font-bold tracking-[0.5em] py-2.5 border border-slate-200 rounded-lg focus:border-portal-navy focus:ring-1 focus:ring-portal-navy outline-none transition bg-white"
               />
             </div>
 
             <button
               type="submit"
               disabled={loading || otp.length !== 6}
-              className="w-full py-3.5 px-4 rounded-xl shadow-md text-base font-extrabold text-white bg-gradient-to-r from-amber-500 to-gurukul-600 hover:from-amber-600 hover:to-gurukul-700 disabled:opacity-50 transition flex items-center justify-center tracking-wide"
+              className="btn-primary w-full"
             >
-              {loading ? 'Verifying...' : 'Verify'}
+              {loading ? 'Verifying...' : 'Verify OTP & Complete Registration'}
             </button>
           </form>
 
@@ -312,9 +283,9 @@ export default function RegisterPage() {
                 setStep('details');
                 setError('');
               }}
-              className="hover:text-slate-800 underline"
+              className="hover:text-portal-navy underline"
             >
-              ← Edit Phone / Email
+              Edit Details
             </button>
 
             {canResend ? (
@@ -322,12 +293,12 @@ export default function RegisterPage() {
                 type="button"
                 onClick={handleResendOtp}
                 disabled={loading}
-                className="text-gurukul-600 font-bold hover:underline flex items-center gap-1"
+                className="text-portal-gold font-semibold hover:underline flex items-center gap-1"
               >
-                <RotateCcw className="w-3.5 h-3.5" /> Resend OTP
+                <RotateCcw className="w-3 h-3" /> Resend OTP
               </button>
             ) : (
-              <span className="text-slate-400 font-medium">
+              <span className="text-slate-400">
                 Resend OTP in <strong>{resendTimer}s</strong>
               </span>
             )}
@@ -340,52 +311,40 @@ export default function RegisterPage() {
   // Closed Schedule Guard
   if (scheduleStatus && !scheduleStatus.isOpen) {
     return (
-      <div className="min-h-[85vh] flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8 bg-slate-100 font-sans">
-        <div className="max-w-lg w-full space-y-6 bg-white p-8 sm:p-10 rounded-3xl shadow-xl border border-rose-200 text-center">
-          <div className="w-16 h-16 bg-rose-100 text-rose-600 rounded-2xl flex items-center justify-center mx-auto shadow-inner">
-            <AlertCircle className="w-8 h-8" />
-          </div>
-
-          <div className="space-y-2">
-            <span className="text-[10px] font-black uppercase tracking-wider text-rose-700 bg-rose-100 px-3 py-1 rounded-full inline-block">
+      <div className="min-h-[85vh] flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8 bg-slate-50 font-sans">
+        <div className="max-w-md w-full space-y-5 bg-white p-8 rounded-xl shadow-xs border border-rose-200 text-center">
+          <div className="space-y-1.5">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-rose-700 bg-rose-50 px-3 py-1 rounded-full inline-block border border-rose-200">
               Registration Concluded
             </span>
-            <h2 className="text-2xl font-black text-gurukul-navy">
+            <h2 className="text-xl font-bold text-portal-navy">
               Online Registration Closed
             </h2>
-            <p className="text-xs sm:text-sm text-slate-600 leading-relaxed">
-              {scheduleStatus.message || 'Online applications for Entrance Examination Session 2027-28 have concluded. New candidate registrations are currently closed.'}
+            <p className="text-xs text-slate-600 leading-relaxed">
+              {scheduleStatus.message || 'Online applications for Entrance Examination Session 2027-28 have concluded. New registrations are currently closed.'}
             </p>
           </div>
 
-          <div className="p-4 bg-slate-50 border border-slate-200 rounded-2xl text-xs text-slate-600 text-left space-y-2">
-            <p className="font-bold text-slate-800">For Already Registered Candidates:</p>
-            <ul className="list-disc pl-4 space-y-1 text-slate-600">
+          <div className="p-4 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-600 text-left space-y-1.5">
+            <p className="font-semibold text-slate-800">For Already Registered Candidates:</p>
+            <ul className="list-disc pl-4 space-y-1 text-slate-600 text-[11px]">
               <li>Sign in to your Candidate Portal to check scrutiny status or download your submitted form.</li>
               <li>Track verification and roll number allotment using your Registration ID.</li>
-              <li>Admit Cards will be available for download once released by the Admission Cell.</li>
             </ul>
           </div>
 
-          <div className="flex flex-col sm:flex-row gap-3 pt-2">
+          <div className="flex flex-col gap-2 pt-2">
             <Link
               href="/"
-              className="flex-1 py-3 bg-gurukul-navy hover:bg-slate-800 text-amber-300 font-extrabold text-xs rounded-xl shadow transition flex items-center justify-center gap-2"
+              className="btn-primary w-full"
             >
-              <span>Sign In to Candidate Portal</span>
-              <ArrowRight className="w-4 h-4" />
+              Sign In to Candidate Portal
             </Link>
             <Link
               href="/status"
-              className="flex-1 py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl transition flex items-center justify-center gap-1.5"
+              className="btn-secondary w-full"
             >
-              <span>Track Application Status</span>
-            </Link>
-          </div>
-
-          <div className="pt-2">
-            <Link href="/" className="text-xs text-slate-500 hover:text-gurukul-600 font-semibold transition">
-              ← Return to Portal Gateway
+              Track Application Status
             </Link>
           </div>
         </div>
@@ -393,86 +352,76 @@ export default function RegisterPage() {
     );
   }
 
-  // Screen 1: Details Entry with Password Visibility Eye Icons
+  // Screen 1: Details Entry
   return (
-    <div className="min-h-[85vh] flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8 bg-slate-100">
-      <div className="max-w-md w-full space-y-6 bg-white p-8 sm:p-10 rounded-3xl shadow-xl border border-slate-200">
-        <div className="text-center space-y-2">
-          <div className="w-16 h-16 mx-auto flex items-center justify-center">
+    <div className="min-h-[85vh] flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8 bg-slate-50 font-sans">
+      <div className="max-w-md w-full space-y-6 bg-white p-8 rounded-xl shadow-xs border border-slate-200">
+        <div className="text-center space-y-1.5">
+          <div className="w-12 h-12 mx-auto flex items-center justify-center">
             <Image
               src="/logo-gurukul.png"
               alt="Gurukul Logo"
-              width={64}
-              height={64}
-              className="brand-logo-img object-contain"
+              width={48}
+              height={48}
+              className="brand-logo-sm object-contain"
             />
           </div>
-          <span className="text-[10px] font-bold uppercase tracking-wider text-gurukul-600 bg-amber-100 px-3 py-1 rounded-full inline-block">
+          <span className="text-[10px] font-semibold uppercase tracking-wider text-portal-gold bg-amber-50 px-3 py-0.5 rounded-full inline-block border border-amber-200">
             Entrance Session 2027-28
           </span>
-          <h2 className="text-2xl font-black tracking-tight text-gurukul-navy">
+          <h2 className="text-xl font-bold tracking-tight text-portal-navy">
             Candidate Registration
           </h2>
           <p className="text-xs text-slate-500">
-            Verify via Email/WhatsApp OTP to begin your entrance examination application.
+            Verify via Email/Mobile OTP to begin your entrance examination application.
           </p>
         </div>
 
         {error && (
-          <div className="p-3.5 rounded-xl bg-red-50 border border-red-200 flex items-center gap-2.5 text-xs text-red-700">
-            <AlertCircle className="w-4 h-4 flex-shrink-0" />
+          <div className="p-3 rounded-lg bg-rose-50 border border-rose-200 flex items-center gap-2 text-xs text-rose-700 font-medium">
+            <AlertCircle className="w-4 h-4 flex-shrink-0 text-rose-600" />
             <span>{error}</span>
           </div>
         )}
 
-        <form className="mt-4 space-y-4" onSubmit={handleInitiateRegistration}>
-          {/* Full Name */}
+        <form className="space-y-4" onSubmit={handleInitiateRegistration}>
           <div>
-            <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
-              Candidate Full Name (As per AADHAAR CARD) *
+            <label className="form-label">
+              Candidate Full Name (As per Aadhaar Card) <span className="text-rose-500">*</span>
             </label>
-            <div className="relative">
-              <User className="w-4 h-4 text-slate-400 absolute left-3 top-3.5 pointer-events-none" />
-              <input
-                type="text"
-                required
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="As per candidate's Aadhaar Card"
-                className="w-full pl-10 pr-3 py-2.5 text-sm border border-slate-300 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none transition"
-              />
-            </div>
+            <input
+              type="text"
+              required
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="Candidate full name"
+              className="form-input-field"
+            />
           </div>
 
-          {/* Email Address */}
           <div>
-            <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
-              Email Address *
+            <label className="form-label">
+              Email Address <span className="text-rose-500">*</span>
             </label>
-            <div className="relative">
-              <Mail className="w-4 h-4 text-slate-400 absolute left-3 top-3.5 pointer-events-none" />
-              <input
-                type="email"
-                required
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="student@example.com"
-                className="w-full pl-10 pr-3 py-2.5 text-sm border border-slate-300 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none transition"
-              />
-            </div>
-            <p className="text-[10px] text-slate-400 mt-1">
-              Used for sending Registration Number, Admit Card, and notifications.
+            <input
+              type="email"
+              required
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="student@example.com"
+              className="form-input-field"
+            />
+            <p className="text-[11px] text-slate-400 mt-1">
+              Used for dispatching Registration Number and Admit Card.
             </p>
           </div>
 
-          {/* Mobile Phone Number */}
           <div>
-            <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
-              Mobile / WhatsApp Number *
+            <label className="form-label">
+              Mobile / WhatsApp Number <span className="text-rose-500">*</span>
             </label>
             <div className="relative">
-              <Phone className="w-4 h-4 text-slate-400 absolute left-3 top-3.5 pointer-events-none" />
-              <span className="absolute left-9 top-3 text-xs font-bold text-slate-500">+91</span>
+              <span className="absolute left-3 top-2.5 text-xs font-semibold text-slate-500">+91</span>
               <input
                 type="tel"
                 required
@@ -480,30 +429,28 @@ export default function RegisterPage() {
                 value={phone}
                 onChange={(e) => setPhone(e.target.value.replace(/\D/g, ''))}
                 placeholder="9876543210"
-                className="w-full pl-16 pr-3 py-2.5 text-sm border border-slate-300 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none transition font-mono"
+                className="form-input-field pl-11 font-mono"
               />
             </div>
           </div>
 
-          {/* Password with Eye Icon */}
           <div>
-            <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
-              Password *
+            <label className="form-label">
+              Password <span className="text-rose-500">*</span>
             </label>
             <div className="relative">
-              <Lock className="w-4 h-4 text-slate-400 absolute left-3 top-3.5 pointer-events-none" />
               <input
                 type={showPassword ? 'text' : 'password'}
                 required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="At least 6 characters"
-                className="w-full pl-10 pr-10 py-2.5 text-sm border border-slate-300 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none transition"
+                className="form-input-field pr-10"
               />
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-3 text-slate-400 hover:text-slate-600 focus:outline-none"
+                className="absolute right-3 top-2.5 text-slate-400 hover:text-slate-600"
                 title={showPassword ? 'Hide password' : 'Show password'}
               >
                 {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
@@ -511,38 +458,34 @@ export default function RegisterPage() {
             </div>
           </div>
 
-          {/* Confirm Password with Eye Icon and Match Check */}
           <div>
             <div className="flex justify-between items-center mb-1">
-              <label className="block text-xs font-bold text-slate-700 uppercase">
-                Confirm Password *
+              <label className="form-label mb-0">
+                Confirm Password <span className="text-rose-500">*</span>
               </label>
               {confirmPassword && (
-                <span className={`text-[10px] font-bold ${
-                  password === confirmPassword ? 'text-emerald-600' : 'text-red-500'
+                <span className={`text-[10px] font-semibold ${
+                  password === confirmPassword ? 'text-emerald-600' : 'text-rose-500'
                 }`}>
-                  {password === confirmPassword ? '✓ Passwords Match' : '✗ Passwords Differ'}
+                  {password === confirmPassword ? 'Passwords Match' : 'Passwords Differ'}
                 </span>
               )}
             </div>
             <div className="relative">
-              <Lock className="w-4 h-4 text-slate-400 absolute left-3 top-3.5 pointer-events-none" />
               <input
                 type={showConfirmPassword ? 'text' : 'password'}
                 required
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 placeholder="Re-enter password"
-                className={`w-full pl-10 pr-10 py-2.5 text-sm border rounded-xl focus:ring-2 outline-none transition ${
-                  confirmPassword && password !== confirmPassword 
-                    ? 'border-red-400 focus:ring-red-300' 
-                    : 'border-slate-300 focus:ring-amber-500'
+                className={`form-input-field pr-10 ${
+                  confirmPassword && password !== confirmPassword ? 'border-rose-400 focus:border-rose-500 focus:ring-rose-200' : ''
                 }`}
               />
               <button
                 type="button"
                 onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                className="absolute right-3 top-3 text-slate-400 hover:text-slate-600 focus:outline-none"
+                className="absolute right-3 top-2.5 text-slate-400 hover:text-slate-600"
                 title={showConfirmPassword ? 'Hide password' : 'Show password'}
               >
                 {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
@@ -550,19 +493,18 @@ export default function RegisterPage() {
             </div>
           </div>
 
-          {/* Submit Button */}
           <button
             type="submit"
             disabled={loading}
-            className="w-full mt-2 py-3.5 px-4 rounded-xl shadow-md text-base font-extrabold text-white bg-gradient-to-r from-amber-500 to-gurukul-600 hover:from-amber-600 hover:to-gurukul-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-amber-500 transition flex items-center justify-center tracking-wide"
+            className="btn-primary w-full mt-2"
           >
-            {loading ? 'Verifying...' : 'Verify'}
+            {loading ? 'Dispatching OTP...' : 'Send Verification OTP'}
           </button>
         </form>
 
-        <div className="pt-2 text-center text-xs text-slate-600">
+        <div className="pt-2 text-center text-xs text-slate-600 border-t border-slate-100">
           Already registered?{' '}
-          <Link href="/" className="font-bold text-gurukul-600 hover:underline">
+          <Link href="/" className="font-semibold text-portal-navy hover:underline">
             Sign In with Registration No.
           </Link>
         </div>
@@ -570,4 +512,3 @@ export default function RegisterPage() {
     </div>
   );
 }
-

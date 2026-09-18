@@ -9,17 +9,16 @@ import {
   Users,
   CheckSquare,
   Award,
-  Building,
   FileSpreadsheet,
   Settings,
   LogOut,
   ShieldCheck,
   Menu,
   X,
-  ExternalLink,
   Bell,
   MessageSquare
 } from 'lucide-react';
+import AdminFooter from '@/components/AdminFooter';
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -31,7 +30,6 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const [unreadEnquiryCount, setUnreadEnquiryCount] = useState(0);
 
   useEffect(() => {
-    // Don't check on admin login page
     if (pathname === '/admin/login') return;
 
     fetch('/api/auth/me')
@@ -45,27 +43,25 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       })
       .catch(() => router.push('/admin/login'));
 
-    // Fetch unread counters
     const fetchCounters = () => {
       fetch('/api/admin/notifications?limit=1')
         .then((res) => res.json())
         .then((data) => {
           if (data.unreadCount !== undefined) setUnreadNotifCount(data.unreadCount);
         })
-        .catch(() => { });
+        .catch(() => {});
 
       fetch('/api/admin/enquiries?status=new')
         .then((res) => res.json())
         .then((data) => {
           if (data.enquiries) setUnreadEnquiryCount(data.enquiries.length);
         })
-        .catch(() => { });
+        .catch(() => {});
     };
 
     fetchCounters();
     const interval = setInterval(fetchCounters, 20000);
 
-    // Immediately sync the sidebar badge when the bell marks notifications as read
     const handleNotifCountUpdate = (e: Event) => {
       const evt = e as CustomEvent<{ unreadCount: number }>;
       if (typeof evt.detail?.unreadCount === 'number') {
@@ -85,7 +81,6 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     router.push('/admin/login');
   };
 
-  // If on login page, render children directly without sidebar
   if (pathname === '/admin/login') {
     return <>{children}</>;
   }
@@ -97,20 +92,20 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     { name: 'Notification Center', href: '/admin/notifications', icon: Bell, badge: unreadNotifCount },
     { name: 'Results & Merit List', href: '/admin/results', icon: Award },
     { name: 'Attendance Registers', href: '/admin/attendance', icon: CheckSquare },
-    { name: 'Reports & Analytics', href: '/admin/reports', icon: FileSpreadsheet },
+    { name: 'Reports & Demographics', href: '/admin/reports', icon: FileSpreadsheet },
     { name: 'System Audit Logs', href: '/admin/audit-logs', icon: ShieldCheck },
-    { name: 'Portal Schedule & Settings', href: '/admin/settings', icon: Settings },
+    { name: 'Portal Settings', href: '/admin/settings', icon: Settings },
   ];
 
   return (
-    <div className="min-h-screen bg-slate-100 flex flex-col md:flex-row">
+    <div className="flex-1 min-h-screen w-full bg-slate-50 flex flex-col md:flex-row font-sans">
       {/* Mobile Top Bar */}
-      <div className="md:hidden bg-gurukul-navy text-white p-4 flex justify-between items-center sticky top-0 z-20 shadow-md">
+      <div className="md:hidden bg-portal-navy text-white p-3 flex justify-between items-center z-40 border-b border-slate-800 flex-shrink-0">
         <Link href="/admin/dashboard" className="flex items-center gap-2">
-          <div className="w-8 h-8 flex items-center justify-center">
-            <Image src="/logo-gurukul.png" alt="Logo" width={32} height={32} className="brand-logo-sm object-contain" />
+          <div className="w-7 h-7 flex items-center justify-center">
+            <Image src="/logo-gurukul.png" alt="Logo" width={28} height={28} className="brand-logo-sm object-contain" />
           </div>
-          <span className="font-black text-sm tracking-tight">ADMIN GURUKUL</span>
+          <span className="font-bold text-xs tracking-tight">ADMIN GURUKUL</span>
         </Link>
         <div className="flex items-center gap-2">
           <Link
@@ -118,17 +113,16 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             className="relative p-1.5 text-slate-300 hover:text-white"
             title="Notifications"
           >
-            <Bell className="w-5 h-5 text-amber-400" />
+            <Bell className="w-5 h-5 text-portal-gold" />
             {unreadNotifCount > 0 && (
-              <span className="absolute top-0 right-0 bg-red-600 text-white font-mono text-[9px] font-bold w-4 h-4 rounded-full flex items-center justify-center">
+              <span className="absolute top-0 right-0 bg-rose-600 text-white font-mono text-[9px] font-bold w-4 h-4 rounded-full flex items-center justify-center">
                 {unreadNotifCount > 9 ? '9+' : unreadNotifCount}
               </span>
             )}
           </Link>
           <button
             onClick={handleLogout}
-            className="bg-red-600 hover:bg-red-700 text-white px-2.5 py-1 rounded text-xs font-bold flex items-center gap-1"
-            title="Logout"
+            className="bg-rose-600 hover:bg-rose-700 text-white px-2.5 py-1 rounded text-xs font-semibold flex items-center gap-1"
           >
             <LogOut className="w-3.5 h-3.5" />
             <span>Logout</span>
@@ -142,34 +136,45 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         </div>
       </div>
 
+      {/* Mobile Drawer Backdrop */}
+      {sidebarOpen && (
+        <div 
+          className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-40 md:hidden"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
+
       {/* Admin Sidebar Navigation */}
       <aside
-        className={`w-64 bg-gurukul-navy text-white flex-shrink-0 flex flex-col justify-between transition-all duration-300 z-30 fixed md:sticky top-0 md:top-[128px] h-screen md:h-[calc(100vh-128px)] overflow-y-auto ${sidebarOpen ? 'left-0' : '-left-64 md:left-0'
-          }`}
+        className={`w-64 bg-portal-navy text-white flex-shrink-0 flex flex-col justify-between transition-transform duration-200 z-20 fixed md:sticky inset-y-0 left-0 md:top-[96px] md:h-[calc(100vh-96px)] overflow-hidden ${
+          sidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'
+        }`}
       >
-        <div className="p-5 space-y-6">
-          {/* Brand Logo & Title */}
-          <Link href="/admin/dashboard" className="flex items-center gap-3 border-b border-slate-700/80 pb-4 hover:opacity-90 transition group">
-            <div className="w-11 h-11 flex-shrink-0 flex items-center justify-center">
+        {/* Brand Header */}
+        <div className="p-5 border-b border-slate-800 flex-shrink-0">
+          <Link href="/admin/dashboard" className="flex items-center gap-3 group">
+            <div className="w-10 h-10 flex-shrink-0 flex items-center justify-center">
               <Image
                 src="/logo-gurukul.png"
                 alt="Gurukul Crest"
-                width={44}
-                height={44}
-                className="brand-logo-sm object-contain group-hover:scale-105 transition-transform"
+                width={40}
+                height={40}
+                className="brand-logo-sm object-contain"
               />
             </div>
             <div>
-              <h2 className="font-black text-sm tracking-tight text-white leading-snug">
+              <h2 className="font-bold text-sm tracking-tight text-white leading-snug">
                 ADMIN GURUKUL
               </h2>
-              <span className="text-[10px] font-mono text-amber-400 font-bold block">
-                ADMINISTRATION DESK
+              <span className="text-[10px] font-mono text-portal-gold font-medium block">
+                EXAMINATION DESK
               </span>
             </div>
           </Link>
+        </div>
 
-          {/* Navigation Items */}
+        {/* Scrollable Nav Items */}
+        <div className="p-3 flex-1 overflow-y-auto min-h-0 space-y-1">
           <nav className="space-y-1">
             {navItems.map((item) => {
               const Icon = item.icon;
@@ -179,21 +184,23 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                   key={item.href}
                   href={item.href}
                   onClick={() => setSidebarOpen(false)}
-                  className={`flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold transition ${isActive
-                      ? 'bg-amber-500 text-gurukul-navy shadow-md font-black'
-                      : 'text-slate-300 hover:bg-slate-800 hover:text-white'
-                    }`}
+                  className={`flex items-center justify-between px-3 py-2 rounded-lg text-xs font-medium transition ${
+                    isActive
+                      ? 'bg-portal-gold text-slate-950 font-bold shadow-xs'
+                      : 'text-slate-300 hover:bg-slate-800/80 hover:text-white'
+                  }`}
                 >
-                  <div className="flex items-center gap-3">
-                    <Icon className={`w-4 h-4 ${isActive ? 'text-gurukul-navy' : 'text-amber-400'}`} />
+                  <div className="flex items-center gap-2.5">
+                    <Icon className={`w-4 h-4 ${isActive ? 'text-slate-950' : 'text-slate-400'}`} />
                     <span>{item.name}</span>
                   </div>
                   {item.badge !== undefined && item.badge > 0 && (
                     <span
-                      className={`text-[10px] font-mono font-extrabold px-1.5 py-0.2 rounded-full ${isActive
-                          ? 'bg-gurukul-navy text-amber-400'
-                          : 'bg-red-600 text-white'
-                        }`}
+                      className={`text-[10px] font-mono font-bold px-1.5 py-0.2 rounded-full ${
+                        isActive
+                          ? 'bg-slate-950 text-portal-gold'
+                          : 'bg-rose-600 text-white'
+                      }`}
                     >
                       {item.badge > 99 ? '99+' : item.badge}
                     </span>
@@ -205,25 +212,30 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         </div>
 
         {/* Bottom User Profile */}
-        <div className="p-4 border-t border-slate-800 bg-slate-900/70">
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-full bg-amber-500/20 text-amber-400 border border-amber-500/30 flex items-center justify-center text-xs font-bold">
+        <div className="p-4 border-t border-slate-800 bg-slate-950/40 flex-shrink-0">
+          <div className="flex items-center gap-2.5 overflow-hidden">
+            <div className="w-8 h-8 rounded-full bg-portal-gold/20 text-portal-gold border border-portal-gold/30 flex items-center justify-center text-xs font-bold flex-shrink-0">
               <ShieldCheck className="w-4 h-4" />
             </div>
             <div className="overflow-hidden">
-              <p className="text-xs font-bold text-white truncate">
+              <p className="text-xs font-semibold text-white truncate">
                 {adminUser?.name || 'Administrator'}
               </p>
-              <p className="text-[10px] text-slate-400 font-mono">Super Admin</p>
+              <p className="text-[10px] text-slate-400 font-mono">Examination Board</p>
             </div>
           </div>
         </div>
       </aside>
 
-      {/* Main Content Area */}
-      <main className="flex-1 p-4 sm:p-8 max-w-7xl mx-auto overflow-y-auto w-full">
-        {children}
-      </main>
+      {/* Main Content Area with Natural Scroll & Admin Footer */}
+      <div className="flex-1 flex flex-col min-w-0 bg-slate-50">
+        <main className="flex-1 p-4 sm:p-6 lg:p-8 w-full pb-16">
+          <div className="max-w-6xl mx-auto">
+            {children}
+          </div>
+        </main>
+        <AdminFooter />
+      </div>
     </div>
   );
 }

@@ -6,22 +6,24 @@ import { sendNotification } from '@/lib/notifications';
 export async function GET(request: Request) {
   try {
     const user = await getCurrentUser();
-    if (!user) {
-      return NextResponse.json({ error: 'Authentication required to access examination result' }, { status: 401 });
-    }
-
     const { searchParams } = new URL(request.url);
     const appId = searchParams.get('appId');
     const rollNo = searchParams.get('rollNo');
+    const dob = searchParams.get('dob');
+    const all = searchParams.get('all');
 
-    // Admin can query any candidate result
-    if (user.role === 'admin') {
-      if (appId) {
-        const res = await db.getResult(appId);
-        return NextResponse.json({ result: res });
+    // Admin access
+    if (user && user.role === 'admin') {
+      if (all === 'true') {
+        const results = await db.getAllResults();
+        return NextResponse.json({ results });
       }
       if (rollNo) {
-        const res = await db.getResult(rollNo);
+        const res = await db.getResultByRollAndDob(rollNo, dob || undefined);
+        return NextResponse.json({ result: res });
+      }
+      if (appId) {
+        const res = await db.getResult(appId);
         return NextResponse.json({ result: res });
       }
     }
@@ -35,27 +37,62 @@ export async function GET(request: Request) {
       );
     }
 
-    // Applicant can ONLY access their own result dossier
-    const userApp = await db.getApplicationByUserId(user.userId);
-    if (!userApp) {
+    // Candidate Search via Roll Number & Date of Birth
+    if (rollNo) {
+      if (!user || user.role !== 'admin') {
+        if (!dob || !dob.trim()) {
+          return NextResponse.json(
+            { error: 'Date of Birth (DOB) is required to verify and view results.', result: null, resultsDeclared: true },
+            { status: 400 }
+          );
+        }
+      }
+      const res = await db.getResultByRollAndDob(rollNo, dob ? dob.trim() : undefined);
+      if (res && res.isPublished) {
+        // Sanitize: Under institutional policy, absolutely NO marks are transmitted
+        const sanitized = {
+          id: res.id,
+          rollNumber: res.rollNumber,
+          applicationNumber: res.applicationNumber,
+          candidateName: res.candidateName,
+          dob: res.dob,
+          classApplying: res.classApplying,
+          qualifyingStatus: res.qualifyingStatus,
+          remarks: res.remarks,
+          counselingDate: res.counselingDate,
+          counselingVenue: res.counselingVenue,
+          isPublished: res.isPublished,
+        };
+        return NextResponse.json({ result: sanitized, resultsDeclared: true });
+      }
       return NextResponse.json({ result: null, resultsDeclared: true });
     }
 
-    // Block IDOR parameter tampering
-    if (appId && appId !== userApp.id && appId !== userApp.applicationNumber && appId !== userApp.registrationNumber) {
-      return NextResponse.json({ error: 'Forbidden: You cannot access another candidate result' }, { status: 403 });
+    // Logged in applicant checking from dashboard
+    if (user) {
+      const userApp = await db.getApplicationByUserId(user.userId);
+      if (userApp) {
+        const res = (await db.getResult(userApp.id)) || (userApp.rollNumber ? await db.getResult(userApp.rollNumber) : null);
+        if (res && res.isPublished) {
+          const sanitized = {
+            id: res.id,
+            rollNumber: res.rollNumber,
+            applicationNumber: res.applicationNumber,
+            candidateName: res.candidateName,
+            dob: res.dob || userApp.personalInfo?.dob,
+            classApplying: res.classApplying,
+            qualifyingStatus: res.qualifyingStatus,
+            remarks: res.remarks,
+            counselingDate: res.counselingDate,
+            counselingVenue: res.counselingVenue,
+            isPublished: res.isPublished,
+          };
+          return NextResponse.json({ result: sanitized, resultsDeclared: true });
+        }
+      }
     }
 
-    if (rollNo && (!userApp.rollNumber || rollNo !== userApp.rollNumber)) {
-      return NextResponse.json({ error: 'Forbidden: You cannot query another candidate result' }, { status: 403 });
-    }
-
-    const res = await db.getResult(userApp.id);
-    if (!res || !res.isPublished) {
-      return NextResponse.json({ result: null, resultsDeclared: true });
-    }
-
-    return NextResponse.json({ result: res, resultsDeclared: true });
+    return NextResponse.json({ result: null, resultsDeclared: true });
   } catch (error) {
     console.error('Error in results route:', error);
     return NextResponse.json({ error: 'Failed to retrieve result' }, { status: 500 });
@@ -70,49 +107,39 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json();
-    const { applicationId, subjects, qualifyingStatus, remarks } = body;
+    const { applicationId, rollNumber, candidateName, dob, classApplying, qualifyingStatus, remarks } = body;
 
-    const application = await db.getApplicationById(applicationId);
-    if (!application) {
-      return NextResponse.json({ error: 'Application not found' }, { status: 404 });
-    }
-
-    const admitCard = await db.getAdmitCard(application.id);
-    const rollNumber = admitCard?.rollNumber || '26' + Math.floor(100000 + Math.random() * 900000);
-
-    const totalMarks = subjects.reduce((sum: number, s: any) => sum + Number(s.marksObtained), 0);
-    const maxTotalMarks = subjects.reduce((sum: number, s: any) => sum + Number(s.maxMarks), 0);
-    const percentage = parseFloat(((totalMarks / maxTotalMarks) * 100).toFixed(1));
+    const application = applicationId ? await db.getApplicationById(applicationId) : null;
+    const finalRoll = rollNumber || application?.rollNumber || 'ROLL-' + Date.now();
+    const finalName = candidateName || application?.personalInfo.fullName || `Candidate (${finalRoll})`;
 
     const newResult = await db.publishResult({
       id: 'res-' + Date.now(),
-      applicationId: application.id,
-      applicationNumber: application.applicationNumber,
-      rollNumber,
-      candidateName: application.personalInfo.fullName,
-      classApplying: application.classApplying,
-      subjects,
-      totalMarks,
-      maxTotalMarks,
-      percentage,
-      rank: Math.floor(1 + Math.random() * 40),
-      qualifyingStatus: qualifyingStatus || 'Qualified for Admission',
-      counselingDate: '10 January 2027 at 10:00 AM',
-      counselingVenue: 'Main Administrative Block, Gurukul Kurukshetra Campus',
+      applicationId: application ? application.id : `app-manual-${finalRoll}`,
+      applicationNumber: application ? application.applicationNumber : finalRoll,
+      rollNumber: finalRoll,
+      candidateName: finalName,
+      dob: dob || application?.personalInfo?.dob || '',
+      classApplying: classApplying || application?.classApplying || 'Class 6',
+      qualifyingStatus: qualifyingStatus === 'Qualified' ? 'Qualified' : 'Not Qualified',
+      counselingDate: qualifyingStatus === 'Qualified' ? '10 January 2027 at 10:00 AM' : undefined,
+      counselingVenue: qualifyingStatus === 'Qualified' ? 'Main Administrative Block, Gurukul Kurukshetra Campus' : undefined,
       isPublished: true,
-      remarks: remarks || 'Verified and declared by Exam Controller.',
+      remarks: remarks || (qualifyingStatus === 'Qualified' ? 'Qualified for admission counseling.' : 'Not qualified for current session.'),
       createdAt: new Date().toISOString(),
     });
 
-    await sendNotification({
-      to: application.personalInfo.fullName,
-      name: application.personalInfo.fullName,
-      type: 'RESULT_DECLARED',
-      data: {
-        rollNumber,
-        status: newResult.qualifyingStatus,
-      },
-    });
+    if (application) {
+      await sendNotification({
+        to: application.personalInfo.fullName,
+        name: application.personalInfo.fullName,
+        type: 'RESULT_DECLARED',
+        data: {
+          rollNumber: finalRoll,
+          status: newResult.qualifyingStatus,
+        },
+      });
+    }
 
     return NextResponse.json({ success: true, result: newResult });
   } catch (error) {

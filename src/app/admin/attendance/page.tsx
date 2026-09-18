@@ -1,8 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import Image from 'next/image';
-import { Printer, Download, Search, Users, Calendar, MapPin, Building } from 'lucide-react';
+import { Printer, Building, Loader2 } from 'lucide-react';
 
 export default function AdminAttendancePage() {
   const [candidates, setCandidates] = useState<any[]>([]);
@@ -25,12 +24,12 @@ export default function AdminAttendancePage() {
           if (data.settings.entranceExamTime) setOfficialExamTime(data.settings.entranceExamTime);
         }
       })
-      .catch((e) => console.warn('Failed to load settings in attendance page:', e));
+      .catch(() => {});
   }, []);
 
-  const fetchAttendance = () => {
+  useEffect(() => {
+    let isMounted = true;
     setLoading(true);
-    // For Class 11 stream variants, we pass the class and stream separately
     const [classVal, streamVal] = selectedClass.includes('|')
       ? selectedClass.split('|')
       : [selectedClass, ''];
@@ -43,14 +42,18 @@ export default function AdminAttendancePage() {
     fetch(url)
       .then((res) => res.json())
       .then((data) => {
-        setCandidates(data.candidates || []);
-        setLoading(false);
+        if (isMounted) {
+          setCandidates(data.candidates || []);
+          setLoading(false);
+        }
       })
-      .catch(() => setLoading(false));
-  };
+      .catch(() => {
+        if (isMounted) setLoading(false);
+      });
 
-  useEffect(() => {
-    fetchAttendance();
+    return () => {
+      isMounted = false;
+    };
   }, [selectedClass, selectedWing]);
 
   const handlePrintWing = (wing: 'all' | 'boys' | 'girls') => {
@@ -60,40 +63,19 @@ export default function AdminAttendancePage() {
     }, 400);
   };
 
-  const formatClass = (cls?: string) => {
-    if (!cls) return '—';
-    const str = String(cls).trim();
-    // Check if already ends with th, st, nd, rd (e.g. 6th)
-    if (/^\d+(st|nd|rd|th)/i.test(str)) {
-      return str;
-    }
-    // Match "Class 7", "Class 11 Science", "7", "11", etc.
-    const match = str.match(/(?:class\s*)?(\d+)(.*)/i);
-    if (match) {
-      const num = parseInt(match[1], 10);
-      const suffix = match[2] ? match[2].trim() : '';
-      let ordinal = 'th';
-      if (num === 1 || (num % 10 === 1 && num !== 11)) ordinal = 'st';
-      else if (num === 2 || (num % 10 === 2 && num !== 12)) ordinal = 'nd';
-      else if (num === 3 || (num % 10 === 3 && num !== 13)) ordinal = 'rd';
-      return `${num}${ordinal}${suffix ? ` ${suffix}` : ''}`;
-    }
-    return str;
-  };
-
   return (
-    <div className="space-y-6 font-sans">
+    <div className="space-y-6">
       {/* Top Banner (Hidden on Print) */}
-      <div className="flex flex-col lg:flex-row justify-between lg:items-center gap-4 bg-white p-6 rounded-2xl border border-slate-200 shadow-sm print:hidden">
+      <div className="portal-card p-6 flex flex-col lg:flex-row justify-between lg:items-center gap-4 print:hidden">
         <div>
-          <span className="text-[10px] font-mono uppercase tracking-wider text-gurukul-600 bg-amber-100 px-3 py-1 rounded-full font-bold">
+          <span className="text-[11px] font-semibold uppercase tracking-wider text-portal-navy bg-slate-100 px-2.5 py-0.5 rounded">
             Examination Desk • Session 2027-28
           </span>
-          <h1 className="text-xl sm:text-2xl font-black text-gurukul-navy mt-1.5">
+          <h1 className="text-xl sm:text-2xl font-bold text-slate-900 mt-1">
             Entrance Examination Attendance Registers
           </h1>
           <p className="text-xs text-slate-500">
-            Generate official printable invigilator attendance sheets separated for Boys Wing and Girls Wing.
+            Generate printable invigilator attendance sheets separated for Boys Wing and Girls Wing.
           </p>
         </div>
 
@@ -101,7 +83,7 @@ export default function AdminAttendancePage() {
           <button
             type="button"
             onClick={() => handlePrintWing('boys')}
-            className="bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs px-4 py-2.5 rounded-xl shadow transition flex items-center justify-center gap-1.5"
+            className="btn-secondary text-xs px-3.5 py-2 font-medium"
           >
             <Printer className="w-3.5 h-3.5" />
             <span>Print Boys Sheet</span>
@@ -109,7 +91,7 @@ export default function AdminAttendancePage() {
           <button
             type="button"
             onClick={() => handlePrintWing('girls')}
-            className="bg-pink-600 hover:bg-pink-700 text-white font-bold text-xs px-4 py-2.5 rounded-xl shadow transition flex items-center justify-center gap-1.5"
+            className="btn-secondary text-xs px-3.5 py-2 font-medium"
           >
             <Printer className="w-3.5 h-3.5" />
             <span>Print Girls Sheet</span>
@@ -117,67 +99,69 @@ export default function AdminAttendancePage() {
           <button
             type="button"
             onClick={() => window.print()}
-            className="bg-gurukul-navy hover:bg-slate-900 text-white font-bold text-xs px-4 py-2.5 rounded-xl shadow transition flex items-center justify-center gap-1.5"
+            className="btn-primary text-xs px-4 py-2 font-medium"
           >
-            <Printer className="w-3.5 h-3.5 text-amber-400" />
+            <Printer className="w-3.5 h-3.5" />
             <span>Print Current Sheet</span>
           </button>
         </div>
       </div>
 
-      {/* Category / Wing Tabs & Filters (Hidden on Print) */}
+      {/* Category Tabs & Filters (Hidden on Print) */}
       <div className="space-y-3 print:hidden">
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="text-xs font-bold text-slate-600 mr-1">Category / Wing:</span>
+        <div className="flex flex-wrap items-center gap-2 text-xs font-semibold">
+          <span className="text-slate-500 mr-1 text-[11px] uppercase tracking-wider">Wing:</span>
           <button
             type="button"
             onClick={() => setSelectedWing('all')}
-            className={`px-4 py-2 rounded-xl text-xs font-bold transition ${selectedWing === 'all'
-              ? 'bg-gurukul-navy text-white shadow-sm'
-              : 'bg-white text-slate-700 border border-slate-200 hover:bg-slate-50'
-              }`}
+            className={`px-3 py-1.5 rounded-lg transition ${
+              selectedWing === 'all'
+                ? 'bg-portal-navy text-white shadow-xs'
+                : 'bg-white text-slate-700 border border-slate-200 hover:bg-slate-50'
+            }`}
           >
             All Candidates
           </button>
           <button
             type="button"
             onClick={() => setSelectedWing('boys')}
-            className={`px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 ${selectedWing === 'boys'
-              ? 'bg-blue-600 text-white shadow-sm'
-              : 'bg-white text-blue-700 border border-blue-200 hover:bg-blue-50'
-              }`}
+            className={`px-3 py-1.5 rounded-lg transition ${
+              selectedWing === 'boys'
+                ? 'bg-portal-navy text-white shadow-xs'
+                : 'bg-white text-slate-700 border border-slate-200 hover:bg-slate-50'
+            }`}
           >
-            <span> Boys Attendance Sheet</span>
+            Boys Attendance Sheet
           </button>
           <button
             type="button"
             onClick={() => setSelectedWing('girls')}
-            className={`px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 ${selectedWing === 'girls'
-              ? 'bg-pink-600 text-white shadow-sm'
-              : 'bg-white text-pink-700 border border-pink-200 hover:bg-pink-50'
-              }`}
+            className={`px-3 py-1.5 rounded-lg transition ${
+              selectedWing === 'girls'
+                ? 'bg-portal-navy text-white shadow-xs'
+                : 'bg-white text-slate-700 border border-slate-200 hover:bg-slate-50'
+            }`}
           >
-            <span>Girls Attendance Sheet</span>
-
+            Girls Attendance Sheet
           </button>
         </div>
 
-        <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-wrap gap-4 items-center">
-          <div className="flex items-center gap-2 text-xs font-semibold text-slate-700 bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-200">
-            <Building className="w-4 h-4 text-gurukul-600" />
-            <span>Centre: <strong className="text-gurukul-navy">{officialCentre}</strong></span>
+        <div className="portal-card p-4 flex flex-wrap gap-4 items-center">
+          <div className="flex items-center gap-2 text-xs text-slate-700 bg-slate-50 px-3 py-1.5 rounded border border-slate-200">
+            <Building className="w-3.5 h-3.5 text-portal-navy" />
+            <span>Centre: <strong>{officialCentre}</strong></span>
             <span className="text-slate-300">|</span>
-            <span>Date: <strong className="text-gurukul-navy">{officialExamDate}</strong></span>
+            <span>Date: <strong>{officialExamDate}</strong></span>
             <span className="text-slate-300">|</span>
-            <span>Time: <strong className="text-gurukul-navy">{officialExamTime}</strong></span>
+            <span>Time: <strong>{officialExamTime}</strong></span>
           </div>
 
           <div className="flex items-center gap-2">
-            <span className="text-xs font-bold text-slate-600">Filter Class:</span>
+            <span className="text-xs font-medium text-slate-600">Class:</span>
             <select
               value={selectedClass}
               onChange={(e) => setSelectedClass(e.target.value)}
-              className="text-xs border rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-amber-500 font-semibold"
+              className="text-xs border rounded-lg px-2.5 py-1.5 outline-none font-medium text-slate-800"
             >
               <option value="">All Classes</option>
               <option value="Class 6">Class 6th</option>
@@ -191,20 +175,22 @@ export default function AdminAttendancePage() {
             </select>
           </div>
 
-          <span className="text-xs font-mono text-slate-500 ml-auto flex items-center gap-1.5">
-            Candidates in Sheet:{' '}
-            {loading ? (
-              <span className="text-amber-600 font-bold animate-pulse">Loading...</span>
-            ) : (
-              <strong className="text-slate-900">{candidates.length}</strong>
-            )}
-          </span>
+          {loading ? (
+            <span className="text-xs text-slate-500 ml-auto inline-flex items-center gap-1.5 font-medium">
+              <Loader2 className="w-3.5 h-3.5 animate-spin text-portal-navy" />
+              <span>Loading candidates...</span>
+            </span>
+          ) : (
+            <span className="text-xs text-slate-500 ml-auto">
+              Candidates: <strong className="text-slate-900">{candidates.length}</strong>
+            </span>
+          )}
         </div>
       </div>
 
       {/* Printable Sheet Container */}
-      <div className="bg-white border border-slate-300 rounded-2xl shadow-sm p-6 print:p-0 print:border-none print:shadow-none">
-        {/* Printable Header Matching PDF Template */}
+      <div className="bg-white border border-slate-300 rounded-xl p-6 print:p-0 print:border-none print:shadow-none">
+        {/* Printable Header */}
         <div className="border-2 border-black pb-2 pt-2 mb-4 text-center bg-slate-50 print:bg-transparent">
           <h2 className="text-xl sm:text-2xl font-black text-black uppercase tracking-wider font-serif">
             GURUKUL
@@ -220,7 +206,7 @@ export default function AdminAttendancePage() {
           </p>
         </div>
 
-        {/* Attendance Register Table with Exact Columns from PDF */}
+        {/* Attendance Register Table */}
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse border-2 border-black text-xs">
             <thead>
@@ -238,24 +224,26 @@ export default function AdminAttendancePage() {
             <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan={8} className="p-12 text-center text-slate-500 border border-black bg-slate-50/60">
-                    <div className="flex flex-col items-center justify-center gap-2.5 py-4">
-                      <div className="w-9 h-9 border-4 border-amber-500 border-t-transparent rounded-full animate-spin" />
-                      <p className="font-black text-xs text-slate-800 tracking-wider uppercase">
-                        Loading Attendance Register Candidates...
-                      </p>
-                      <p className="text-[11px] text-slate-400">
-                        Retrieving allotted candidate hall tickets &amp; photographs
-                      </p>
+                  <td colSpan={8} className="p-16 text-center text-slate-500 border border-black bg-slate-50">
+                    <div className="flex flex-col items-center justify-center gap-3">
+                      <Loader2 className="w-8 h-8 animate-spin text-portal-navy" />
+                      <div>
+                        <p className="font-bold text-xs text-slate-800 uppercase tracking-wider">
+                          Loading Attendance Register...
+                        </p>
+                        <p className="text-[11px] text-slate-500 mt-1">
+                          Fetching candidate hall ticket and examination roll records
+                        </p>
+                      </div>
                     </div>
                   </td>
                 </tr>
               ) : candidates.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="p-10 text-center text-slate-500 space-y-2 border border-black">
-                    <p className="font-bold text-sm text-slate-700">No candidates with allotted Roll Numbers found.</p>
-                    <p className="text-xs text-slate-400">
-                      Candidates must have an active Admit Card and allotted Roll Number to appear on the official attendance register.
+                  <td colSpan={8} className="p-8 text-center text-slate-500 space-y-1 border border-black">
+                    <p className="font-semibold text-xs text-slate-700">No candidates with allotted Roll Numbers found.</p>
+                    <p className="text-[11px] text-slate-400">
+                      Candidates must have an active Admit Card and allotted Roll Number to appear on the attendance register.
                     </p>
                   </td>
                 </tr>
@@ -294,7 +282,7 @@ export default function AdminAttendancePage() {
                           {/* eslint-disable-next-line @next/next/no-img-element */}
                           <img
                             src={c.signature}
-                            alt="Candidate Signature"
+                            alt="Signature"
                             className="max-h-10 max-w-[100px] object-contain mx-auto"
                           />
                         </div>
@@ -319,11 +307,10 @@ export default function AdminAttendancePage() {
             <span className="ml-6">Absent: __________</span>
           </div>
           <div>
-            <span>Signature of Centre Superintendent & Seal</span>
+            <span>Signature of Centre Superintendent &amp; Seal</span>
           </div>
         </div>
       </div>
     </div>
   );
 }
-

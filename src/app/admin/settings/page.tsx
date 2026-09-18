@@ -6,22 +6,16 @@ import {
   Save, 
   CheckCircle, 
   Clock, 
-  Calendar, 
-  CreditCard, 
-  Mail, 
-  Phone, 
-  ShieldCheck,
+  RotateCcw, 
+  Globe, 
+  Award, 
+  Eye, 
+  EyeOff, 
+  X, 
+  CalendarCheck, 
+  ShieldCheck, 
   AlertTriangle,
-  RotateCcw,
-  Globe,
-  Award,
-  Eye,
-  EyeOff,
-  Sparkles,
-  X,
-  CalendarCheck,
-  Layers,
-  PhoneCall
+  Loader2
 } from 'lucide-react';
 import { FormScheduleConfig, FormStatusResult } from '@/lib/formSchedule';
 import { SystemSettings } from '@/lib/types';
@@ -33,7 +27,6 @@ interface ToastState {
 }
 
 export default function AdminSettingsPage() {
-  // ── Form Schedule Config ──────────────────────────────────────
   const [scheduleConfig, setScheduleConfig] = useState<FormScheduleConfig>({
     startDate: '2026-09-01T00:00',
     endDate: '2026-10-31T23:59',
@@ -48,12 +41,11 @@ export default function AdminSettingsPage() {
   const [formStatus, setFormStatus] = useState<FormStatusResult | null>(null);
   const [scheduleSaving, setScheduleSaving] = useState(false);
 
-  // ── Key Academic Dates & Milestones ───────────────────────────
   const [academicSettings, setAcademicSettings] = useState<SystemSettings>({
     portalOpen: true,
     resultsDeclared: false,
     academicSession: '2027-2028',
-    applicationFee: 1200,
+    applicationFee: 800,
     registrationStartDate: '2026-09-01',
     registrationEndDate: '2027-01-31',
     admitCardReleaseDate: '2027-03-01',
@@ -68,16 +60,10 @@ export default function AdminSettingsPage() {
   });
 
   const [academicSaving, setAcademicSaving] = useState(false);
-
-  // ── Result Declaration State ─────────────────────────────────
   const [resultsDeclared, setResultsDeclared] = useState<boolean | null>(null);
   const [resultToggling, setResultToggling] = useState(false);
-
-  // ── Admit Card Release State ──────────────────────────────────
   const [admitCardsReleased, setAdmitCardsReleased] = useState<boolean | null>(null);
   const [admitCardToggling, setAdmitCardToggling] = useState(false);
-
-  // ── Toast Notification Popup State ───────────────────────────
   const [toast, setToast] = useState<ToastState | null>(null);
 
   const showToast = (message: string, type: 'success' | 'error' | 'info' = 'success') => {
@@ -116,7 +102,6 @@ export default function AdminSettingsPage() {
     }
   };
 
-  // ── Initial Data Load ─────────────────────────────────────────
   const loadSchedule = () => {
     fetch('/api/schedule')
       .then((res) => res.json())
@@ -130,7 +115,7 @@ export default function AdminSettingsPage() {
         }
         if (data.status) setFormStatus(data.status);
       })
-      .catch((err) => console.warn('Failed to load schedule:', err));
+      .catch(() => {});
   };
 
   const loadAcademicSettings = () => {
@@ -150,103 +135,50 @@ export default function AdminSettingsPage() {
           }
         }
       })
-      .catch((err) => console.warn('Failed to load academic settings:', err));
+      .catch(() => {});
   };
 
   useEffect(() => {
     loadSchedule();
     loadAcademicSettings();
-
-    // Fetch current resultsDeclared status directly
-    fetch('/api/results/status')
-      .then((r) => r.json())
-      .then((d) => {
-        if (d.resultsDeclared !== undefined) {
-          setResultsDeclared(d.resultsDeclared === true);
-        }
-      })
-      .catch(() => setResultsDeclared(false));
-
-    // Fetch current admitCardsReleased status directly
-    fetch('/api/admit-card/status')
-      .then((r) => r.json())
-      .then((d) => {
-        if (d.admitCardsReleased !== undefined) {
-          setAdmitCardsReleased(d.admitCardsReleased === true);
-        }
-      })
-      .catch(() => setAdmitCardsReleased(false));
   }, []);
 
-  // ── Save Form Schedule ────────────────────────────────────────
   const handleSaveSchedule = async (e: React.FormEvent) => {
     e.preventDefault();
     setScheduleSaving(true);
 
     try {
-      const startIso = scheduleConfig.startDate.length === 16
-        ? new Date(`${scheduleConfig.startDate}:00+05:30`).toISOString()
-        : new Date(scheduleConfig.startDate).toISOString();
-      const endIso = scheduleConfig.endDate.length === 16
-        ? new Date(`${scheduleConfig.endDate}:00+05:30`).toISOString()
-        : new Date(scheduleConfig.endDate).toISOString();
-
       const res = await fetch('/api/schedule', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          startDate: startIso,
-          endDate: endIso,
-          statusOverride: scheduleConfig.statusOverride,
-          timezone: scheduleConfig.timezone,
-          announcementNotice: scheduleConfig.announcementNotice,
-        }),
+        body: JSON.stringify(scheduleConfig),
       });
       const data = await res.json();
 
       if (!res.ok) {
-        showToast(data.error || 'Failed to update schedule settings.', 'error');
+        showToast(data.error || 'Failed to update form schedule.', 'error');
         return;
       }
 
-      if (data.status) setFormStatus(data.status);
-      showToast('Application schedule settings saved successfully! Changes are live on the portal.', 'success');
-      loadSchedule();
+      setScheduleConfig({
+        ...data.config,
+        startDate: formatToISTDateTimeLocal(data.config.startDate, scheduleConfig.startDate),
+        endDate: formatToISTDateTimeLocal(data.config.endDate, scheduleConfig.endDate),
+      });
+      setFormStatus(data.status);
+      showToast('Form schedule & portal controls updated successfully.', 'success');
       loadAcademicSettings();
     } catch {
-      showToast('An unexpected error occurred while saving the schedule.', 'error');
+      showToast('Network error while saving schedule.', 'error');
     } finally {
       setScheduleSaving(false);
     }
   };
 
-  // ── Quick Reopen / Extension ───────────────────────────────────
   const handleQuickReopen = (daysToAdd: number) => {
-    // Base extension on current effective closing date (from scheduleConfig or academicSettings)
-    const targetStr = scheduleConfig.endDate || academicSettings.registrationEndDate || '';
-    let yr: number, mo: number, da: number, hr = 23, min = 59;
-    const match = targetStr.match(/^(\d{4})-(\d{2})-(\d{2})(?:T(\d{2}):(\d{2}))?/);
-
-    if (match) {
-      yr = parseInt(match[1], 10);
-      mo = parseInt(match[2], 10) - 1;
-      da = parseInt(match[3], 10);
-      if (match[4] !== undefined) hr = parseInt(match[4], 10);
-      if (match[5] !== undefined) min = parseInt(match[5], 10);
-    } else {
-      const now = new Date();
-      yr = now.getFullYear();
-      mo = now.getMonth();
-      da = now.getDate();
-    }
-
-    const base = new Date(yr, mo, da, hr, min, 0);
     const now = new Date();
-    // If current closing date has already passed, extend from today; otherwise extend from the existing closing date
-    const effectiveBase = base.getTime() < now.getTime()
-      ? new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 0)
-      : base;
-
+    const currentEnd = scheduleConfig.endDate ? new Date(scheduleConfig.endDate) : null;
+    const effectiveBase = currentEnd && currentEnd > now ? new Date(currentEnd) : new Date(now);
     effectiveBase.setDate(effectiveBase.getDate() + daysToAdd);
 
     const pad = (n: number) => n.toString().padStart(2, '0');
@@ -254,12 +186,11 @@ export default function AdminSettingsPage() {
     const newDateTimeStr = `${newDateOnlyStr}T${pad(effectiveBase.getHours())}:${pad(effectiveBase.getMinutes())}`;
     const dateFormatted = effectiveBase.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
 
-    // Synchronously update BOTH scheduleConfig AND academicSettings in real-time
     setScheduleConfig((prev) => ({
       ...prev,
       endDate: newDateTimeStr,
       statusOverride: 'extended',
-      announcementNotice: `Online Application has been reopened & extended until ${dateFormatted}.`,
+      announcementNotice: `Online Application has been extended until ${dateFormatted}.`,
     }));
 
     setAcademicSettings((prev) => ({
@@ -267,10 +198,9 @@ export default function AdminSettingsPage() {
       registrationEndDate: newDateOnlyStr,
     }));
 
-    showToast(`End date extended by ${daysToAdd} days to ${dateFormatted}. Click "Save Schedule & Portal Controls" below to commit.`, 'info');
+    showToast(`End date extended by ${daysToAdd} days to ${dateFormatted}. Click Save below to commit.`, 'info');
   };
 
-  // ── Save Key Academic Dates & Milestones ──────────────────────
   const handleSaveAcademicDates = async (e: React.FormEvent) => {
     e.preventDefault();
     setAcademicSaving(true);
@@ -284,22 +214,21 @@ export default function AdminSettingsPage() {
       const data = await res.json();
 
       if (!res.ok) {
-        showToast(data.error || 'Failed to update academic milestone dates.', 'error');
+        showToast(data.error || 'Failed to update academic dates.', 'error');
         return;
       }
 
       setAcademicSettings(data.settings);
-      showToast('Key academic dates & milestone schedules updated successfully! Visible on public portal.', 'success');
-      loadSchedule(); // reload schedule in case start/end dates synchronized
+      showToast('Academic milestone dates updated successfully.', 'success');
+      loadSchedule();
       loadAcademicSettings();
     } catch {
-      showToast('Network error while saving academic milestone dates.', 'error');
+      showToast('Network error while saving dates.', 'error');
     } finally {
       setAcademicSaving(false);
     }
   };
 
-  // ── Result Declaration Visibility Toggle ──────────────────────
   const handleToggleResults = async (declare: boolean) => {
     setResultToggling(true);
     try {
@@ -310,14 +239,14 @@ export default function AdminSettingsPage() {
       });
       const data = await res.json();
       if (!res.ok) {
-        showToast(data.error || 'Failed to update result declaration status.', 'error');
+        showToast(data.error || 'Failed to update result declaration.', 'error');
       } else {
         setResultsDeclared(declare);
         setAcademicSettings((prev) => ({ ...prev, resultsDeclared: declare }));
         showToast(
           declare
-            ? 'Results are now DECLARED and publicly visible to candidates!'
-            : 'Results have been HIDDEN from candidates.',
+            ? 'Results are now declared and publicly visible to candidates.'
+            : 'Results have been hidden from candidates.',
           'success'
         );
       }
@@ -343,8 +272,8 @@ export default function AdminSettingsPage() {
         setAdmitCardsReleased(release);
         showToast(
           release
-            ? 'Admit cards are now officially RELEASED and visible to candidates!'
-            : 'Admit cards are now HIDDEN from candidates (held in progress).',
+            ? 'Admit cards are now officially released and visible to candidates.'
+            : 'Admit cards are now hidden from candidates.',
           'success'
         );
       }
@@ -356,42 +285,39 @@ export default function AdminSettingsPage() {
   };
 
   return (
-    <div className="space-y-8 max-w-5xl mx-auto pb-16 font-sans relative">
-      {/* ── Fixed Bottom-Right Popup Toast ───────────────────────── */}
+    <div className="space-y-6 max-w-4xl mx-auto pb-16">
+      {/* Toast Notification (Top-Right Eye-Level Notification) */}
       {toast && (
-        <div className="fixed bottom-6 right-6 z-50 animate-in fade-in slide-in-from-bottom-5 duration-300">
-          <div className={`flex items-start gap-3 p-4 rounded-2xl shadow-2xl border max-w-md bg-white ${
+        <div className="fixed top-24 right-4 sm:right-8 z-50 transition-all duration-300 transform translate-y-0">
+          <div className={`flex items-start gap-3 p-4 rounded-xl shadow-2xl border max-w-sm sm:max-w-md bg-white text-xs ${
             toast.type === 'success'
-              ? 'border-emerald-400 ring-2 ring-emerald-100 shadow-emerald-900/10'
+              ? 'border-emerald-200 border-l-4 border-l-emerald-600'
               : toast.type === 'error'
-              ? 'border-rose-400 ring-2 ring-rose-100 shadow-rose-900/10'
-              : 'border-blue-400 ring-2 ring-blue-100 shadow-blue-900/10'
+              ? 'border-rose-200 border-l-4 border-l-rose-600'
+              : 'border-slate-200 border-l-4 border-l-portal-navy'
           }`}>
-            {toast.type === 'success' ? (
-              <CheckCircle className="w-5 h-5 text-emerald-600 flex-shrink-0 mt-0.5" />
-            ) : toast.type === 'error' ? (
-              <AlertTriangle className="w-5 h-5 text-rose-600 flex-shrink-0 mt-0.5" />
-            ) : (
-              <Sparkles className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
-            )}
-            <div className="flex-1 pr-2">
-              <p className={`text-xs font-black uppercase tracking-wider ${
-                toast.type === 'success'
-                  ? 'text-emerald-800'
-                  : toast.type === 'error'
-                  ? 'text-rose-800'
-                  : 'text-blue-800'
+            <div className="flex-shrink-0 mt-0.5">
+              {toast.type === 'success' ? (
+                <CheckCircle className="w-5 h-5 text-emerald-600" />
+              ) : toast.type === 'error' ? (
+                <AlertTriangle className="w-5 h-5 text-rose-600" />
+              ) : (
+                <Clock className="w-5 h-5 text-portal-navy" />
+              )}
+            </div>
+            <div className="flex-1 min-w-0 pr-2">
+              <span className={`font-bold text-sm block ${
+                toast.type === 'success' ? 'text-emerald-900' : toast.type === 'error' ? 'text-rose-900' : 'text-slate-900'
               }`}>
                 {toast.type === 'success' ? 'Updated Successfully' : toast.type === 'error' ? 'Action Failed' : 'Notice'}
-              </p>
-              <p className="text-xs text-slate-700 font-semibold mt-0.5 leading-snug">
-                {toast.message}
-              </p>
+              </span>
+              <p className="text-slate-600 mt-1 leading-relaxed text-xs">{toast.message}</p>
             </div>
             <button
               type="button"
               onClick={() => setToast(null)}
-              className="text-slate-400 hover:text-slate-600 transition p-1"
+              className="text-slate-400 hover:text-slate-700 p-1 rounded-md hover:bg-slate-100 transition flex-shrink-0"
+              title="Dismiss"
             >
               <X className="w-4 h-4" />
             </button>
@@ -399,98 +325,67 @@ export default function AdminSettingsPage() {
         </div>
       )}
 
-      {/* ── Page Header ──────────────────────────────────────────── */}
-      <div>
-        <div className="flex items-center gap-2">
-          <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-gurukul-700 bg-amber-100 px-3 py-1 rounded-full border border-amber-200">
-            Administrative Control Center
-          </span>
-          <span className="text-[10px] font-mono font-semibold text-slate-500">
-            Real-Time Sync Active
-          </span>
-        </div>
-        <h1 className="text-2xl sm:text-3xl font-black text-gurukul-navy mt-1.5">
+      {/* Header */}
+      <div className="border-b border-slate-200 pb-4">
+        <h1 className="text-xl sm:text-2xl font-bold text-slate-900">
           Portal Lifecycle, Dates &amp; System Configuration
         </h1>
-        <p className="text-xs sm:text-sm text-slate-500 mt-1">
-          Manage application deadlines, academic milestones, result declarations, and helpline channels with instantaneous portal updates.
+        <p className="text-xs text-slate-500">
+          Manage application deadlines, academic milestones, result declarations, and helpline channels.
         </p>
       </div>
 
-      {/* ── Live Portal Status Summary ───────────────────────────── */}
+      {/* Live Status Bar */}
       {formStatus && (
-        <div className={`p-5 rounded-2xl border flex flex-col sm:flex-row justify-between sm:items-center gap-4 shadow-sm ${
+        <div className={`p-4 rounded-lg border flex flex-col sm:flex-row justify-between sm:items-center gap-3 text-xs ${
           formStatus.isOpen
             ? formStatus.status === 'EXTENDED'
-              ? 'bg-amber-50/80 border-amber-300 text-amber-950'
-              : 'bg-emerald-50/80 border-emerald-300 text-emerald-950'
-            : 'bg-rose-50/80 border-rose-300 text-rose-950'
+              ? 'bg-amber-50 border-amber-200 text-amber-950'
+              : 'bg-emerald-50 border-emerald-200 text-emerald-950'
+            : 'bg-rose-50 border-rose-200 text-rose-950'
         }`}>
-          <div className="space-y-1">
-            <div className="flex items-center gap-2 flex-wrap">
-              <span className={`px-2.5 py-0.5 rounded-full text-xs font-black uppercase tracking-wide ${
-                formStatus.isOpen
-                  ? formStatus.status === 'EXTENDED'
-                    ? 'bg-amber-500 text-gurukul-navy'
-                    : 'bg-emerald-600 text-white'
-                  : 'bg-rose-600 text-white'
-              }`}>
-                PORTAL STATUS: {formStatus.status}
-              </span>
-              <span className="text-xs font-mono font-bold flex items-center gap-1 text-slate-700">
-                <Globe className="w-3.5 h-3.5 text-slate-500" /> Timezone: {formStatus.timezone}
-              </span>
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="font-bold">STATUS: {formStatus.status}</span>
+              <span className="text-slate-500">• Timezone: {formStatus.timezone}</span>
             </div>
-            <p className="text-xs font-bold leading-relaxed">{formStatus.message}</p>
+            <p className="text-slate-700 mt-0.5">{formStatus.message}</p>
           </div>
-
-          <div className="text-xs font-mono sm:text-right flex sm:flex-col justify-between sm:justify-start gap-1 pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-200">
-            <div>Extensions Granted: <strong className="text-gurukul-navy">{scheduleConfig.reopenedCount} times</strong></div>
-            <div className="text-[10px] text-slate-500">Every change timestamped in audit logs</div>
-          </div>
+          <span className="text-[11px] text-slate-500">
+            Extensions: {scheduleConfig.reopenedCount}
+          </span>
         </div>
       )}
 
-      {/* ═══════════════════════════════════════════════════════════ */}
-      {/* SECTION 1: KEY ACADEMIC DATES & MILESTONES (Real-time Sync) */}
-      {/* ═══════════════════════════════════════════════════════════ */}
-      <div className="bg-white border border-slate-200 rounded-3xl p-6 sm:p-8 shadow-sm space-y-6">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-4">
-          <div>
-            <h2 className="font-extrabold text-slate-900 text-base sm:text-lg flex items-center gap-2">
-              <CalendarCheck className="w-5 h-5 text-gurukul-600" /> Key Academic Milestones &amp; Examination Dates
-            </h2>
-            <p className="text-xs text-slate-500 mt-0.5">
-              Dates configured here update simultaneously across the applicant portal, dashboard timelines, and official notices.
-            </p>
-          </div>
-          <span className="text-[11px] font-bold px-3 py-1 bg-gurukul-50 text-gurukul-700 border border-gurukul-200 rounded-full w-fit">
-            Session: {academicSettings.academicSession || '2027-2028'}
-          </span>
+      {/* SECTION 1: Key Academic Milestones */}
+      <div className="portal-card p-6 space-y-5">
+        <div className="border-b border-slate-100 pb-3">
+          <h2 className="font-bold text-sm text-slate-900">
+            Key Academic Milestones &amp; Examination Dates
+          </h2>
+          <p className="text-xs text-slate-500">
+            Dates configured here synchronize across the candidate portal, dashboard, and official notices.
+          </p>
         </div>
 
-        <form onSubmit={handleSaveAcademicDates} className="space-y-6">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 text-xs">
-            {/* Academic Session */}
+        <form onSubmit={handleSaveAcademicDates} className="space-y-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 text-xs">
             <div>
-              <label className="block font-bold text-slate-700 uppercase mb-1">
-                Academic Session *
+              <label className="form-label">
+                Academic Session <span className="text-rose-500">*</span>
               </label>
               <input
                 type="text"
                 required
                 value={academicSettings.academicSession}
                 onChange={(e) => setAcademicSettings({ ...academicSettings, academicSession: e.target.value })}
-                placeholder="2027-2028"
-                className="w-full p-2.5 border rounded-xl outline-none focus:ring-2 focus:ring-amber-500 font-semibold"
+                className="form-input-field"
               />
-              <p className="text-[10px] text-slate-400 mt-1">e.g., 2027-2028 or 2027-28</p>
             </div>
 
-            {/* Application Fee */}
             <div>
-              <label className="block font-bold text-slate-700 uppercase mb-1">
-                Application Fee (INR ₹) *
+              <label className="form-label">
+                Application Fee (₹) <span className="text-rose-500">*</span>
               </label>
               <input
                 type="number"
@@ -498,15 +393,13 @@ export default function AdminSettingsPage() {
                 min={0}
                 value={academicSettings.applicationFee}
                 onChange={(e) => setAcademicSettings({ ...academicSettings, applicationFee: Number(e.target.value) })}
-                className="w-full p-2.5 border rounded-xl outline-none focus:ring-2 focus:ring-amber-500 font-mono font-bold"
+                className="form-input-field font-mono"
               />
-              <p className="text-[10px] text-slate-400 mt-1">Standard candidate application fee</p>
             </div>
 
-            {/* Registration Start Date */}
             <div>
-              <label className="block font-bold text-slate-700 uppercase mb-1">
-                Registration Start Date *
+              <label className="form-label">
+                Registration Start Date <span className="text-rose-500">*</span>
               </label>
               <input
                 type="date"
@@ -520,15 +413,13 @@ export default function AdminSettingsPage() {
                     setScheduleConfig((prev) => ({ ...prev, startDate: `${val}T${timePart}` }));
                   }
                 }}
-                className="w-full p-2.5 border rounded-xl outline-none focus:ring-2 focus:ring-amber-500 font-mono"
+                className="form-input-field font-mono"
               />
-              <p className="text-[10px] text-slate-400 mt-1">Portal opens for registration</p>
             </div>
 
-            {/* Registration End Date */}
             <div>
-              <label className="block font-bold text-slate-700 uppercase mb-1">
-                Registration End Date (Deadline) *
+              <label className="form-label">
+                Registration End Date (Deadline) <span className="text-rose-500">*</span>
               </label>
               <input
                 type="date"
@@ -542,471 +433,353 @@ export default function AdminSettingsPage() {
                     setScheduleConfig((prev) => ({ ...prev, endDate: `${val}T${timePart}` }));
                   }
                 }}
-                className="w-full p-2.5 border rounded-xl outline-none focus:ring-2 focus:ring-amber-500 font-mono"
+                className="form-input-field font-mono"
               />
-              <p className="text-[10px] text-slate-400 mt-1">Normal registration closing date</p>
             </div>
 
-            {/* Admit Card Release Date */}
             <div>
-              <label className="block font-bold text-slate-700 uppercase mb-1">
-                Admit Card Release Date *
+              <label className="form-label">
+                Admit Card Release Date <span className="text-rose-500">*</span>
               </label>
               <input
                 type="date"
                 required
                 value={academicSettings.admitCardReleaseDate}
                 onChange={(e) => setAcademicSettings({ ...academicSettings, admitCardReleaseDate: e.target.value })}
-                className="w-full p-2.5 border rounded-xl outline-none focus:ring-2 focus:ring-amber-500 font-mono"
+                className="form-input-field font-mono"
               />
-              <p className="text-[10px] text-slate-400 mt-1">Hall tickets generated &amp; downloadable</p>
             </div>
 
-            {/* Written Entrance Exam Date */}
             <div>
-              <label className="block font-bold text-slate-700 uppercase mb-1">
-                Written Entrance Exam Date *
+              <label className="form-label">
+                Entrance Exam Date <span className="text-rose-500">*</span>
               </label>
               <input
                 type="date"
                 required
                 value={academicSettings.entranceExamDate}
                 onChange={(e) => setAcademicSettings({ ...academicSettings, entranceExamDate: e.target.value })}
-                className="w-full p-2.5 border rounded-xl outline-none focus:ring-2 focus:ring-amber-500 font-mono"
+                className="form-input-field font-mono"
               />
-              <p className="text-[10px] text-slate-400 mt-1">Official entrance test day (Admit Cards &amp; Attendance)</p>
             </div>
 
-            {/* Written Entrance Exam Time */}
             <div>
-              <label className="block font-bold text-slate-700 uppercase mb-1">
-                Entrance Exam Reporting Time *
+              <label className="form-label">
+                Reporting Time <span className="text-rose-500">*</span>
               </label>
               <input
                 type="text"
                 placeholder="e.g. 9:30 AM"
                 value={academicSettings.entranceExamTime || '9:30 AM'}
                 onChange={(e) => setAcademicSettings({ ...academicSettings, entranceExamTime: e.target.value })}
-                className="w-full p-2.5 border rounded-xl outline-none focus:ring-2 focus:ring-amber-500 font-mono"
+                className="form-input-field font-mono"
               />
-              <p className="text-[10px] text-slate-400 mt-1">Synchronized across Admit Cards &amp; Attendance Registers</p>
             </div>
 
-            {/* Dynamic Entrance Exam Venue Name */}
-            <div className="md:col-span-2 bg-amber-50/60 p-3.5 rounded-2xl border border-amber-200">
-              <label className="block font-black text-amber-950 uppercase mb-1 text-xs">
-                Official Examination Centre Venue Name (Single Source of Truth) *
+            <div className="sm:col-span-2">
+              <label className="form-label">
+                Exam Venue Name <span className="text-rose-500">*</span>
               </label>
               <input
                 type="text"
-                placeholder="e.g. THE GURUKUL JYOTISAR PEHOWA ROAD, KURUKSHETRA"
                 value={academicSettings.examVenueName || ''}
                 onChange={(e) => setAcademicSettings({ ...academicSettings, examVenueName: e.target.value })}
-                className="w-full p-2.5 border border-amber-300 rounded-xl outline-none focus:ring-2 focus:ring-amber-500 font-mono text-xs font-bold bg-white text-slate-900"
+                className="form-input-field font-mono"
               />
-              <p className="text-[10px] text-amber-800 font-medium mt-1">
-                Authoritative venue name displayed on all Candidate Admit Cards, Invigilator Attendance Registers, and portal downloads.
-              </p>
             </div>
 
-            {/* Dynamic Entrance Exam Venue Address */}
-            <div className="md:col-span-1 bg-amber-50/60 p-3.5 rounded-2xl border border-amber-200">
-              <label className="block font-black text-amber-950 uppercase mb-1 text-xs">
-                Venue Address &amp; Location *
+            <div>
+              <label className="form-label">
+                Venue Location / PIN <span className="text-rose-500">*</span>
               </label>
               <input
                 type="text"
-                placeholder="e.g. 136119, Haryana"
                 value={academicSettings.examVenueAddress || ''}
                 onChange={(e) => setAcademicSettings({ ...academicSettings, examVenueAddress: e.target.value })}
-                className="w-full p-2.5 border border-amber-300 rounded-xl outline-none focus:ring-2 focus:ring-amber-500 font-mono text-xs font-bold bg-white text-slate-900"
+                className="form-input-field font-mono"
               />
-              <p className="text-[10px] text-amber-800 font-medium mt-1">Printed in Admit Card bottom venue banner</p>
             </div>
 
-            {/* Result Declaration Date */}
             <div>
-              <label className="block font-bold text-slate-700 uppercase mb-1">
-                Result Declaration Date *
+              <label className="form-label">
+                Result Declaration Date <span className="text-rose-500">*</span>
               </label>
               <input
                 type="date"
                 required
                 value={academicSettings.resultDeclarationDate}
                 onChange={(e) => setAcademicSettings({ ...academicSettings, resultDeclarationDate: e.target.value })}
-                className="w-full p-2.5 border rounded-xl outline-none focus:ring-2 focus:ring-amber-500 font-mono"
+                className="form-input-field font-mono"
               />
-              <p className="text-[10px] text-slate-400 mt-1">Merit list &amp; scorecard publication date</p>
             </div>
 
-            {/* Counseling Start Date */}
             <div>
-              <label className="block font-bold text-slate-700 uppercase mb-1">
-                Counseling / Admission Start Date *
+              <label className="form-label">
+                Counseling Start Date <span className="text-rose-500">*</span>
               </label>
               <input
                 type="date"
                 required
                 value={academicSettings.counselingStartDate}
                 onChange={(e) => setAcademicSettings({ ...academicSettings, counselingStartDate: e.target.value })}
-                className="w-full p-2.5 border rounded-xl outline-none focus:ring-2 focus:ring-amber-500 font-mono"
+                className="form-input-field font-mono"
               />
-              <p className="text-[10px] text-slate-400 mt-1">Verification &amp; physical reporting begins</p>
             </div>
 
-            {/* Helpline Phone */}
             <div>
-              <label className="block font-bold text-slate-700 uppercase mb-1">
-                Official Helpline Contact Numbers
+              <label className="form-label">
+                Helpline Phone
               </label>
               <input
                 type="text"
                 value={academicSettings.helplinePhone}
                 onChange={(e) => setAcademicSettings({ ...academicSettings, helplinePhone: e.target.value })}
-                className="w-full p-2.5 border rounded-xl outline-none focus:ring-2 focus:ring-amber-500 font-mono"
+                className="form-input-field font-mono"
               />
-              <p className="text-[10px] text-slate-400 mt-1">Displayed in candidate support bars</p>
             </div>
 
-            {/* Helpline Email */}
-            <div className="sm:col-span-2 lg:col-span-2">
-              <label className="block font-bold text-slate-700 uppercase mb-1">
-                Official Helpline Support Email
+            <div className="sm:col-span-2">
+              <label className="form-label">
+                Helpline Email
               </label>
               <input
                 type="email"
                 value={academicSettings.helplineEmail}
                 onChange={(e) => setAcademicSettings({ ...academicSettings, helplineEmail: e.target.value })}
-                className="w-full p-2.5 border rounded-xl outline-none focus:ring-2 focus:ring-amber-500 font-mono"
+                className="form-input-field font-mono"
               />
-              <p className="text-[10px] text-slate-400 mt-1">Enquiries routed to this address</p>
             </div>
           </div>
 
-          <div className="flex items-center justify-end pt-3 border-t border-slate-100">
+          <div className="flex justify-end pt-3 border-t border-slate-100">
             <button
               type="submit"
               disabled={academicSaving}
-              className="px-7 py-2.5 bg-gurukul-navy hover:bg-gurukul-navyLight disabled:opacity-50 text-white font-extrabold text-xs rounded-xl shadow-md transition flex items-center gap-2"
+              className="btn-primary text-xs px-5 py-2 font-semibold"
             >
-              <Save className="w-4 h-4 text-amber-400" />
-              <span>{academicSaving ? 'Updating...' : 'Save Academic Dates & Milestones'}</span>
+              {academicSaving ? 'Updating...' : 'Save Academic Dates'}
             </button>
           </div>
         </form>
       </div>
 
-      {/* ═══════════════════════════════════════════════════════════ */}
-      {/* SECTION 2: APPLICATION FORM SCHEDULE & EXTENSION CONTROLS */}
-      {/* ═══════════════════════════════════════════════════════════ */}
-      <form onSubmit={handleSaveSchedule} className="space-y-6">
-        <div className="bg-white border border-slate-200 rounded-3xl p-6 sm:p-8 shadow-sm space-y-5">
-          <h2 className="font-extrabold text-slate-900 text-base sm:text-lg flex items-center gap-2 border-b border-slate-100 pb-4">
-            <Clock className="w-5 h-5 text-amber-600" /> Application Form Opening, Closing &amp; Status Override
+      {/* SECTION 2: Form Opening / Closing Schedule */}
+      <form onSubmit={handleSaveSchedule} className="portal-card p-6 space-y-5">
+        <div className="border-b border-slate-100 pb-3">
+          <h2 className="font-bold text-sm text-slate-900">
+            Application Schedule &amp; Overrides
           </h2>
+          <p className="text-xs text-slate-500">
+            Automated registration start/end timestamps and admin overrides.
+          </p>
+        </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 text-xs">
-            <div>
-              <label className="block font-bold text-slate-700 uppercase mb-1">
-                Application Opening Timestamp (IST) *
-              </label>
-              <input
-                type="datetime-local"
-                required
-                value={scheduleConfig.startDate}
-                onChange={(e) => {
-                  const val = e.target.value;
-                  setScheduleConfig((prev) => ({ ...prev, startDate: val }));
-                  if (val && val.length >= 10) {
-                    setAcademicSettings((prev) => ({ ...prev, registrationStartDate: val.slice(0, 10) }));
-                  }
-                }}
-                className="w-full p-2.5 border rounded-xl outline-none focus:ring-2 focus:ring-amber-500 font-mono"
-              />
-              <p className="text-[10px] text-slate-400 mt-1">Form automatically opens on this date and time.</p>
-            </div>
-
-            <div>
-              <label className="block font-bold text-slate-700 uppercase mb-1">
-                Application Closing Timestamp (IST) *
-              </label>
-              <input
-                type="datetime-local"
-                required
-                value={scheduleConfig.endDate}
-                onChange={(e) => {
-                  const val = e.target.value;
-                  setScheduleConfig((prev) => ({ ...prev, endDate: val }));
-                  if (val && val.length >= 10) {
-                    setAcademicSettings((prev) => ({ ...prev, registrationEndDate: val.slice(0, 10) }));
-                  }
-                }}
-                className="w-full p-2.5 border rounded-xl outline-none focus:ring-2 focus:ring-amber-500 font-mono"
-              />
-              <p className="text-[10px] text-slate-400 mt-1">New registrations automatically blocked after this timestamp.</p>
-            </div>
-
-            <div>
-              <label className="block font-bold text-slate-700 uppercase mb-1">
-                Administrative Status Override
-              </label>
-              <select
-                value={scheduleConfig.statusOverride}
-                onChange={(e) => setScheduleConfig({ ...scheduleConfig, statusOverride: e.target.value as any })}
-                className="w-full p-2.5 border rounded-xl outline-none focus:ring-2 focus:ring-amber-500 font-semibold text-slate-800"
-              >
-                <option value="auto">Auto (Enforce Start &amp; End Timestamps)</option>
-                <option value="open">Force Open (Accept Registrations Regardless)</option>
-                <option value="closed">Force Closed (Block New Applications Immediately)</option>
-                <option value="extended">Extended / Reopened Period</option>
-              </select>
-              <p className="text-[10px] text-slate-400 mt-1">Use 'Extended' when reopening after original deadline.</p>
-            </div>
-
-            <div>
-              <label className="block font-bold text-slate-700 uppercase mb-1">
-                Enforced Application Timezone
-              </label>
-              <input
-                type="text"
-                disabled
-                value={scheduleConfig.timezone}
-                className="w-full p-2.5 border rounded-xl bg-slate-50 text-slate-500 font-mono font-bold"
-              />
-              <p className="text-[10px] text-slate-400 mt-1">Server clocks calibrated to Indian Standard Time.</p>
-            </div>
-
-            <div className="sm:col-span-2">
-              <label className="block font-bold text-slate-700 uppercase mb-1">
-                Public Announcement Marquee / Notice
-              </label>
-              <input
-                type="text"
-                value={scheduleConfig.announcementNotice}
-                onChange={(e) => setScheduleConfig({ ...scheduleConfig, announcementNotice: e.target.value })}
-                className="w-full p-2.5 border rounded-xl outline-none focus:ring-2 focus:ring-amber-500 font-medium"
-              />
-              <p className="text-[10px] text-slate-400 mt-1">Displayed in the header marquee across the entrance examination portal.</p>
-            </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
+          <div>
+            <label className="form-label">
+              Opening Timestamp (IST) <span className="text-rose-500">*</span>
+            </label>
+            <input
+              type="datetime-local"
+              required
+              value={scheduleConfig.startDate}
+              onChange={(e) => {
+                const val = e.target.value;
+                setScheduleConfig((prev) => ({ ...prev, startDate: val }));
+                if (val && val.length >= 10) {
+                  setAcademicSettings((prev) => ({ ...prev, registrationStartDate: val.slice(0, 10) }));
+                }
+              }}
+              className="form-input-field font-mono"
+            />
           </div>
 
-          {/* Quick Extension Buttons */}
-          <div className="bg-amber-50/70 border border-amber-200 rounded-2xl p-5 space-y-3">
-            <h3 className="font-bold text-slate-900 text-xs sm:text-sm flex items-center gap-2">
-              <RotateCcw className="w-4 h-4 text-amber-600" /> Fast Reopening &amp; Deadline Extension
-            </h3>
-            <p className="text-xs text-slate-600 leading-relaxed">
-              Instantly extend candidate submission windows without modifying existing applications or submitted data.
-            </p>
-
-            <div className="flex flex-wrap gap-2.5 pt-1">
-              <button
-                type="button"
-                onClick={() => handleQuickReopen(7)}
-                className="bg-white hover:bg-amber-100 text-amber-950 font-bold text-xs px-3.5 py-2 rounded-xl border border-amber-300 shadow-sm transition"
-              >
-                + Extend by 7 Days
-              </button>
-              <button
-                type="button"
-                onClick={() => handleQuickReopen(15)}
-                className="bg-white hover:bg-amber-100 text-amber-950 font-bold text-xs px-3.5 py-2 rounded-xl border border-amber-300 shadow-sm transition"
-              >
-                + Extend by 15 Days
-              </button>
-              <button
-                type="button"
-                onClick={() => handleQuickReopen(30)}
-                className="bg-white hover:bg-amber-100 text-amber-950 font-bold text-xs px-3.5 py-2 rounded-xl border border-amber-300 shadow-sm transition"
-              >
-                + Extend by 30 Days
-              </button>
-            </div>
+          <div>
+            <label className="form-label">
+              Closing Timestamp (IST) <span className="text-rose-500">*</span>
+            </label>
+            <input
+              type="datetime-local"
+              required
+              value={scheduleConfig.endDate}
+              onChange={(e) => {
+                const val = e.target.value;
+                setScheduleConfig((prev) => ({ ...prev, endDate: val }));
+                if (val && val.length >= 10) {
+                  setAcademicSettings((prev) => ({ ...prev, registrationEndDate: val.slice(0, 10) }));
+                }
+              }}
+              className="form-input-field font-mono"
+            />
           </div>
 
-          {/* Safety note */}
-          <div className="p-4 bg-slate-50 border border-slate-200 rounded-2xl text-xs text-slate-600 flex items-start gap-3">
-            <ShieldCheck className="w-5 h-5 text-emerald-600 flex-shrink-0 mt-0.5" />
-            <div>
-              <p className="font-bold text-slate-900">Database &amp; Data Integrity Safety:</p>
-              <p className="mt-0.5">
-                Extending dates preserves all previously submitted applications, payment records, and generated admit cards.
-              </p>
-            </div>
-          </div>
-
-          <div className="flex items-center justify-end pt-3 border-t border-slate-100">
-            <button
-              type="submit"
-              disabled={scheduleSaving}
-              className="px-7 py-2.5 bg-gurukul-navy hover:bg-gurukul-navyLight disabled:opacity-50 text-white font-extrabold text-xs rounded-xl shadow-md transition flex items-center gap-2"
+          <div>
+            <label className="form-label">
+              Status Override
+            </label>
+            <select
+              value={scheduleConfig.statusOverride}
+              onChange={(e) => setScheduleConfig({ ...scheduleConfig, statusOverride: e.target.value as any })}
+              className="form-input-field font-medium"
             >
-              <Save className="w-4 h-4 text-amber-400" />
-              <span>{scheduleSaving ? 'Saving...' : 'Save Schedule & Portal Controls'}</span>
+              <option value="auto">Auto (Follow Timestamps)</option>
+              <option value="open">Force Open</option>
+              <option value="closed">Force Closed</option>
+              <option value="extended">Extended Period</option>
+            </select>
+          </div>
+
+          <div>
+            <label className="form-label">
+              Timezone
+            </label>
+            <input
+              type="text"
+              disabled
+              value={scheduleConfig.timezone}
+              className="form-input-field bg-slate-50 text-slate-500 cursor-not-allowed font-mono"
+            />
+          </div>
+
+          <div className="sm:col-span-2">
+            <label className="form-label">
+              Announcement Notice
+            </label>
+            <input
+              type="text"
+              value={scheduleConfig.announcementNotice}
+              onChange={(e) => setScheduleConfig({ ...scheduleConfig, announcementNotice: e.target.value })}
+              className="form-input-field"
+            />
+          </div>
+        </div>
+
+        {/* Fast Extension Buttons */}
+        <div className="bg-slate-50 border border-slate-200 rounded-lg p-4 space-y-2">
+          <span className="text-xs font-semibold text-slate-900 block">
+            Quick Deadline Extension
+          </span>
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={() => handleQuickReopen(7)}
+              className="btn-secondary text-xs px-3 py-1.5"
+            >
+              + 7 Days
+            </button>
+            <button
+              type="button"
+              onClick={() => handleQuickReopen(15)}
+              className="btn-secondary text-xs px-3 py-1.5"
+            >
+              + 15 Days
+            </button>
+            <button
+              type="button"
+              onClick={() => handleQuickReopen(30)}
+              className="btn-secondary text-xs px-3 py-1.5"
+            >
+              + 30 Days
             </button>
           </div>
         </div>
+
+        <div className="flex justify-end pt-3 border-t border-slate-100">
+          <button
+            type="submit"
+            disabled={scheduleSaving}
+            className="btn-primary text-xs px-5 py-2 font-semibold"
+          >
+            {scheduleSaving ? 'Saving...' : 'Save Schedule'}
+          </button>
+        </div>
       </form>
 
-      {/* ═══════════════════════════════════════════════════════════ */}
-      {/* SECTION 3: RESULT DECLARATION & CANDIDATE VISIBILITY       */}
-      {/* ═══════════════════════════════════════════════════════════ */}
-      <div className="bg-white border border-slate-200 rounded-3xl p-6 sm:p-8 shadow-sm space-y-5">
-        <h2 className="font-extrabold text-slate-900 text-base sm:text-lg flex items-center gap-2 border-b border-slate-100 pb-4">
-          <Award className="w-5 h-5 text-amber-500" /> Result Declaration — Candidate Visibility Gate
-        </h2>
-
-        <div className={`p-4 rounded-2xl flex items-start gap-3 ${
-          resultsDeclared
-            ? 'bg-emerald-50 border border-emerald-300'
-            : 'bg-rose-50 border border-rose-300'
-        }`}>
-          {resultsDeclared ? (
-            <Eye className="w-5 h-5 text-emerald-600 flex-shrink-0 mt-0.5" />
-          ) : (
-            <EyeOff className="w-5 h-5 text-rose-500 flex-shrink-0 mt-0.5" />
-          )}
-          <div className="text-xs">
-            <p className={`font-black text-sm ${
-              resultsDeclared ? 'text-emerald-900' : 'text-rose-900'
-            }`}>
-              Results are currently{' '}
-              <span className="uppercase">{resultsDeclared ? '✅ VISIBLE TO CANDIDATES' : '🔒 HIDDEN FROM CANDIDATES'}</span>
-            </p>
-            <p className={`mt-0.5 font-medium ${
-              resultsDeclared ? 'text-emerald-700' : 'text-rose-700'
-            }`}>
-              {resultsDeclared
-                ? 'Candidates can view scorecards and qualification status from the portal.'
-                : 'Candidate result page access is blocked until the official declaration time.'}
-            </p>
-          </div>
+      {/* SECTION 3: Result & Admit Card Visibility Toggles */}
+      <div className="portal-card p-6 space-y-5">
+        <div className="border-b border-slate-100 pb-3">
+          <h2 className="font-bold text-sm text-slate-900">
+            Candidate Visibility Toggles
+          </h2>
+          <p className="text-xs text-slate-500">
+            Control candidate-facing visibility for results and admit cards.
+          </p>
         </div>
 
-        <div className="flex flex-wrap gap-3 pt-1">
-          <button
-            type="button"
-            disabled={resultToggling || resultsDeclared === true}
-            onClick={() => handleToggleResults(true)}
-            className="flex items-center gap-2 px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold text-xs rounded-xl shadow transition"
-          >
-            <Eye className="w-3.5 h-3.5" />
-            Declare Results (Make Visible to All Candidates)
-          </button>
-          <button
-            type="button"
-            disabled={resultToggling || resultsDeclared === false}
-            onClick={() => handleToggleResults(false)}
-            className="flex items-center gap-2 px-5 py-2.5 bg-rose-600 hover:bg-rose-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold text-xs rounded-xl shadow transition"
-          >
-            <EyeOff className="w-3.5 h-3.5" />
-            Hide Results from Candidates
-          </button>
-        </div>
-
-        <p className="text-[10px] text-slate-400 border-t border-slate-100 pt-3">
-          Note: This toggle strictly manages candidate-facing display. Score entries and merit positions entered in the admin database remain intact.
-        </p>
-      </div>
-
-      {/* ── Admit Card Release & Candidate Visibility ───────────── */}
-      <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-sm space-y-5">
-        <div className="flex items-center gap-3 border-b border-slate-100 pb-4">
-          <div className="w-10 h-10 rounded-2xl bg-amber-100 text-amber-800 flex items-center justify-center flex-shrink-0 shadow-xs">
-            <ShieldCheck className="w-5 h-5 text-amber-600" />
-          </div>
-          <div>
-            <h2 className="text-base sm:text-lg font-black text-slate-900">
-              Admit Card Release &amp; Candidate Visibility
-            </h2>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          {/* Result Toggle */}
+          <div className="border border-slate-200 rounded-lg p-4 space-y-3">
+            <div className="flex justify-between items-center">
+              <span className="font-semibold text-xs text-slate-900">Entrance Results</span>
+              <span className={`text-[10px] font-semibold px-2 py-0.5 rounded ${
+                resultsDeclared ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-600'
+              }`}>
+                {resultsDeclared ? 'Visible' : 'Hidden'}
+              </span>
+            </div>
             <p className="text-xs text-slate-500">
-              Control whether registered students can access, view, and download their examination Hall Tickets.
+              {resultsDeclared ? 'Candidates can search and view published scorecards.' : 'Results are hidden from candidates.'}
             </p>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                disabled={resultToggling || resultsDeclared === true}
+                onClick={() => handleToggleResults(true)}
+                className="btn-primary text-xs px-3 py-1.5 flex-1 font-medium"
+              >
+                Declare Results
+              </button>
+              <button
+                type="button"
+                disabled={resultToggling || resultsDeclared === false}
+                onClick={() => handleToggleResults(false)}
+                className="btn-secondary text-xs px-3 py-1.5 flex-1"
+              >
+                Hide Results
+              </button>
+            </div>
           </div>
-        </div>
 
-        {admitCardsReleased === null ? (
-          <div className="p-4 rounded-2xl bg-slate-100 border border-slate-200 flex items-center gap-3 animate-pulse">
-            <div className="w-5 h-5 border-2 border-amber-500 border-t-transparent rounded-full animate-spin flex-shrink-0" />
-            <div className="text-xs space-y-1">
-              <p className="font-bold text-slate-700">Verifying Active Admit Card Visibility Status...</p>
-              <p className="text-slate-400">Fetching current live status from portal settings server</p>
-            </div>
-          </div>
-        ) : (
-          <div className={`p-4 rounded-2xl flex items-start gap-3 transition ${
-            admitCardsReleased
-              ? 'bg-emerald-50 border border-emerald-300'
-              : 'bg-rose-50 border border-rose-300'
-          }`}>
-            {admitCardsReleased ? (
-              <Eye className="w-5 h-5 text-emerald-600 flex-shrink-0 mt-0.5" />
-            ) : (
-              <EyeOff className="w-5 h-5 text-rose-500 flex-shrink-0 mt-0.5" />
-            )}
-            <div className="text-xs">
-              <p className={`font-black text-sm ${
-                admitCardsReleased ? 'text-emerald-900' : 'text-rose-900'
+          {/* Admit Card Toggle */}
+          <div className="border border-slate-200 rounded-lg p-4 space-y-3">
+            <div className="flex justify-between items-center">
+              <span className="font-semibold text-xs text-slate-900">Admit Cards</span>
+              <span className={`text-[10px] font-semibold px-2 py-0.5 rounded ${
+                admitCardsReleased ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-600'
               }`}>
-                Admit Cards are currently{' '}
-                <span className="uppercase">{admitCardsReleased ? '✅ VISIBLE TO CANDIDATES' : '🔒 HIDDEN FROM CANDIDATES'}</span>
-              </p>
-              <p className={`mt-0.5 font-medium ${
-                admitCardsReleased ? 'text-emerald-700' : 'text-rose-700'
-              }`}>
-                {admitCardsReleased
-                  ? 'Registered candidates can download Hall Tickets from the portal and their dashboard.'
-                  : 'Admit Card downloads are locked in progress and hidden from students until released.'}
-              </p>
+                {admitCardsReleased ? 'Visible' : 'Hidden'}
+              </span>
             </div>
-          </div>
-        )}
-
-        <div className="flex flex-wrap gap-3 pt-1">
-          {admitCardsReleased === null ? (
-            <div className="flex gap-3">
-              <div className="h-10 px-5 bg-slate-200 rounded-xl animate-pulse flex items-center justify-center text-slate-500 text-xs font-bold gap-2">
-                <div className="w-3.5 h-3.5 border-2 border-amber-500 border-t-transparent rounded-full animate-spin" />
-                <span>Checking Visibility Status...</span>
-              </div>
-            </div>
-          ) : (
-            <>
+            <p className="text-xs text-slate-500">
+              {admitCardsReleased ? 'Candidates can download Hall Tickets from the portal.' : 'Admit Cards are hidden from candidates.'}
+            </p>
+            <div className="flex gap-2">
               <button
                 type="button"
                 disabled={admitCardToggling || admitCardsReleased === true}
                 onClick={() => handleToggleAdmitCards(true)}
-                className="flex items-center gap-2 px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold text-xs rounded-xl shadow transition"
+                className="btn-primary text-xs px-3 py-1.5 flex-1 font-medium flex items-center justify-center gap-1.5"
               >
-                {admitCardToggling ? (
-                  <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                ) : (
-                  <Eye className="w-3.5 h-3.5" />
+                {admitCardToggling && admitCardsReleased !== true && (
+                  <Loader2 className="w-3.5 h-3.5 animate-spin text-white" />
                 )}
-                <span>Release Admit Cards (Make Visible to All Candidates)</span>
+                <span>Release Cards</span>
               </button>
               <button
                 type="button"
                 disabled={admitCardToggling || admitCardsReleased === false}
                 onClick={() => handleToggleAdmitCards(false)}
-                className="flex items-center gap-2 px-5 py-2.5 bg-rose-600 hover:bg-rose-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold text-xs rounded-xl shadow transition"
+                className="btn-secondary text-xs px-3 py-1.5 flex-1 flex items-center justify-center gap-1.5"
               >
-                {admitCardToggling ? (
-                  <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                ) : (
-                  <EyeOff className="w-3.5 h-3.5" />
+                {admitCardToggling && admitCardsReleased === true && (
+                  <Loader2 className="w-3.5 h-3.5 animate-spin text-portal-navy" />
                 )}
-                <span>Stop Showing / Hide Admit Cards from Candidates</span>
+                <span>Hide Cards</span>
               </button>
-            </>
-          )}
+            </div>
+          </div>
         </div>
-
-        <p className="text-[10px] text-slate-400 border-t border-slate-100 pt-3">
-          Note: Hiding admit cards returns candidate dashboards to &quot;In Progress&quot; status and suppresses the admit card release announcement on the website.
-        </p>
       </div>
     </div>
   );
 }
-

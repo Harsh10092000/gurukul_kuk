@@ -337,7 +337,7 @@ export function resolveAdmissionPhase(input: PhaseDatesInput): AdmissionPhaseInf
       isOpen: false,
       badge: 'Registrations Closed',
       title: 'Online Applications Concluded',
-      description: `The deadline for online registration for Session ${session} ended on ${regEndFormatted}. Registered applicants can track status, download admission forms, and prepare for entrance examination.`,
+      description: `The deadline for online registration for Session ${session} ended on ${regEndFormatted}. Registered applicants can track status, download Admission forms, and prepare for entrance examination.`,
       actionText: 'Track Application Status',
       actionHref: '/status',
       isPrimary: false,

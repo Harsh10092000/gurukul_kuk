@@ -168,21 +168,18 @@ export default function AdmitCardView({ admitCard }: AdmitCardViewProps) {
   return (
     <div className="w-full max-w-4xl mx-auto my-6 px-2 sm:px-4 font-sans text-slate-900 print:m-0 print:p-0 print:max-w-full">
       {/* Top Action Bar (Hidden when printing) */}
-      <div className="no-print bg-amber-50 border border-amber-200 rounded-xl p-4 mb-6 flex flex-wrap justify-between items-center gap-4 shadow-sm">
+      <div className="no-print portal-card p-4 mb-6 flex flex-wrap justify-between items-center gap-4">
         <div>
-          <h2 className="text-amber-900 font-bold text-base sm:text-lg flex items-center gap-2">
+          <h2 className="text-slate-900 font-bold text-base sm:text-lg flex items-center gap-2">
             <CheckCircle className="w-5 h-5 text-emerald-600" />
             Official Admit Card Ready (Session 2027-28)
           </h2>
-          <p className="text-xs text-amber-800 mt-0.5">
-            Important: As per examination guidelines, please take a clear <strong>COLOUR PRINT OUT</strong> on A4 size paper.
-          </p>
         </div>
         <div className="flex gap-3">
           <button
             onClick={handlePrint}
             id="admit-card-print-btn"
-            className="bg-gurukul-navy hover:bg-slate-900 text-white font-bold px-5 py-2.5 rounded-lg text-xs sm:text-sm shadow flex items-center gap-2 transition"
+            className="btn-primary text-xs sm:text-sm h-10 px-5 flex items-center gap-2"
           >
             <Printer className="w-4 h-4 text-amber-400" />
             <span>Print / Save as PDF</span>
@@ -195,7 +192,7 @@ export default function AdmitCardView({ admitCard }: AdmitCardViewProps) {
         id="admit-card-print-sheet"
         className="bg-white border-2 border-black p-4 sm:p-7 print:p-2.5 print:border-2 print:border-black print-card text-black space-y-3 sm:space-y-3.5 print:space-y-1.5 leading-tight"
       >
-        
+
         {/* 1. Top Warning Box */}
         <div className="border border-black py-1 print:py-0.5 px-2 text-center">
           <span className="font-black text-xs sm:text-sm print:text-xs tracking-wider uppercase">
@@ -429,11 +426,11 @@ export default function AdmitCardView({ admitCard }: AdmitCardViewProps) {
             ADMIT CARD INSTRUCTIONS FOR THE CANDIDATES
           </h3>
           <ol className="list-decimal list-inside space-y-1 print:space-y-0.5 text-[10px] sm:text-[11px] print:text-[9px] text-slate-900 font-medium leading-relaxed print:leading-tight pl-1 sm:pl-2">
-            <li>Kindly reach exam venue well in time as mentioned on admit card.</li>
-            <li>Paste Your Recent Coloured Photograph On Admit Card.</li>
-            <li>Please bring Black or Blue Ball point pen and one Cardboard with you.</li>
-            <li>A coloured print out of admit card.</li>
-            <li>Please bring Valid ID proof or ADHAAR Card on the day of examination.</li>
+            <li><strong>MANDATORY:</strong> Candidate MUST bring a <strong>COLOURED copy / printout of this Admit Card</strong> to the examination venue (Black &amp; white printouts will NOT be accepted).</li>
+            <li><strong>MANDATORY:</strong> Candidate MUST bring <strong>ONE ORIGINAL valid Photo ID Proof</strong> (e.g. Original Aadhaar Card, Passport, or Original School ID Card). Photocopies will not be accepted.</li>
+            <li>Paste your recent passport-size coloured photograph in the designated physical box above.</li>
+            <li>Please bring Black or Blue Ball point pen and one writing clipboard / cardboard.</li>
+            <li>Kindly reach the examination venue at least 45 minutes prior to the reporting time mentioned on this admit card.</li>
           </ol>
         </div>
 

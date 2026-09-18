@@ -251,12 +251,12 @@ export default function AdminNotificationBell() {
           </div>
 
           {/* Filter Tabs */}
-          <div className="bg-slate-50 border-b border-slate-200 px-3 py-1.5 flex gap-1 text-[11px] font-bold overflow-x-auto">
+          <div className="bg-slate-50 border-b border-slate-200 px-3 py-1.5 flex gap-1 text-[11px] font-medium overflow-x-auto">
             <button
               onClick={() => setActiveTab('all')}
-              className={`px-2.5 py-1 rounded-lg transition whitespace-nowrap ${
+              className={`px-2.5 py-1 rounded-md transition whitespace-nowrap ${
                 activeTab === 'all'
-                  ? 'bg-amber-500 text-gurukul-navy font-black shadow-xs'
+                  ? 'bg-portal-navy text-white font-semibold shadow-xs'
                   : 'text-slate-600 hover:bg-slate-200/60'
               }`}
             >
@@ -264,9 +264,9 @@ export default function AdminNotificationBell() {
             </button>
             <button
               onClick={() => setActiveTab('unread')}
-              className={`px-2.5 py-1 rounded-lg transition whitespace-nowrap ${
+              className={`px-2.5 py-1 rounded-md transition whitespace-nowrap ${
                 activeTab === 'unread'
-                  ? 'bg-amber-500 text-gurukul-navy font-black shadow-xs'
+                  ? 'bg-portal-navy text-white font-semibold shadow-xs'
                   : 'text-slate-600 hover:bg-slate-200/60'
               }`}
             >
@@ -274,9 +274,9 @@ export default function AdminNotificationBell() {
             </button>
             <button
               onClick={() => setActiveTab('applications')}
-              className={`px-2.5 py-1 rounded-lg transition whitespace-nowrap ${
+              className={`px-2.5 py-1 rounded-md transition whitespace-nowrap ${
                 activeTab === 'applications'
-                  ? 'bg-amber-500 text-gurukul-navy font-black shadow-xs'
+                  ? 'bg-portal-navy text-white font-semibold shadow-xs'
                   : 'text-slate-600 hover:bg-slate-200/60'
               }`}
             >
@@ -284,9 +284,9 @@ export default function AdminNotificationBell() {
             </button>
             <button
               onClick={() => setActiveTab('enquiries')}
-              className={`px-2.5 py-1 rounded-lg transition whitespace-nowrap ${
+              className={`px-2.5 py-1 rounded-md transition whitespace-nowrap ${
                 activeTab === 'enquiries'
-                  ? 'bg-amber-500 text-gurukul-navy font-black shadow-xs'
+                  ? 'bg-portal-navy text-white font-semibold shadow-xs'
                   : 'text-slate-600 hover:bg-slate-200/60'
               }`}
             >
@@ -298,14 +298,14 @@ export default function AdminNotificationBell() {
           <div className="max-h-[380px] overflow-y-auto divide-y divide-slate-100 text-xs">
             {loading && notifications.length === 0 ? (
               <div className="py-12 text-center text-slate-400 space-y-2">
-                <div className="w-6 h-6 border-2 border-amber-500 border-t-transparent rounded-full animate-spin mx-auto" />
+                <div className="w-6 h-6 border-2 border-portal-navy border-t-transparent rounded-full animate-spin mx-auto" />
                 <p>Loading notifications...</p>
               </div>
             ) : filteredNotifications.length === 0 ? (
               <div className="py-12 text-center text-slate-400 space-y-1">
                 <CheckCheck className="w-8 h-8 mx-auto text-slate-300" />
-                <p className="font-bold text-slate-600">No notifications in this view</p>
-                <p className="text-[11px]">All administrative updates are up to date.</p>
+                <p className="font-semibold text-slate-600">No notifications in this view</p>
+                <p className="text-[11px] text-slate-500">All administrative updates are up to date.</p>
               </div>
             ) : (
               filteredNotifications.map((notif) => (
@@ -313,7 +313,7 @@ export default function AdminNotificationBell() {
                   key={notif.id}
                   onClick={() => handleNotificationClick(notif)}
                   className={`p-3 sm:p-3.5 hover:bg-slate-50 transition cursor-pointer flex gap-3 items-start group ${
-                    !notif.isRead ? 'bg-amber-50/50' : ''
+                    !notif.isRead ? 'bg-amber-50/40' : ''
                   }`}
                 >
                   <div className="mt-0.5">{getNotificationIcon(notif.type)}</div>
@@ -322,7 +322,7 @@ export default function AdminNotificationBell() {
                     <div className="flex justify-between items-start gap-1">
                       <h4
                         className={`text-xs truncate ${
-                          !notif.isRead ? 'font-black text-slate-900' : 'font-bold text-slate-700'
+                          !notif.isRead ? 'font-bold text-slate-900' : 'font-semibold text-slate-700'
                         }`}
                       >
                         {notif.title}
@@ -341,17 +341,17 @@ export default function AdminNotificationBell() {
                     {notif.metadata && (
                       <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
                         {notif.metadata.applicationNumber && (
-                          <span className="font-mono text-[9px] font-bold bg-slate-100 text-slate-700 px-1.5 py-0.5 rounded border border-slate-200">
+                          <span className="font-mono text-[9px] font-semibold bg-slate-100 text-slate-700 px-1.5 py-0.5 rounded border border-slate-200">
                             {notif.metadata.applicationNumber}
                           </span>
                         )}
                         {notif.metadata.classApplying && (
-                          <span className="text-[9px] font-bold bg-amber-100 text-amber-900 px-1.5 py-0.5 rounded">
-                            {notif.metadata.classApplying}
+                          <span className="text-[9px] font-semibold bg-blue-50 text-blue-800 px-1.5 py-0.5 rounded">
+                            Class {notif.metadata.classApplying}
                           </span>
                         )}
                         {notif.metadata.rejectionReason && (
-                          <span className="text-[9px] font-bold bg-red-100 text-red-800 px-1.5 py-0.5 rounded truncate max-w-[200px]" title={notif.metadata.rejectionReason}>
+                          <span className="text-[9px] font-semibold bg-rose-50 text-rose-800 px-1.5 py-0.5 rounded truncate max-w-[200px]" title={notif.metadata.rejectionReason}>
                             Reason: {notif.metadata.rejectionReason}
                           </span>
                         )}
@@ -374,14 +374,13 @@ export default function AdminNotificationBell() {
           </div>
 
           {/* Footer */}
-          <div className="bg-slate-50 p-2.5 px-4 border-t border-slate-200 flex justify-between items-center text-xs font-bold text-slate-600">
+          <div className="bg-slate-50 p-2.5 px-4 border-t border-slate-200 flex justify-between items-center text-xs font-semibold text-slate-600">
             <Link
               href="/admin/notifications"
               onClick={() => setIsOpen(false)}
-              className="text-gurukul-navy hover:text-amber-600 flex items-center gap-1 transition"
+              className="text-portal-navy hover:underline flex items-center gap-1 transition"
             >
               <span>View All in Notification Center</span>
-              <ExternalLink className="w-3 h-3" />
             </Link>
 
             <Link
@@ -389,7 +388,7 @@ export default function AdminNotificationBell() {
               onClick={() => setIsOpen(false)}
               className="text-slate-500 hover:text-slate-800 text-[11px] font-semibold transition"
             >
-              Contact Enquiries →
+              Contact Enquiries
             </Link>
           </div>
         </div>

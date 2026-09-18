@@ -8,13 +8,32 @@ module.exports = {
   theme: {
     extend: {
       colors: {
+        portal: {
+          navy: '#0b192c',
+          navyDark: '#060d17',
+          navyLight: '#1e3e62',
+          gold: '#d97706',
+          goldLight: '#f59e0b',
+          goldDark: '#92400e',
+          surface: '#ffffff',
+          bg: '#f8fafc',
+          subtle: '#f1f5f9',
+          border: '#e2e8f0',
+          borderStrong: '#cbd5e1',
+          text: '#0f172a',
+          secondary: '#475569',
+          muted: '#64748b',
+          success: '#15803d',
+          warning: '#b45309',
+          error: '#b91c1c',
+        },
         gurukul: {
           50: '#fff9ed',
           100: '#fef2d6',
           200: '#fde0ac',
           300: '#fbc978',
           400: '#f8a93e',
-          500: '#f58a14', // Rich Saffron / Vedic Ochre
+          500: '#f58a14',
           600: '#d96c0a',
           700: '#b44e0b',
           800: '#903e10',
@@ -22,7 +41,7 @@ module.exports = {
           navy: '#0b192c',
           navyLight: '#1e3e62',
           navyDark: '#060d17',
-          gold: '#dfa838',
+          gold: '#d97706',
         },
       },
       fontFamily: {
@@ -31,8 +50,11 @@ module.exports = {
         hindi: ['var(--font-devanagari)', 'sans-serif'],
       },
       boxShadow: {
+        'xs': '0 1px 2px 0 rgba(0, 0, 0, 0.05)',
+        'subtle': '0 1px 3px 0 rgba(0, 0, 0, 0.05), 0 1px 2px -1px rgba(0, 0, 0, 0.05)',
+        'elevated': '0 4px 6px -1px rgba(0, 0, 0, 0.07), 0 2px 4px -2px rgba(0, 0, 0, 0.05)',
         'glass': '0 8px 32px 0 rgba(31, 38, 135, 0.15)',
-        'card-hover': '0 20px 35px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
+        'card-hover': '0 10px 25px -5px rgba(0, 0, 0, 0.08), 0 8px 10px -6px rgba(0, 0, 0, 0.03)',
       },
     },
   },

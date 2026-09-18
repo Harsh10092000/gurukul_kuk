@@ -4,7 +4,6 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname } from 'next/navigation';
-import { MapPin, Phone, Mail, Shield, CheckCircle2, ExternalLink } from 'lucide-react';
 
 export default function Footer() {
   const pathname = usePathname();
@@ -21,8 +20,12 @@ export default function Footer() {
       .catch(() => { });
   }, []);
 
+  if (pathname.startsWith('/admin')) {
+    return null;
+  }
+
   return (
-    <footer className="bg-gurukul-navy text-slate-300 border-t-4 border-gurukul-500 no-print">
+    <footer className="bg-portal-navy text-slate-300 border-t border-slate-800 no-print">
       {/* Main Footer Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-8 py-12 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
         {/* Col 1: Institutional Identity */}
@@ -38,128 +41,118 @@ export default function Footer() {
               />
             </div>
             <div>
-              <h3 className="text-white font-black text-lg tracking-wide">
+              <h3 className="text-white font-bold text-lg tracking-tight">
                 GURUKUL
               </h3>
-              <p className="text-amber-400 font-serif text-xs font-semibold">
+              <p className="text-portal-gold font-serif text-xs">
                 तमसो मा ज्योतिर्गमय
               </p>
             </div>
           </div>
           <p className="text-xs text-slate-400 leading-relaxed">
-            Blends ancient Vedic values, yoga, and character building with world-class modern academic excellence, state-of-the-art infrastructure, and holistic student personality grooming.
+            Integrating ancient Vedic values and character building with modern academic discipline, state-of-the-art facilities, and comprehensive student mentoring.
           </p>
           <div className="pt-2 text-xs space-y-1 text-slate-400">
-            <div className="flex items-center gap-1.5 text-amber-300 font-medium">
-              <CheckCircle2 className="w-3.5 h-3.5" /> CBSE Affiliated Institutional Network
+            <div className="text-portal-gold font-medium">
+              CBSE Affiliated Institutional Network
             </div>
             <div>Nilokheri • Jyotisar • Aryakulam Campuses</div>
           </div>
         </div>
 
-        {/* Col 2: Quick Admission Links */}
+        {/* Col 2: Quick Admission Links (No arrows) */}
         <div className="space-y-3">
-          <h4 className="text-white font-bold text-sm uppercase tracking-wider border-b border-slate-700 pb-2">
+          <h4 className="text-white font-semibold text-xs uppercase tracking-wider border-b border-slate-800 pb-2">
             Entrance 2027-28
           </h4>
           <ul className="space-y-2 text-xs">
             <li>
-              <Link href="/register" className="hover:text-amber-400 transition flex items-center gap-1">
-                <span>›</span> New Online Application
+              <Link href="/register" className="hover:text-portal-gold transition">
+                New Candidate Registration
               </Link>
             </li>
             <li>
-              <Link href="/login" className="hover:text-amber-400 transition flex items-center gap-1">
-                <span>›</span> Applicant Login
+              <Link href="/login" className="hover:text-portal-gold transition">
+                Candidate Login
               </Link>
             </li>
             <li>
-              <Link href="/status" className="hover:text-amber-400 transition flex items-center gap-1">
-                <span>›</span> Check Application Status
+              <Link href="/status" className="hover:text-portal-gold transition">
+                Check Application Status
               </Link>
             </li>
             <li>
-              <Link href="/admit-card" className="hover:text-amber-400 transition flex items-center gap-1">
-                <span>›</span> Download Hall Ticket / Admit Card
+              <Link href="/admit-card" className="hover:text-portal-gold transition">
+                Download Hall Ticket / Admit Card
               </Link>
             </li>
             {resultsDeclared && (
               <li>
-                <Link href="/result" className="hover:text-amber-400 transition flex items-center gap-1">
-                  <span>›</span> Entrance Exam Result & Merit List
+                <Link href="/result" className="hover:text-portal-gold transition">
+                  Entrance Exam Result &amp; Merit List
                 </Link>
               </li>
             )}
-
             <li>
-              <Link href="/contact" className="hover:text-amber-400 transition flex items-center gap-1 font-bold text-amber-300">
-                <span>›</span> Helpdesk & Contact Enquiries
+              <Link href="/contact" className="hover:text-portal-gold transition text-portal-gold font-medium">
+                Helpdesk &amp; Contact Enquiries
               </Link>
             </li>
           </ul>
         </div>
 
-        {/* Col 3: Examination & Policy Info */}
+        {/* Col 3: Academic Programs */}
         <div className="space-y-3">
-          <h4 className="text-white font-bold text-sm uppercase tracking-wider border-b border-slate-700 pb-2">
-            Important Information
+          <h4 className="text-white font-semibold text-xs uppercase tracking-wider border-b border-slate-800 pb-2">
+            Programs Offered
           </h4>
           <ul className="space-y-2 text-xs text-slate-400">
-            <li className="flex items-start gap-1.5">
-              <Shield className="w-3.5 h-3.5 text-amber-400 mt-0.5 flex-shrink-0" />
-              <span>Strictly Merit-Based Selection through Written Entrance Test & Physical Verification.</span>
-            </li>
-            <li className="flex items-start gap-1.5">
-              <Shield className="w-3.5 h-3.5 text-amber-400 mt-0.5 flex-shrink-0" />
-              <span>No Capitation Fee or Donation is accepted under any circumstances.</span>
-            </li>
-            <li className="flex items-start gap-1.5">
-              <Shield className="w-3.5 h-3.5 text-amber-400 mt-0.5 flex-shrink-0" />
-              <span>Specialized NDA Wing with SSB training & physical conditioning.</span>
-            </li>
+            <li>Class 5th &amp; 6th (Middle Wing)</li>
+            <li>Class 7th &amp; 8th (Secondary Wing)</li>
+            <li>Class 9th (Senior Secondary Foundation)</li>
+            <li>Class 11th Science (Medical &amp; Non-Medical)</li>
+            <li>Class 11th Commerce &amp; Humanities</li>
+            <li>NDA &amp; Armed Forces Wing (Rigorous Cadre)</li>
           </ul>
         </div>
 
-        {/* Col 4: Contact & Campus Address */}
+        {/* Col 4: Official Helpline & Helpdesk */}
         <div className="space-y-3">
-          <h4 className="text-white font-bold text-sm uppercase tracking-wider border-b border-slate-700 pb-2">
-            Admission Helpline
+          <h4 className="text-white font-semibold text-xs uppercase tracking-wider border-b border-slate-800 pb-2">
+            Admissions Office
           </h4>
-          <div className="space-y-2.5 text-xs text-slate-300">
-            <div className="flex items-start gap-2">
-              <MapPin className="w-4 h-4 text-amber-400 flex-shrink-0 mt-0.5" />
-              <span>Near 3rd Gate, Kurukshetra University, Kurukshetra, Haryana - 136119, India</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <Phone className="w-4 h-4 text-amber-400 flex-shrink-0" />
-              <span>+91-1744-259114, 259115</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <Phone className="w-4 h-4 text-amber-400 flex-shrink-0" />
-              <span>+91-9896328329 / 7015886675</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <Mail className="w-4 h-4 text-amber-400 flex-shrink-0" />
-              <span>admissions@gurukuladmissions.org</span>
-            </div>
+          <div className="text-xs space-y-2 text-slate-400 leading-relaxed">
+            <p className="text-white font-medium">
+              The Gurukul Jyotisar, Pehowa Road, Kurukshetra - 136119, Haryana
+            </p>
+            <p>
+              Helpline: +91-1744-259114, 9896328329
+            </p>
+            <p>
+              Email: admissions@gurukuladmissions.org
+            </p>
+            <p className="text-[11px] text-slate-500 pt-1">
+              Office Hours: 9:00 AM – 4:00 PM (Monday to Saturday)
+            </p>
           </div>
         </div>
       </div>
 
-      {/* Bottom Copyright Bar */}
-      <div className="bg-gurukul-navyDark border-t border-slate-800 py-4 px-4 sm:px-8 text-center text-xs text-slate-400">
-        <div className="max-w-7xl mx-auto flex flex-col sm:flex-row justify-between items-center gap-2">
-          <p>© {new Date().getFullYear()} GURUKUL Institutional Network. All Rights Reserved.</p>
-          <p className="flex items-center gap-2">
-            <span>Official Portal for Entrance Examination & Admission Management</span>
-            <span className="hidden sm:inline">|</span>
-            <Link href="/admin/login" className="text-amber-400 hover:underline">
-              Administrative Login
-            </Link>
-          </p>
+      {/* Bottom Legal Strip */}
+      <div className="border-t border-slate-800 py-4 px-4 sm:px-8 text-[11px] text-slate-500 text-center flex flex-col sm:flex-row justify-between items-center max-w-7xl mx-auto gap-2">
+        <div>
+          &copy; {new Date().getFullYear()} Gurukul Kurukshetra Examination &amp; Admission Board. All rights reserved.
+        </div>
+        <div className="flex items-center gap-4">
+          <Link href="/admin/login" className="hover:text-slate-400 transition">
+            Staff Portal
+          </Link>
+          <span>•</span>
+          <Link href="/contact" className="hover:text-slate-400 transition">
+            Support Desk
+          </Link>
         </div>
       </div>
     </footer>
   );
 }
-

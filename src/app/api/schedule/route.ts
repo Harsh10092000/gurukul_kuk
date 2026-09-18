@@ -50,7 +50,7 @@ export async function POST(req: Request) {
             day: '2-digit',
           }).format(d);
         }
-      } catch {}
+      } catch { }
       return isoOrDateStr.slice(0, 10);
     };
 
@@ -71,7 +71,7 @@ export async function POST(req: Request) {
     const status = checkFormStatus();
     return NextResponse.json({
       success: true,
-      message: 'Application form schedule updated and recorded in audit log successfully.',
+      message: 'Admission form schedule updated and recorded in audit log successfully.',
       config: updated,
       status,
     });

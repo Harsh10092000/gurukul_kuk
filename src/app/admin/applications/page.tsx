@@ -3,24 +3,19 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { 
-  Users, 
   Search, 
-  Filter, 
   CheckCircle2, 
   AlertCircle, 
   FileSpreadsheet, 
   Eye, 
-  Download,
-  CheckSquare,
-  Trash2,
-  ShieldCheck,
-  Sparkles,
-  Clock,
-  Check,
-  X,
-  EyeOff,
-  ChevronLeft,
-  ChevronRight
+  Trash2, 
+  ShieldCheck, 
+  Clock, 
+  Check, 
+  EyeOff, 
+  ChevronLeft, 
+  ChevronRight,
+  Loader2
 } from 'lucide-react';
 import { Application } from '@/lib/types';
 
@@ -128,9 +123,9 @@ export default function AdminApplicationsPage() {
         setAdmitCardsReleased(release);
         if (release) {
           setAdmitCardsReleasedAt(data.admitCardsReleasedAt || new Date().toISOString());
-          setBulkSuccessMsg('Admit cards are now officially RELEASED and visible to all registered candidates.');
+          setBulkSuccessMsg('Admit cards are now officially released and visible to all registered candidates.');
         } else {
-          setBulkSuccessMsg('Admit cards are now HIDDEN from candidates (held in progress).');
+          setBulkSuccessMsg('Admit cards are now hidden from candidates.');
         }
         fetchApplications();
         setTimeout(() => setBulkSuccessMsg(''), 8000);
@@ -144,7 +139,6 @@ export default function AdminApplicationsPage() {
     }
   };
 
-  // Exclude drafts completely: only registered candidates are displayed
   const registeredApplications = applications.filter((app) => {
     if (!app) return false;
     if (app.status === 'draft') return false;
@@ -172,7 +166,6 @@ export default function AdminApplicationsPage() {
     return matchesSearch && matchesClass && matchesStatus;
   });
 
-  // Pagination calculation
   const totalPages = Math.max(1, Math.ceil(filteredApps.length / pageSize));
   const validCurrentPage = Math.min(currentPage, totalPages);
   const paginatedApps = filteredApps.slice((validCurrentPage - 1) * pageSize, validCurrentPage * pageSize);
@@ -199,7 +192,6 @@ export default function AdminApplicationsPage() {
     }
   };
 
-  // Authoritative metrics derived from registered applications only
   const activeCount = registeredApplications.length;
   const submittedCount = registeredApplications.filter((a) => a.status === 'submitted' || a.status === 'under_review').length;
   const approvedCount = registeredApplications.filter((a) => a.status === 'approved').length;
@@ -208,9 +200,9 @@ export default function AdminApplicationsPage() {
   return (
     <div className="space-y-6">
       {/* Top Title & Actions */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-slate-200 pb-4">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-black text-gurukul-navy">
+          <h1 className="text-xl sm:text-2xl font-bold text-slate-900">
             Candidate Application Management
           </h1>
           <p className="text-xs text-slate-500">
@@ -218,141 +210,143 @@ export default function AdminApplicationsPage() {
           </p>
         </div>
 
-        <div className="flex gap-2.5">
+        <div className="flex items-center gap-2">
           <a
             href="/api/admin/export"
             download
-            className="bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 font-bold px-4 py-2 rounded-xl text-xs shadow-sm flex items-center gap-1.5 transition"
+            className="btn-secondary text-xs px-3 py-1.5"
           >
-            <FileSpreadsheet className="w-4 h-4 text-emerald-600" />
-            <span>Export CSV</span>
+            Export CSV
           </a>
         </div>
-      </div>
-
-      {/* Central Bulk Admit Card Issuance & Visibility Control Banner */}
-      <div className="bg-gradient-to-r from-slate-900 via-gurukul-navy to-slate-900 rounded-3xl p-5 sm:p-6 text-white shadow-lg border border-slate-700/60 flex flex-col md:flex-row items-start md:items-center justify-between gap-5">
-        <div className="space-y-1.5 max-w-2xl">
-          <div className="flex items-center gap-2.5 flex-wrap">
-            <div className="w-8 h-8 rounded-xl bg-amber-500/20 text-amber-400 border border-amber-500/30 flex items-center justify-center">
-              <ShieldCheck className="w-4 h-4" />
-            </div>
-            <span className="text-[11px] font-mono font-bold tracking-wider uppercase text-amber-400">
-              Examination Board Desk
+      </div>      {/* Bulk Admit Card Release Banner */}
+      <div className="portal-card-navy p-6 flex flex-col md:flex-row items-start md:items-center justify-between gap-5">
+        <div className="space-y-1.5 max-w-xl">
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="text-[10px] font-mono font-bold tracking-wider uppercase text-amber-300">
+              Examination Board
             </span>
             {admitCardsReleased === null ? (
-              <span className="bg-slate-700/60 text-slate-300 border border-slate-600 text-[10px] font-bold px-2.5 py-0.5 rounded-full flex items-center gap-1.5 animate-pulse">
-                <div className="w-2.5 h-2.5 border-2 border-amber-400 border-t-transparent rounded-full animate-spin" />
-                Checking Visibility Status...
+              <span className="bg-slate-800/80 text-amber-300 border border-slate-700 text-[10px] font-medium px-2.5 py-0.5 rounded-full inline-flex items-center gap-1.5">
+                <Loader2 className="w-3 h-3 animate-spin text-amber-300" />
+                Checking Status...
               </span>
             ) : admitCardsReleased ? (
-              <span className="bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-[10px] font-bold px-2.5 py-0.5 rounded-full flex items-center gap-1">
-                <Check className="w-3 h-3 text-emerald-400" /> Admit Cards: Released &amp; Visible
+              <span className="bg-emerald-500/20 text-emerald-300 border border-emerald-400/40 text-[10px] font-bold px-2.5 py-0.5 rounded-full">
+                Admit Cards: Released &amp; Visible to Students
               </span>
             ) : (
-              <span className="bg-amber-500/20 text-amber-300 border border-amber-500/30 text-[10px] font-bold px-2.5 py-0.5 rounded-full flex items-center gap-1">
-                <Clock className="w-3 h-3 text-amber-400" /> Admit Cards: Hidden / In Progress
+              <span className="bg-amber-500/20 text-amber-300 border border-amber-400/40 text-[10px] font-bold px-2.5 py-0.5 rounded-full">
+                Admit Cards: Hidden / In Preparation
               </span>
             )}
           </div>
-          <h2 className="text-base sm:text-lg font-black text-white">
-            Admit Card Release &amp; Candidate Visibility Control
+          <h2 className="text-lg font-black tracking-tight text-white">
+            Admit Card Release &amp; Visibility Control
           </h2>
           <p className="text-xs text-slate-300 leading-relaxed">
             {admitCardsReleased === null
-              ? 'Connecting to Examination Board server to verify live admit card availability...'
+              ? 'Loading official admit card distribution and publishing status...'
               : admitCardsReleased
-              ? 'Admit cards and examination roll numbers are officially released and visible to candidates. Announcement is active on website.'
-              : 'Admit cards are held in progress by default and hidden from candidates. When the Admissions Board is ready, click below to release Admit Cards for all registered students.'}
+              ? 'Admit cards and entrance roll numbers are actively published and downloadable by candidates from their dashboard.'
+              : 'Admit cards are hidden from students. Click below to generate entrance roll numbers and officially release hall tickets.'}
           </p>
         </div>
 
-        <div className="flex-shrink-0 flex flex-wrap gap-2.5 w-full md:w-auto">
+        <div className="flex-shrink-0 flex flex-wrap gap-2.5">
           {admitCardsReleased === null ? (
-            <div className="h-10 px-4 rounded-xl bg-slate-800/80 border border-slate-700 text-slate-400 font-bold text-xs flex items-center justify-center gap-2 animate-pulse">
-              <div className="w-3.5 h-3.5 border-2 border-amber-400 border-t-transparent rounded-full animate-spin" />
+            <button
+              type="button"
+              disabled
+              className="bg-slate-800 text-slate-300 border border-slate-700 text-xs h-10 px-4 font-bold flex items-center gap-2 rounded-xl opacity-80 cursor-wait shadow-sm"
+            >
+              <Loader2 className="w-4 h-4 animate-spin text-amber-400" />
               <span>Checking Status...</span>
-            </div>
+            </button>
           ) : admitCardsReleased ? (
             <button
               type="button"
               onClick={() => handleToggleAdmitCards(false)}
               disabled={bulkLoading}
-              className="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs shadow-md flex items-center justify-center gap-1.5 transition active:scale-95 disabled:opacity-50"
+              className="btn-danger text-xs h-10 px-4 font-bold flex items-center gap-2 shadow-sm"
             >
-              <EyeOff className="w-3.5 h-3.5" />
-              <span>{bulkLoading ? 'Updating...' : 'Stop Showing / Hide Admit Cards'}</span>
+              {bulkLoading ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <EyeOff className="w-4 h-4" />
+              )}
+              <span>{bulkLoading ? 'Updating...' : 'Hide Admit Cards'}</span>
             </button>
           ) : (
             <button
               type="button"
               onClick={() => setShowBulkModal(true)}
               disabled={bulkLoading}
-              className="w-full sm:w-auto px-5 py-3 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-white font-black text-xs shadow-lg shadow-emerald-500/20 flex items-center justify-center gap-2 transition transform active:scale-95 disabled:opacity-50"
+              className="btn-accent text-xs h-10 px-5 font-bold flex items-center gap-2 shadow-md"
             >
-              <Eye className="w-4 h-4 text-white" />
-              <span>
-                {bulkLoading
-                  ? 'Processing Bulk Release...'
-                  : 'Release Admit Cards (Make Visible to Candidates)'}
-              </span>
+              {bulkLoading ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <Eye className="w-4 h-4" />
+              )}
+              <span>{bulkLoading ? 'Processing...' : 'Release Admit Cards for All'}</span>
             </button>
           )}
         </div>
       </div>
 
       {bulkSuccessMsg && (
-        <div className="p-4 bg-emerald-50 border border-emerald-300 rounded-2xl text-emerald-900 text-xs font-bold flex items-center gap-2 shadow-xs">
-          <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+        <div className="p-4 bg-emerald-50 border border-emerald-300 rounded-xl text-emerald-950 text-xs font-semibold flex items-center gap-2.5 shadow-sm">
+          <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />
           <span>{bulkSuccessMsg}</span>
         </div>
       )}
 
       {bulkErrorMsg && (
-        <div className="p-4 bg-rose-50 border border-rose-300 rounded-2xl text-rose-900 text-xs font-bold flex items-center gap-2 shadow-xs">
-          <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
+        <div className="p-4 bg-rose-50 border border-rose-300 rounded-xl text-rose-950 text-xs font-semibold flex items-center gap-2.5 shadow-sm">
+          <AlertCircle className="w-5 h-5 text-rose-600 shrink-0" />
           <span>{bulkErrorMsg}</span>
         </div>
       )}
 
-      {/* Quick Status Category Filter Pills (Drafts Removed) */}
-      <div className="flex flex-wrap items-center gap-1.5 text-xs font-bold">
+      {/* Status Category Filter Tabs */}
+      <div className="flex flex-wrap items-center gap-2 text-xs font-semibold">
         <button
           onClick={() => { setSelectedStatus('All'); setCurrentPage(1); }}
-          className={`px-3 py-1.5 rounded-xl transition ${
+          className={`px-3.5 py-2 rounded-xl transition ${
             selectedStatus === 'All'
-              ? 'bg-gurukul-navy text-white shadow-xs'
-              : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'
+              ? 'bg-portal-navy text-white shadow-sm ring-1 ring-portal-navy font-bold'
+              : 'bg-white text-slate-700 border border-slate-200 hover:bg-slate-50'
           }`}
         >
           All Active ({activeCount})
         </button>
         <button
           onClick={() => { setSelectedStatus('submitted'); setCurrentPage(1); }}
-          className={`px-3 py-1.5 rounded-xl transition ${
+          className={`px-3.5 py-2 rounded-xl transition ${
             selectedStatus === 'submitted'
-              ? 'bg-gurukul-navy text-white shadow-xs'
-              : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'
+              ? 'bg-portal-navy text-white shadow-sm ring-1 ring-portal-navy font-bold'
+              : 'bg-white text-slate-700 border border-slate-200 hover:bg-slate-50'
           }`}
         >
           Pending Review ({submittedCount})
         </button>
         <button
           onClick={() => { setSelectedStatus('approved'); setCurrentPage(1); }}
-          className={`px-3 py-1.5 rounded-xl transition ${
+          className={`px-3.5 py-2 rounded-xl transition ${
             selectedStatus === 'approved'
-              ? 'bg-gurukul-navy text-white shadow-xs'
-              : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'
+              ? 'bg-portal-navy text-white shadow-sm ring-1 ring-portal-navy font-bold'
+              : 'bg-white text-slate-700 border border-slate-200 hover:bg-slate-50'
           }`}
         >
-          Approved &amp; Verified ({approvedCount})
+          Approved ({approvedCount})
         </button>
         <button
           onClick={() => { setSelectedStatus('correction_needed'); setCurrentPage(1); }}
-          className={`px-3 py-1.5 rounded-xl transition ${
+          className={`px-3.5 py-2 rounded-xl transition ${
             selectedStatus === 'correction_needed'
-              ? 'bg-gurukul-navy text-white shadow-xs'
-              : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'
+              ? 'bg-portal-navy text-white shadow-sm ring-1 ring-portal-navy font-bold'
+              : 'bg-white text-slate-700 border border-slate-200 hover:bg-slate-50'
           }`}
         >
           Correction Needed ({correctionCount})
@@ -360,25 +354,22 @@ export default function AdminApplicationsPage() {
       </div>
 
       {/* Filter & Search Toolbar */}
-      <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm grid grid-cols-1 sm:grid-cols-3 gap-3">
-        {/* Search */}
+      <div className="portal-card p-4 grid grid-cols-1 sm:grid-cols-3 gap-3">
         <div className="relative">
-          <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-3 pointer-events-none" />
           <input
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search by Name, App No., Mobile, Email..."
-            className="w-full pl-10 pr-3 py-2 text-xs border rounded-xl outline-none focus:ring-2 focus:ring-amber-500"
+            placeholder="Search by name, ID, phone, email..."
+            className="form-input-field"
           />
         </div>
 
-        {/* Filter by Class */}
         <div>
           <select
             value={selectedClass}
             onChange={(e) => setSelectedClass(e.target.value)}
-            className="w-full px-3 py-2 text-xs border rounded-xl outline-none focus:ring-2 focus:ring-amber-500 font-medium"
+            className="form-input-field font-medium"
           >
             <option value="All">All Classes (6, 7, 8, 9, 11)</option>
             <option value="Class 6">Class 6th</option>
@@ -389,14 +380,13 @@ export default function AdminApplicationsPage() {
           </select>
         </div>
 
-        {/* Filter by Status */}
         <div>
           <select
             value={selectedStatus}
             onChange={(e) => setSelectedStatus(e.target.value)}
-            className="w-full px-3 py-2 text-xs border rounded-xl outline-none focus:ring-2 focus:ring-amber-500 font-medium"
+            className="form-input-field font-medium"
           >
-            <option value="All">All Registered Candidates (Confirmed)</option>
+            <option value="All">All Registered Candidates</option>
             <option value="registered">Registered (Fee Paid ₹800)</option>
             <option value="approved">Approved &amp; Verified</option>
           </select>
@@ -404,197 +394,176 @@ export default function AdminApplicationsPage() {
       </div>
 
       {/* Applications Table */}
-      <div className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
-        <div className="p-4 border-b border-slate-100 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 text-xs">
-          <div className="flex items-center gap-2">
-            <span className="font-bold text-slate-800">
-              Showing {filteredApps.length} Candidates
-            </span>
-            <span className="bg-slate-100 text-slate-600 px-2.5 py-0.5 rounded-full font-semibold text-[11px]">
-              {selectedStatus === 'All' ? 'All Confirmed' : selectedStatus.replace('_', ' ')}
-            </span>
-          </div>
-          <div className="text-slate-500 text-[11px] font-medium">
-            Total active in portal: {filteredApps.length} of {registeredApplications.length} registered dossiers
-          </div>
+      <div className="portal-card p-0 overflow-hidden border border-slate-200/90 shadow-sm">
+        <div className="p-4 sm:px-6 border-b border-slate-100 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 text-xs bg-slate-50/50">
+          <span className="font-bold text-slate-900">
+            Showing {filteredApps.length} Candidates
+          </span>
+          <span className="text-slate-500 text-[11px] font-medium">
+            {filteredApps.length} of {registeredApplications.length} registered dossiers
+          </span>
         </div>
 
         {loading ? (
-          <div className="py-16 text-center text-xs text-slate-500">Loading candidates...</div>
+          <div className="py-16 text-center text-xs text-slate-500 font-medium">Loading candidate dossiers...</div>
         ) : filteredApps.length === 0 ? (
-          <div className="py-16 text-center text-xs text-slate-400">
-            No registered candidate applications match the selected criteria.
+          <div className="py-16 text-center text-xs text-slate-400 font-medium">
+            No registered applications match your search and filter criteria.
           </div>
         ) : (
-          /* Standard Applications Table View */
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs">
-              <thead className="bg-slate-50 text-slate-500 uppercase font-bold text-[10px] border-b border-slate-200">
+              <thead className="bg-slate-50/90 text-slate-600 uppercase font-bold text-[10px] tracking-wider border-b border-slate-200">
                 <tr>
-                  <th className="py-3 px-4">Registration ID</th>
-                  <th className="py-3 px-4">Candidate Profile</th>
-                  <th className="py-3 px-4">Class &amp; Stream</th>
-                  <th className="py-3 px-4">Guardian &amp; Phone</th>
-                  <th className="py-3 px-4">Preferred Study Location</th>
-                  <th className="py-3 px-4">Fee Paid</th>
-                  <th className="py-3 px-4">Status</th>
+                  <th className="py-3 px-4">Reg ID</th>
+                  <th className="py-3 px-4">Candidate</th>
+                  <th className="py-3 px-4">Class</th>
+                  <th className="py-3 px-4">Guardian / Contact</th>
+                  <th className="py-3 px-4">Centre Preference</th>
+                  <th className="py-3 px-4">Fee Status</th>
+                  <th className="py-3 px-4">Dossier</th>
                   <th className="py-3 px-4 text-right">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {paginatedApps.map((app) => (
-                  <tr key={app.id} className="hover:bg-slate-50">
-                    <td className="py-3.5 px-4 font-mono font-bold text-slate-900">
-                      {app.registrationNumber || app.applicationNumber}
-                    </td>
-                    <td className="py-3.5 px-4">
-                      <div className="font-bold text-slate-900 uppercase">
-                        {app.personalInfo?.fullName || (app as any).applicantName || 'Applicant'}
-                      </div>
-                      <div className="text-[11px] text-slate-500">
-                        {app.personalInfo?.gender ? `${app.personalInfo.gender} • ` : ''}
-                        {app.personalInfo?.dob ? formatDob(app.personalInfo.dob) : (app.personalInfo?.candidateEmail || '—')}
-                      </div>
-                    </td>
-                    <td className="py-3.5 px-4">
-                      <span className="bg-amber-50 text-amber-900 border border-amber-200 px-2 py-0.5 rounded text-[11px] font-bold">
-                        Class {app.classApplying}{app.stream ? ` (${app.stream})` : ''}
-                      </span>
-                    </td>
-                    <td className="py-3.5 px-4">
-                      <div className="text-slate-800 font-medium">{app.parentInfo?.fatherName || 'Guardian Pending'}</div>
-                      <div className="font-mono text-slate-500 text-[11px]">
-                        {app.parentInfo?.fatherPhone || app.personalInfo?.candidateMobile || 'N/A'}
-                      </div>
-                    </td>
-                    <td className="py-3.5 px-4 text-slate-700 max-w-[170px] truncate text-xs font-semibold">
-                      {app.studyLocation?.firstPreference || app.examCentrePref?.preferredCenter1 || 'Gurukul Nilokheri'}
-                    </td>
-                    <td className="py-3.5 px-4">
-                      <span className="text-emerald-700 font-bold flex items-center gap-1">
-                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
-                        ₹{app.amountPaid || 800}
-                      </span>
-                    </td>
-                    <td className="py-3.5 px-4">
-                      <span className="text-[10px] font-bold px-2.5 py-1 rounded-full uppercase bg-emerald-100 text-emerald-800">
-                        REGISTERED
-                      </span>
-                    </td>
-                    <td className="py-3.5 px-4 text-right">
-                      <div className="flex items-center justify-end gap-1.5">
-                        <Link
-                          href={`/admin/applications/${app.id}`}
-                          className="bg-gurukul-navy hover:bg-gurukul-navyLight text-white font-bold px-3 py-1.5 rounded-lg text-xs transition inline-flex items-center gap-1.5 shadow-sm"
-                        >
-                          <Eye className="w-3.5 h-3.5" />
-                          <span>Verify</span>
-                        </Link>
-                        <button
-                          type="button"
-                          onClick={() => setAppToDelete(app)}
-                          className="p-1.5 bg-slate-50 hover:bg-red-50 text-slate-400 hover:text-red-600 border border-slate-200 hover:border-red-300 rounded-lg transition"
-                          title="Delete Candidate Application"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
+                {paginatedApps.map((app) => {
+                  const candidateName = app.personalInfo?.fullName || (app as any).applicantName || 'Applicant';
+                  const candidateInitials = candidateName
+                    .split(' ')
+                    .map((n: string) => n[0])
+                    .filter(Boolean)
+                    .slice(0, 2)
+                    .join('')
+                    .toUpperCase();
+
+                  return (
+                    <tr key={app.id} className="hover:bg-slate-50/80 transition-colors">
+                      <td className="py-3.5 px-4 font-mono font-bold text-portal-navy">
+                        {app.registrationNumber || app.applicationNumber}
+                      </td>
+                      <td className="py-3.5 px-4">
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 rounded-lg bg-slate-100 text-slate-800 font-bold text-xs flex items-center justify-center flex-shrink-0 border border-slate-200">
+                            {candidateInitials}
+                          </div>
+                          <div>
+                            <div className="font-bold text-slate-900">
+                              {candidateName}
+                            </div>
+                            <div className="text-[11px] text-slate-500 font-medium">
+                              {app.personalInfo?.gender ? `${app.personalInfo.gender} • ` : ''}
+                              {app.personalInfo?.dob ? formatDob(app.personalInfo.dob) : (app.personalInfo?.candidateEmail || '—')}
+                            </div>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="py-3.5 px-4">
+                        <span className="bg-slate-100 text-slate-800 border border-slate-200 px-2.5 py-0.5 rounded-md text-[11px] font-semibold">
+                          Class {app.classApplying}{app.stream ? ` (${app.stream})` : ''}
+                        </span>
+                      </td>
+                      <td className="py-3.5 px-4">
+                        <div className="text-slate-900 font-medium">{app.parentInfo?.fatherName || 'Guardian Pending'}</div>
+                        <div className="font-mono text-slate-500 text-[11px]">
+                          {app.parentInfo?.fatherPhone || app.personalInfo?.candidateMobile || 'N/A'}
+                        </div>
+                      </td>
+                      <td className="py-3.5 px-4 text-slate-700 max-w-[160px] truncate text-xs font-medium">
+                        {app.studyLocation?.firstPreference || app.examCentrePref?.preferredCenter1 || 'Gurukul Nilokheri'}
+                      </td>
+                      <td className="py-3.5 px-4">
+                        <span className="text-emerald-700 font-bold flex items-center gap-1.5 font-mono">
+                          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                          ₹{app.amountPaid || 800}
+                        </span>
+                      </td>
+                      <td className="py-3.5 px-4">
+                        <span className="portal-badge-emerald">
+                          Registered
+                        </span>
+                      </td>
+                      <td className="py-3.5 px-4 text-right">
+                        <div className="flex items-center justify-end gap-2">
+                          <Link
+                            href={`/admin/applications/${app.id}`}
+                            className="btn-primary text-xs h-8 px-3"
+                          >
+                            View
+                          </Link>
+                          <button
+                            type="button"
+                            onClick={() => setAppToDelete(app)}
+                            className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition"
+                            title="Delete Candidate Record"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
         )}
 
-        {/* Pagination Controls Bar */}
+        {/* Pagination Bar */}
         {filteredApps.length > 0 && (
-          <div className="p-4 border-t border-slate-200 bg-slate-50/70 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs">
-            <div className="text-slate-600 font-medium">
-              Showing <strong className="text-slate-900">{(validCurrentPage - 1) * pageSize + 1}</strong> to{' '}
-              <strong className="text-slate-900">{Math.min(validCurrentPage * pageSize, filteredApps.length)}</strong> of{' '}
-              <strong className="text-slate-900">{filteredApps.length}</strong> registered candidates
+          <div className="p-3.5 border-t border-slate-200 bg-slate-50 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs">
+            <div className="text-slate-600">
+              Showing <strong>{(validCurrentPage - 1) * pageSize + 1}</strong> to{' '}
+              <strong>{Math.min(validCurrentPage * pageSize, filteredApps.length)}</strong> of{' '}
+              <strong>{filteredApps.length}</strong> candidates
             </div>
 
-            <div className="flex items-center gap-1.5">
+            <div className="flex items-center gap-1">
               <button
                 type="button"
                 onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
                 disabled={validCurrentPage <= 1}
-                className="px-3 py-1.5 rounded-lg border border-slate-300 bg-white text-slate-700 font-bold hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1 transition"
+                className="px-2.5 py-1 rounded border border-slate-300 bg-white text-slate-700 font-medium hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed"
               >
-                <ChevronLeft className="w-3.5 h-3.5" />
-                <span>Previous</span>
+                Previous
               </button>
 
-              <div className="flex items-center gap-1">
-                {Array.from({ length: totalPages }, (_, i) => i + 1).map((pg) => {
-                  if (
-                    totalPages > 7 &&
-                    pg !== 1 &&
-                    pg !== totalPages &&
-                    Math.abs(pg - validCurrentPage) > 2
-                  ) {
-                    if (pg === 2 || pg === totalPages - 1) {
-                      return <span key={pg} className="px-1 text-slate-400">...</span>;
-                    }
-                    return null;
-                  }
-                  return (
-                    <button
-                      key={pg}
-                      type="button"
-                      onClick={() => setCurrentPage(pg)}
-                      className={`w-8 h-8 rounded-lg font-bold transition flex items-center justify-center ${
-                        pg === validCurrentPage
-                          ? 'bg-gurukul-navy text-white shadow-xs'
-                          : 'bg-white border border-slate-300 text-slate-700 hover:bg-slate-50'
-                      }`}
-                    >
-                      {pg}
-                    </button>
-                  );
-                })}
-              </div>
+              <span className="px-2 font-medium text-slate-700">
+                Page {validCurrentPage} of {totalPages}
+              </span>
 
               <button
                 type="button"
                 onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
                 disabled={validCurrentPage >= totalPages}
-                className="px-3 py-1.5 rounded-lg border border-slate-300 bg-white text-slate-700 font-bold hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1 transition"
+                className="px-2.5 py-1 rounded border border-slate-300 bg-white text-slate-700 font-medium hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed"
               >
-                <span>Next</span>
-                <ChevronRight className="w-3.5 h-3.5" />
+                Next
               </button>
             </div>
           </div>
         )}
       </div>
 
-      {/* Delete Candidate Application Modal */}
+      {/* Delete Application Modal */}
       {appToDelete && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4">
-            <h3 className="font-bold text-red-700 text-base flex items-center gap-2">
-              <Trash2 className="w-5 h-5 text-red-600" />
-              Delete Candidate Application
+        <div className="fixed inset-0 bg-slate-900/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-xl max-w-sm w-full p-6 shadow-elevated border border-slate-200 space-y-3">
+            <h3 className="font-bold text-slate-900 text-sm">
+              Delete Candidate Application?
             </h3>
-            <p className="text-xs text-slate-600 leading-relaxed">
-              Are you sure you want to permanently delete application <strong>{appToDelete.applicationNumber}</strong> for candidate <strong>{appToDelete.personalInfo?.fullName || 'Candidate'}</strong>?
-            </p>
-            <p className="text-[11px] text-amber-800 bg-amber-50 p-3 rounded-xl border border-amber-200">
-              ⚠️ <strong>Warning:</strong> This will completely remove this application record and any issued admit card. This action cannot be reversed.
+            <p className="text-xs text-slate-600 leading-normal">
+              Permanently delete application <strong>{appToDelete.applicationNumber}</strong> for candidate <strong>{appToDelete.personalInfo?.fullName || 'Candidate'}</strong>? This action cannot be reversed.
             </p>
             {deleteError && (
-              <p className="text-xs text-rose-700 bg-rose-50 p-2.5 rounded-xl border border-rose-200 font-medium">
+              <p className="text-xs text-rose-700 bg-rose-50 p-2 rounded font-medium">
                 {deleteError}
               </p>
             )}
-            <div className="flex justify-end gap-2 pt-2 border-t">
+            <div className="flex justify-end gap-2 pt-2 border-t border-slate-100">
               <button
                 type="button"
                 onClick={() => setAppToDelete(null)}
-                className="px-4 py-2 border rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-50 transition"
+                className="btn-secondary text-xs px-3 py-1.5"
               >
                 Cancel
               </button>
@@ -602,46 +571,32 @@ export default function AdminApplicationsPage() {
                 type="button"
                 onClick={handleDeleteApp}
                 disabled={actionLoading}
-                className="px-5 py-2 bg-red-600 hover:bg-red-700 text-white font-bold text-xs rounded-xl shadow transition"
+                className="btn-danger text-xs px-3.5 py-1.5"
               >
-                {actionLoading ? 'Deleting...' : 'Permanently Delete'}
+                {actionLoading ? 'Deleting...' : 'Delete'}
               </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* Bulk Admit Card Release Confirmation Modal */}
+      {/* Bulk Admit Card Release Modal */}
       {showBulkModal && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl max-w-lg w-full p-6 shadow-2xl space-y-4">
-            <div className="flex items-center gap-3 border-b border-slate-100 pb-3">
-              <div className="w-10 h-10 rounded-2xl bg-amber-100 text-amber-800 flex items-center justify-center flex-shrink-0">
-                <ShieldCheck className="w-5 h-5 text-amber-600" />
-              </div>
-              <div>
-                <h3 className="font-black text-slate-900 text-base">
-                  Generate &amp; Release Admit Cards for ALL Candidates
-                </h3>
-                <p className="text-[11px] text-slate-500">
-                  Entrance Session 2027-28 • Examination Board
-                </p>
-              </div>
-            </div>
-
-            <p className="text-xs text-slate-600 leading-relaxed">
-              You are about to generate official roll numbers and examination hall tickets simultaneously for all registered candidates with fee paid (₹800).
+        <div className="fixed inset-0 bg-slate-900/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-xl max-w-md w-full p-6 shadow-elevated border border-slate-200 space-y-4">
+            <h3 className="font-bold text-slate-900 text-sm">
+              Generate &amp; Release Admit Cards for ALL Candidates
+            </h3>
+            <p className="text-xs text-slate-600 leading-normal">
+              Official roll numbers and examination hall tickets will be generated simultaneously for all registered candidates with confirmed fee payment.
             </p>
 
-            <div className="bg-amber-50 border border-amber-200 rounded-2xl p-3.5 space-y-2 text-xs text-amber-950 font-medium">
-              <div className="font-bold flex items-center gap-1.5 text-amber-900">
-                <Sparkles className="w-3.5 h-3.5 text-amber-600" />
-                What will happen next:
-              </div>
-              <ul className="list-disc list-inside text-[11px] space-y-1 text-amber-900">
+            <div className="bg-slate-50 border border-slate-200 rounded-lg p-3 text-xs text-slate-700 space-y-1">
+              <strong className="block text-slate-900">What will happen:</strong>
+              <ul className="list-disc pl-4 space-y-0.5 text-[11px] text-slate-600">
                 <li>Automated sequential roll numbers will be allocated to all students.</li>
-                <li>Admit card download buttons will become immediately active on students&apos; candidate dashboards.</li>
-                <li>A notification banner and popup will be broadcast on the website announcing that Admit Cards have been released.</li>
+                <li>Admit card download buttons will become active on candidate dashboards.</li>
+                <li>Admit card release announcement will be broadcast on portal.</li>
               </ul>
             </div>
 
@@ -650,7 +605,7 @@ export default function AdminApplicationsPage() {
                 type="button"
                 onClick={() => setShowBulkModal(false)}
                 disabled={bulkLoading}
-                className="px-4 py-2 border rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-50 transition"
+                className="btn-secondary text-xs px-3 py-1.5"
               >
                 Cancel
               </button>
@@ -658,9 +613,9 @@ export default function AdminApplicationsPage() {
                 type="button"
                 onClick={handleBulkGenerateAdmitCards}
                 disabled={bulkLoading}
-                className="px-5 py-2 bg-gurukul-navy hover:bg-slate-900 text-amber-400 font-black text-xs rounded-xl shadow transition flex items-center gap-1.5"
+                className="btn-primary text-xs px-4 py-1.5 font-bold"
               >
-                {bulkLoading ? 'Generating Roll Numbers...' : 'Yes, Generate & Release for All'}
+                {bulkLoading ? 'Generating...' : 'Confirm Release'}
               </button>
             </div>
           </div>
@@ -669,4 +624,3 @@ export default function AdminApplicationsPage() {
     </div>
   );
 }
-

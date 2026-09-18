@@ -22,6 +22,12 @@ export default function AdminApplicationAdmissionFormPage() {
       .then((data) => {
         if (data.application) {
           setApplication(data.application);
+          fetch(`/api/admit-card?appId=${data.application.id}`)
+            .then((r) => r.json())
+            .then((admitData) => {
+              if (admitData.admitCard) setAdmitCard(admitData.admitCard);
+            })
+            .catch(() => {});
         } else {
           setError(data.error || 'Application record not found.');
         }
@@ -46,9 +52,9 @@ export default function AdminApplicationAdmissionFormPage() {
 
   if (error || !application) {
     return (
-      <div className="p-6 bg-white rounded-2xl border border-red-200 text-red-700 text-xs flex items-center gap-3">
+      <div className="p-6 portal-card border-rose-200 text-rose-700 text-xs flex items-center gap-3">
         <AlertCircle className="w-5 h-5 flex-shrink-0" />
-        <span>{error || 'Unable to render admission form.'}</span>
+        <span>{error || 'Unable to render Admission form.'}</span>
       </div>
     );
   }

@@ -2,7 +2,7 @@
 
 import React from 'react';
 import Image from 'next/image';
-import { Printer, ArrowLeft, Download, ShieldCheck, Award } from 'lucide-react';
+import { Printer, ArrowLeft, ShieldCheck, FileCheck, CheckSquare, Square } from 'lucide-react';
 import Link from 'next/link';
 import { Application, AdmitCard } from '@/lib/types';
 
@@ -41,215 +41,224 @@ export default function AdmissionFormView({
   return (
     <div className="max-w-4xl mx-auto my-6 px-2 sm:px-4 font-sans print:m-0 print:p-0 print:max-w-full">
       {/* Top Action Bar (Hidden on Print) */}
-      <div className="flex justify-between items-center bg-white p-4 rounded-2xl border border-slate-200 shadow-sm mb-6 print:hidden">
+      <div className="flex justify-between items-center portal-card p-3 sm:p-4 mb-5 print:hidden">
         <div className="flex items-center gap-2">
           <Link
-            href={backUrl || "/dashboard"}
-            className="p-2 hover:bg-slate-100 rounded-xl text-slate-600 transition flex items-center gap-1.5 text-xs font-bold"
+            href={backUrl || "/admin/applications"}
+            className="btn-secondary text-xs h-8 px-3 flex items-center gap-1.5"
           >
-            <ArrowLeft className="w-4 h-4" />
-            <span>{backLabel || "Dashboard"}</span>
+            <ArrowLeft className="w-3.5 h-3.5" />
+            <span>{backLabel || "Admin Applications"}</span>
           </Link>
           <span className="text-slate-300">|</span>
-          <span className="text-xs font-bold text-slate-700">Official Admission Form (A4)</span>
+          <span className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+            <span className="bg-rose-100 text-rose-800 border border-rose-200 text-[10px] font-bold px-2 py-0.5 rounded uppercase">
+              Office Use Only
+            </span>
+            <span>Admission Scrutiny &amp; Enrolment Dossier</span>
+          </span>
         </div>
         <button
           onClick={handlePrint}
-          className="bg-gurukul-navy hover:bg-slate-900 text-white font-extrabold text-xs px-5 py-2.5 rounded-xl shadow transition flex items-center gap-2"
+          className="btn-primary text-xs h-8 px-4 flex items-center gap-1.5 font-bold"
         >
           <Printer className="w-4 h-4 text-amber-400" />
-          <span>Print / Save as PDF</span>
+          <span>Print Office Dossier</span>
         </button>
       </div>
 
-      {/* The Printable A4 One-Page Form Sheet */}
-      <div className="bg-white border-2 border-slate-900 rounded-lg p-6 print:p-3 print:border print:shadow-none print-card text-slate-900 space-y-3 text-[11px] leading-tight">
-        {/* Institutional Header */}
-        <div className="border-b-2 border-slate-900 pb-2 flex items-center justify-between gap-3">
+      {/* The Printable A4 Administrative Office Form Sheet */}
+      <div className="bg-white border-2 border-black rounded-sm p-4 sm:p-5 print:p-2.5 print:border-2 print:border-black print:shadow-none print-card text-black space-y-2.5 text-[10.5px] leading-tight">
+        
+        {/* 1. Official Institutional Header */}
+        <div className="border-b-2 border-black pb-2 flex items-center justify-between gap-3">
           <div className="w-16 h-16 flex-shrink-0 flex items-center justify-center">
             <Image
               src="/logo-gurukul.png"
               alt="Gurukul Crest"
-              width={64}
-              height={64}
+              width={60}
+              height={60}
               className="brand-logo-img object-contain"
             />
           </div>
 
           <div className="flex-1 text-center">
-            <h1 className="text-xl sm:text-2xl font-black tracking-tight text-gurukul-navy leading-none">
+            <h1 className="text-xl sm:text-2xl font-black tracking-tight text-black leading-none font-serif">
               GURUKUL
             </h1>
-            <p className="text-[11px] font-serif font-bold text-gurukul-700 mt-0.5">
-              तमसो मा ज्योतिर्गमय
+            <p className="text-[11px] font-serif font-black text-slate-800 mt-0.5">
+              तमसो मा ज्योतिर्गमय • CBSE AFFILIATED INSTITUTIONAL NETWORK
             </p>
-            <p className="text-[10px] text-slate-600 font-medium">
-              CBSE Affiliated Institutional Network • Haryana
+            <p className="text-[9.5px] text-black font-extrabold uppercase tracking-wide mt-0.5">
+              CENTRAL ADMISSION CELL &amp; SCRUTINY BOARD • SESSION 2027-28
             </p>
-            <div className="mt-1 bg-gurukul-navy text-white text-[11px] font-black tracking-wider uppercase py-0.5 px-3 rounded inline-block">
-              Official Admission Verification & Enrolment Form (Session 2027-28)
+            <div className="mt-1 bg-black text-white text-[10px] font-black tracking-widest uppercase py-0.5 px-3 rounded-none inline-block">
+              OFFICIAL ADMISSION SCRUTINY &amp; ENROLMENT RECORD (OFFICE USE ONLY)
             </div>
           </div>
 
-          {/* Verification Stamp placeholder */}
-          <div className="w-20 h-20 border border-slate-400 rounded bg-slate-50 flex flex-col items-center justify-center text-center p-1 text-[8px] font-bold text-slate-500 flex-shrink-0">
-            <span>OFFICIAL STAMP</span>
-            <span>& VERIFICATION</span>
+          {/* Right Patron Portrait */}
+          <div className="w-16 h-16 sm:w-20 sm:h-20 print:w-16 print:h-16 flex-shrink-0 flex items-center justify-center">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="/gurukul-patron.png"
+              alt="Gurukul Patron"
+              className="max-h-16 sm:max-h-20 print:max-h-16 max-w-full object-contain rounded-full shadow-xs"
+            />
           </div>
         </div>
 
-        {/* Identification Strip */}
-        <div className="grid grid-cols-4 gap-2 bg-slate-100 p-2 rounded border border-slate-300 text-[10px]">
+        {/* 2. Key Identification Strip */}
+        <div className="grid grid-cols-4 gap-2 border border-black bg-slate-100 p-1.5 text-[9.5px]">
           <div>
-            <span className="text-slate-500 block">Registration ID:</span>
-            <span className="font-mono font-black text-xs text-gurukul-navy">{regNo}</span>
+            <span className="text-slate-600 block text-[8px] uppercase font-bold">Registration ID:</span>
+            <span className="font-mono font-black text-xs text-black">{regNo}</span>
           </div>
           <div>
-            <span className="text-slate-500 block">Entrance Roll No:</span>
-            <span className="font-mono font-black text-xs text-amber-900">{rollNo}</span>
+            <span className="text-slate-600 block text-[8px] uppercase font-bold">Entrance Roll No:</span>
+            <span className="font-mono font-black text-xs text-black">{rollNo}</span>
           </div>
           <div>
-            <span className="text-slate-500 block">Class Seeking Admission:</span>
-            <span className="font-black text-xs text-slate-900">
+            <span className="text-slate-600 block text-[8px] uppercase font-bold">Class &amp; Stream:</span>
+            <span className="font-black text-xs text-black">
               Class {application.classApplying}{application.stream ? ` (${application.stream})` : ''}
             </span>
           </div>
           <div>
-            <span className="text-slate-500 block">Social Category:</span>
-            <span className="font-bold text-xs text-slate-900">{application.personalInfo?.category || 'General'}</span>
+            <span className="text-slate-600 block text-[8px] uppercase font-bold">Category &amp; Gender:</span>
+            <span className="font-bold text-xs text-black">
+              {application.personalInfo?.category || 'General'} • {application.personalInfo?.gender || '—'}
+            </span>
           </div>
         </div>
 
-        {/* Grid: Details (Left 75%) + Photo & Signature (Right 25%) */}
-        <div className="grid grid-cols-12 gap-3 items-start">
-          <div className="col-span-9 space-y-2.5">
+        {/* 3. Grid: Candidate Dossier (Left 9 cols) + Affixed Photos/Signs (Right 3 cols) */}
+        <div className="grid grid-cols-12 gap-2.5 items-start">
+          <div className="col-span-9 space-y-2">
+            
             {/* Section A: Candidate Particulars */}
             <div>
-              <h3 className="font-black text-[11px] bg-slate-200 px-2 py-0.5 uppercase tracking-wide text-gurukul-navy mb-1">
-                1. Candidate Particulars
-              </h3>
-              <div className="grid grid-cols-3 gap-x-2 gap-y-1">
+              <div className="bg-slate-200 border border-black px-2 py-0.5 font-black text-[10px] uppercase tracking-wide flex justify-between">
+                <span>1. Candidate Identification Particulars</span>
+                <span className="font-mono text-[9px]">Verified Office Record</span>
+              </div>
+              <div className="border-x border-b border-black p-1.5 grid grid-cols-3 gap-x-2 gap-y-1">
                 <div>
-                  <span className="text-slate-500 block text-[9px]">Full Name:</span>
-                  <span className="font-bold">{application.personalInfo?.fullName || '—'}</span>
+                  <span className="text-slate-600 block text-[8.5px]">Full Name:</span>
+                  <span className="font-black text-[10.5px] uppercase">{application.personalInfo?.fullName || '—'}</span>
                 </div>
                 <div>
-                  <span className="text-slate-500 block text-[9px]">Date of Birth:</span>
-                  <span className="font-semibold">{formatDob(application.personalInfo?.dob)}</span>
+                  <span className="text-slate-600 block text-[8.5px]">Date of Birth:</span>
+                  <span className="font-bold">{formatDob(application.personalInfo?.dob)}</span>
                 </div>
                 <div>
-                  <span className="text-slate-500 block text-[9px]">Gender:</span>
-                  <span className="font-semibold">{application.personalInfo?.gender || '—'}</span>
+                  <span className="text-slate-600 block text-[8.5px]">Aadhaar Number:</span>
+                  <span className="font-mono font-bold">{application.personalInfo?.aadhaarNumber || '—'}</span>
                 </div>
                 <div>
-                  <span className="text-slate-500 block text-[9px]">Aadhaar Number:</span>
-                  <span className="font-mono font-semibold">{application.personalInfo?.aadhaarNumber || '—'}</span>
-                </div>
-                <div>
-                  <span className="text-slate-500 block text-[9px]">PEN (Optional):</span>
+                  <span className="text-slate-600 block text-[8.5px]">PEN (Permanent Education No):</span>
                   <span className="font-mono font-semibold">{application.personalInfo?.panNumber || '—'}</span>
                 </div>
                 <div>
-                  <span className="text-slate-500 block text-[9px]">Family ID (Optional):</span>
+                  <span className="text-slate-600 block text-[8.5px]">Family ID / PPP:</span>
                   <span className="font-mono font-semibold">{application.personalInfo?.familyId || '—'}</span>
                 </div>
                 <div>
-                  <span className="text-slate-500 block text-[9px]">Registered Mobile No:</span>
-                  <span className="font-mono font-semibold">{application.personalInfo?.candidateMobile || application.personalInfo?.whatsappNumber || '—'}</span>
-                </div>
-                <div className="col-span-2">
-                  <span className="text-slate-500 block text-[9px]">Email Address:</span>
-                  <span className="font-semibold">{application.personalInfo?.email || '—'}</span>
+                  <span className="text-slate-600 block text-[8.5px]">Primary Contact Phone:</span>
+                  <span className="font-mono font-bold">{application.personalInfo?.candidateMobile || application.personalInfo?.whatsappNumber || '—'}</span>
                 </div>
               </div>
             </div>
 
-            {/* Section B: Parent Particulars */}
+            {/* Section B: Parent / Guardian Record */}
             <div>
-              <h3 className="font-black text-[11px] bg-slate-200 px-2 py-0.5 uppercase tracking-wide text-gurukul-navy mb-1">
-                2. Parent / Guardian Particulars
-              </h3>
-              <div className="grid grid-cols-3 gap-x-2 gap-y-1">
+              <div className="bg-slate-200 border border-black px-2 py-0.5 font-black text-[10px] uppercase tracking-wide">
+                2. Parent / Guardian Office Record
+              </div>
+              <div className="border-x border-b border-black p-1.5 grid grid-cols-3 gap-x-2 gap-y-1">
                 <div>
-                  <span className="text-slate-500 block text-[9px]">Father&apos;s Name:</span>
-                  <span className="font-bold">{application.parentInfo?.fatherName || '—'}</span>
+                  <span className="text-slate-600 block text-[8.5px]">Father&apos;s Name:</span>
+                  <span className="font-bold uppercase">{application.parentInfo?.fatherName || '—'}</span>
                 </div>
                 <div>
-                  <span className="text-slate-500 block text-[9px]">Father&apos;s Occupation:</span>
-                  <span className="font-semibold">{application.parentInfo?.fatherOccupation || '—'}</span>
+                  <span className="text-slate-600 block text-[8.5px]">Father&apos;s Occupation:</span>
+                  <span className="font-medium">{application.parentInfo?.fatherOccupation || '—'}</span>
                 </div>
                 <div>
-                  <span className="text-slate-500 block text-[9px]">Father&apos;s Mobile:</span>
-                  <span className="font-mono font-semibold">{application.parentInfo?.fatherPhone || '—'}</span>
+                  <span className="text-slate-600 block text-[8.5px]">Father&apos;s Mobile:</span>
+                  <span className="font-mono font-bold">{application.parentInfo?.fatherPhone || '—'}</span>
                 </div>
                 <div>
-                  <span className="text-slate-500 block text-[9px]">Mother&apos;s Name:</span>
-                  <span className="font-bold">{application.parentInfo?.motherName || '—'}</span>
+                  <span className="text-slate-600 block text-[8.5px]">Mother&apos;s Name:</span>
+                  <span className="font-bold uppercase">{application.parentInfo?.motherName || '—'}</span>
                 </div>
                 <div>
-                  <span className="text-slate-500 block text-[9px]">Mother&apos;s Occupation:</span>
-                  <span className="font-semibold">{application.parentInfo?.motherOccupation || 'Not Specified'}</span>
+                  <span className="text-slate-600 block text-[8.5px]">Mother&apos;s Occupation:</span>
+                  <span className="font-medium">{application.parentInfo?.motherOccupation || 'Housewife'}</span>
                 </div>
                 <div>
-                  <span className="text-slate-500 block text-[9px]">Annual Family Income:</span>
-                  <span className="font-bold text-gurukul-700">{application.parentInfo?.annualIncome || '—'}</span>
+                  <span className="text-slate-600 block text-[8.5px]">Annual Family Income:</span>
+                  <span className="font-bold">{application.parentInfo?.annualIncome || '—'}</span>
                 </div>
               </div>
             </div>
 
             {/* Section C: Permanent Address */}
             <div>
-              <h3 className="font-black text-[11px] bg-slate-200 px-2 py-0.5 uppercase tracking-wide text-gurukul-navy mb-1">
+              <div className="bg-slate-200 border border-black px-2 py-0.5 font-black text-[10px] uppercase tracking-wide">
                 3. Permanent Residential Address
-              </h3>
-              <div className="grid grid-cols-4 gap-x-2 gap-y-1">
+              </div>
+              <div className="border-x border-b border-black p-1.5 grid grid-cols-4 gap-x-2 gap-y-1">
                 <div className="col-span-2">
-                  <span className="text-slate-500 block text-[9px]">Street Address / House No:</span>
-                  <span className="font-semibold">{application.addressInfo?.streetAddress || '—'}</span>
+                  <span className="text-slate-600 block text-[8.5px]">Address Line:</span>
+                  <span className="font-medium uppercase text-[9.5px]">{application.addressInfo?.streetAddress || '—'}</span>
                 </div>
                 <div>
-                  <span className="text-slate-500 block text-[9px]">District, State:</span>
-                  <span className="font-semibold">{application.addressInfo?.district}, {application.addressInfo?.state}</span>
+                  <span className="text-slate-600 block text-[8.5px]">District, State:</span>
+                  <span className="font-bold uppercase">{application.addressInfo?.district}, {application.addressInfo?.state}</span>
                 </div>
                 <div>
-                  <span className="text-slate-500 block text-[9px]">PIN Code:</span>
-                  <span className="font-mono font-semibold">{application.addressInfo?.pincode}</span>
+                  <span className="text-slate-600 block text-[8.5px]">PIN Code:</span>
+                  <span className="font-mono font-bold">{application.addressInfo?.pincode || '—'}</span>
                 </div>
               </div>
             </div>
 
-            {/* Section D: Previous Academic Record & Preferred Study Location */}
+            {/* Section D: Academic Record & Campus Preference */}
             <div>
-              <h3 className="font-black text-[11px] bg-slate-200 px-2 py-0.5 uppercase tracking-wide text-gurukul-navy mb-1">
-                4. Academic Background & Preferred Study Location
-              </h3>
-              <div className="grid grid-cols-2 gap-x-2 gap-y-1">
+              <div className="bg-slate-200 border border-black px-2 py-0.5 font-black text-[10px] uppercase tracking-wide">
+                4. Academic History &amp; Study Campus Allotment
+              </div>
+              <div className="border-x border-b border-black p-1.5 grid grid-cols-2 gap-x-2 gap-y-1">
                 <div>
-                  <span className="text-slate-500 block text-[9px]">Previous School:</span>
-                  <span className="font-semibold">{application.personalInfo?.previousSchoolName || application.academicInfo?.previousSchoolName || '—'}</span>
+                  <span className="text-slate-600 block text-[8.5px]">Previous School Name:</span>
+                  <span className="font-semibold uppercase">{application.personalInfo?.previousSchoolName || application.academicInfo?.previousSchoolName || '—'}</span>
                 </div>
                 <div>
-                  <span className="text-slate-500 block text-[9px]">Previous Board:</span>
-                  <span className="font-semibold">
-                    {application.personalInfo?.previousBoard || application.academicInfo?.previousBoard || '—'}
-                    {application.personalInfo?.otherBoard ? ` (${application.personalInfo.otherBoard})` : ''}
+                  <span className="text-slate-600 block text-[8.5px]">Previous Board:</span>
+                  <span className="font-semibold uppercase">
+                    {application.personalInfo?.previousBoard || application.academicInfo?.previousBoard || 'CBSE'}
                   </span>
                 </div>
                 <div>
-                  <span className="text-slate-500 block text-[9px]">1st Study Location Preference:</span>
-                  <span className="font-bold text-gurukul-navy">{application.studyLocation?.firstPreference || 'Gurukul Nilokheri'}</span>
+                  <span className="text-slate-600 block text-[8.5px]">1st Campus Preference:</span>
+                  <span className="font-bold text-black">{application.studyLocation?.firstPreference || 'Gurukul Nilokheri'}</span>
                 </div>
                 <div>
-                  <span className="text-slate-500 block text-[9px]">2nd Study Location Preference:</span>
-                  <span className="font-semibold text-slate-700">{application.studyLocation?.secondPreference || 'None'}</span>
+                  <span className="text-slate-600 block text-[8.5px]">2nd Campus Preference:</span>
+                  <span className="font-medium text-slate-800">{application.studyLocation?.secondPreference || 'None'}</span>
                 </div>
               </div>
             </div>
+
           </div>
 
-          {/* Right Column: Photo & Signature Box */}
-          <div className="col-span-3 flex flex-col items-center justify-between space-y-2">
-            <div className="w-28 h-36 border-2 border-slate-400 rounded bg-slate-50 flex flex-col items-center justify-center relative overflow-hidden">
+          {/* Right 3 Cols: Candidate Photo & Signatures */}
+          <div className="col-span-3 flex flex-col items-center space-y-2 border border-black p-1.5 bg-slate-50">
+            <span className="text-[8px] font-black uppercase text-slate-700 tracking-tight">
+              AFFIXED PHOTOGRAPH
+            </span>
+            <div className="w-24 h-32 border-2 border-black bg-white flex flex-col items-center justify-center relative overflow-hidden">
               {application.documents?.photo ? (
                 /* eslint-disable-next-line @next/next/no-img-element */
                 <img
@@ -258,91 +267,169 @@ export default function AdmissionFormView({
                   className="w-full h-full object-cover"
                 />
               ) : (
-                <span className="text-[9px] text-slate-400 text-center px-1">Candidate Passport Photo</span>
+                <span className="text-[8px] text-slate-400 text-center px-1 font-bold">Candidate Photo</span>
               )}
             </div>
 
-            <div className="w-28 h-12 border border-slate-400 rounded bg-white flex flex-col items-center justify-center p-0.5">
-              {application.documents?.signature ? (
-                /* eslint-disable-next-line @next/next/no-img-element */
-                <img
-                  src={application.documents.signature}
-                  alt="Candidate Sign"
-                  className="w-full h-full object-contain"
-                />
-              ) : (
-                <span className="text-[8px] text-slate-400">Candidate Signature</span>
-              )}
+            <div className="w-full">
+              <span className="text-[7.5px] font-bold text-slate-700 block uppercase text-center">Candidate Signature</span>
+              <div className="w-full h-9 border border-black bg-white flex items-center justify-center p-0.5">
+                {application.documents?.signature ? (
+                  /* eslint-disable-next-line @next/next/no-img-element */
+                  <img
+                    src={application.documents.signature}
+                    alt="Candidate Sign"
+                    className="max-h-8 w-auto object-contain"
+                  />
+                ) : (
+                  <span className="text-[7px] text-slate-400">Specimen Signature</span>
+                )}
+              </div>
             </div>
 
-            <div className="w-28 h-12 border border-slate-400 rounded bg-white flex flex-col items-center justify-center p-0.5">
-              {application.documents?.parentSignature ? (
-                /* eslint-disable-next-line @next/next/no-img-element */
-                <img
-                  src={application.documents.parentSignature}
-                  alt="Parent Sign"
-                  className="w-full h-full object-contain"
-                />
-              ) : (
-                <span className="text-[8px] text-slate-400">Parent Signature</span>
-              )}
+            <div className="w-full">
+              <span className="text-[7.5px] font-bold text-slate-700 block uppercase text-center">Parent Signature</span>
+              <div className="w-full h-9 border border-black bg-white flex items-center justify-center p-0.5">
+                {application.documents?.parentSignature ? (
+                  /* eslint-disable-next-line @next/next/no-img-element */
+                  <img
+                    src={application.documents.parentSignature}
+                    alt="Parent Sign"
+                    className="max-h-8 w-auto object-contain"
+                  />
+                ) : (
+                  <span className="text-[7px] text-slate-400">Specimen Signature</span>
+                )}
+              </div>
             </div>
           </div>
         </div>
 
-        {/* Section E: Undertaking & Declaration */}
-        <div className="border-t border-slate-300 pt-1.5 text-[9px] text-slate-700 space-y-1">
-          <p className="font-bold uppercase text-[9px] text-slate-900">Declaration by Student and Parent:</p>
-          <p className="leading-snug">
-            We hereby declare that all statements made in this application are true and correct. If admitted to Gurukul, the candidate shall strictly abide by the rules, Vedic code of conduct, daily sandhya, yoga routine, and residential discipline. We acknowledge that admission is strictly merit-based and no donation/capitation fee is accepted.
-          </p>
-          <div className="flex justify-between pt-3 px-2 font-bold text-[9px]">
-            <span>Date: {application.paymentInfo?.paidAt ? new Date(application.paymentInfo.paidAt).toLocaleDateString('en-IN') : '________________'}</span>
-            <span>Signature of Candidate</span>
-            <span>Signature of Father / Guardian</span>
+        {/* 4. Official Document Scrutiny & Verification Checklist (4 Registration Documents) */}
+        <div className="border border-black">
+          <div className="bg-slate-200 border-b border-black px-2 py-1 font-black text-[10px] uppercase tracking-wide flex justify-between items-center">
+            <span>5. Office Document Verification &amp; Scrutiny Checklist</span>
+            <span className="text-[8.5px] font-bold text-slate-700">4 Registration Documents • To be verified by Scrutiny Officer</span>
           </div>
+
+          <table className="w-full text-[9.5px] border-collapse">
+            <thead>
+              <tr className="bg-slate-100 border-b border-black text-left font-black">
+                <th className="p-1.5 border-r border-black w-8 text-center">Sr.</th>
+                <th className="p-1.5 border-r border-black">Document / Registration Credential</th>
+                <th className="p-1.5 border-r border-black w-36 text-center">Status</th>
+                <th className="p-1.5 w-52">Officer Remarks</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-black font-medium">
+              <tr className="h-9">
+                <td className="p-1.5 border-r border-black text-center font-mono font-bold">1</td>
+                <td className="p-1.5 border-r border-black font-semibold">Candidate Recent Coloured Photograph</td>
+                <td className="p-1.5 border-r border-black text-center"></td>
+                <td className="p-1.5"></td>
+              </tr>
+              <tr className="h-9">
+                <td className="p-1.5 border-r border-black text-center font-mono font-bold">2</td>
+                <td className="p-1.5 border-r border-black font-semibold">Candidate Specimen Signature</td>
+                <td className="p-1.5 border-r border-black text-center"></td>
+                <td className="p-1.5"></td>
+              </tr>
+              <tr className="h-9">
+                <td className="p-1.5 border-r border-black text-center font-mono font-bold">3</td>
+                <td className="p-1.5 border-r border-black font-semibold">Parent / Guardian Signature</td>
+                <td className="p-1.5 border-r border-black text-center"></td>
+                <td className="p-1.5"></td>
+              </tr>
+              <tr className="h-9">
+                <td className="p-1.5 border-r border-black text-center font-mono font-bold">4</td>
+                <td className="p-1.5 border-r border-black font-semibold">Candidate Aadhaar Card / Valid Photo ID Proof</td>
+                <td className="p-1.5 border-r border-black text-center"></td>
+                <td className="p-1.5"></td>
+              </tr>
+            </tbody>
+          </table>
         </div>
 
-        {/* Section F: FOR OFFICE USE ONLY (Admission Cell) */}
-        <div className="border-2 border-dashed border-slate-500 bg-slate-50 p-2.5 rounded space-y-1.5 text-[9.5px]">
-          <div className="flex justify-between items-center border-b border-slate-300 pb-1">
-            <span className="font-black uppercase tracking-wider text-gurukul-navy">
-              FOR OFFICIAL USE ONLY (Gurukul Admission Cell)
+        {/* 5. Accounts & Entrance Fee Verification Section */}
+        <div className="border border-black bg-slate-50 p-2 text-[9px] space-y-1">
+          <div className="flex justify-between items-center border-b border-black pb-1">
+            <span className="font-black uppercase tracking-wider text-black text-[9.5px]">
+              6. Accounts Branch Counterfoil &amp; Registration Fee Audit
             </span>
-            <span className="text-[9px] text-slate-500 font-mono">Reg ID: {regNo}</span>
+            <span className="font-mono text-black font-bold">Registration ID: {regNo}</span>
           </div>
-
-          <div className="grid grid-cols-4 gap-2 pt-0.5 font-mono">
+          <div className="grid grid-cols-4 gap-2 font-mono text-[9px] pt-0.5">
             <div>
-              <span className="text-slate-500 block text-[8.5px]">Allotted Roll No:</span>
-              <span className="font-bold text-slate-900">{rollNo}</span>
+              <span className="text-slate-600 block text-[8px]">Fee Amount:</span>
+              <strong className="text-black text-[10px]">₹{application.amountPaid || 800}.00 (PAID)</strong>
             </div>
             <div>
-              <span className="text-slate-500 block text-[8.5px]">Transaction ID:</span>
-              <span className="font-bold text-slate-900 truncate block">{application.paymentInfo?.transactionId || 'PAID-ONLINE'}</span>
+              <span className="text-slate-600 block text-[8px]">Transaction ID:</span>
+              <strong className="text-black truncate block text-[9.5px]" title={application.paymentInfo?.transactionId || application.transactionId}>
+                {application.paymentInfo?.transactionId || application.transactionId || 'PAID-ONLINE'}
+              </strong>
             </div>
             <div>
-              <span className="text-slate-500 block text-[8.5px]">Application Fee Receipt:</span>
-              <span className="font-bold text-emerald-800">PAID (₹800)</span>
+              <span className="text-slate-600 block text-[8px]">Payment Mode:</span>
+              <strong className="text-black">Online / Razorpay</strong>
             </div>
             <div>
-              <span className="text-slate-500 block text-[8.5px]">Registration Status:</span>
-              <span className="font-bold text-emerald-700">CONFIRMED / REGISTERED</span>
-            </div>
-          </div>
-
-          <div className="flex justify-between items-end pt-3 px-2 font-bold text-[8.5px] border-t border-slate-200 mt-2">
-            <span>Scrutiny Clerk Sign: __________________</span>
-            <span>Exam Controller Sign: __________________</span>
-            <div className="flex flex-col items-center">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src="/principal-signature.png" alt="Principal Signature" className="h-6 w-auto object-contain mb-0.5" />
-              <span>Principal / Director Signature &amp; Seal</span>
+              <span className="text-slate-600 block text-[8px]">Fee Reconciliation:</span>
+              <strong className="text-black uppercase">AUDITED &amp; CONFIRMED</strong>
             </div>
           </div>
         </div>
+
+        {/* 6. Multi-Officer Approval Desk & Institutional Sanction */}
+        <div className="border-2 border-black p-2 bg-white space-y-2">
+          <div className="text-[9px] font-black uppercase tracking-wider border-b border-black pb-0.5 text-center">
+            7. Official Scrutiny Board &amp; Admission Committee Sanction
+          </div>
+
+          <div className="grid grid-cols-4 gap-2 pt-2 text-center text-[8.5px] items-end">
+            <div>
+              <div className="h-10 border-b border-black mx-auto max-w-[120px]"></div>
+              <span className="font-black text-black block mt-1 uppercase text-[8px]">
+                Scrutiny Officer
+              </span>
+              <span className="text-[7.5px] text-slate-600 block">Name &amp; Signature</span>
+            </div>
+
+            <div>
+              <div className="h-10 border-b border-black mx-auto max-w-[120px]"></div>
+              <span className="font-black text-black block mt-1 uppercase text-[8px]">
+                Exam Board Convener
+              </span>
+              <span className="text-[7.5px] text-slate-600 block">Signature &amp; Date</span>
+            </div>
+
+            <div>
+              <div className="h-10 border-b border-black mx-auto max-w-[120px]"></div>
+              <span className="font-black text-black block mt-1 uppercase text-[8px]">
+                Hostel Proctor / Warden
+              </span>
+              <span className="text-[7.5px] text-slate-600 block">Residential Fitness</span>
+            </div>
+
+            <div>
+              <div className="h-10 border-b border-black mx-auto max-w-[130px] flex items-center justify-center pb-0.5">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src="/principal-signature.png" alt="Principal Signature" className="max-h-9 w-auto object-contain" />
+              </div>
+              <span className="font-black text-black block mt-1 uppercase text-[8px]">
+                Principal / Director
+              </span>
+              <span className="text-[7.5px] text-slate-600 block">Official Seal &amp; Approval</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Confidentiality Footer */}
+        <div className="text-[8px] text-center text-slate-600 border-t border-black pt-1">
+          CONFIDENTIAL OFFICE RECORD • GURUKUL EXAMINATION &amp; ADMISSION ADMINISTRATION • ARCHIVAL RETENTION: 5 YEARS
+        </div>
+
       </div>
     </div>
   );
 }
-

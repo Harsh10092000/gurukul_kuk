@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { Search, Download, AlertCircle, FileText, ArrowLeft, Clock } from 'lucide-react';
+import { Search, AlertCircle, FileText, Clock } from 'lucide-react';
 import AdmitCardView from '@/components/AdmitCardView';
 import { AdmitCard } from '@/lib/types';
 
@@ -24,7 +24,6 @@ export default function AdmitCardPage() {
         setIsReleased(released);
         setCheckingRelease(false);
         if (released) {
-          // Try to load admit card for logged-in user automatically
           fetch('/api/admit-card')
             .then((res) => res.json())
             .then((data) => {
@@ -75,86 +74,92 @@ export default function AdmitCardPage() {
   };
 
   return (
-    <div className="max-w-5xl mx-auto px-4 py-10 space-y-6 print:p-0 print:m-0 print:max-w-full print:space-y-0">
+    <div className="max-w-4xl mx-auto px-4 py-8 space-y-6 print:p-0 print:m-0 print:max-w-full print:space-y-0">
       {/* Header */}
       <div className="text-center space-y-2 no-print">
-        <span className="text-xs font-bold uppercase tracking-wider text-gurukul-600 bg-amber-100 px-3 py-1 rounded-full">
-          Hall Ticket Download
+        <span className="text-[11px] font-semibold uppercase tracking-wider text-portal-navy bg-white border border-slate-200 px-3 py-1 rounded">
+          Examination Portal
         </span>
-        <h1 className="text-2xl sm:text-3xl font-black text-gurukul-navy">
+        <h1 className="text-2xl sm:text-3xl font-bold text-slate-900">
           Download Entrance Examination Admit Card 2027-28
         </h1>
-        <p className="text-xs sm:text-sm text-slate-500">
-          Enter your Registration ID (e.g. NILB-00001 or NILG-00001) or Roll Number to retrieve and print your Hall Ticket.
+        <p className="text-xs text-slate-500 max-w-lg mx-auto">
+          Enter your Registration Number or Roll Number to verify your examination centre and print your Hall Ticket.
         </p>
       </div>
 
-      {/* Status Notice if Not Released */}
+      {/* Loading Release Status */}
       {checkingRelease ? (
-        <div className="max-w-xl mx-auto bg-white border border-slate-200 rounded-3xl p-10 text-center space-y-4 shadow-sm no-print">
-          <div className="w-10 h-10 border-4 border-amber-500 border-t-transparent rounded-full animate-spin mx-auto" />
-          <div className="space-y-1">
-            <h3 className="text-sm font-bold text-slate-800">Verifying Examination Schedule &amp; Admit Card Status...</h3>
-            <p className="text-xs text-slate-400">Connecting to Admissions Board examination server</p>
-          </div>
+        <div className="max-w-md mx-auto portal-card p-8 text-center space-y-3 no-print">
+          <div className="w-8 h-8 border-2 border-portal-navy border-t-transparent rounded-full animate-spin mx-auto" />
+          <p className="text-xs font-semibold text-slate-700">Verifying Admit Card Release Schedule...</p>
         </div>
       ) : !isReleased ? (
-        <div className="max-w-xl mx-auto bg-amber-50 border-2 border-amber-300 rounded-3xl p-8 text-center space-y-4 shadow-sm no-print">
-          <div className="w-14 h-14 bg-amber-100 text-amber-700 rounded-2xl flex items-center justify-center mx-auto shadow-inner">
-            <Clock className="w-8 h-8" />
+        <div className="max-w-md mx-auto portal-card p-6 text-center space-y-3 no-print border-amber-300 bg-amber-50/50">
+          <div className="w-12 h-12 bg-amber-100 text-amber-800 rounded-full flex items-center justify-center mx-auto">
+            <Clock className="w-6 h-6" />
           </div>
-          <div className="space-y-1.5">
-            <span className="text-[11px] font-black uppercase tracking-wider text-amber-800 bg-amber-200/70 px-3 py-1 rounded-full">
-              Status: In Progress
+          <div className="space-y-1">
+            <span className="text-[10px] font-semibold uppercase tracking-wider text-amber-800 bg-amber-100 px-2 py-0.5 rounded">
+              Schedule Pending
             </span>
-            <h2 className="text-xl font-black text-amber-950 pt-2">
-              Admit Cards Have Not Been Released Yet
+            <h2 className="text-base font-bold text-slate-900 pt-1">
+              Admit Cards Not Yet Released
             </h2>
-            <p className="text-xs text-amber-900 leading-relaxed max-w-md mx-auto">
-              Admit Cards for Entrance Examination (Session 2027-28) are under preparation and will be generated &amp; released collectively by the Admissions Board for all candidates.
+            <p className="text-xs text-slate-600 leading-relaxed max-w-sm mx-auto">
+              Admit Cards for Entrance Examination Session 2027-28 are currently in preparation and will be issued collectively by the Examination Cell.
             </p>
           </div>
           <div className="pt-2">
             <Link
               href="/"
-              className="inline-block bg-gurukul-navy hover:bg-slate-800 text-amber-300 font-extrabold text-xs px-5 py-2.5 rounded-xl shadow transition"
+              className="btn-secondary text-xs px-4 py-2"
             >
-              ← Return to Candidate Dashboard
+              Return to Dashboard
             </Link>
           </div>
         </div>
       ) : (
         <>
-          {/* Search Input Box */}
-          <div className="max-w-xl mx-auto bg-white border border-slate-200 rounded-2xl p-5 shadow-md no-print">
+          {/* Important Exam Guidelines Alert */}
+          <div className="max-w-lg mx-auto p-4 rounded-xl bg-amber-50/90 border border-amber-300 text-amber-950 text-xs space-y-1.5 no-print shadow-xs">
+            <div className="flex items-center gap-2 font-bold text-amber-900 text-xs">
+              <AlertCircle className="w-4 h-4 text-amber-700 shrink-0" />
+              <span>Mandatory Examination Day Instructions:</span>
+            </div>
+            <ul className="list-disc list-inside text-[11.5px] text-amber-900 pl-1 space-y-1">
+              <li>Candidate must carry a <strong className="underline">COLOURED printout</strong> of the Admit Card.</li>
+              <li>Candidate must bring <strong className="underline">ONE ORIGINAL Photo ID Proof</strong> (Aadhaar Card, Passport, or School ID). Photocopies are not allowed.</li>
+            </ul>
+          </div>
+
+          {/* Search Box */}
+          <div className="max-w-lg mx-auto portal-card p-5 no-print">
             <form onSubmit={handleSearch} className="space-y-3">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div className="relative">
-                  <label className="block text-[11px] font-bold text-slate-700 mb-1">
-                    Registration No. / Roll No. <span className="text-red-500">*</span>
+                <div>
+                  <label className="form-label">
+                    Registration No. / Roll No. <span className="text-rose-500">*</span>
                   </label>
-                  <div className="relative">
-                    <Search className="w-4 h-4 text-slate-400 absolute left-3 top-3 pointer-events-none" />
-                    <input
-                      type="text"
-                      value={regNo}
-                      onChange={(e) => setRegNo(e.target.value)}
-                      placeholder="e.g. NILB-00001"
-                      className="w-full pl-9 pr-3 py-2 text-xs border rounded-xl outline-none focus:ring-2 focus:ring-amber-500 font-mono font-bold uppercase"
-                      required
-                    />
-                  </div>
+                  <input
+                    type="text"
+                    value={regNo}
+                    onChange={(e) => setRegNo(e.target.value)}
+                    placeholder="e.g. NILB-00001"
+                    className="form-input-field font-mono font-semibold uppercase"
+                    required
+                  />
                 </div>
 
                 <div>
-                  <label className="block text-[11px] font-bold text-slate-700 mb-1">
-                    Date of Birth <span className="text-red-500">*</span>
+                  <label className="form-label">
+                    Date of Birth <span className="text-rose-500">*</span>
                   </label>
                   <input
                     type="date"
                     value={dob}
                     onChange={(e) => setDob(e.target.value)}
-                    className="w-full px-3 py-2 text-xs border rounded-xl outline-none focus:ring-2 focus:ring-amber-500 font-medium"
+                    className="form-input-field font-mono"
                     required
                   />
                 </div>
@@ -164,9 +169,9 @@ export default function AdmitCardPage() {
                 <button
                   type="submit"
                   disabled={loading}
-                  className="px-6 py-2.5 bg-gurukul-navy hover:bg-slate-900 text-amber-300 font-extrabold text-xs rounded-xl transition shadow flex items-center gap-1.5 border border-amber-400/40"
+                  className="btn-primary text-xs px-5 py-2"
                 >
-                  {loading ? 'Verifying Details...' : 'Download Hall Ticket'}
+                  {loading ? 'Verifying Details...' : 'Search Admit Card'}
                 </button>
               </div>
             </form>
@@ -174,39 +179,39 @@ export default function AdmitCardPage() {
 
           {/* Error Notice */}
           {error && (
-            <div className="max-w-xl mx-auto p-4 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs flex items-center gap-2 no-print">
-              <AlertCircle className="w-5 h-5 flex-shrink-0" />
+            <div className="max-w-lg mx-auto p-3.5 rounded-lg bg-rose-50 border border-rose-200 text-rose-800 text-xs flex items-center gap-2 no-print">
+              <AlertCircle className="w-4 h-4 text-rose-600 flex-shrink-0" />
               <span>{error}</span>
             </div>
           )}
         </>
       )}
 
-      {/* Render Search Loading or Admit Card */}
+      {/* Render Results */}
       {loading ? (
-        <div className="max-w-xl mx-auto bg-white border border-slate-200 rounded-2xl p-8 text-center space-y-3 shadow-sm no-print">
-          <div className="w-8 h-8 border-3 border-amber-500 border-t-transparent rounded-full animate-spin mx-auto" />
-          <p className="text-xs font-bold text-slate-700 uppercase tracking-wider">Locating Official Hall Ticket...</p>
-          <p className="text-[11px] text-slate-400">Verifying candidate identity and retrieving examination roll number</p>
+        <div className="max-w-md mx-auto portal-card p-6 text-center space-y-2 no-print">
+          <div className="w-6 h-6 border-2 border-portal-navy border-t-transparent rounded-full animate-spin mx-auto" />
+          <p className="text-xs font-semibold text-slate-700">Locating Hall Ticket Record...</p>
         </div>
       ) : admitCard ? (
         <AdmitCardView admitCard={admitCard} />
       ) : searched ? (
-        <div className="text-center py-12 text-slate-500 text-sm no-print">
-          <FileText className="w-12 h-12 text-slate-300 mx-auto mb-2" />
+        <div className="text-center py-8 text-slate-500 text-xs no-print space-y-2">
+          <FileText className="w-10 h-10 text-slate-300 mx-auto" />
           <p className="font-semibold text-slate-700">No Admit Card Available</p>
-          <p className="text-xs text-slate-400 max-w-sm mx-auto mt-1">
-            If you have recently submitted your application, please ensure your fee is paid and documents are verified by the administration.
+          <p className="text-slate-400 max-w-xs mx-auto">
+            Please verify your registration credentials and ensure payment has been confirmed.
           </p>
-          <Link
-            href="/dashboard"
-            className="mt-4 inline-block text-xs font-bold text-gurukul-600 hover:underline"
-          >
-            View Application Status in Dashboard
-          </Link>
+          <div className="pt-2">
+            <Link
+              href="/dashboard"
+              className="text-xs font-semibold text-portal-navy hover:underline"
+            >
+              Check Status in Dashboard
+            </Link>
+          </div>
         </div>
       ) : null}
     </div>
   );
 }
-

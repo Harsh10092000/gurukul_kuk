@@ -1,10 +1,12 @@
-﻿'use client';
+'use client';
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import { Award, Bell, Download, X, CheckCircle } from 'lucide-react';
 
 export default function AdmitCardReleasePopup() {
+  const pathname = usePathname();
   const [released, setReleased] = useState(false);
   const [releasedAt, setReleasedAt] = useState<string | null>(null);
   const [dismissed, setDismissed] = useState(true);
@@ -38,7 +40,7 @@ export default function AdmitCardReleasePopup() {
     } catch {}
   };
 
-  if (!released || dismissed) return null;
+  if (pathname?.startsWith('/admin') || !released || dismissed) return null;
 
   return (
     <div className="bg-gradient-to-r from-amber-600 via-gurukul-600 to-emerald-700 text-white shadow-md border-b border-amber-400/40 relative z-50 animate-fadeIn">

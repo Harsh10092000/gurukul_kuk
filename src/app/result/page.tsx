@@ -1,13 +1,16 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import Link from 'next/link';
-import { Search, Award, AlertCircle, FileText, ArrowLeft, ShieldAlert } from 'lucide-react';
+import { useSearchParams } from 'next/navigation';
+import { Search, Award, AlertCircle, FileText, Calendar, Hash, ArrowLeft, Loader2 } from 'lucide-react';
 import ScorecardView from '@/components/ScorecardView';
 import { ExamResult } from '@/lib/types';
 
-export default function ResultPage() {
-  const [query, setQuery] = useState('');
+function ResultContent() {
+  const searchParams = useSearchParams();
+  const [rollNumber, setRollNumber] = useState('');
+  const [dob, setDob] = useState('');
   const [result, setResult] = useState<ExamResult | null>(null);
   const [loading, setLoading] = useState(true);
   const [searching, setSearching] = useState(false);
@@ -17,7 +20,11 @@ export default function ResultPage() {
   const [currentUser, setCurrentUser] = useState<any>(null);
 
   useEffect(() => {
-    // 1. Fetch current user
+    const initialRoll = searchParams.get('rollNo') || searchParams.get('query') || '';
+    const initialDob = searchParams.get('dob') || '';
+    if (initialRoll) setRollNumber(initialRoll);
+    if (initialDob) setDob(initialDob);
+
     fetch('/api/auth/me')
       .then((res) => res.json())
       .then((data) => {
@@ -25,222 +32,249 @@ export default function ResultPage() {
       })
       .catch(() => { });
 
-    // 2. Fetch results declaration status
     fetch('/api/results/status')
       .then((res) => res.json())
       .then((statusData) => {
         setResultsDeclared(Boolean(statusData.resultsDeclared));
         if (statusData.resultsDeclared) {
-          // If declared, load result for current logged-in user
-          fetch('/api/results')
-            .then((res) => res.json())
-            .then((data) => {
-              if (data.result) {
-                setResult(data.result);
-                setSearched(true);
-              }
-              setLoading(false);
-            })
-            .catch(() => setLoading(false));
+          // If params exist in URL, auto-query
+          if (initialRoll) {
+            executeSearch(initialRoll, initialDob);
+          } else {
+            // Check if logged in applicant has a result already
+            fetch('/api/results')
+              .then((res) => res.json())
+              .then((data) => {
+                if (data.result) {
+                  setResult(data.result);
+                  setSearched(true);
+                }
+                setLoading(false);
+              })
+              .catch(() => setLoading(false));
+          }
         } else {
           setLoading(false);
         }
       })
       .catch(() => setLoading(false));
-  }, []);
+  }, [searchParams]);
 
-  const handleSearch = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!query.trim()) return;
+  const executeSearch = async (roll: string, birthDate: string) => {
+    if (!roll.trim()) {
+      setError('Please enter your Roll Number.');
+      return;
+    }
+    if (!birthDate.trim()) {
+      setError('Please enter your Date of Birth (DOB) as printed on your Admit Card.');
+      return;
+    }
 
     setSearching(true);
     setError('');
     setSearched(true);
+    setResult(null);
 
     try {
-      const res = await fetch(`/api/results?appId=${encodeURIComponent(query.trim())}`);
+      const url = `/api/results?rollNo=${encodeURIComponent(roll.trim())}&dob=${encodeURIComponent(birthDate.trim())}`;
+      const res = await fetch(url);
       const data = await res.json();
 
       if (res.ok && data.result) {
         setResult(data.result);
       } else if (res.status === 403) {
         setResult(null);
-        setError(data.error || 'Forbidden: You are only authorized to view your own result.');
+        setError(data.error || 'Results have not been officially declared yet.');
       } else {
-        const res2 = await fetch(`/api/results?rollNo=${encodeURIComponent(query.trim())}`);
+        // Fallback check with registration / application id
+        const res2 = await fetch(`/api/results?appId=${encodeURIComponent(roll.trim())}&dob=${encodeURIComponent(birthDate.trim())}`);
         const data2 = await res2.json();
         if (res2.ok && data2.result) {
           setResult(data2.result);
-        } else if (res2.status === 403) {
-          setResult(null);
-          setError(data2.error || 'Forbidden: You are only authorized to view your own result.');
         } else {
           setResult(null);
-          setError('No published result found for the entered Roll Number or Application Number.');
+          setError(data.error || 'No published result found matching the entered Roll Number and Date of Birth.');
         }
       }
     } catch {
       setError('An error occurred while fetching the entrance exam result.');
     } finally {
       setSearching(false);
+      setLoading(false);
     }
+  };
+
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    executeSearch(rollNumber, dob);
   };
 
   if (loading) {
     return (
-      <div className="min-h-[70vh] flex items-center justify-center bg-slate-50 font-sans">
+      <div className="min-h-[60vh] flex items-center justify-center font-sans">
         <div className="text-center space-y-3">
-          <div className="w-10 h-10 border-4 border-amber-500 border-t-transparent rounded-full animate-spin mx-auto" />
-          <p className="text-xs font-bold text-slate-600">Verifying Examination Result Records...</p>
+          <div className="w-10 h-10 border-3 border-portal-navy border-t-transparent rounded-full animate-spin mx-auto text-portal-navy" />
+          <p className="text-xs font-semibold text-slate-600">Connecting to Gurukul Examination Result Server...</p>
         </div>
       </div>
     );
   }
 
-  // If results are NOT officially declared and user is not an administrator, show locked notice
   if (!resultsDeclared && currentUser?.role !== 'admin') {
     return (
-      <div className="max-w-xl mx-auto my-16 p-8 sm:p-10 bg-white rounded-3xl shadow-2xl border border-slate-200 text-center space-y-5 font-sans">
-        <div className="w-16 h-16 bg-amber-100 text-amber-600 rounded-full flex items-center justify-center mx-auto shadow-inner">
-          <Award className="w-8 h-8" />
+      <div className="max-w-md mx-auto my-16 p-8 portal-card text-center space-y-4">
+        <div className="w-12 h-12 bg-amber-100 text-amber-800 rounded-full flex items-center justify-center mx-auto">
+          <Award className="w-6 h-6" />
         </div>
-        <div className="space-y-2">
-          <span className="text-[10px] font-black uppercase tracking-widest text-amber-800 bg-amber-100 px-3.5 py-1 rounded-full border border-amber-300">
+        <div className="space-y-1">
+          <span className="text-[10px] font-semibold uppercase tracking-wider text-amber-800 bg-amber-100 px-2.5 py-0.5 rounded">
             Evaluation In Progress
           </span>
-          <h2 className="text-xl sm:text-2xl font-black text-gurukul-navy">
+          <h2 className="text-lg font-bold text-slate-900 pt-1">
             Entrance Results Not Yet Declared
           </h2>
-          <p className="text-xs sm:text-sm text-slate-600 leading-relaxed max-w-md mx-auto">
-            The official entrance examination results and merit scorecards for Session 2027-28 have not been declared by the Examination Controller yet.
+          <p className="text-xs text-slate-600 leading-relaxed max-w-sm mx-auto">
+            Official entrance examination results for Session 2027-28 have not been declared by the Examination Controller yet.
           </p>
-          <p className="text-xs text-slate-400">
-            Please check back after official announcement notifications are issued to registered candidates.
+          <p className="text-[11px] text-slate-400 pt-1">
+            Notifications will be issued to registered candidates once published.
           </p>
         </div>
 
         <div className="pt-2">
           <Link
             href="/"
-            className="inline-flex items-center gap-2 py-2.5 px-6 bg-gurukul-navy hover:bg-slate-800 text-amber-300 font-bold text-xs rounded-xl shadow transition border border-amber-400/30"
+            className="btn-secondary text-xs px-4 py-2 inline-block"
           >
-            <ArrowLeft className="w-4 h-4" />
-            <span>Return to Candidate Dashboard</span>
+            Return to Home
           </Link>
         </div>
       </div>
     );
   }
 
-  const [selectedWing, setSelectedWing] = useState<'all' | 'boys' | 'girls'>('all');
-
   return (
-    <div className="max-w-5xl mx-auto px-4 py-10 space-y-6">
+    <div className="max-w-4xl mx-auto px-4 py-8 space-y-6">
       {/* Header */}
       <div className="text-center space-y-2 no-print">
-        <span className="text-xs font-bold uppercase tracking-wider text-gurukul-600 bg-amber-100 px-3 py-1 rounded-full">
-          Merit Assessment
+        <span className="text-[11px] font-semibold uppercase tracking-wider text-portal-navy bg-white border border-slate-200 px-3 py-1 rounded">
+          Official Portal
         </span>
-        <h1 className="text-2xl sm:text-3xl font-black text-gurukul-navy">
-          Entrance Examination Result &amp; Scorecard 2027-28
+        <h1 className="text-2xl sm:text-3xl font-bold text-slate-900">
+          Entrance Examination Result 2027-28
         </h1>
-        <p className="text-xs sm:text-sm text-slate-500">
-          Official merit rank and score breakdown declared by Gurukul Kurukshetra Examination Cell.
+        <p className="text-xs text-slate-500 max-w-lg mx-auto">
+          Check qualification status and selection remarks declared by Gurukul Kurukshetra Examination Cell.
         </p>
       </div>
 
-      {/* Category Tabs for Boys and Girls Wings */}
-      <div className="flex justify-center flex-wrap items-center gap-2 no-print">
-        <button
-          type="button"
-          onClick={() => setSelectedWing('all')}
-          className={`px-4 py-2 rounded-xl text-xs font-bold transition ${
-            selectedWing === 'all'
-              ? 'bg-gurukul-navy text-white shadow-sm'
-              : 'bg-white text-slate-700 border border-slate-200 hover:bg-slate-50'
-          }`}
-        >
-          All Wings
-        </button>
-        <button
-          type="button"
-          onClick={() => setSelectedWing('boys')}
-          className={`px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 ${
-            selectedWing === 'boys'
-              ? 'bg-blue-600 text-white shadow-sm'
-              : 'bg-white text-blue-700 border border-blue-200 hover:bg-blue-50'
-          }`}
-        >
-          <span>👦 Boys Wing Merit</span>
-          <span className="text-[10px] opacity-80">(Gurukul Nilokheri &amp; Jyotisar)</span>
-        </button>
-        <button
-          type="button"
-          onClick={() => setSelectedWing('girls')}
-          className={`px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 ${
-            selectedWing === 'girls'
-              ? 'bg-pink-600 text-white shadow-sm'
-              : 'bg-white text-pink-700 border border-pink-200 hover:bg-pink-50'
-          }`}
-        >
-          <span>👧 Girls Wing Merit</span>
-          <span className="text-[10px] opacity-80">(Aryakulam Nilokheri)</span>
-        </button>
-      </div>
+      {/* Search Input Box */}
+      <div className="max-w-xl mx-auto portal-card p-6 no-print space-y-4">
+        <div className="border-b border-slate-100 pb-3">
+          <h3 className="font-bold text-slate-900 text-sm">
+            Search Candidate Result
+          </h3>
+          <p className="text-xs text-slate-500 mt-0.5">
+            Enter your Roll Number and Date of Birth as registered in your Admit Card.
+          </p>
+        </div>
 
-      {/* Search Input Box (Admins or if candidate has not loaded result) */}
-      {(currentUser?.role === 'admin' || !result) && (
-        <div className="max-w-xl mx-auto bg-white border border-slate-200 rounded-2xl p-4 shadow-md no-print space-y-2">
-          {selectedWing !== 'all' && (
-            <p className="text-[11px] font-bold text-slate-600 text-center">
-              Filtering for: <strong className={selectedWing === 'girls' ? 'text-pink-700' : 'text-blue-700'}>{selectedWing === 'girls' ? '👧 Aryakulam Girls Wing (NILG-)' : '👦 Gurukul Boys Wing (NILB-)'}</strong>
-            </p>
-          )}
-          <form onSubmit={handleSearch} className="flex gap-2">
-            <div className="relative flex-1">
-              <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-3.5 pointer-events-none" />
+        <form onSubmit={handleSearch} className="space-y-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className="block text-[11px] font-semibold text-slate-700 uppercase tracking-wider mb-1 flex items-center gap-1.5">
+                <Hash className="w-3.5 h-3.5 text-portal-navy" />
+                Roll Number *
+              </label>
               <input
                 type="text"
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                placeholder={
-                  selectedWing === 'girls'
-                    ? 'Enter Girls Roll No or NILG- Registration No.'
-                    : selectedWing === 'boys'
-                    ? 'Enter Boys Roll No or NILB- Registration No.'
-                    : 'Enter Roll Number or Registration No.'
-                }
-                className="w-full pl-10 pr-3 py-2.5 text-sm border rounded-xl outline-none focus:ring-2 focus:ring-amber-500 font-mono"
+                value={rollNumber}
+                onChange={(e) => setRollNumber(e.target.value)}
+                placeholder="e.g. 270101 or NILB-27-0101"
+                required
+                className="form-input-field font-mono font-bold uppercase text-xs"
               />
             </div>
+
+            <div>
+              <label className="block text-[11px] font-semibold text-slate-700 uppercase tracking-wider mb-1 flex items-center gap-1.5">
+                <Calendar className="w-3.5 h-3.5 text-portal-navy" />
+                Date of Birth (DOB) *
+              </label>
+              <input
+                type="date"
+                value={dob}
+                onChange={(e) => setDob(e.target.value)}
+                required
+                className="form-input-field font-mono text-xs"
+              />
+            </div>
+          </div>
+
+          <div className="flex items-center justify-between pt-1 flex-wrap gap-2">
+            <p className="text-[11px] text-slate-400">
+              * Verification uses Roll Number &amp; Date of Birth. Only Qualified / Not Qualified status is published.
+            </p>
             <button
               type="submit"
-              disabled={searching}
-              className="px-6 py-2.5 bg-gurukul-600 hover:bg-gurukul-700 text-white font-bold text-xs rounded-xl transition shadow flex items-center gap-1.5"
+              disabled={searching || !rollNumber.trim() || !dob.trim()}
+              className="btn-primary text-xs px-5 py-2.5 flex items-center gap-2 flex-shrink-0 shadow-sm disabled:opacity-60"
             >
-              {searching ? 'Searching...' : 'Check Scorecard'}
+              {searching ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin text-white" />
+                  <span>Verifying Result...</span>
+                </>
+              ) : (
+                <>
+                  <Search className="w-4 h-4 text-amber-400" />
+                  <span>Check Result</span>
+                </>
+              )}
             </button>
-          </form>
-        </div>
-      )}
+          </div>
+        </form>
+      </div>
 
       {/* Error notice */}
       {error && (
-        <div className="max-w-xl mx-auto p-4 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs flex items-center gap-2 no-print">
-          <AlertCircle className="w-5 h-5 flex-shrink-0" />
+        <div className="max-w-xl mx-auto p-4 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-xs flex items-center gap-2.5 no-print shadow-xs">
+          <AlertCircle className="w-4 h-4 text-rose-600 flex-shrink-0" />
           <span>{error}</span>
         </div>
       )}
 
+      {/* In-Page Searching Loader */}
+      {searching && (
+        <div className="max-w-xl mx-auto portal-card p-8 text-center space-y-3 no-print animate-fadeIn">
+          <div className="w-10 h-10 border-3 border-portal-navy border-t-transparent rounded-full animate-spin mx-auto text-portal-navy" />
+          <h4 className="font-bold text-slate-800 text-sm">Searching Examination Result...</h4>
+          <p className="text-xs text-slate-500 max-w-sm mx-auto">
+            Validating credentials for Roll Number <strong className="font-mono text-portal-navy">{rollNumber}</strong> against official entrance examination records.
+          </p>
+        </div>
+      )}
+
       {/* Result Display */}
-      {result ? (
-        <ScorecardView result={result} />
+      {result && !searching ? (
+        <div className="space-y-4">
+          <div className="no-print max-w-4xl mx-auto flex justify-between items-center px-1">
+            <button
+              onClick={() => { setResult(null); setSearched(false); }}
+              className="text-xs text-slate-600 hover:text-slate-900 font-semibold flex items-center gap-1.5"
+            >
+              <ArrowLeft className="w-3.5 h-3.5" />
+              <span>Check Another Result</span>
+            </button>
+          </div>
+          <ScorecardView result={result} />
+        </div>
       ) : searched && !searching ? (
-        <div className="text-center py-12 text-slate-500 text-sm no-print">
-          <Award className="w-12 h-12 text-slate-300 mx-auto mb-2" />
+        <div className="text-center py-10 text-slate-500 text-xs no-print space-y-2">
+          <FileText className="w-10 h-10 text-slate-300 mx-auto" />
           <p className="font-semibold text-slate-700">No Published Result Found</p>
-          <p className="text-xs text-slate-400 max-w-sm mx-auto mt-1">
-            Ensure the entered Roll Number or Registration Number matches your official candidate dossier.
+          <p className="text-slate-400 max-w-xs mx-auto">
+            Please ensure the Roll Number and Date of Birth match the official credentials on your Coloured Admit Card.
           </p>
         </div>
       ) : null}
@@ -248,3 +282,17 @@ export default function ResultPage() {
   );
 }
 
+export default function ResultPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-[60vh] flex items-center justify-center">
+        <div className="text-center space-y-3">
+          <div className="w-8 h-8 border-2 border-portal-navy border-t-transparent rounded-full animate-spin mx-auto" />
+          <p className="text-xs font-semibold text-slate-600">Loading Result Portal...</p>
+        </div>
+      </div>
+    }>
+      <ResultContent />
+    </Suspense>
+  );
+}

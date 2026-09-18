@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { getCurrentUser } from '@/lib/auth';
 import { recordAuditLog } from '@/lib/audit';
+import { ExamResult } from '@/lib/types';
 
 export async function POST(req: Request) {
   try {
@@ -10,25 +11,29 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Unauthorized. Admin role required.' }, { status: 403 });
     }
 
-    const body = await req.json();
-    const { action, csvContent, publishDirectly } = body;
+    const body = await req.json().catch(() => ({}));
+    const { action, rows, publishDirectly } = body;
 
-    if (!csvContent || typeof csvContent !== 'string') {
-      return NextResponse.json({ error: 'Valid CSV content is required.' }, { status: 400 });
+    // Action 0: Clear all existing results
+    if (action === 'clear') {
+      await db.clearResults();
+      await recordAuditLog({
+        userId: user.userId,
+        userName: user.name,
+        userRole: user.role,
+        action: 'CLEAR_RESULTS',
+        entity: 'Results',
+        details: { clearedBy: user.name },
+      });
+      return NextResponse.json({ success: true, message: 'All results cleared successfully.' });
     }
 
-    // Parse CSV lines
-    const lines = csvContent
-      .split(/\r?\n/)
-      .map((l) => l.trim())
-      .filter((l) => l.length > 0);
-
-    if (lines.length < 2) {
-      return NextResponse.json({ error: 'CSV file must have a header row and at least one candidate record.' }, { status: 400 });
+    if (!Array.isArray(rows) || rows.length === 0) {
+      return NextResponse.json(
+        { error: 'No candidate result rows found. Please upload a valid Excel or CSV file.' },
+        { status: 400 }
+      );
     }
-
-    const headers = lines[0].split(',').map((h) => h.trim().toLowerCase());
-    const dataRows = lines.slice(1);
 
     const applications = await db.getApplications();
     const admitCards = await db.getAdmitCards();
@@ -36,115 +41,174 @@ export async function POST(req: Request) {
     const parsedResults: any[] = [];
     const errors: string[] = [];
 
-    dataRows.forEach((rowStr, idx) => {
-      const cols = rowStr.split(',').map((c) => c.trim());
-      if (cols.length < 5) {
-        errors.push(`Row ${idx + 2}: Incomplete columns.`);
+    rows.forEach((rawRow: any, idx: number) => {
+      // Find candidate name (case-insensitive keys)
+      const nameKey = Object.keys(rawRow).find((k) =>
+        /^(candidate\s*name|name|student\s*name|full\s*name)$/i.test(k.trim())
+      );
+      const rollKey = Object.keys(rawRow).find((k) =>
+        /^(roll\s*number|roll\s*no|rollno|roll)$/i.test(k.trim())
+      );
+      const dobKey = Object.keys(rawRow).find((k) =>
+        /^(dob|date\s*of\s*birth|birth\s*date)$/i.test(k.trim())
+      );
+      const remarkKey = Object.keys(rawRow).find((k) =>
+        /^(remark|remarks|selection\s*remark|comments|status|selection\s*comment)$/i.test(k.trim())
+      );
+
+      const candidateName = (nameKey ? String(rawRow[nameKey] || '') : '').trim();
+      const rollNumber = (rollKey ? String(rawRow[rollKey] || '') : '').trim();
+      let dob = (dobKey ? String(rawRow[dobKey] || '') : '').trim();
+      const remarks = (remarkKey ? String(rawRow[remarkKey] || '') : '').trim();
+
+      // Format Excel serial date if numeric (e.g. 41771)
+      if (dob && /^\d{5}$/.test(dob)) {
+        try {
+          const serial = parseInt(dob, 10);
+          const utcDays = serial - 25569;
+          const dateObj = new Date(utcDays * 86400 * 1000);
+          if (!isNaN(dateObj.getTime())) {
+            dob = dateObj.toISOString().slice(0, 10);
+          }
+        } catch {}
+      }
+
+      if (!rollNumber && !candidateName) {
+        // Skip purely empty trailing rows
         return;
       }
 
-      // Expected columns: RollNo, Math, Science, English, SanskritGK, Rank, Status
-      const rollNumber = cols[0];
-      const math = parseFloat(cols[1]) || 0;
-      const sci = parseFloat(cols[2]) || 0;
-      const eng = parseFloat(cols[3]) || 0;
-      const gk = parseFloat(cols[4]) || 0;
-      const rank = cols[5] ? parseInt(cols[5]) : idx + 1;
-      const status = cols[6]?.toLowerCase() === 'qualified' ? 'qualified' : 'not_qualified';
+      if (!rollNumber) {
+        errors.push(`Row ${idx + 1}: Missing Roll Number.`);
+        return;
+      }
 
-      const total = math + sci + eng + gk;
+      // Determine qualifying status from remark / comment
+      const lowerRemark = (remarks + ' ' + (rawRow.status || '')).toLowerCase();
+      let qualifyingStatus: 'Qualified' | 'Not Qualified' = 'Qualified';
+      if (
+        lowerRemark.includes('not qualified') ||
+        lowerRemark.includes('not_qualified') ||
+        lowerRemark.includes('rejected') ||
+        lowerRemark.includes('disqualified') ||
+        lowerRemark.includes('fail')
+      ) {
+        qualifyingStatus = 'Not Qualified';
+      } else if (
+        lowerRemark.includes('qualified') ||
+        lowerRemark.includes('selected') ||
+        lowerRemark.includes('shortlisted') ||
+        lowerRemark.includes('pass')
+      ) {
+        qualifyingStatus = 'Qualified';
+      } else {
+        // Default to Qualified if positive remarks, or Not Qualified if negative
+        qualifyingStatus = lowerRemark.length > 0 ? 'Qualified' : 'Not Qualified';
+      }
 
-      // Find matching application by roll number or registration number
-      const card = admitCards.find((c) => c.rollNumber === rollNumber);
+      // Find matching application or admit card in system
+      const card = admitCards.find(
+        (c) =>
+          c.rollNumber?.toLowerCase() === rollNumber.toLowerCase() ||
+          c.applicationNumber?.toLowerCase() === rollNumber.toLowerCase()
+      );
       const app = applications.find(
-        (a) => a.id === card?.applicationId || a.rollNumber === rollNumber || a.registrationNumber === rollNumber
+        (a) =>
+          a.id === card?.applicationId ||
+          a.rollNumber?.toLowerCase() === rollNumber.toLowerCase() ||
+          a.registrationNumber?.toLowerCase() === rollNumber.toLowerCase()
       );
 
       parsedResults.push({
-        rowNumber: idx + 2,
+        id: `res-${rollNumber.replace(/[^a-zA-Z0-9]/g, '')}`,
+        applicationId: app ? app.id : `app-ext-${rollNumber}`,
+        applicationNumber: app ? app.registrationNumber : rollNumber,
         rollNumber,
-        applicationId: app ? app.id : `app-import-${rollNumber}`,
-        candidateName: app?.personalInfo?.fullName || `Candidate (${rollNumber})`,
+        candidateName: candidateName || app?.personalInfo?.fullName || `Candidate (${rollNumber})`,
+        dob: dob || app?.personalInfo?.dob || '',
         classApplying: app?.classApplying || 'Class 6',
-        subjectMarks: {
-          mathematics: math,
-          science: sci,
-          englishHindi: eng,
-          sanskritGk: gk,
-        },
-        totalMarks: total,
-        maxMarks: 100,
-        rank,
-        qualifyingStatus: status,
+        qualifyingStatus,
+        remarks: remarks || (qualifyingStatus === 'Qualified' ? 'Qualified for admission counseling.' : 'Not qualified for current session.'),
         isMatched: !!app,
+        isPublished: Boolean(publishDirectly),
+        createdAt: new Date().toISOString(),
       });
     });
 
-    // Action 1: Preview only
+    if (parsedResults.length === 0) {
+      return NextResponse.json(
+        { error: 'No valid candidate records could be parsed from the provided file.' },
+        { status: 400 }
+      );
+    }
+
+    const qualifiedCount = parsedResults.filter((r) => r.qualifyingStatus === 'Qualified').length;
+    const notQualifiedCount = parsedResults.filter((r) => r.qualifyingStatus === 'Not Qualified').length;
+
+    // Action 1: Preview mode
     if (action === 'preview') {
       return NextResponse.json({
         success: true,
         action: 'preview',
-        totalRows: dataRows.length,
-        parsedCount: parsedResults.length,
-        validCount: parsedResults.filter((r) => r.isMatched).length,
-        previewRows: parsedResults.slice(0, 50),
+        totalRows: parsedResults.length,
+        qualifiedCount,
+        notQualifiedCount,
+        matchedCount: parsedResults.filter((r) => r.isMatched).length,
+        previewRows: parsedResults,
         errors,
       });
     }
 
-    // Action 2: Commit and save
+    // Action 2: Commit mode (Save to database)
     if (action === 'commit') {
-      for (const res of parsedResults) {
-        const subjectsList = [
-          { subject: 'Mathematics', maxMarks: 25, marksObtained: res.subjectMarks.mathematics },
-          { subject: 'Science', maxMarks: 25, marksObtained: res.subjectMarks.science },
-          { subject: 'English & Hindi', maxMarks: 25, marksObtained: res.subjectMarks.englishHindi },
-          { subject: 'Sanskrit & General Knowledge', maxMarks: 25, marksObtained: res.subjectMarks.sanskritGk },
-        ];
-        const percentage = parseFloat(((res.totalMarks / 100) * 100).toFixed(2));
-        const qualifyingStatus = res.qualifyingStatus === 'qualified' ? 'Qualified for Admission' : 'Not Qualified';
+      const toSave: ExamResult[] = parsedResults.map((r) => ({
+        id: r.id,
+        applicationId: r.applicationId,
+        applicationNumber: r.applicationNumber,
+        rollNumber: r.rollNumber,
+        candidateName: r.candidateName,
+        dob: r.dob,
+        classApplying: r.classApplying,
+        qualifyingStatus: r.qualifyingStatus,
+        remarks: r.remarks,
+        isPublished: Boolean(publishDirectly),
+        counselingDate: r.qualifyingStatus === 'Qualified' ? '10 January 2027 at 10:00 AM' : undefined,
+        counselingVenue: r.qualifyingStatus === 'Qualified' ? 'Main Administrative Block, Gurukul Kurukshetra' : undefined,
+        createdAt: new Date().toISOString(),
+      }));
 
-        await db.publishResult({
-          id: `res-${Date.now()}-${res.rollNumber}`,
-          applicationId: res.applicationId,
-          applicationNumber: res.rollNumber,
-          rollNumber: res.rollNumber,
-          candidateName: res.candidateName,
-          classApplying: res.classApplying,
-          subjects: subjectsList,
-          totalMarks: res.totalMarks,
-          maxTotalMarks: 100,
-          percentage,
-          rank: res.rank,
-          qualifyingStatus,
-          isPublished: !!publishDirectly,
-          counselingDate: qualifyingStatus === 'Qualified for Admission' ? '05 January 2027' : undefined,
-          counselingVenue: qualifyingStatus === 'Qualified for Admission' ? 'Gurukul Kurukshetra Main Campus Auditorium' : undefined,
-        });
+      await db.bulkSaveResults(toSave);
+
+      if (publishDirectly) {
+        await db.updateSettings({ resultsDeclared: true });
       }
 
       await recordAuditLog({
         userId: user.userId,
         userName: user.name,
         userRole: user.role,
-        action: 'IMPORT_RESULTS_CSV',
+        action: 'UPLOAD_RESULTS_EXCEL',
         entity: 'Results',
         details: {
-          totalImported: parsedResults.length,
-          published: !!publishDirectly,
+          totalUploaded: toSave.length,
+          qualified: qualifiedCount,
+          notQualified: notQualifiedCount,
+          publishedImmediately: !!publishDirectly,
         },
       });
 
       return NextResponse.json({
         success: true,
-        message: `Successfully imported ${parsedResults.length} entrance exam results!`,
-        totalImported: parsedResults.length,
+        message: `Successfully uploaded ${toSave.length} results (${qualifiedCount} Qualified, ${notQualifiedCount} Not Qualified).`,
+        totalUploaded: toSave.length,
+        qualifiedCount,
+        notQualifiedCount,
       });
     }
 
-    return NextResponse.json({ error: 'Invalid action.' }, { status: 400 });
+    return NextResponse.json({ error: 'Invalid action parameter. Must be preview or commit.' }, { status: 400 });
   } catch (err: any) {
-    return NextResponse.json({ error: err.message || 'CSV processing failed' }, { status: 500 });
+    console.error('Error in results import API:', err);
+    return NextResponse.json({ error: err.message || 'Failed to process Excel results.' }, { status: 500 });
   }
 }

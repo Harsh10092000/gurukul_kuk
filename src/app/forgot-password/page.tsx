@@ -5,15 +5,10 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { 
-  KeyRound, 
-  Mail, 
-  Lock, 
-  Phone, 
   Eye, 
   EyeOff, 
   AlertCircle, 
   CheckCircle2, 
-  ArrowRight, 
   RotateCcw 
 } from 'lucide-react';
 
@@ -102,7 +97,7 @@ export default function ForgotPasswordPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          action: 'resend',
+          action: 'send',
           actionType: 'forgot_password',
           identifier: identifier.trim(),
         }),
@@ -110,14 +105,15 @@ export default function ForgotPasswordPage() {
       const data = await res.json();
 
       if (!res.ok) {
-        setError(data.error || 'Failed to resend recovery code.');
+        setError(data.error || 'Failed to resend code.');
       } else {
-        setResendSuccess('A fresh 6-digit recovery code has been dispatched to your email/mobile.');
+        setResendSuccess('Verification code resent successfully.');
         setResendTimer(30);
         setCanResend(false);
+        setTimeout(() => setResendSuccess(''), 4000);
       }
     } catch {
-      setError('Unable to resend recovery code at this moment.');
+      setError('Network error while resending code.');
     } finally {
       setResendLoading(false);
     }
@@ -128,24 +124,41 @@ export default function ForgotPasswordPage() {
     setError('');
 
     if (!otp.trim() || otp.trim().length !== 6) {
-      setError('Please enter the 6-digit verification code.');
+      setError('Please enter the valid 6-digit OTP.');
       return;
     }
 
     if (newPassword.length < 6) {
-      setError('Password must be at least 6 characters long.');
+      setError('New password must be at least 6 characters long.');
       return;
     }
 
     if (newPassword !== confirmPassword) {
-      setError('Passwords do not match. Please ensure both fields are identical.');
+      setError('Passwords do not match. Please ensure both passwords match.');
       return;
     }
 
     setLoading(true);
 
     try {
-      const res = await fetch('/api/auth/reset-password', {
+      const verifyRes = await fetch('/api/auth/otp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'verify',
+          identifier: identifier.trim(),
+          otp: otp.trim(),
+        }),
+      });
+      const verifyData = await verifyRes.json();
+
+      if (!verifyRes.ok) {
+        setError(verifyData.error || 'Invalid or expired verification code.');
+        setLoading(false);
+        return;
+      }
+
+      const resetRes = await fetch('/api/auth/reset-password', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -154,64 +167,67 @@ export default function ForgotPasswordPage() {
           newPassword,
         }),
       });
-      const data = await res.json();
+      const resetData = await resetRes.json();
 
-      if (!res.ok) {
-        setError(data.error || 'Password reset failed.');
+      if (!resetRes.ok) {
+        setError(resetData.error || 'Failed to reset password.');
         setLoading(false);
         return;
       }
 
       setSuccess(true);
       setLoading(false);
+      setTimeout(() => {
+        router.push('/');
+      }, 2500);
     } catch {
-      setError('An unexpected error occurred during password reset.');
+      setError('An error occurred during password reset.');
       setLoading(false);
     }
   };
 
   if (success) {
     return (
-      <div className="min-h-[80vh] flex items-center justify-center py-12 px-4 bg-slate-100 font-sans">
-        <div className="max-w-md w-full bg-white p-8 sm:p-10 rounded-3xl shadow-xl border border-slate-200 text-center space-y-6">
-          <div className="w-16 h-16 bg-emerald-100 text-emerald-600 rounded-2xl flex items-center justify-center mx-auto shadow-inner">
-            <CheckCircle2 className="w-10 h-10" />
+      <div className="min-h-[85vh] flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8 bg-slate-50 font-sans">
+        <div className="max-w-md w-full space-y-4 bg-white p-8 rounded-xl shadow-xs border border-slate-200 text-center">
+          <CheckCircle2 className="w-12 h-12 text-emerald-600 mx-auto" />
+          <h2 className="text-xl font-bold text-portal-navy">
+            Password Reset Successfully
+          </h2>
+          <p className="text-xs text-slate-600 leading-relaxed">
+            Your candidate account password has been updated. Redirecting you to sign in...
+          </p>
+          <div className="pt-2">
+            <Link
+              href="/"
+              className="btn-primary w-full"
+            >
+              Sign In to Candidate Dashboard
+            </Link>
           </div>
-          <div>
-            <h2 className="text-2xl font-black text-gurukul-navy">Password Reset Successfully!</h2>
-            <p className="text-xs text-slate-500 mt-1">
-              Your account password has been updated. You can now sign in to the portal with your Registration Number and new password.
-            </p>
-          </div>
-          <Link
-            href="/"
-            className="w-full inline-block py-3.5 bg-gurukul-navy hover:bg-gurukul-navyLight text-white font-extrabold text-xs rounded-xl shadow-lg transition"
-          >
-            Go to Candidate Sign In Gateway →
-          </Link>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-[80vh] flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8 bg-slate-100 font-sans">
-      <div className="max-w-md w-full space-y-6 bg-white p-8 sm:p-10 rounded-3xl shadow-xl border border-slate-200">
-        <div className="text-center space-y-2">
-          <div className="w-16 h-16 mx-auto flex items-center justify-center">
+    <div className="min-h-[85vh] flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8 bg-slate-50 font-sans">
+      <div className="max-w-md w-full space-y-6 bg-white p-8 rounded-xl shadow-xs border border-slate-200">
+        <div className="text-center space-y-1.5">
+          <div className="w-12 h-12 mx-auto flex items-center justify-center">
             <Image
               src="/logo-gurukul.png"
-              alt="Gurukul Kurukshetra Logo"
-              width={64}
-              height={64}
-              className="brand-logo-img object-contain"
+              alt="Gurukul Logo"
+              width={48}
+              height={48}
+              className="brand-logo-sm object-contain"
             />
           </div>
-          <span className="text-[10px] font-bold uppercase tracking-wider text-amber-800 bg-amber-100 px-3 py-1 rounded-full inline-block">
+          <span className="text-[10px] font-semibold uppercase tracking-wider text-portal-gold bg-amber-50 px-3 py-0.5 rounded-full inline-block border border-amber-200">
             Account Recovery
           </span>
-          <h2 className="text-2xl font-black tracking-tight text-gurukul-navy">
-            {step === 'request' ? 'Forgot Password?' : 'Reset Your Password'}
+          <h2 className="text-xl font-bold tracking-tight text-portal-navy">
+            {step === 'request' ? 'Forgot Password' : 'Reset Your Password'}
           </h2>
           <p className="text-xs text-slate-500">
             {step === 'request'
@@ -220,10 +236,9 @@ export default function ForgotPasswordPage() {
           </p>
         </div>
 
-
         {error && (
-          <div className="p-3.5 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs flex items-center gap-2">
-            <AlertCircle className="w-4 h-4 flex-shrink-0" />
+          <div className="p-3 rounded-lg bg-rose-50 border border-rose-200 text-rose-700 text-xs flex items-center gap-2 font-medium">
+            <AlertCircle className="w-4 h-4 flex-shrink-0 text-rose-600" />
             <span>{error}</span>
           </div>
         )}
@@ -231,42 +246,32 @@ export default function ForgotPasswordPage() {
         {step === 'request' ? (
           <form onSubmit={handleRequestOtp} className="space-y-4">
             <div>
-              <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
-                Registered Email / Mobile Number *
+              <label className="form-label">
+                Registered Email or Mobile Number <span className="text-rose-500">*</span>
               </label>
-              <div className="relative">
-                <Mail className="w-4 h-4 text-slate-400 absolute left-3 top-3.5 pointer-events-none" />
-                <input
-                  type="text"
-                  required
-                  value={identifier}
-                  onChange={(e) => setIdentifier(e.target.value)}
-                  placeholder="e.g. student@example.com or 9876543210"
-                  className="w-full pl-10 pr-3 py-2.5 text-xs sm:text-sm border border-slate-300 rounded-xl focus:ring-2 focus:ring-amber-500 outline-none transition"
-                />
-              </div>
+              <input
+                type="text"
+                required
+                value={identifier}
+                onChange={(e) => setIdentifier(e.target.value)}
+                placeholder="e.g. student@example.com or 9876543210"
+                className="form-input-field"
+              />
             </div>
 
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-3 bg-gradient-to-r from-amber-500 to-gurukul-600 hover:from-amber-600 hover:to-gurukul-700 text-white font-extrabold text-xs rounded-xl shadow transition flex items-center justify-center gap-2"
+              className="btn-primary w-full"
             >
-              {loading ? (
-                <span>Sending Recovery Code...</span>
-              ) : (
-                <>
-                  <KeyRound className="w-4 h-4" />
-                  <span>Send Recovery OTP</span>
-                </>
-              )}
+              {loading ? 'Sending Recovery Code...' : 'Send Recovery OTP'}
             </button>
           </form>
         ) : (
           <form onSubmit={handleResetPassword} className="space-y-4">
             <div>
-              <label className="block text-xs font-bold text-slate-700 uppercase mb-1 text-center">
-                6-Digit Recovery OTP *
+              <label className="form-label text-center">
+                6-Digit Recovery OTP <span className="text-rose-500">*</span>
               </label>
               <input
                 type="text"
@@ -275,51 +280,50 @@ export default function ForgotPasswordPage() {
                 value={otp}
                 onChange={(e) => setOtp(e.target.value.replace(/\D/g, ''))}
                 placeholder="• • • • • •"
-                className="w-full text-center text-xl font-mono font-black tracking-[0.4em] py-2.5 border-2 border-slate-300 rounded-xl focus:border-amber-500 outline-none"
+                className="w-full text-center text-xl font-mono font-bold tracking-[0.4em] py-2.5 border border-slate-200 rounded-lg focus:border-portal-navy focus:ring-1 focus:ring-portal-navy outline-none bg-white"
               />
-              <div className="flex justify-between items-center text-xs mt-1.5 px-1">
+              <div className="flex justify-between items-center text-xs mt-2 px-1">
                 <span className="text-slate-500">Didn&apos;t receive code?</span>
                 {canResend ? (
                   <button
                     type="button"
                     onClick={handleResendOtp}
                     disabled={resendLoading}
-                    className="text-amber-700 font-bold hover:underline inline-flex items-center gap-1 transition"
+                    className="text-portal-gold font-semibold hover:underline inline-flex items-center gap-1"
                   >
                     <RotateCcw className={`w-3 h-3 ${resendLoading ? 'animate-spin' : ''}`} />
                     <span>Resend OTP</span>
                   </button>
                 ) : (
-                  <span className="text-slate-400 font-medium">
-                    Resend code in <span className="font-mono font-bold text-amber-700">{resendTimer}s</span>
+                  <span className="text-slate-400">
+                    Resend code in <strong>{resendTimer}s</strong>
                   </span>
                 )}
               </div>
               {resendSuccess && (
-                <p className="text-[11px] text-emerald-600 font-medium mt-1 text-center bg-emerald-50 py-1 rounded border border-emerald-200">
+                <p className="text-[11px] text-emerald-700 bg-emerald-50 py-1 px-2 rounded border border-emerald-200 mt-2 text-center">
                   {resendSuccess}
                 </p>
               )}
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
-                New Password *
+              <label className="form-label">
+                New Password <span className="text-rose-500">*</span>
               </label>
               <div className="relative">
-                <Lock className="w-4 h-4 text-slate-400 absolute left-3 top-3.5 pointer-events-none" />
                 <input
                   type={showPassword ? 'text' : 'password'}
                   required
                   value={newPassword}
                   onChange={(e) => setNewPassword(e.target.value)}
                   placeholder="At least 6 characters"
-                  className="w-full pl-10 pr-10 py-2.5 text-xs sm:text-sm border border-slate-300 rounded-xl focus:ring-2 focus:ring-amber-500 outline-none transition"
+                  className="form-input-field pr-10"
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-3 text-slate-400 hover:text-slate-600"
+                  className="absolute right-3 top-2.5 text-slate-400 hover:text-slate-600"
                 >
                   {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
@@ -327,23 +331,22 @@ export default function ForgotPasswordPage() {
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
-                Confirm New Password *
+              <label className="form-label">
+                Confirm New Password <span className="text-rose-500">*</span>
               </label>
               <div className="relative">
-                <Lock className="w-4 h-4 text-slate-400 absolute left-3 top-3.5 pointer-events-none" />
                 <input
                   type={showConfirmPassword ? 'text' : 'password'}
                   required
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
                   placeholder="Re-enter new password"
-                  className="w-full pl-10 pr-10 py-2.5 text-xs sm:text-sm border border-slate-300 rounded-xl focus:ring-2 focus:ring-amber-500 outline-none transition"
+                  className="form-input-field pr-10"
                 />
                 <button
                   type="button"
                   onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                  className="absolute right-3 top-3 text-slate-400 hover:text-slate-600"
+                  className="absolute right-3 top-2.5 text-slate-400 hover:text-slate-600"
                 >
                   {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
@@ -353,26 +356,19 @@ export default function ForgotPasswordPage() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-3 bg-gradient-to-r from-gurukul-navy to-gurukul-navyLight hover:from-slate-900 hover:to-gurukul-navy text-white font-extrabold text-xs rounded-xl shadow-lg transition flex items-center justify-center gap-2"
+              className="btn-primary w-full"
             >
-              {loading ? (
-                <span>Resetting Password...</span>
-              ) : (
-                <>
-                  <CheckCircle2 className="w-4 h-4 text-amber-400" />
-                  <span>Update Password & Save</span>
-                </>
-              )}
+              {loading ? 'Resetting Password...' : 'Save New Password'}
             </button>
           </form>
         )}
 
-        <div className="pt-2 border-t border-slate-100 flex justify-between items-center text-xs text-slate-500">
-          <Link href="/" className="hover:text-slate-800 underline">
-            ← Back to Sign In
+        <div className="pt-3 border-t border-slate-100 flex justify-between items-center text-xs text-slate-500">
+          <Link href="/" className="hover:text-portal-navy transition font-medium">
+            Return to Sign In
           </Link>
-          <Link href="/register" className="text-gurukul-600 font-bold hover:underline">
-            New Registration →
+          <Link href="/register" className="text-portal-navy font-semibold hover:underline">
+            New Registration
           </Link>
         </div>
       </div>

@@ -12,24 +12,9 @@ import {
   AlertCircle,
   Printer,
   Award,
-  Calendar,
-  MapPin,
-  User,
-  ExternalLink,
   Phone,
   BookmarkCheck,
-  ArrowRight,
-  Upload,
-  X,
-  Send,
-  RefreshCw,
-  FileCheck,
-  XCircle,
-  Info,
-  ShieldCheck,
-  HelpCircle,
-  AlertTriangle,
-  MessageSquare
+  X
 } from 'lucide-react';
 import { Application, AdmitCard, ExamResult } from '@/lib/types';
 import ConfirmModal from '@/components/ConfirmModal';
@@ -42,8 +27,7 @@ export default function ApplicantDashboard() {
   const [loading, setLoading] = useState(true);
   const [draftSaved, setDraftSaved] = useState(false);
 
-
-  // Document upload & resubmission state
+  // Resubmission State
   const [uploadedDocs, setUploadedDocs] = useState<{ [key: string]: string }>({});
   const [uploadedDocNames, setUploadedDocNames] = useState<{ [key: string]: string }>({});
   const [candidateClarification, setCandidateClarification] = useState('');
@@ -60,9 +44,8 @@ export default function ApplicantDashboard() {
   });
   const [resubmitLoading, setResubmitLoading] = useState(false);
   const [resubmitMsg, setResubmitMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
-  const [activeResubmitTab, setActiveResubmitTab] = useState<'docs' | 'personal' | 'academic'>('docs');
 
-  // Accessible centralized confirmation & notification modal state
+  // Modal State
   const [modalState, setModalState] = useState<{
     isOpen: boolean;
     title: string;
@@ -86,7 +69,6 @@ export default function ApplicantDashboard() {
       }
     }
 
-    // 1. Fetch current authenticated user & enforce strict Admin Role Guard
     fetch('/api/auth/me')
       .then((res) => res.json())
       .then((authData) => {
@@ -95,7 +77,6 @@ export default function ApplicantDashboard() {
           return;
         }
 
-        // STRICT ROLE SEPARATION: Admin can NEVER access candidate dashboard!
         if (authData.user.role === 'admin') {
           window.location.href = '/admin/dashboard';
           return;
@@ -107,14 +88,11 @@ export default function ApplicantDashboard() {
         }
 
         setCurrentUser(authData.user);
-        const user = authData.user;
 
-        // Purge any un-scoped legacy draft from shared browser storage
         try {
           localStorage.removeItem('gurukul_application_draft');
         } catch (e) { }
 
-        // 2. Fetch candidate's own application
         fetch('/api/applications')
           .then((res) => res.json())
           .then(async (data) => {
@@ -153,63 +131,6 @@ export default function ApplicantDashboard() {
       });
   }, []);
 
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>, docKey: string) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    if (file.size > 5 * 1024 * 1024) {
-      setResubmitMsg({ type: 'error', text: 'Uploaded file must be under 5MB.' });
-      return;
-    }
-
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      const base64 = reader.result as string;
-      setUploadedDocs((prev) => ({ ...prev, [docKey]: base64 }));
-      setUploadedDocNames((prev) => ({ ...prev, [docKey]: file.name }));
-      setResubmitMsg({ type: 'success', text: `Selected "${file.name}" for upload.` });
-    };
-    reader.readAsDataURL(file);
-  };
-
-  const handleResubmit = async (e?: React.FormEvent) => {
-    if (e) e.preventDefault();
-    if (!application) return;
-
-    try {
-      setResubmitLoading(true);
-      setResubmitMsg(null);
-      const res = await fetch(`/api/applications/${application.id}/resubmit`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          documents: Object.keys(uploadedDocs).length > 0 ? uploadedDocs : undefined,
-          personalInfo: revisedPersonal,
-          academicInfo: revisedAcademic,
-          clarification: candidateClarification,
-        }),
-      });
-
-      const data = await res.json();
-      if (data.success && data.application) {
-        setApplication(data.application);
-        setResubmitMsg({
-          type: 'success',
-          text: 'Your revised details & documents have been successfully submitted to the Admission Committee for re-verification.',
-        });
-        setUploadedDocs({});
-        setUploadedDocNames({});
-        setCandidateClarification('');
-      } else {
-        setResubmitMsg({ type: 'error', text: data.error || 'Failed to submit revision' });
-      }
-    } catch (err: any) {
-      setResubmitMsg({ type: 'error', text: 'Network error during resubmission. Please try again.' });
-    } finally {
-      setResubmitLoading(false);
-    }
-  };
-
   const formatDob = (dobStr?: string) => {
     if (!dobStr) return '—';
     const s = dobStr.trim();
@@ -220,13 +141,12 @@ export default function ApplicantDashboard() {
     return s;
   };
 
-
   if (loading) {
     return (
       <div className="min-h-[60vh] flex items-center justify-center">
         <div className="text-center space-y-3">
-          <div className="w-12 h-12 border-4 border-amber-500 border-t-transparent rounded-full animate-spin mx-auto" />
-          <p className="text-sm font-semibold text-slate-600">Loading your entrance dashboard...</p>
+          <div className="w-8 h-8 border-2 border-portal-navy border-t-transparent rounded-full animate-spin mx-auto" />
+          <p className="text-xs font-semibold text-slate-600">Loading candidate portal...</p>
         </div>
       </div>
     );
@@ -234,49 +154,45 @@ export default function ApplicantDashboard() {
 
   if (!application) {
     return (
-      <div className="max-w-4xl mx-auto my-12 px-4 sm:px-6 space-y-8 font-sans">
-        {/* Welcome Header */}
-        <div className="bg-gradient-to-r from-gurukul-navy to-gurukul-navyLight text-white rounded-3xl p-6 sm:p-8 shadow-xl flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
-          <div className="space-y-2">
-            <span className="bg-amber-400 text-gurukul-navy text-xs font-black px-3 py-1 rounded-full uppercase tracking-wider font-mono shadow-sm">
-              Registered Candidate Account
+      <div className="max-w-4xl mx-auto my-12 px-4 space-y-6">
+        <div className="bg-portal-navy text-white rounded-xl p-6 sm:p-8 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+          <div className="space-y-1">
+            <span className="bg-slate-800 text-slate-300 text-xs font-semibold px-2.5 py-0.5 rounded uppercase tracking-wider">
+              Candidate Account
             </span>
-            <h1 className="text-2xl sm:text-3xl font-black">
+            <h1 className="text-xl sm:text-2xl font-bold">
               Welcome, {currentUser?.name || 'Candidate'}
             </h1>
-            <p className="text-xs sm:text-sm text-slate-300">
-              Gurukul Kurukshetra Online Entrance Examination Portal • Academic Session 2027-28
+            <p className="text-xs text-slate-300">
+              Gurukul Kurukshetra Online Entrance Examination Portal • Session 2027-28
             </p>
           </div>
           <Link
             href="/apply"
-            className="bg-amber-500 hover:bg-amber-600 text-gurukul-navy font-black text-xs px-6 py-3 rounded-xl shadow-lg transition flex items-center gap-2 flex-shrink-0"
+            className="btn-accent text-xs px-4 py-2 flex-shrink-0"
           >
-            <span>Start Online Application</span>
-            <ArrowRight className="w-4 h-4" />
+            Start Online Application
           </Link>
         </div>
 
-        {/* Application Start Prompt Card */}
-        <div className="bg-white rounded-3xl border-2 border-slate-200 p-8 sm:p-12 text-center space-y-6 shadow-sm">
-          <div className="w-20 h-20 mx-auto flex items-center justify-center bg-amber-50 rounded-2xl border border-amber-200">
-            <Image src="/logo-gurukul.png" alt="Logo" width={64} height={64} className="brand-logo-img object-contain" />
+        <div className="portal-card p-8 text-center space-y-4">
+          <div className="w-16 h-16 mx-auto flex items-center justify-center bg-slate-100 rounded-full border border-slate-200">
+            <Image src="/logo-gurukul.png" alt="Logo" width={48} height={48} className="object-contain" />
           </div>
-          <div className="max-w-lg mx-auto space-y-2">
-            <h2 className="text-2xl font-black text-gurukul-navy">
-              No Application Form Submitted Yet
+          <div className="max-w-md mx-auto space-y-2">
+            <h2 className="text-lg font-bold text-slate-900">
+              No Admission Form Submitted Yet
             </h2>
-            <p className="text-xs sm:text-sm text-slate-600 leading-relaxed">
+            <p className="text-xs text-slate-600 leading-relaxed">
               Dear <strong className="text-slate-900">{currentUser?.name || 'Applicant'}</strong>, your candidate account is active. Please complete your online admission application, upload verification documents, and pay the entrance fee to receive your permanent Registration Number and Admit Card.
             </p>
           </div>
           <div className="pt-2 flex justify-center">
             <Link
               href="/apply"
-              className="inline-flex items-center gap-2 bg-gradient-to-r from-gurukul-600 to-amber-600 hover:from-gurukul-700 hover:to-amber-700 text-white font-extrabold px-8 py-3.5 rounded-2xl shadow-lg hover:shadow-xl transition text-sm"
+              className="btn-primary text-xs px-6 py-2.5"
             >
-              <span>Begin Application Form 2027-28</span>
-              <ArrowRight className="w-4 h-4" />
+              Begin Admission Form 2027-28
             </Link>
           </div>
         </div>
@@ -284,156 +200,140 @@ export default function ApplicantDashboard() {
     );
   }
 
-  // DRAFT APPLICATION VIEW: When user saved as draft
+  // DRAFT APPLICATION VIEW
   if (application.status === 'draft') {
     const completedStep = application.currentStep || 1;
     const resumeStep = Math.min(completedStep < 7 ? completedStep + 1 : 7, 7);
     const formSteps = [
-      { num: 1, title: 'Personal Particulars', desc: 'Candidate name, DOB, Aadhaar & category' },
-      { num: 2, title: 'Parent & Guardian Details', desc: 'Father & Mother particulars, mobile & income' },
-      { num: 3, title: 'Residential Address', desc: 'Permanent street address, State, District & PIN' },
-      { num: 4, title: 'Academic History', desc: 'Previous school, board, marks & class sought' },
-      { num: 5, title: 'Exam Centre Preferences', desc: '1st & 2nd choice entrance examination centre' },
-      { num: 6, title: 'Documents & Photographs', desc: 'Photo, signature & Aadhaar card copy' },
-      { num: 7, title: 'Fee Payment & Submission', desc: 'Review application & complete fee payment' },
+      { num: 1, title: 'Instructions & Advisory', desc: 'Eligibility rules and candidate undertaking' },
+      { num: 2, title: 'Candidate Details', desc: 'Name, DOB, Aadhaar number & category' },
+      { num: 3, title: 'Parent Particulars', desc: 'Father & Mother details, mobile & income' },
+      { num: 4, title: 'Address & Contact', desc: 'Permanent street address, State, District & PIN' },
+      { num: 5, title: 'Campus Preference', desc: '1st and 2nd preferred study locations' },
+      { num: 6, title: 'Upload Documents', desc: 'Photo, signature, parent signature & Aadhaar' },
+      { num: 7, title: 'Review & Payment', desc: 'Review particulars & complete ₹800 fee payment' },
     ];
     const progressPct = Math.min(Math.round((completedStep / 7) * 100), 100);
 
     return (
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 py-10 space-y-8">
+      <div className="max-w-5xl mx-auto px-4 py-8 space-y-6">
         {/* Top Header */}
-        <div className="bg-gradient-to-r from-gurukul-navy to-gurukul-navyLight text-white rounded-3xl p-6 sm:p-8 shadow-xl relative overflow-hidden flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
-          <div className="space-y-3 z-10">
-            <div className="flex items-center gap-2.5 flex-wrap">
-              <span className="bg-amber-400 text-gurukul-navy text-xs font-black px-3 py-1 rounded-full uppercase tracking-wider font-mono shadow-sm">
-                Application Draft • Step {completedStep} of 7 Completed
+        <div className="bg-portal-navy text-white rounded-xl p-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+          <div className="space-y-1">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="bg-amber-500 text-slate-900 text-xs font-bold px-2.5 py-0.5 rounded uppercase tracking-wider">
+                Draft • Step {completedStep} of 7
               </span>
-              <span className="bg-white/20 text-xs font-bold px-3 py-1 rounded-full">
+              <span className="bg-slate-800 text-slate-300 text-xs px-2.5 py-0.5 rounded">
                 Class: {application.classApplying}
               </span>
             </div>
-            <h1 className="text-2xl sm:text-3xl font-black">
+            <h1 className="text-xl sm:text-2xl font-bold">
               Welcome, {currentUser?.name || application.personalInfo?.fullName || 'Candidate'}
             </h1>
-            <p className="text-xs sm:text-sm text-slate-300">
-              Gurukul Kurukshetra Online Entrance Examination Portal • Academic Session 2027-28
+            <p className="text-xs text-slate-300">
+              Online Entrance Application • Session 2027-28
             </p>
           </div>
 
-          <div className="z-10 flex flex-wrap gap-3 items-center">
+          <div className="flex items-center gap-2">
             <Link
               href={`/apply?step=${resumeStep}`}
-              className="bg-amber-500 hover:bg-amber-600 text-gurukul-navy font-black text-xs px-5 py-2.5 rounded-xl shadow-lg transition flex items-center gap-1.5"
+              className="btn-accent text-xs px-4 py-2"
             >
-              <span>Continue Filling Form</span>
-              <ArrowRight className="w-4 h-4" />
+              Continue Application
             </Link>
           </div>
         </div>
 
-        {/* Draft Alert Notification */}
         {draftSaved && (
-          <div className="p-4 rounded-2xl bg-emerald-50 border-2 border-emerald-300 text-emerald-950 flex items-center gap-3 shadow-sm">
-            <CheckCircle2 className="w-6 h-6 text-emerald-600 flex-shrink-0" />
+          <div className="p-3.5 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-900 flex items-center gap-2.5 text-xs font-medium">
+            <CheckCircle2 className="w-4 h-4 text-emerald-600 flex-shrink-0" />
             <div>
-              <h4 className="font-extrabold text-sm">Application Draft Preserved Successfully!</h4>
-              <p className="text-xs text-emerald-800">
-                All details entered up to Step {completedStep} have been safely stored. You can resume filling right where you left off.
-              </p>
+              <strong>Application Saved:</strong> Details entered up to Step {completedStep} are securely stored. You can resume anytime.
             </div>
           </div>
         )}
 
-        {/* Hero Resume Card with Progress Bar */}
-        <div className="bg-gradient-to-br from-amber-50/80 via-white to-orange-50/50 border-2 border-amber-300 rounded-3xl p-6 sm:p-8 shadow-sm space-y-6">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div className="space-y-1">
-              <span className="text-xs font-bold text-amber-800 uppercase tracking-wider flex items-center gap-1.5">
-                <BookmarkCheck className="w-4 h-4 text-amber-600" />
-                Draft Status: In Progress
+        {/* Progress Overview Card */}
+        <div className="portal-card p-6 space-y-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div>
+              <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                Application Progress
               </span>
-              <h2 className="text-xl sm:text-2xl font-black text-slate-900">
+              <h2 className="text-base sm:text-lg font-bold text-slate-900">
                 Step {completedStep} of 7 Completed ({progressPct}%)
               </h2>
-              <p className="text-xs text-slate-600">
-                Continue your application form to select examination centres, upload verification documents, and complete fee payment.
-              </p>
             </div>
-
             <Link
               href={`/apply?step=${resumeStep}`}
-              className="inline-flex items-center gap-2 bg-gradient-to-r from-gurukul-600 to-amber-600 hover:from-gurukul-700 hover:to-amber-700 text-white font-extrabold text-sm px-6 py-3.5 rounded-2xl shadow-lg hover:shadow-xl transition flex-shrink-0"
+              className="btn-primary text-xs px-4 py-2 self-start sm:self-auto"
             >
-              <span>Continue Filling Application Form</span>
-              <ArrowRight className="w-4 h-4" />
+              Resume Form
             </Link>
           </div>
 
-          {/* Visual Progress Bar */}
-          <div className="space-y-2">
-            <div className="w-full bg-slate-200 h-3 rounded-full overflow-hidden p-0.5">
+          <div className="space-y-1.5">
+            <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
               <div
-                className="bg-gradient-to-r from-amber-500 via-amber-600 to-emerald-600 h-full rounded-full transition-all duration-500"
+                className="bg-portal-navy h-full rounded-full transition-all duration-300"
                 style={{ width: `${progressPct}%` }}
               />
             </div>
-            <div className="flex justify-between text-[11px] font-bold text-slate-500">
-              <span>Step 1: Personal Particulars</span>
-              <span>Step 4: Academics</span>
-              <span>Step 7: Payment & Submission</span>
+            <div className="flex justify-between text-[11px] text-slate-400">
+              <span>Step 1: Instructions</span>
+              <span>Step 4: Address</span>
+              <span>Step 7: Payment</span>
             </div>
           </div>
         </div>
 
-        {/* 7-Step Progress Roadmap */}
-        <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm space-y-5">
-          <h3 className="font-bold text-slate-900 text-sm flex items-center gap-2 border-b border-slate-100 pb-3">
-            <Clock className="w-4 h-4 text-gurukul-600" /> Application Steps Roadmap
+        {/* 7 Steps Roadmap */}
+        <div className="portal-card p-6 space-y-4">
+          <h3 className="font-bold text-slate-900 text-sm border-b border-slate-100 pb-2">
+            Application Roadmap
           </h3>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
             {formSteps.map((fs) => {
               const isDone = fs.num <= completedStep;
               const isCurrent = fs.num === resumeStep;
               return (
                 <div
                   key={fs.num}
-                  className={`p-4 rounded-xl border transition flex flex-col justify-between ${isDone
-                    ? 'bg-emerald-50/40 border-emerald-300 text-emerald-950'
+                  className={`p-3.5 rounded-lg border text-left flex flex-col justify-between ${isDone
+                    ? 'bg-emerald-50/50 border-emerald-200 text-slate-800'
                     : isCurrent
-                      ? 'bg-amber-50/70 border-amber-300 text-amber-950 ring-2 ring-amber-400/40'
-                      : 'bg-slate-50 border-slate-200 text-slate-500'
+                      ? 'bg-white border-portal-navy ring-1 ring-portal-navy text-slate-900'
+                      : 'bg-slate-50 border-slate-200 text-slate-400'
                     }`}
                 >
-                  <div className="space-y-2">
+                  <div className="space-y-1">
                     <div className="flex items-center justify-between">
-                      <span className="text-[10px] font-bold uppercase tracking-wider font-mono">
-                        Step {fs.num}
-                      </span>
+                      <span className="text-[10px] font-mono font-semibold uppercase">Step {fs.num}</span>
                       {isDone ? (
-                        <span className="text-[10px] font-bold bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full flex items-center gap-1">
-                          <CheckCircle2 className="w-3 h-3" /> Completed
+                        <span className="text-[10px] font-semibold text-emerald-700 bg-emerald-100 px-1.5 py-0.5 rounded">
+                          Done
                         </span>
                       ) : isCurrent ? (
-                        <span className="text-[10px] font-bold bg-amber-100 text-amber-800 px-2 py-0.5 rounded-full">
+                        <span className="text-[10px] font-semibold text-portal-navy bg-slate-100 px-1.5 py-0.5 rounded">
                           Current
                         </span>
                       ) : (
                         <span className="text-[10px] text-slate-400">Pending</span>
                       )}
                     </div>
-                    <h4 className="font-bold text-xs text-slate-900">{fs.title}</h4>
+                    <h4 className="font-semibold text-xs text-slate-900">{fs.title}</h4>
                     <p className="text-[11px] text-slate-500 leading-snug">{fs.desc}</p>
                   </div>
 
-                  <div className="pt-3 mt-3 border-t border-slate-200/60">
+                  <div className="pt-2 mt-2 border-t border-slate-100">
                     <Link
                       href={`/apply?step=${fs.num}`}
-                      className={`text-xs font-bold flex items-center gap-1 hover:underline ${isDone ? 'text-emerald-700' : isCurrent ? 'text-amber-700' : 'text-slate-600'
-                        }`}
+                      className="text-xs font-medium text-portal-navy hover:underline"
                     >
-                      <span>{isDone ? 'Review / Edit' : 'Fill this step'}</span>
-                      <ArrowRight className="w-3 h-3" />
+                      {isDone ? 'Review' : 'Fill'}
                     </Link>
                   </div>
                 </div>
@@ -442,55 +342,36 @@ export default function ApplicantDashboard() {
           </div>
         </div>
 
-        {/* Draft Particulars Dossier Overview */}
-        <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm space-y-4">
+        {/* Saved Particulars Overview */}
+        <div className="portal-card p-6 space-y-4">
           <div className="flex justify-between items-center border-b border-slate-100 pb-3">
-            <h3 className="font-bold text-slate-900 text-sm flex items-center gap-2">
-              <FileText className="w-4 h-4 text-gurukul-600" /> Saved Draft Particulars
+            <h3 className="font-bold text-slate-900 text-sm">
+              Saved Draft Particulars
             </h3>
             <Link
               href={`/apply?step=${resumeStep}`}
-              className="text-xs font-bold text-gurukul-600 hover:text-gurukul-700 flex items-center gap-1"
+              className="text-xs font-semibold text-portal-navy hover:underline"
             >
-              <span>Continue Filling Form</span>
-              <ArrowRight className="w-3.5 h-3.5" />
+              Continue Filling
             </Link>
           </div>
 
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-xs">
             <div>
-              <span className="text-slate-400 block">Candidate Name:</span>
-              <span className="font-bold text-slate-900">{application.personalInfo?.fullName || 'Not Filled'}</span>
+              <span className="text-slate-500 block text-[11px]">Candidate Name</span>
+              <span className="font-semibold text-slate-900">{application.personalInfo?.fullName || '—'}</span>
             </div>
             <div>
-              <span className="text-slate-400 block">Applying Class:</span>
-              <span className="font-bold text-gurukul-700 bg-amber-50 px-2 py-0.5 rounded inline-block">{application.classApplying}</span>
+              <span className="text-slate-500 block text-[11px]">Applying Class</span>
+              <span className="font-semibold text-portal-navy">{application.classApplying}</span>
             </div>
             <div>
-              <span className="text-slate-400 block">Aadhaar Card:</span>
-              <span className="font-mono font-bold text-slate-900">{application.personalInfo?.aadhaarNumber || 'Not Filled'}</span>
+              <span className="text-slate-500 block text-[11px]">Aadhaar Number</span>
+              <span className="font-mono text-slate-900">{application.personalInfo?.aadhaarNumber || '—'}</span>
             </div>
             <div>
-              <span className="text-slate-400 block">Father&apos;s Full Name:</span>
-              <span className="font-bold text-slate-900">{application.parentInfo?.fatherName || 'Not Filled'}</span>
-            </div>
-            <div>
-              <span className="text-slate-400 block">Father&apos;s Mobile:</span>
-              <span className="font-mono font-bold text-slate-900">{application.parentInfo?.fatherPhone || 'Not Filled'}</span>
-            </div>
-            <div>
-              <span className="text-slate-400 block">Mother&apos;s Full Name:</span>
-              <span className="font-bold text-slate-900">{application.parentInfo?.motherName || 'Not Filled'}</span>
-            </div>
-            <div>
-              <span className="text-slate-400 block">Annual Income:</span>
-              <span className="font-bold text-slate-900">{application.parentInfo?.annualIncome || 'Not Selected'}</span>
-            </div>
-            <div>
-              <span className="text-slate-400 block">City & State:</span>
-              <span className="font-bold text-slate-900">
-                {application.addressInfo?.city ? `${application.addressInfo.city}, ${application.addressInfo.state}` : 'Not Filled'}
-              </span>
+              <span className="text-slate-500 block text-[11px]">Father&apos;s Name</span>
+              <span className="font-semibold text-slate-900">{application.parentInfo?.fatherName || '—'}</span>
             </div>
           </div>
         </div>
@@ -498,66 +379,77 @@ export default function ApplicantDashboard() {
     );
   }
 
+  // SUBMITTED & CONFIRMED APPLICATION VIEW
   const steps = [
-    { label: 'Registration & ₹800 Fee Paid', completed: true, current: false },
-    { label: 'Official Admission Form Ready', completed: true, current: false },
+    { label: 'Registration & ₹800 Fee', sublabel: 'Fee Confirmed', completed: true, current: false },
+    { label: 'Application Verification', sublabel: 'Dossier Under Scrutiny', completed: true, current: false },
     {
       label: 'Admit Card Generation',
+      sublabel: admitCard?.isReleased ? 'Released & Ready' : 'Admit Card: In Progress',
       completed: !!admitCard && admitCard.isReleased,
       current: !admitCard || !admitCard.isReleased,
     },
     {
       label: 'Written Entrance Exam',
+      sublabel: admitCard?.examDate ? `${admitCard.examDate}` : 'Date Scheduled',
       completed: !!result,
       current: !!admitCard?.isReleased && !result,
     },
     {
-      label: 'Result & Merit Scorecard',
+      label: 'Result & Selection',
+      sublabel: result?.isPublished ? (result.qualifyingStatus || 'Result Declared') : 'Evaluation Pending',
       completed: !!result?.isPublished,
       current: false,
     },
   ];
 
+  const candidateInitials = (application.personalInfo?.fullName || currentUser?.name || 'GK')
+    .split(' ')
+    .map((n: string) => n[0])
+    .filter(Boolean)
+    .slice(0, 2)
+    .join('')
+    .toUpperCase();
+
   return (
-    <div className="max-w-6xl mx-auto px-4 sm:px-6 py-10 space-y-8">
-      {/* Top Welcome Header */}
-      <div className="bg-gradient-to-r from-gurukul-navy to-gurukul-navyLight text-white rounded-3xl p-6 sm:p-8 shadow-xl relative overflow-hidden flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
-        <div className="space-y-3 z-10">
-          <div className="flex items-center gap-2.5 flex-wrap">
-            <span className="bg-amber-500 text-gurukul-navy text-xs font-black px-3 py-1 rounded-full uppercase tracking-wider font-mono shadow-sm">
-              Registration ID: {application.registrationNumber || application.applicationNumber}
-            </span>
-            <span className="bg-white/20 text-xs font-bold px-3 py-1 rounded-full">
-              Class: {application.classApplying}{application.stream ? ` (${application.stream})` : ''}
-            </span>
-            {admitCard?.rollNumber && (
-              <span className="bg-slate-900/80 text-amber-300 text-[11px] font-semibold px-3 py-1 rounded-full border border-amber-400/30">
-                Roll No: {admitCard.rollNumber}
-              </span>
-            )}
+    <div className="max-w-6xl mx-auto px-4 py-8 space-y-6 font-sans">
+      {/* Top Welcome Hero Banner */}
+      <div className="portal-card-navy p-6 sm:p-8 flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+        <div className="flex items-start sm:items-center gap-4 sm:gap-5">
+          {/* Avatar Monogram */}
+          <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-gradient-to-br from-amber-400 to-amber-600 text-slate-950 font-black text-xl sm:text-2xl flex items-center justify-center shadow-md flex-shrink-0 ring-4 ring-white/10">
+            {candidateInitials}
           </div>
-          <h1 className="text-2xl sm:text-3xl font-black">
-            Welcome, {currentUser?.name || application.personalInfo?.fullName || 'Candidate'}
-          </h1>
-          <p className="text-xs sm:text-sm text-slate-300">
-            GURUKUL Online Entrance Examination Portal • Session 2027-28
-          </p>
+
+          <div className="space-y-1.5">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="bg-amber-400/20 text-amber-300 border border-amber-400/30 text-xs font-bold px-3 py-0.5 rounded-full font-mono">
+                Reg ID: {application.registrationNumber || application.applicationNumber}
+              </span>
+              <span className="bg-white/10 text-slate-200 border border-white/15 text-xs font-semibold px-2.5 py-0.5 rounded-full">
+                Class {application.classApplying}{application.stream ? ` (${application.stream})` : ''}
+              </span>
+              {admitCard?.rollNumber && (
+                <span className="bg-amber-500/30 text-amber-200 border border-amber-400/40 text-xs font-bold px-2.5 py-0.5 rounded-full font-mono">
+                  Roll No: {admitCard.rollNumber}
+                </span>
+              )}
+            </div>
+
+            <h1 className="text-xl sm:text-3xl font-black tracking-tight text-white">
+              Welcome, {currentUser?.name || application.personalInfo?.fullName || 'Candidate'}
+            </h1>
+            <p className="text-xs sm:text-sm text-slate-300 font-medium">
+              Entrance Examination &amp; Admission Portal • Session 2027-28
+            </p>
+          </div>
         </div>
 
-        <div className="z-10 flex flex-wrap gap-3 items-center">
-          <Link
-            href="/admission-form"
-            className="bg-gurukul-navy hover:bg-slate-800 text-amber-300 font-extrabold text-xs px-4 py-2.5 rounded-xl shadow-lg transition flex items-center gap-1.5 border border-amber-400/40"
-            title="Download / Print Official Admission Verification & Enrolment Form"
-          >
-            <Printer className="w-4 h-4" />
-            <span>Admission Form</span>
-          </Link>
-
+        <div className="flex flex-wrap gap-2.5 items-center self-stretch sm:self-auto justify-start sm:justify-end border-t sm:border-t-0 border-white/10 pt-4 sm:pt-0">
           {admitCard && admitCard.isReleased && (
             <Link
               href="/admit-card"
-              className="bg-amber-500 hover:bg-amber-600 text-gurukul-navy font-black text-xs px-5 py-2.5 rounded-xl shadow-lg transition flex items-center gap-1.5"
+              className="btn-accent text-xs h-10 px-4 font-bold flex items-center gap-2 shadow-sm"
             >
               <Download className="w-4 h-4" />
               <span>Download Admit Card</span>
@@ -566,265 +458,340 @@ export default function ApplicantDashboard() {
 
           {result?.isPublished && (
             <Link
-              href="/result"
-              className="bg-emerald-500 hover:bg-emerald-600 text-white font-black text-xs px-5 py-2.5 rounded-xl shadow-lg transition flex items-center gap-1.5"
+              href={`/result?rollNo=${encodeURIComponent(admitCard?.rollNumber || application.rollNumber || application.registrationNumber || '')}&dob=${encodeURIComponent(application.personalInfo?.dob || '')}`}
+              className="btn-primary text-xs h-10 px-4 flex items-center gap-2 border border-white/20 shadow-sm"
             >
-              <Award className="w-4 h-4" />
-              <span>View Scorecard</span>
+              <Award className="w-4 h-4 text-amber-400" />
+              <span>View Result</span>
             </Link>
           )}
         </div>
       </div>
 
-      {/* Resubmission / Action Alert Messages */}
+      {/* Resubmission Message */}
       {resubmitMsg && (
         <div
-          className={`p-4 rounded-2xl text-xs font-semibold flex items-center justify-between shadow-sm transition ${resubmitMsg.type === 'success'
-            ? 'bg-emerald-50 border-2 border-emerald-300 text-emerald-950'
-            : 'bg-red-50 border-2 border-red-300 text-red-950'
+          className={`p-4 rounded-xl text-xs font-medium flex items-center justify-between border shadow-sm ${resubmitMsg.type === 'success'
+            ? 'bg-emerald-50 border-emerald-300 text-emerald-950'
+            : 'bg-rose-50 border-rose-300 text-rose-950'
             }`}
         >
           <div className="flex items-center gap-2.5">
             {resubmitMsg.type === 'success' ? (
               <CheckCircle2 className="w-5 h-5 text-emerald-600 flex-shrink-0" />
             ) : (
-              <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0" />
+              <AlertCircle className="w-5 h-5 text-rose-600 flex-shrink-0" />
             )}
             <span>{resubmitMsg.text}</span>
           </div>
           <button
             onClick={() => setResubmitMsg(null)}
-            className="text-slate-400 hover:text-slate-700 ml-4"
+            className="text-slate-400 hover:text-slate-600 ml-4"
           >
             <X className="w-4 h-4" />
           </button>
         </div>
       )}
 
+      {/* Application Progress Roadmap */}
+      <div className="portal-card p-6 sm:p-7 space-y-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-xs font-bold uppercase tracking-wider text-slate-500">
+              Admission Journey
+            </h2>
+            <p className="text-sm font-bold text-slate-900 mt-0.5">
+              Candidate Milestone Tracker
+            </p>
+          </div>
+          <span className="portal-badge-gold">
+            Official Session 2027-28
+          </span>
+        </div>
 
-      {/* Application Status Timeline Card */}
-      <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
-        <h2 className="text-sm font-bold uppercase tracking-wider text-slate-700 mb-6 flex items-center gap-2">
-          <Clock className="w-4 h-4 text-gurukul-600" />
-          Application Progress Tracker
-        </h2>
-
-        <div className="grid grid-cols-1 sm:grid-cols-5 gap-4 relative">
+        <div className="grid grid-cols-1 sm:grid-cols-5 gap-3 pt-1">
           {steps.map((st, idx) => (
             <div
               key={idx}
-              className={`p-4 rounded-xl border text-left transition ${st.completed
-                ? 'bg-emerald-50/50 border-emerald-300 text-emerald-950'
+              className={`p-4 rounded-xl border text-left transition-all relative overflow-hidden ${st.completed
+                ? 'bg-emerald-50/70 border-emerald-300 text-slate-900 shadow-xs'
                 : st.current
-                  ? 'bg-amber-50 border-amber-300 text-amber-950 ring-2 ring-amber-400/40'
-                  : 'bg-slate-50 border-slate-200 text-slate-400'
+                  ? 'bg-amber-50/50 border-amber-400 ring-2 ring-amber-400/30 text-slate-950 shadow-sm'
+                  : 'bg-slate-50/80 border-slate-200 text-slate-400'
                 }`}
             >
               <div className="flex items-center justify-between mb-2">
-                <span className="text-[10px] font-mono font-bold uppercase">Step 0{idx + 1}</span>
+                <span className={`text-[10px] font-mono font-bold uppercase ${st.completed ? 'text-emerald-800' : st.current ? 'text-amber-800' : 'text-slate-400'}`}>
+                  Step 0{idx + 1}
+                </span>
                 {st.completed ? (
                   <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                ) : st.current ? (
+                  <span className="w-2.5 h-2.5 rounded-full bg-amber-500 animate-pulse" />
                 ) : (
-                  <div className="w-2 h-2 rounded-full bg-slate-300" />
+                  <div className="w-1.5 h-1.5 rounded-full bg-slate-300" />
                 )}
               </div>
-              <h4 className="font-bold text-xs leading-snug">{st.label}</h4>
-              <span className="text-[10px] mt-1 block">
-                {st.completed ? 'Completed' : st.current ? 'In Progress' : 'Pending'}
+              <h4 className={`font-bold text-xs leading-tight ${st.completed ? 'text-slate-900' : st.current ? 'text-slate-950' : 'text-slate-500'}`}>
+                {st.label}
+              </h4>
+              <span className={`text-[11px] mt-1.5 block font-medium ${st.completed ? 'text-emerald-700' : st.current ? 'text-amber-700 font-semibold' : 'text-slate-400'}`}>
+                {st.sublabel}
               </span>
             </div>
           ))}
         </div>
       </div>
 
-      {/* Grid of Details & Quick Actions */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Left 2 Cols: Application Dossier */}
+      {/* Grid: Dossier + Receipts */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
+        {/* Left 2 Cols: Candidate Dossier */}
         <div className="lg:col-span-2 space-y-6">
-          <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm space-y-4">
-            <div className="flex justify-between items-center border-b border-slate-100 pb-3">
-              <h3 className="font-bold text-slate-900 text-sm flex items-center gap-2">
-                <FileText className="w-4 h-4 text-gurukul-600" /> Candidate Dossier Summary
-              </h3>
-              <span className="text-xs font-bold px-3 py-1 rounded-full bg-emerald-100 text-emerald-800">
-                Status: REGISTERED (FEE PAID)
+          <div className="portal-card p-6 sm:p-7 space-y-6">
+            <div className="flex justify-between items-center border-b border-slate-100 pb-4">
+              <div>
+                <h3 className="font-bold text-slate-900 text-base">
+                  Candidate Dossier Summary
+                </h3>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  Verified particulars recorded for entrance examination and campus enrolment
+                </p>
+              </div>
+              <span className="portal-badge-emerald">
+                <CheckCircle2 className="w-3.5 h-3.5" />
+                <span>Confirmed</span>
               </span>
             </div>
 
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 text-xs">
-              <div>
-                <span className="text-slate-400 block">Registration ID:</span>
-                <span className="font-mono font-black text-amber-700 text-sm">
+            {/* Dossier Grid */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
+              <div className="data-cell">
+                <span className="text-slate-500 block text-[10px] font-semibold uppercase tracking-wider">Registration ID</span>
+                <span className="font-mono font-bold text-sm text-portal-navy mt-0.5 block">
                   {application.registrationNumber || application.applicationNumber}
                 </span>
               </div>
-              <div>
-                <span className="text-slate-400 block">Class Seeking Admission:</span>
-                <span className="font-bold text-slate-900">
+              <div className="data-cell">
+                <span className="text-slate-500 block text-[10px] font-semibold uppercase tracking-wider">Class Seeking</span>
+                <span className="font-bold text-sm text-slate-900 mt-0.5 block">
                   Class {application.classApplying}{application.stream ? ` (${application.stream})` : ''}
                 </span>
               </div>
-              <div>
-                <span className="text-slate-400 block">Application Fee (₹800):</span>
-                <span className="font-bold text-emerald-700">PAID (CONFIRMED)</span>
+              <div className="data-cell">
+                <span className="text-slate-500 block text-[10px] font-semibold uppercase tracking-wider">Application Fee</span>
+                <span className="font-bold text-sm text-emerald-700 mt-0.5 block">₹800.00 (Paid)</span>
               </div>
 
-              <div>
-                <span className="text-slate-400 block">Candidate Name:</span>
-                <span className="font-bold text-slate-900">{application.personalInfo?.fullName}</span>
+              <div className="data-cell">
+                <span className="text-slate-500 block text-[10px] font-semibold uppercase tracking-wider">Candidate Full Name</span>
+                <span className="font-bold text-slate-900 mt-0.5 block">{application.personalInfo?.fullName}</span>
               </div>
-              <div>
-                <span className="text-slate-400 block">Date of Birth:</span>
-                <span className="font-bold text-slate-900">{formatDob(application.personalInfo?.dob)}</span>
+              <div className="data-cell">
+                <span className="text-slate-500 block text-[10px] font-semibold uppercase tracking-wider">Date of Birth</span>
+                <span className="font-medium text-slate-900 mt-0.5 block">{formatDob(application.personalInfo?.dob)}</span>
               </div>
-              <div>
-                <span className="text-slate-400 block">Gender / Category:</span>
-                <span className="font-bold text-slate-900">
-                  {application.personalInfo?.gender} ({application.personalInfo?.category || 'General'})
+              <div className="data-cell">
+                <span className="text-slate-500 block text-[10px] font-semibold uppercase tracking-wider">Gender &amp; Category</span>
+                <span className="font-medium text-slate-900 mt-0.5 block">
+                  {application.personalInfo?.gender} • {application.personalInfo?.category || 'General'}
                 </span>
               </div>
 
-              <div>
-                <span className="text-slate-400 block">Aadhaar Number:</span>
-                <span className="font-mono font-bold text-slate-900">{application.personalInfo?.aadhaarNumber || '—'}</span>
+              <div className="data-cell">
+                <span className="text-slate-500 block text-[10px] font-semibold uppercase tracking-wider">Aadhaar Number</span>
+                <span className="font-mono text-slate-800 mt-0.5 block">{application.personalInfo?.aadhaarNumber || '—'}</span>
               </div>
-              <div>
-                <span className="text-slate-400 block"> PEN:</span>
-                <span className="font-mono font-bold text-slate-900">{application.personalInfo?.panNumber || '—'}</span>
+              <div className="data-cell">
+                <span className="text-slate-500 block text-[10px] font-semibold uppercase tracking-wider">PEN Number</span>
+                <span className="font-mono text-slate-800 mt-0.5 block">{application.personalInfo?.panNumber || '—'}</span>
               </div>
-              <div>
-                <span className="text-slate-400 block">Family ID:</span>
-                <span className="font-mono font-bold text-slate-900">{application.personalInfo?.familyId || '—'}</span>
-              </div>
-
-              <div>
-                <span className="text-slate-400 block">Father&apos;s Name:</span>
-                <span className="font-bold text-slate-900">{application.parentInfo?.fatherName}</span>
-              </div>
-              <div>
-                <span className="text-slate-400 block">Mother&apos;s Name:</span>
-                <span className="font-bold text-slate-900">{application.parentInfo?.motherName}</span>
-              </div>
-              <div>
-                <span className="text-slate-400 block">Registered Phone:</span>
-                <span className="font-bold text-slate-900">{application.parentInfo?.fatherPhone || application.personalInfo?.candidateMobile}</span>
+              <div className="data-cell">
+                <span className="text-slate-500 block text-[10px] font-semibold uppercase tracking-wider">Family ID</span>
+                <span className="font-mono text-slate-800 mt-0.5 block">{application.personalInfo?.familyId || '—'}</span>
               </div>
 
-              <div>
-                <span className="text-slate-400 block">1st Study Location Preference:</span>
-                <span className="font-bold text-gurukul-navy">{application.studyLocation?.firstPreference || 'Gurukul Nilokheri'}</span>
+              <div className="data-cell">
+                <span className="text-slate-500 block text-[10px] font-semibold uppercase tracking-wider">Father&apos;s Name</span>
+                <span className="font-medium text-slate-900 mt-0.5 block">{application.parentInfo?.fatherName}</span>
               </div>
-              <div>
-                <span className="text-slate-400 block">2nd Study Location Preference:</span>
-                <span className="font-semibold text-slate-700">{application.studyLocation?.secondPreference || 'None'}</span>
+              <div className="data-cell">
+                <span className="text-slate-500 block text-[10px] font-semibold uppercase tracking-wider">Mother&apos;s Name</span>
+                <span className="font-medium text-slate-900 mt-0.5 block">{application.parentInfo?.motherName}</span>
               </div>
-              <div>
-                <span className="text-slate-400 block">Payment Reference:</span>
-                <span className="font-mono text-[11px] text-slate-600 truncate block">{application.paymentInfo?.transactionId || 'CONFIRMED'}</span>
+              <div className="data-cell">
+                <span className="text-slate-500 block text-[10px] font-semibold uppercase tracking-wider">Registered Mobile</span>
+                <span className="font-mono text-slate-900 mt-0.5 block">{application.parentInfo?.fatherPhone || application.personalInfo?.candidateMobile}</span>
               </div>
 
-              <div className="sm:col-span-3">
-                <span className="text-slate-400 block">Residential Address:</span>
-                <span className="font-medium text-slate-800">
+              <div className="data-cell sm:col-span-2">
+                <span className="text-slate-500 block text-[10px] font-semibold uppercase tracking-wider">Campus Preferences</span>
+                <span className="font-medium text-slate-900 mt-0.5 block">
+                  1st: <strong>{application.studyLocation?.firstPreference || 'Gurukul Nilokheri'}</strong> • 2nd: {application.studyLocation?.secondPreference || 'None'}
+                </span>
+              </div>
+              <div className="data-cell">
+                <span className="text-slate-500 block text-[10px] font-semibold uppercase tracking-wider">Payment Reference</span>
+                <span className="font-mono text-[11px] text-slate-700 truncate mt-0.5 block">{application.paymentInfo?.transactionId || 'CONFIRMED'}</span>
+              </div>
+
+              <div className="data-cell sm:col-span-3">
+                <span className="text-slate-500 block text-[10px] font-semibold uppercase tracking-wider">Permanent Residential Address</span>
+                <span className="font-medium text-slate-800 mt-0.5 block leading-relaxed">
                   {application.addressInfo?.streetAddress}, {application.addressInfo?.district}, {application.addressInfo?.state} - {application.addressInfo?.pincode}
                 </span>
               </div>
             </div>
 
-            <div className="pt-4 border-t border-slate-100 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
-              <div>
-                <span className="font-bold text-slate-800 block text-xs">Official Admission & Enrolment Form (A4)</span>
-                <span className="text-[11px] text-slate-500">
-                  Available immediately for download. Print and bring along with Admit Card on examination day.
-                </span>
+            {/* Mandatory Examination Day Guidelines Card */}
+            <div className="p-4 rounded-xl bg-amber-50/80 border border-amber-300 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 shadow-xs">
+              <div className="space-y-1">
+                <div className="flex items-center gap-2">
+                  <span className="bg-amber-500/20 text-amber-900 border border-amber-400 text-[10px] font-bold px-2 py-0.5 rounded uppercase tracking-wider">
+                    Exam Day Mandatory Requirements
+                  </span>
+                </div>
+                <h4 className="font-bold text-slate-900 text-xs sm:text-sm">
+                  Candidates Must Bring to the Examination Centre:
+                </h4>
+                <ul className="text-[11.5px] text-slate-700 space-y-0.5 list-disc list-inside">
+                  <li><strong className="text-slate-950">1. Coloured Admit Card:</strong> A clear coloured printout of your Hall Ticket (Black &amp; white copies are NOT permitted).</li>
+                  <li><strong className="text-slate-950">2. Original Photo ID Proof:</strong> ONE original photo ID (Original Aadhaar Card, Passport, or School ID Card).</li>
+                </ul>
               </div>
-              <Link
-                href="/admission-form"
-                className="inline-flex items-center gap-1.5 bg-slate-900 hover:bg-black text-amber-300 font-bold px-4 py-2 rounded-xl text-xs transition border border-amber-400/30"
-              >
-                <Printer className="w-3.5 h-3.5" />
-                <span>Print Admission Form</span>
-              </Link>
+              {admitCard && admitCard.isReleased ? (
+                <Link
+                  href="/admit-card"
+                  className="btn-primary text-xs h-9 px-4 flex items-center gap-2 flex-shrink-0 font-bold"
+                >
+                  <Download className="w-3.5 h-3.5" />
+                  <span>Download Coloured Admit Card</span>
+                </Link>
+              ) : (
+                <span className="text-[11px] text-amber-800 font-semibold bg-amber-100/70 border border-amber-300 px-3 py-1.5 rounded-lg">
+                  Admit Card Pending Release
+                </span>
+              )}
             </div>
           </div>
 
-          {/* Quick Admit Card Alert if ready */}
+          {/* Admit Card Banner if released */}
           {admitCard && admitCard.isReleased && (
-            <div className="bg-amber-50 border-2 border-amber-300 rounded-2xl p-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+            <div className="portal-card bg-amber-50/60 border-amber-300 p-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
               <div className="space-y-1">
-                <span className="bg-amber-200 text-amber-900 text-[10px] font-black px-2 py-0.5 rounded uppercase">
+                <span className="portal-badge-gold font-mono">
                   Roll No: {admitCard.rollNumber}
                 </span>
-                <h4 className="font-black text-slate-900 text-base">
-                  Entrance Examination Admit Card Issued
+                <h4 className="font-bold text-slate-900 text-base">
+                  Entrance Examination Hall Ticket Released
                 </h4>
-                <p className="text-xs text-slate-600">
-                  Venue: <strong>{admitCard.examCentreName}</strong> | Date: <strong>{admitCard.examDate}</strong> ({admitCard.reportingTime})
+                <p className="text-xs text-slate-700">
+                  Venue: <strong>{admitCard.examCentreName}</strong> • Date: <strong>{admitCard.examDate}</strong> ({admitCard.reportingTime})
                 </p>
               </div>
 
               <Link
                 href="/admit-card"
-                className="bg-gurukul-600 hover:bg-gurukul-700 text-white font-bold text-xs px-5 py-2.5 rounded-xl shadow transition flex items-center gap-1.5 flex-shrink-0"
+                className="btn-accent text-xs h-10 px-5 flex-shrink-0 font-bold"
               >
-                <Printer className="w-4 h-4" />
-                <span>Print Hall Ticket</span>
+                <Download className="w-4 h-4" />
+                <span>Print Admit Card</span>
               </Link>
             </div>
           )}
         </div>
 
-        {/* Right 1 Col: Fee Payment Receipt & Helpline */}
+        {/* Right 1 Col: Receipt & Helpdesk */}
         <div className="space-y-6">
-          {/* Payment Receipt */}
-          <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm space-y-4">
-            <h3 className="font-bold text-slate-900 text-sm flex items-center gap-2 border-b border-slate-100 pb-3">
-              <CreditCard className="w-4 h-4 text-emerald-600" /> Fee Payment Receipt
-            </h3>
+          {/* Fee Payment Voucher Card */}
+          <div className="portal-card p-6 space-y-4 text-xs">
+            <div className="flex justify-between items-center border-b border-slate-100 pb-3">
+              <div>
+                <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-slate-400 block">
+                  Official Voucher
+                </span>
+                <h3 className="font-bold text-slate-900 text-sm">
+                  Fee Payment Receipt
+                </h3>
+              </div>
+              <span className="portal-badge-emerald">
+                <CheckCircle2 className="w-3 h-3" />
+                <span>Verified</span>
+              </span>
+            </div>
 
-            <div className="space-y-2 text-xs">
-              <div className="flex justify-between">
-                <span className="text-slate-500">Payment Status:</span>
-                <span className="font-bold text-emerald-600 uppercase flex items-center gap-1">
-                  <CheckCircle2 className="w-3.5 h-3.5" /> Paid & Verified
+            <div className="p-4 rounded-xl bg-slate-50 border border-slate-200/80 text-center space-y-1">
+              <span className="text-[10px] uppercase font-bold text-slate-500 tracking-wider">Total Entrance Fee</span>
+              <div className="text-2xl font-black text-slate-900 font-mono">
+                ₹{application.amountPaid || 800}.00
+              </div>
+              <span className="text-[11px] text-emerald-700 font-semibold block">
+                Paid Successfully
+              </span>
+            </div>
+
+            <div className="space-y-2.5 pt-1">
+              <div className="flex justify-between items-center py-1 border-b border-slate-100">
+                <span className="text-slate-500">Transaction ID</span>
+                <span className="font-mono text-slate-800 font-medium text-[11px] truncate max-w-[140px]" title={application.transactionId}>
+                  {application.transactionId}
                 </span>
               </div>
-              <div className="flex justify-between">
-                <span className="text-slate-500">Amount Paid:</span>
-                <span className="font-mono font-bold text-slate-900">₹{application.amountPaid || 1200}.00</span>
+              <div className="flex justify-between items-center py-1 border-b border-slate-100">
+                <span className="text-slate-500">Receipt Date</span>
+                <span className="text-slate-800 font-medium">{new Date(application.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}</span>
               </div>
-              <div className="flex justify-between">
-                <span className="text-slate-500">Transaction Ref:</span>
-                <span className="font-mono text-slate-700 text-[11px]">{application.transactionId}</span>
+              <div className="flex justify-between items-center py-1 border-b border-slate-100">
+                <span className="text-slate-500">Payment Gateway</span>
+                <span className="text-slate-800 font-medium">Online Verified (Razorpay)</span>
               </div>
-              <div className="flex justify-between">
-                <span className="text-slate-500">Gateway:</span>
-                <span className="text-slate-700">Razorpay Secure Online</span>
+              <div className="flex justify-between items-center py-1">
+                <span className="text-slate-500">Academic Session</span>
+                <span className="text-slate-800 font-semibold">2027-28</span>
               </div>
-              <div className="flex justify-between">
-                <span className="text-slate-500">Submission Date:</span>
-                <span className="text-slate-700">{new Date(application.createdAt).toLocaleDateString()}</span>
-              </div>
+            </div>
+
+            <div className="pt-2 text-[11px] text-slate-500 text-center bg-slate-50 py-2 px-3 rounded-lg border border-slate-100">
+              Official electronic payment receipt verified for Session 2027-28.
             </div>
           </div>
 
-          {/* Helpline Box */}
-          <div className="bg-slate-900 text-white rounded-2xl p-6 shadow-md space-y-3">
-            <h4 className="font-bold text-sm text-amber-400 flex items-center gap-2">
-              <Phone className="w-4 h-4" /> Admission Helpdesk
-            </h4>
+          {/* Admission Helpdesk Box */}
+          <div className="portal-card-navy p-6 space-y-3.5 text-white">
+            <div className="flex items-center gap-2">
+              <div className="w-7 h-7 rounded-lg bg-amber-400/20 text-amber-300 border border-amber-400/30 flex items-center justify-center">
+                <Phone className="w-3.5 h-3.5" />
+              </div>
+              <div>
+                <h4 className="font-bold text-xs text-amber-300 uppercase tracking-wider">
+                  Admission Helpdesk
+                </h4>
+                <p className="text-[10px] text-slate-400">Examination Cell</p>
+              </div>
+            </div>
+
             <p className="text-xs text-slate-300 leading-relaxed">
-              Have questions regarding document verification, syllabus, or exam centres? Contact the Gurukul Kurukshetra Examination Cell.
+              Have questions regarding document verification, syllabus, or exam centres? Contact the Gurukul Examination Cell.
             </p>
-            <div className="pt-2 text-xs space-y-1 font-mono text-amber-200">
-              <div>+91-1744-259114</div>
-              <div>+91-9896328329</div>
+
+            <div className="pt-2 border-t border-slate-800 space-y-1.5 text-xs font-mono text-slate-200">
+              <div className="flex items-center justify-between">
+                <span className="text-slate-400 font-sans text-[11px]">Helpline 1:</span>
+                <span>+91-1744-259114</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-slate-400 font-sans text-[11px]">Helpline 2:</span>
+                <span>+91-9896328329</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-slate-400 font-sans text-[11px]">Email:</span>
+                <span className="text-[11px]">admissions@gurukuladmissions.org</span>
+              </div>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Accessible Centralized Modal */}
+      {/* Accessible Modal */}
       <ConfirmModal
         isOpen={modalState.isOpen}
         title={modalState.title}
@@ -838,4 +805,3 @@ export default function ApplicantDashboard() {
     </div>
   );
 }
-

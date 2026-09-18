@@ -96,16 +96,16 @@ export default function ConfirmModal({
       className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-sm animate-in fade-in duration-150"
     >
       <div
-        className="bg-white rounded-3xl shadow-2xl border border-slate-200 max-w-md w-full overflow-hidden transform transition-all animate-in zoom-in-95 duration-200"
+        className="bg-white rounded-2xl shadow-xl border border-slate-200 max-w-md w-full overflow-hidden transform transition-all animate-in zoom-in-95 duration-200"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header Ribbon */}
-        <div className="bg-gradient-to-r from-gurukul-navy to-gurukul-navyLight px-6 py-4 flex items-center justify-between border-b border-amber-500/30">
+        <div className="bg-portal-navy px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-2.5">
-            <div className={`w-8 h-8 rounded-full ${variantConfig.iconBg} flex items-center justify-center`}>
+            <div className={`w-8 h-8 rounded-lg ${variantConfig.iconBg} flex items-center justify-center`}>
               <IconComponent className={`w-4 h-4 ${variantConfig.iconColor}`} />
             </div>
-            <h3 id="confirm-modal-title" className="text-white text-base font-black tracking-wide">
+            <h3 id="confirm-modal-title" className="text-white text-base font-bold">
               {title}
             </h3>
           </div>
@@ -113,7 +113,7 @@ export default function ConfirmModal({
             <button
               onClick={onCancel}
               disabled={loading}
-              className="text-slate-400 hover:text-white p-1 rounded-lg transition"
+              className="text-slate-400 hover:text-white p-1 rounded-md transition"
               aria-label="Close dialog"
             >
               <X className="w-5 h-5" />
@@ -122,20 +122,20 @@ export default function ConfirmModal({
         </div>
 
         {/* Content Body */}
-        <div className="p-6 sm:p-7 space-y-4">
+        <div className="p-6 space-y-4">
           <div className="text-slate-700 text-xs sm:text-sm leading-relaxed whitespace-pre-line">
             {message}
           </div>
         </div>
 
         {/* Footer Actions */}
-        <div className="bg-slate-50 px-6 py-4 border-t border-slate-200 flex items-center justify-end gap-3">
+        <div className="bg-slate-50 px-6 py-3.5 border-t border-slate-200 flex items-center justify-end gap-3">
           {!isAlertMode && onCancel && (
             <button
               type="button"
               onClick={onCancel}
               disabled={loading}
-              className="px-4 py-2 text-xs font-bold text-slate-700 hover:bg-slate-200/80 rounded-xl transition border border-slate-300"
+              className="btn-secondary text-xs h-9 px-4"
             >
               {cancelText}
             </button>
@@ -146,7 +146,7 @@ export default function ConfirmModal({
             type="button"
             onClick={onConfirm}
             disabled={loading}
-            className={`px-5 py-2 text-xs font-black rounded-xl shadow-md transition flex items-center gap-2 ${variantConfig.buttonBg} disabled:opacity-50`}
+            className={`text-xs font-semibold h-9 px-5 rounded-md shadow-xs transition flex items-center gap-2 ${variantConfig.buttonBg} disabled:opacity-50`}
           >
             {loading ? (
               <>

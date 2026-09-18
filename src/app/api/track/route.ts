@@ -71,14 +71,14 @@ export async function GET(request: Request) {
       if (!admitCard && matchingApp.registrationNumber) {
         admitCard = await db.getAdmitCard(matchingApp.registrationNumber);
       }
-    } catch {}
+    } catch { }
 
     try {
       examResult = await db.getResult(appId);
       if (!examResult && matchingApp.registrationNumber) {
         examResult = await db.getResult(matchingApp.registrationNumber);
       }
-    } catch {}
+    } catch { }
 
     const isAdmitCardReleased = settings.admitCardsReleased === true;
     const isResultsDeclared = settings.resultsDeclared === true;
@@ -109,7 +109,7 @@ export async function GET(request: Request) {
       },
       {
         id: 'dossier_submission',
-        title: 'Application Form Submission',
+        title: 'Admission Form Submission',
         subtitle: 'Candidate dossier & certificates',
         status: 'completed',
         date: formatDateString(matchingApp.createdAt, '01 Sep 2026'),
@@ -162,14 +162,14 @@ export async function GET(request: Request) {
       },
       {
         id: 'result',
-        title: 'Merit List & Scorecard',
+        title: 'Entrance Examination Result',
         subtitle: isResultsDeclared
           ? (examResult?.qualifyingStatus || 'Result Declared')
           : `Scheduled for ${formatDateString(settings.resultDeclarationDate, '25 Dec 2026')}`,
         status: isResultsDeclared ? 'completed' : 'scheduled',
         details: isResultsDeclared && examResult
-          ? `Score: ${examResult.totalMarks}/${examResult.maxTotalMarks} (${examResult.percentage}%) - Rank ${examResult.rank || 'N/A'}`
-          : 'Merit list and scorecards will be published post examination evaluation.',
+          ? (examResult.remarks ? `Status: ${examResult.qualifyingStatus} - ${examResult.remarks}` : `Status: ${examResult.qualifyingStatus}`)
+          : 'Result will be published post examination evaluation.',
       },
     ];
 
@@ -210,12 +210,9 @@ export async function GET(request: Request) {
       },
       result: isResultsDeclared && examResult ? {
         declared: true,
-        totalMarks: examResult.totalMarks,
-        maxTotalMarks: examResult.maxTotalMarks,
-        percentage: examResult.percentage,
-        rank: examResult.rank,
         qualifyingStatus: examResult.qualifyingStatus,
-        scorecardUrl: `/result?query=${encodeURIComponent(matchingApp.registrationNumber || matchingApp.applicationNumber)}`,
+        remarks: examResult.remarks,
+        resultUrl: `/result?rollNo=${encodeURIComponent(matchingApp.rollNumber || '')}`,
       } : {
         declared: false,
         scheduledDate: formatDateString(settings.resultDeclarationDate, '25 December 2026'),

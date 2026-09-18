@@ -89,7 +89,7 @@ async function runHardeningTests() {
 
   // 2. Aadhaar Uniqueness Verification
   console.log('\n[Step 2] Testing Aadhaar Number Formatting & Validation...');
-  
+
   const validParentInfo = {
     fatherName: 'Rajesh Sharma',
     motherName: 'Sunita Sharma',
@@ -112,7 +112,7 @@ async function runHardeningTests() {
   // 3. Parent Names Validation
   console.log('\n[Step 3] Testing Father & Mother Name Rules (Rejection of RRRRRRRR, 123456)...');
   const testAadhaar = '88' + Math.floor(1000000000 + Math.random() * 9000000000).toString().slice(0, 10);
-  
+
   // 3a. Repeated single characters
   const repeatNameRes = await request(
     { hostname: 'localhost', port: 3000, path: '/api/applications', method: 'POST', headers: { 'Content-Type': 'application/json', Cookie: candCookie } },
@@ -159,7 +159,7 @@ async function runHardeningTests() {
 
   // 5. Academic Marks Validation
   console.log('\n[Step 5] Testing Academic Marks Validation (No negative marks, obtain <= total)...');
-  
+
   // 5a. Negative Marks
   const negMarksRes = await request(
     { hostname: 'localhost', port: 3000, path: '/api/applications', method: 'POST', headers: { 'Content-Type': 'application/json', Cookie: candCookie } },
@@ -186,7 +186,7 @@ async function runHardeningTests() {
 
   // 6. Documents & File Security Validation
   console.log('\n[Step 6] Testing Required 5 Documents and Binary Magic-Byte Security...');
-  
+
   // 6a. Missing mandatory Parent Signature or Previous Marksheet
   const missingDocRes = await request(
     { hostname: 'localhost', port: 3000, path: '/api/applications', method: 'POST', headers: { 'Content-Type': 'application/json', Cookie: candCookie } },
@@ -318,7 +318,7 @@ async function runHardeningTests() {
   // As candidate with 'submitted' status:
   assert(newApp.status !== 'approved', `Current candidate status is "${newApp.status}", NOT approved`);
 
-  // Verify that Admin approving the application unlocks the admission form
+  // Verify that Admin approving the application unlocks the Admission form
   console.log('\n[Step 9] Testing Admin Approval Flow...');
   const approveRes = await request(
     { hostname: 'localhost', port: 3000, path: `/api/applications/${newApp.id}`, method: 'PATCH', headers: { 'Content-Type': 'application/json', Cookie: adminCookie } },
