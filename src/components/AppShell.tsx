@@ -20,10 +20,14 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     );
   }
 
+  const isOrangishGradient = pathname === '/register' || pathname === '/login' || pathname === '/admin/login';
+
   return (
     <div className="min-h-screen flex flex-col text-slate-900">
       <Header />
-      <main className="flex-grow bg-gradient-to-br from-[#dbeafe] via-[#fffdf8] via-45% to-[#fde1be] flex flex-col">{children}</main>
+      <main className={`flex-grow flex flex-col ${isOrangishGradient ? 'bg-gradient-to-br from-[#fff7ed] via-[#ffedd5] via-45% to-[#fed7aa]' : 'bg-gradient-to-br from-[#dbeafe] via-[#fffdf8] via-45% to-[#fde1be]'}`}>
+        {children}
+      </main>
       <Footer />
     </div>
   );

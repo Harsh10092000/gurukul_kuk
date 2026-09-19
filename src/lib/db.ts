@@ -576,6 +576,22 @@ export const db = {
     };
   },
 
+  async getAllUsers(): Promise<User[]> {
+    if (useFallbackStorage || !pool) {
+      const store = initFallbackFile();
+      return store.users || [];
+    }
+    try {
+      const [rows]: any = await pool.query(
+        'SELECT id, name, email, phone, role, registration_number as registrationNumber, created_at as createdAt FROM users'
+      );
+      return rows;
+    } catch {
+      const store = initFallbackFile();
+      return store.users || [];
+    }
+  },
+
   async updateUserPassword(emailOrPhone: string, newPasswordHash: string): Promise<boolean> {
     const user = (await this.findUserByIdentifier(emailOrPhone)) || (await this.findUserByPhone(emailOrPhone));
     if (!user) return false;

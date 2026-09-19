@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
@@ -7,7 +7,6 @@ import {
   CheckCircle,
   AlertCircle,
   Trash2,
-  BookmarkCheck,
   Upload
 } from 'lucide-react';
 import { INDIAN_STATES_AND_DISTRICTS } from '@/lib/indianLocations';
@@ -29,8 +28,6 @@ export default function ApplyPage() {
   const router = useRouter();
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
-  const [savingDraft, setSavingDraft] = useState(false);
-  const [draftSavedMsg, setDraftSavedMsg] = useState('');
   const [error, setError] = useState('');
   const [existingApp, setExistingApp] = useState<any>(null);
   const [submittedApp, setSubmittedApp] = useState<any>(null);
@@ -146,43 +143,55 @@ export default function ApplyPage() {
     }
   }, [formData.applyingClass]);
 
-  // Restore authenticated session & draft details on mount
+  // Restore contact info and pre-fill on mount
   useEffect(() => {
+    // 1. Check session storage from registration step
+    try {
+      const stored = sessionStorage.getItem('gurukul_reg_info');
+      if (stored) {
+        const regInfo = JSON.parse(stored);
+        setFormData((prev) => ({
+          ...prev,
+          fullName: regInfo.fullName || prev.fullName,
+          candidateEmail: regInfo.candidateEmail || prev.candidateEmail,
+          candidateMobile: regInfo.candidateMobile || prev.candidateMobile,
+          whatsappNumber: regInfo.candidateMobile || prev.whatsappNumber,
+        }));
+      }
+    } catch { }
+
     fetch('/api/auth/me')
       .then((res) => res.json())
       .then((authData) => {
-        if (!authData.user) {
-          window.location.href = '/login?redirect=/apply';
-          return;
+        if (authData.user) {
+          if (authData.user.role === 'admin') {
+            window.location.href = '/admin/dashboard';
+            return;
+          }
+
+          const user = authData.user;
+          setCurrentUser(user);
+
+          // Pre-fill registered contact info
+          setFormData((prev) => ({
+            ...prev,
+            fullName: user.name || prev.fullName || '',
+            candidateEmail: user.email || prev.candidateEmail || '',
+            candidateMobile: user.phone || prev.candidateMobile || '',
+            whatsappNumber: user.phone || prev.whatsappNumber || '',
+            fatherPhone: prev.fatherPhone || '',
+          }));
         }
 
-        if (authData.user.role === 'admin') {
-          window.location.href = '/admin/dashboard';
-          return;
-        }
-
-        const user = authData.user;
-        setCurrentUser(user);
-
-        // Pre-fill registered contact info
-        setFormData((prev) => ({
-          ...prev,
-          fullName: user.name || prev.fullName || '',
-          candidateEmail: user.email || prev.candidateEmail || '',
-          candidateMobile: user.phone || prev.candidateMobile || '',
-          whatsappNumber: user.phone || prev.whatsappNumber || '',
-          fatherPhone: prev.fatherPhone || '',
-        }));
-
-        // Fetch draft application if any
+        // Fetch draft application if any (optional)
         fetch('/api/applications/draft')
           .then((res) => res.json())
           .then((data) => {
-            if (data.application) {
+            if (data?.application) {
               const app = data.application;
               setFormData((prev) => ({
                 ...prev,
-                fullName: app.personalInfo?.fullName || user.name || prev.fullName,
+                fullName: app.personalInfo?.fullName || prev.fullName,
                 dob: app.personalInfo?.dob || prev.dob,
                 gender: app.personalInfo?.gender || prev.gender,
                 category: app.personalInfo?.category || prev.category,
@@ -228,7 +237,7 @@ export default function ApplyPage() {
           .catch(() => { });
       })
       .catch(() => {
-        window.location.href = '/login';
+        // No redirection to login: applicants fill and pay without prior authentication
       });
   }, []);
 
@@ -318,71 +327,6 @@ export default function ApplyPage() {
       [`${field}Name`]: `${field}-cropped.jpg`,
     }));
     setError('');
-  };
-
-  const handleSaveDraft = async () => {
-    setSavingDraft(true);
-    setError('');
-    try {
-      await fetch('/api/applications/draft', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          classApplying: formData.applyingClass,
-          stream: formData.stream,
-          currentStep: step,
-          personalInfo: {
-            fullName: formData.fullName,
-            dob: formData.dob,
-            gender: formData.gender,
-            category: formData.category,
-            aadhaarNumber: formData.aadhaarNumber,
-            panNumber: formData.panNumber,
-            familyId: formData.familyId,
-            previousSchoolName: formData.previousSchoolName,
-            previousBoard: formData.previousBoard,
-            otherBoard: formData.otherBoard,
-            candidateEmail: formData.candidateEmail,
-            candidateMobile: formData.candidateMobile,
-            whatsappNumber: formData.whatsappNumber,
-          },
-          parentInfo: {
-            fatherName: formData.fatherName,
-            fatherOccupation: formData.fatherOccupation,
-            fatherPhone: formData.fatherPhone,
-            motherName: formData.motherName,
-            motherOccupation: formData.motherOccupation,
-            annualIncome: formData.annualIncome,
-            guardianName: formData.guardianName,
-            guardianRelation: formData.guardianRelation,
-          },
-          addressInfo: {
-            streetAddress: formData.streetAddress,
-            city: formData.city,
-            district: formData.district,
-            state: formData.state,
-            pincode: formData.pincode,
-            whatsappNumber: formData.whatsappNumber,
-          },
-          studyLocationPref: {
-            firstPreference: formData.firstPreference,
-            secondPreference: formData.secondPreference,
-          },
-          documents: {
-            photo: formData.photo,
-            signature: formData.signature,
-            parentSignature: formData.parentSignature,
-            aadhaarCard: formData.aadhaarCard,
-          },
-        }),
-      });
-      setDraftSavedMsg('Application progress saved. You can resume anytime.');
-      setTimeout(() => setDraftSavedMsg(''), 4000);
-    } catch {
-      setError('Failed to save draft. Please check your connection.');
-    } finally {
-      setSavingDraft(false);
-    }
   };
 
   const handleCancelApplication = async () => {
@@ -546,8 +490,18 @@ export default function ApplyPage() {
 
     setLoading(true);
 
+    let chosenPassword = '';
+    try {
+      const stored = sessionStorage.getItem('gurukul_reg_info');
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (parsed.password) chosenPassword = parsed.password;
+      }
+    } catch { }
+
     try {
       const payload = {
+        password: chosenPassword || undefined,
         classApplying: formData.applyingClass,
         stream: formData.applyingClass.includes('11') ? formData.stream : undefined,
         personalInfo: {
@@ -614,6 +568,7 @@ export default function ApplyPage() {
       setSubmittedApp(data.application);
 
       try {
+        sessionStorage.removeItem('gurukul_reg_info');
         localStorage.removeItem('gurukul_application_draft');
       } catch { }
 
@@ -692,20 +647,10 @@ export default function ApplyPage() {
         </div>
 
         <div className="flex items-center gap-2 self-start sm:self-auto">
-          {step > 1 && (
-            <button
-              type="button"
-              onClick={handleSaveDraft}
-              disabled={savingDraft}
-              className="btn-secondary text-xs px-3 py-1.5"
-            >
-              {savingDraft ? 'Saving...' : 'Save Draft'}
-            </button>
-          )}
           <button
             type="button"
             onClick={() => setShowCancelModal(true)}
-            className="text-xs text-rose-600 hover:text-rose-700 px-2.5 py-1.5 font-medium border border-rose-200 rounded hover:bg-rose-50 transition"
+            className="text-xs text-rose-600 hover:text-rose-700 px-3 py-1.5 font-medium border border-rose-200 rounded-lg hover:bg-rose-50 transition"
           >
             Cancel
           </button>
@@ -744,14 +689,6 @@ export default function ApplyPage() {
           })}
         </div>
       </div>
-
-      {/* Draft Saved Message */}
-      {draftSavedMsg && (
-        <div className="mb-4 p-3 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-medium flex items-center gap-2">
-          <BookmarkCheck className="w-4 h-4 text-emerald-600 flex-shrink-0" />
-          <span>{draftSavedMsg}</span>
-        </div>
-      )}
 
       {/* Error Banner */}
       {error && (
@@ -1547,7 +1484,7 @@ export default function ApplyPage() {
               onClick={nextStep}
               className="btn-primary text-xs px-5 py-2"
             >
-              {step === 1 ? 'Accept Declaration & Continue' : 'Save & Continue'}
+              {step === 1 ? 'Accept Declaration & Continue' : 'Continue to Next Step'}
             </button>
           ) : (
             <button

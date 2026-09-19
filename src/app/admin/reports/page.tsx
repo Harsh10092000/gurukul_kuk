@@ -28,52 +28,24 @@ export default function AdminReportsPage() {
         </p>
       </div>
 
-      {/* Export Action Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div className="portal-card p-5 space-y-3 flex flex-col justify-between">
-          <div className="space-y-1">
-            <h3 className="font-bold text-slate-900 text-sm">Candidate Master Register</h3>
-            <p className="text-xs text-slate-500">Complete dataset of all registered candidates</p>
-          </div>
-          <a
-            href="/api/admin/export"
-            download
-            className="btn-primary text-xs py-2 flex items-center justify-center gap-1.5"
-          >
-            <Download className="w-3.5 h-3.5" />
-            <span>Download CSV (Excel)</span>
-          </a>
+      {/* Export Action Card */}
+      <div className="portal-card p-5 sm:p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-l-4 border-l-portal-navy">
+        <div className="space-y-1 max-w-xl">
+          <h3 className="font-bold text-slate-900 text-sm sm:text-base">
+            Candidate Master Register &amp; Reconciliation Report
+          </h3>
+          <p className="text-xs text-slate-500 leading-relaxed">
+            Consolidated dataset of all registered candidate records including roll numbers, class applied, parent contacts, scrutiny status, and fee payment reconciliation details.
+          </p>
         </div>
-
-        <div className="portal-card p-5 space-y-3 flex flex-col justify-between">
-          <div className="space-y-1">
-            <h3 className="font-bold text-slate-900 text-sm">Exam Attendance Register</h3>
-            <p className="text-xs text-slate-500">Candidate roll numbers ordered by exam centre</p>
-          </div>
-          <a
-            href="/api/admin/export"
-            download
-            className="btn-secondary text-xs py-2 flex items-center justify-center gap-1.5"
-          >
-            <Download className="w-3.5 h-3.5" />
-            <span>Download Register</span>
-          </a>
-        </div>
-
-        <div className="portal-card p-5 space-y-3 flex flex-col justify-between">
-          <div className="space-y-1">
-            <h3 className="font-bold text-slate-900 text-sm">Fee Reconciliation Ledger</h3>
-            <p className="text-xs text-slate-500">Payment gateway transaction reference log</p>
-          </div>
-          <a
-            href="/api/admin/export"
-            download
-            className="btn-accent text-xs py-2 flex items-center justify-center gap-1.5"
-          >
-            <Download className="w-3.5 h-3.5" />
-            <span>Export Ledger</span>
-          </a>
-        </div>
+        <a
+          href="/api/admin/export"
+          download
+          className="btn-primary text-xs sm:text-sm py-2.5 px-5 flex items-center justify-center gap-2 shrink-0"
+        >
+          <Download className="w-4 h-4" />
+          <span>Download Master Register (CSV / Excel)</span>
+        </a>
       </div>
 
       {/* Geographic Demographics */}

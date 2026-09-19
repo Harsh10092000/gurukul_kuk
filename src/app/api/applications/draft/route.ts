@@ -6,7 +6,7 @@ export async function GET() {
   try {
     const user = await getCurrentUser();
     if (!user) {
-      return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
+      return NextResponse.json({ application: null }, { status: 200 });
     }
 
     if (user.userId.startsWith('temp_')) {
@@ -25,7 +25,7 @@ export async function POST(req: Request) {
   try {
     const user = await getCurrentUser();
     if (!user) {
-      return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
+      return NextResponse.json({ success: true, message: 'Draft skipped; user will authenticate on payment.' }, { status: 200 });
     }
 
     const body = await req.json();

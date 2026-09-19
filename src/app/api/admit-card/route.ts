@@ -25,52 +25,64 @@ export async function GET(request: Request) {
 
     // Check if Admit Cards have been officially released by Admin
     const settings = await db.getSettings();
-    if (settings.admitCardsReleased !== true) {
-      return NextResponse.json({
-        admitCard: null,
-        released: false,
-        message: 'Admit cards for Entrance Examination 2027-28 have not been declared/published by the administration yet.',
-      });
-    }
+    const isReleased = settings.admitCardsReleased === true;
 
-    // If query by Registration Number / Application Number / Roll Number and DOB
+    // If query by Application ID / Registration Number / Roll Number
     if (appId || rollNo) {
-      const allApps = await db.getApplications();
       const targetQuery = (appId || rollNo || '').trim().toLowerCase();
+      let card = await db.getAdmitCard(appId || rollNo || '');
+
+      const allApps = await db.getApplications();
       const matchingApp = allApps.find((a) => {
+        const id = (a.id || '').trim().toLowerCase();
         const reg = (a.registrationNumber || a.applicationNumber || '').trim().toLowerCase();
         const roll = (a.rollNumber || '').trim().toLowerCase();
-        return reg === targetQuery || roll === targetQuery;
+        return id === targetQuery || reg === targetQuery || roll === targetQuery;
       });
 
-      if (!matchingApp) {
+      if (!card && matchingApp) {
+        card = await db.getAdmitCard(matchingApp.id);
+      }
+
+      if (!card && !matchingApp) {
         return NextResponse.json({
           admitCard: null,
-          released: true,
+          released: isReleased,
           message: 'No candidate record found for the provided Registration ID or Roll Number.',
         });
       }
 
-      // If dob parameter is provided, verify DOB
-      if (dob) {
+      // If dob parameter is provided, verify DOB (public unauthenticated searches)
+      if (dob && matchingApp) {
         const appDob = (matchingApp.personalInfo?.dob || '').trim();
-        // Normalize DOB formats (e.g. YYYY-MM-DD vs DD/MM/YYYY)
         const cleanDobInput = dob.replace(/\D/g, '');
         const cleanAppDob = appDob.replace(/\D/g, '');
-        // Compare directly or by digits if lengths match
         const dobMatches = appDob.toLowerCase() === dob.toLowerCase() || (cleanDobInput && cleanDobInput === cleanAppDob);
         if (!dobMatches) {
           return NextResponse.json({
             admitCard: null,
-            released: true,
+            released: isReleased,
             error: 'Date of Birth does not match our records for this Registration Number.',
             message: 'Date of Birth does not match our records for this Registration Number.',
           }, { status: 400 });
         }
       }
 
-      const card = await db.getAdmitCard(matchingApp.id);
-      return NextResponse.json({ admitCard: card, released: true });
+      // If public unauthenticated search (e.g. /admit-card public portal) and admin has not released yet
+      if (!user && !isReleased) {
+        return NextResponse.json({
+          admitCard: null,
+          released: false,
+          message: 'Admit cards for Entrance Examination 2027-28 have not been declared/published by the administration yet.',
+        });
+      }
+
+      // Return admit card with synchronized isReleased flag from settings
+      if (card) {
+        card.isReleased = isReleased;
+      }
+
+      return NextResponse.json({ admitCard: card, released: isReleased });
     }
 
     // If no query parameters, user must be authenticated candidate
@@ -89,11 +101,14 @@ export async function GET(request: Request) {
     }
 
     if (!userApp) {
-      return NextResponse.json({ admitCard: null, released: true });
+      return NextResponse.json({ admitCard: null, released: isReleased });
     }
 
-    const card = await db.getAdmitCard(userApp.id);
-    return NextResponse.json({ admitCard: card, released: true });
+    let card = await db.getAdmitCard(userApp.id);
+    if (card) {
+      card.isReleased = isReleased;
+    }
+    return NextResponse.json({ admitCard: card, released: isReleased });
   } catch (error) {
     console.error('Error in admit-card route:', error);
     return NextResponse.json({ error: 'Failed to retrieve admit card' }, { status: 500 });
@@ -156,17 +171,7 @@ export async function POST(request: Request) {
       createdAt: new Date().toISOString(),
     });
 
-    // Notify candidate
-    await sendNotification({
-      to: application.personalInfo.fullName,
-      name: application.personalInfo.fullName,
-      type: 'ADMIT_CARD_RELEASED',
-      data: {
-        applicationNumber: application.applicationNumber,
-        rollNumber,
-      },
-    });
-
+    // Note: Per policy, no emails are dispatched to candidates when admit cards are declared/issued.
     // Create persistent Admin Notification
     try {
       await db.createAdminNotification({

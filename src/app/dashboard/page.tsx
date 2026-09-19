@@ -24,6 +24,8 @@ export default function ApplicantDashboard() {
   const [application, setApplication] = useState<Application | null>(null);
   const [admitCard, setAdmitCard] = useState<AdmitCard | null>(null);
   const [result, setResult] = useState<ExamResult | null>(null);
+  const [settings, setSettings] = useState<any>(null);
+  const [resultsDeclared, setResultsDeclared] = useState<boolean>(false);
   const [loading, setLoading] = useState(true);
   const [draftSaved, setDraftSaved] = useState(false);
 
@@ -102,23 +104,7 @@ export default function ApplicantDashboard() {
             }
 
             setApplication(data.application);
-
-            try {
-              const admitRes = await fetch(`/api/admit-card?appId=${data.application.id}`);
-              const admitData = await admitRes.json();
-              if (admitData.admitCard) setAdmitCard(admitData.admitCard);
-            } catch (admitErr) {
-              console.warn('Admit card fetch notice:', admitErr);
-            }
-
-            try {
-              const resRes = await fetch(`/api/results?appId=${data.application.id}`);
-              const resData = await resRes.json();
-              if (resData.result) setResult(resData.result);
-            } catch (resErr) {
-              console.warn('Result fetch notice:', resErr);
-            }
-
+            await syncDashboardData(data.application.id);
             setLoading(false);
           })
           .catch((err) => {
@@ -130,6 +116,56 @@ export default function ApplicantDashboard() {
         window.location.href = '/login';
       });
   }, []);
+
+  const syncDashboardData = async (targetAppId?: string) => {
+    const appId = targetAppId || application?.id;
+    if (!appId) return;
+
+    try {
+      const [settingsRes, statusRes, admitRes, resultRes] = await Promise.allSettled([
+        fetch('/api/settings').then((r) => r.json()),
+        fetch('/api/results/status').then((r) => r.json()),
+        fetch(`/api/admit-card?appId=${appId}`).then((r) => r.json()),
+        fetch(`/api/results?appId=${appId}`).then((r) => r.json()),
+      ]);
+
+      if (settingsRes.status === 'fulfilled' && settingsRes.value?.settings) {
+        setSettings(settingsRes.value.settings);
+      }
+      if (statusRes.status === 'fulfilled' && typeof statusRes.value?.resultsDeclared === 'boolean') {
+        setResultsDeclared(statusRes.value.resultsDeclared);
+      }
+      if (admitRes.status === 'fulfilled' && admitRes.value?.admitCard) {
+        setAdmitCard(admitRes.value.admitCard);
+      }
+      if (resultRes.status === 'fulfilled' && resultRes.value?.result) {
+        setResult(resultRes.value.result);
+      }
+    } catch (syncErr) {
+      console.warn('Dashboard synchronization notice:', syncErr);
+    }
+  };
+
+  // Real-time synchronization whenever admin changes status in admin portal
+  useEffect(() => {
+    if (!application?.id) return;
+
+    const interval = setInterval(() => {
+      syncDashboardData(application.id);
+    }, 6000);
+
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') {
+        syncDashboardData(application.id);
+      }
+    };
+    document.addEventListener('visibilitychange', onVisible);
+
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener('visibilitychange', onVisible);
+    };
+  }, [application?.id]);
 
   const formatDob = (dobStr?: string) => {
     if (!dobStr) return '—';
@@ -380,26 +416,47 @@ export default function ApplicantDashboard() {
   }
 
   // SUBMITTED & CONFIRMED APPLICATION VIEW
+  const isAdmitCardReleased = Boolean(
+    (admitCard && admitCard.isReleased) || settings?.admitCardsReleased === true
+  );
+
+  const isResultDeclared = Boolean(
+    (result && result.isPublished) || resultsDeclared || settings?.resultsDeclared === true
+  );
+
   const steps = [
     { label: 'Registration & ₹800 Fee', sublabel: 'Fee Confirmed', completed: true, current: false },
-    { label: 'Application Verification', sublabel: 'Dossier Under Scrutiny', completed: true, current: false },
+    {
+      label: 'Application Verification',
+      sublabel: application.status === 'rejected' ? 'Application Rejected' : 'Dossier Verified',
+      completed: application.status !== 'rejected',
+      current: false,
+    },
     {
       label: 'Admit Card Generation',
-      sublabel: admitCard?.isReleased ? 'Released & Ready' : 'Admit Card: In Progress',
-      completed: !!admitCard && admitCard.isReleased,
-      current: !admitCard || !admitCard.isReleased,
+      sublabel: isAdmitCardReleased ? 'Released & Ready' : 'Admit Card: In Progress',
+      completed: isAdmitCardReleased,
+      current: !isAdmitCardReleased,
     },
     {
       label: 'Written Entrance Exam',
-      sublabel: admitCard?.examDate ? `${admitCard.examDate}` : 'Date Scheduled',
-      completed: !!result,
-      current: !!admitCard?.isReleased && !result,
+      sublabel: isResultDeclared
+        ? 'Exam Concluded'
+        : admitCard?.examDate
+        ? `${admitCard.examDate}`
+        : 'Date Scheduled',
+      completed: isResultDeclared,
+      current: isAdmitCardReleased && !isResultDeclared,
     },
     {
       label: 'Result & Selection',
-      sublabel: result?.isPublished ? (result.qualifyingStatus || 'Result Declared') : 'Evaluation Pending',
-      completed: !!result?.isPublished,
-      current: false,
+      sublabel: result?.qualifyingStatus
+        ? result.qualifyingStatus
+        : isResultDeclared
+        ? 'Result Declared'
+        : 'Evaluation Pending',
+      completed: isResultDeclared && Boolean(result?.isPublished),
+      current: isResultDeclared && !result?.isPublished,
     },
   ];
 
@@ -446,7 +503,7 @@ export default function ApplicantDashboard() {
         </div>
 
         <div className="flex flex-wrap gap-2.5 items-center self-stretch sm:self-auto justify-start sm:justify-end border-t sm:border-t-0 border-white/10 pt-4 sm:pt-0">
-          {admitCard && admitCard.isReleased && (
+          {isAdmitCardReleased && (
             <Link
               href="/admit-card"
               className="btn-accent text-xs h-10 px-4 font-bold flex items-center gap-2 shadow-sm"
@@ -456,13 +513,13 @@ export default function ApplicantDashboard() {
             </Link>
           )}
 
-          {result?.isPublished && (
+          {isResultDeclared && (
             <Link
               href={`/result?rollNo=${encodeURIComponent(admitCard?.rollNumber || application.rollNumber || application.registrationNumber || '')}&dob=${encodeURIComponent(application.personalInfo?.dob || '')}`}
               className="btn-primary text-xs h-10 px-4 flex items-center gap-2 border border-white/20 shadow-sm"
             >
               <Award className="w-4 h-4 text-amber-400" />
-              <span>View Result</span>
+              <span>View Declared Result</span>
             </Link>
           )}
         </div>
@@ -658,7 +715,7 @@ export default function ApplicantDashboard() {
                   <li><strong className="text-slate-950">2. Original Photo ID Proof:</strong> ONE original photo ID (Original Aadhaar Card, Passport, or School ID Card).</li>
                 </ul>
               </div>
-              {admitCard && admitCard.isReleased ? (
+              {isAdmitCardReleased ? (
                 <Link
                   href="/admit-card"
                   className="btn-primary text-xs h-9 px-4 flex items-center gap-2 flex-shrink-0 font-bold"
@@ -673,31 +730,6 @@ export default function ApplicantDashboard() {
               )}
             </div>
           </div>
-
-          {/* Admit Card Banner if released */}
-          {admitCard && admitCard.isReleased && (
-            <div className="portal-card bg-amber-50/60 border-amber-300 p-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-              <div className="space-y-1">
-                <span className="portal-badge-gold font-mono">
-                  Roll No: {admitCard.rollNumber}
-                </span>
-                <h4 className="font-bold text-slate-900 text-base">
-                  Entrance Examination Hall Ticket Released
-                </h4>
-                <p className="text-xs text-slate-700">
-                  Venue: <strong>{admitCard.examCentreName}</strong> • Date: <strong>{admitCard.examDate}</strong> ({admitCard.reportingTime})
-                </p>
-              </div>
-
-              <Link
-                href="/admit-card"
-                className="btn-accent text-xs h-10 px-5 flex-shrink-0 font-bold"
-              >
-                <Download className="w-4 h-4" />
-                <span>Print Admit Card</span>
-              </Link>
-            </div>
-          )}
         </div>
 
         {/* Right 1 Col: Receipt & Helpdesk */}

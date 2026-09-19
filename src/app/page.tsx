@@ -10,6 +10,7 @@ import {
   EyeOff
 } from 'lucide-react';
 import VisualCaptcha from '@/components/VisualCaptcha';
+import NotificationBar from '@/components/NotificationBar';
 import { resolveAdmissionPhase } from '@/lib/admissionPhases';
 
 export default function ExamPortalGateway() {
@@ -40,6 +41,7 @@ export default function ExamPortalGateway() {
 
   const [scheduleLoaded, setScheduleLoaded] = useState(false);
   const [portalSettings, setPortalSettings] = useState<any>(null);
+  const [settingsLoaded, setSettingsLoaded] = useState(false);
 
   const generateCaptcha = (clearError: boolean = false) => {
     const uppercase = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
@@ -86,14 +88,22 @@ export default function ExamPortalGateway() {
       .then((res) => res.json())
       .then((data) => {
         if (data.settings) setPortalSettings(data.settings);
+        setSettingsLoaded(true);
       })
-      .catch(() => { });
+      .catch(() => {
+        setSettingsLoaded(true);
+      });
 
     fetch('/api/auth/me')
       .then((res) => res.json())
       .then((data) => {
-        if (data.user) {
+        if (data.user && !data.user.isTemporary) {
           setLoggedInUser(data.user);
+        } else {
+          setLoggedInUser(null);
+          try {
+            localStorage.removeItem('gurukul_application_draft');
+          } catch (e) { }
         }
         setCheckingAuth(false);
       })
@@ -104,6 +114,11 @@ export default function ExamPortalGateway() {
     e.preventDefault();
     setError('');
     setCaptchaError('');
+
+    if (identifier.includes('@')) {
+      setError('Candidate login requires Registration ID or Mobile Number. Email login is not allowed.');
+      return;
+    }
 
     if (captchaInput.trim() !== captchaCode) {
       generateCaptcha(false);
@@ -159,29 +174,8 @@ export default function ExamPortalGateway() {
 
   return (
     <div className="w-full min-h-screen bg-gradient-to-br from-[#dbeafe] via-[#fffdf8] via-45% to-[#fde1be] pb-16 font-sans">
-      {/* Dynamic Phase-Aware Announcement Strip */}
-      {!scheduleLoaded ? (
-        <div className="py-2 px-4 text-center text-xs font-semibold flex items-center justify-center gap-2 border-b bg-slate-100 text-slate-400">
-          <span className="bg-slate-200 animate-pulse rounded w-64 h-3 inline-block" />
-        </div>
-      ) : (
-        <div className={`py-2 px-4 text-center text-xs font-semibold flex items-center justify-center gap-2 border-b transition ${phaseInfo.banner.containerStyle}`}>
-          <span className={`text-[10px] uppercase px-2 py-0.5 rounded tracking-wide flex-shrink-0 ${phaseInfo.banner.badgeStyle}`}>
-            {phaseInfo.banner.badge}
-          </span>
-          <span className="truncate">
-            {phaseInfo.banner.message}
-          </span>
-          {phaseInfo.banner.link && (
-            <Link
-              href={phaseInfo.banner.link.href}
-              className="hover:underline font-semibold ml-1 flex-shrink-0"
-            >
-              {phaseInfo.banner.link.label}
-            </Link>
-          )}
-        </div>
-      )}
+      {/* Official Dynamic Notification Bar */}
+      <NotificationBar phaseInfo={phaseInfo} scheduleLoaded={scheduleLoaded && settingsLoaded} />
 
       <div className="max-w-6xl mx-auto px-4 sm:px-6 pt-8">
         {/* Page Title & Context Header */}
@@ -277,7 +271,7 @@ export default function ExamPortalGateway() {
                     <div>
                       <div className="flex justify-between items-center mb-1.5">
                         <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wide">
-                          Registration No. / Email / Mobile <span className="text-rose-500">*</span>
+                          Registration No. / Mobile Number <span className="text-rose-500">*</span>
                         </label>
                         <Link href="/forgot-registration" className="text-portal-gold hover:underline text-xs font-semibold">
                           Forgot Reg No?
@@ -288,7 +282,7 @@ export default function ExamPortalGateway() {
                         required
                         value={identifier}
                         onChange={(e) => setIdentifier(e.target.value)}
-                        placeholder="e.g. NILB-10001 or 9876543210 or email"
+                        placeholder="e.g. NILB-10001 or 9876543210"
                         className="form-input-field"
                       />
                     </div>

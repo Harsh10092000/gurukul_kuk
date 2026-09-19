@@ -1,5 +1,177 @@
 [
   {
+    "userId": "usr-1789805064167-5x8ed",
+    "userName": "Anshu Miglani",
+    "userRole": "applicant",
+    "action": "PASSWORD_RESET_SUCCESS",
+    "entity": "User",
+    "details": {
+      "identifier": "anshu.calinfo@gmail.com"
+    },
+    "id": "audit-1789808414216-8a6vb",
+    "timestamp": "2026-09-19T09:00:14.216Z"
+  },
+  {
+    "userId": "usr-admin-1",
+    "userName": "Principal / Exam Controller",
+    "userRole": "admin",
+    "action": "SYSTEM_SETTINGS_UPDATE",
+    "entity": "SystemSettings",
+    "details": {
+      "previous": {
+        "portalOpen": true,
+        "resultsDeclared": false,
+        "academicSession": "2027-2028",
+        "applicationFee": 800,
+        "registrationStartDate": "2026-09-01",
+        "registrationEndDate": "2026-09-15",
+        "admitCardReleaseDate": "2027-03-01",
+        "entranceExamDate": "2027-03-22",
+        "entranceExamTime": "10:30 AM",
+        "examVenueName": "THE GURUKUL JYOTISAR PEHOWA ROAD, KURUKSHETRA",
+        "examVenueAddress": "136119, Haryana",
+        "resultDeclarationDate": "2027-04-05",
+        "counselingStartDate": "2027-04-15",
+        "helplinePhone": "+91-1744-259114 / +91-9896328329",
+        "helplineEmail": "admissions@gurukuladmissions.org",
+        "admitCardsReleased": false,
+        "admitCardsReleasedAt": "2026-09-18T09:32:20.159Z"
+      },
+      "updated": {
+        "portalOpen": true,
+        "resultsDeclared": false,
+        "academicSession": "2027-2028",
+        "applicationFee": 800,
+        "registrationStartDate": "2026-09-01",
+        "registrationEndDate": "2027-01-31",
+        "admitCardReleaseDate": "2027-03-01",
+        "entranceExamDate": "2027-03-22",
+        "entranceExamTime": "10:30 AM",
+        "examVenueName": "THE GURUKUL JYOTISAR PEHOWA ROAD, KURUKSHETRA",
+        "examVenueAddress": "136119, Haryana",
+        "resultDeclarationDate": "2027-04-05",
+        "counselingStartDate": "2027-04-15",
+        "helplinePhone": "+91-1744-259114 / +91-9896328329",
+        "helplineEmail": "admissions@gurukuladmissions.org",
+        "admitCardsReleased": false,
+        "admitCardsReleasedAt": "2026-09-18T09:32:20.159Z"
+      }
+    },
+    "id": "audit-1789795933645-52ce8",
+    "timestamp": "2026-09-19T05:32:13.645Z"
+  },
+  {
+    "userId": "usr-admin-1",
+    "userName": "Principal / Exam Controller",
+    "userRole": "admin",
+    "action": "UPDATE_FORM_SCHEDULE",
+    "entity": "FormSchedule",
+    "details": {
+      "previous": {
+        "startDate": "2026-08-31T18:30:00.000Z",
+        "endDate": "2026-09-15T18:29:59.000Z",
+        "statusOverride": "auto",
+        "timezone": "Asia/Kolkata (IST)",
+        "announcementNotice": "",
+        "reopenedCount": 1,
+        "lastUpdated": "2026-09-19T05:15:48.685Z",
+        "updatedBy": "Principal / Exam Controller (usr-admin-1)"
+      },
+      "new": {
+        "startDate": "2026-08-31T18:30:00.000Z",
+        "endDate": "2027-01-31T18:29:59.000Z",
+        "statusOverride": "auto",
+        "timezone": "Asia/Kolkata (IST)",
+        "announcementNotice": "",
+        "reopenedCount": 1,
+        "lastUpdated": "2026-09-19T05:32:13.636Z",
+        "updatedBy": "Principal / Exam Controller (usr-admin-1)"
+      }
+    },
+    "id": "audit-1789795933637-gabkd",
+    "timestamp": "2026-09-19T05:32:13.637Z"
+  },
+  {
+    "userId": "usr-admin-1",
+    "userName": "Principal / Exam Controller",
+    "userRole": "admin",
+    "action": "SYSTEM_SETTINGS_UPDATE",
+    "entity": "SystemSettings",
+    "details": {
+      "previous": {
+        "portalOpen": true,
+        "resultsDeclared": false,
+        "academicSession": "2027-2028",
+        "applicationFee": 800,
+        "registrationStartDate": "2026-09-01",
+        "registrationEndDate": "2027-01-31",
+        "admitCardReleaseDate": "2027-03-01",
+        "entranceExamDate": "2027-03-22",
+        "entranceExamTime": "10:30 AM",
+        "examVenueName": "THE GURUKUL JYOTISAR PEHOWA ROAD, KURUKSHETRA",
+        "examVenueAddress": "136119, Haryana",
+        "resultDeclarationDate": "2027-04-05",
+        "counselingStartDate": "2027-04-15",
+        "helplinePhone": "+91-1744-259114 / +91-9896328329",
+        "helplineEmail": "admissions@gurukuladmissions.org",
+        "admitCardsReleased": false,
+        "admitCardsReleasedAt": "2026-09-18T09:32:20.159Z"
+      },
+      "updated": {
+        "portalOpen": true,
+        "resultsDeclared": false,
+        "academicSession": "2027-2028",
+        "applicationFee": 800,
+        "registrationStartDate": "2026-09-01",
+        "registrationEndDate": "2026-09-15",
+        "admitCardReleaseDate": "2027-03-01",
+        "entranceExamDate": "2027-03-22",
+        "entranceExamTime": "10:30 AM",
+        "examVenueName": "THE GURUKUL JYOTISAR PEHOWA ROAD, KURUKSHETRA",
+        "examVenueAddress": "136119, Haryana",
+        "resultDeclarationDate": "2027-04-05",
+        "counselingStartDate": "2027-04-15",
+        "helplinePhone": "+91-1744-259114 / +91-9896328329",
+        "helplineEmail": "admissions@gurukuladmissions.org",
+        "admitCardsReleased": false,
+        "admitCardsReleasedAt": "2026-09-18T09:32:20.159Z"
+      }
+    },
+    "id": "audit-1789794948697-onwd6",
+    "timestamp": "2026-09-19T05:15:48.697Z"
+  },
+  {
+    "userId": "usr-admin-1",
+    "userName": "Principal / Exam Controller",
+    "userRole": "admin",
+    "action": "UPDATE_FORM_SCHEDULE",
+    "entity": "FormSchedule",
+    "details": {
+      "previous": {
+        "startDate": "2026-08-31T18:30:00.000Z",
+        "endDate": "2027-01-31T18:29:59.000Z",
+        "statusOverride": "auto",
+        "timezone": "Asia/Kolkata (IST)",
+        "announcementNotice": "",
+        "reopenedCount": 1,
+        "lastUpdated": "2026-09-18T12:01:38.149Z",
+        "updatedBy": "Principal / Exam Controller (usr-admin-1)"
+      },
+      "new": {
+        "startDate": "2026-08-31T18:30:00.000Z",
+        "endDate": "2026-09-15T18:29:59.000Z",
+        "statusOverride": "auto",
+        "timezone": "Asia/Kolkata (IST)",
+        "announcementNotice": "",
+        "reopenedCount": 1,
+        "lastUpdated": "2026-09-19T05:15:48.685Z",
+        "updatedBy": "Principal / Exam Controller (usr-admin-1)"
+      }
+    },
+    "id": "audit-1789794948686-odjsn",
+    "timestamp": "2026-09-19T05:15:48.686Z"
+  },
+  {
     "userId": "usr-admin-1",
     "userName": "Principal / Exam Controller",
     "userRole": "admin",

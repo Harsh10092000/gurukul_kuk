@@ -1,4 +1,4 @@
-﻿import { NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { hashPassword, signToken, getAuthCookieOptions } from '@/lib/auth';
 import { checkFormStatus } from '@/lib/formSchedule';
@@ -85,52 +85,17 @@ export async function POST(request: Request) {
       );
     }
 
-    // Hash password and initialize temporary application session (NO official registration before ₹800 payment)
-    const passwordHash = await hashPassword(password);
-    const tempSessionId = 'temp_' + Date.now() + '_' + Math.random().toString(36).substring(2, 8);
-
-    await db.saveTempApplication(tempSessionId, {
-      name: name.trim(),
-      email: email.trim().toLowerCase(),
-      phone: phoneClean,
-      passwordHash,
-      isTemporary: true,
-      currentStep: 1,
-      personalInfo: {
-        fullName: name.trim(),
-        candidateEmail: email.trim().toLowerCase(),
-        candidateMobile: phoneClean,
-        whatsappNumber: phoneClean,
-      },
-    });
-
-    // Generate temporary JWT token for the application filling session
-    const token = signToken({
-      userId: tempSessionId,
-      name: name.trim(),
-      email: email.trim().toLowerCase(),
-      role: 'applicant',
-    });
-
-    const response = NextResponse.json({
+    // Registration details verified (NO authentication cookie or official account created before ₹800 fee payment)
+    return NextResponse.json({
       success: true,
-      message: 'OTP verified successfully. Redirecting to Declaration & Instructions.',
-      temporary: true,
+      message: 'OTP verified successfully. Redirecting to Application Form.',
       user: {
-        id: tempSessionId,
         name: name.trim(),
         email: email.trim().toLowerCase(),
         phone: phoneClean,
-        role: 'applicant',
-        isTemporary: true,
       },
       redirectTo: '/apply',
     });
-
-    const cookieOptions = getAuthCookieOptions();
-    response.cookies.set(cookieOptions.name, token, cookieOptions);
-
-    return response;
   } catch (error) {
     console.error('Registration error:', error);
     return NextResponse.json(

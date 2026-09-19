@@ -1,4 +1,4 @@
-﻿export interface AdmissionPhaseInfo {
+export interface AdmissionPhaseInfo {
   phaseId: 'REGISTRATION_UPCOMING' | 'REGISTRATION_ACTIVE' | 'REGISTRATION_EXTENDED' | 'REGISTRATION_CLOSED' | 'ADMIT_CARD_RELEASED' | 'EXAMINATION_PERIOD' | 'RESULTS_DECLARED' | 'COUNSELING_ACTIVE';
   portalOpen: boolean;
   banner: {
@@ -79,15 +79,15 @@ export function resolveAdmissionPhase(input: PhaseDatesInput): AdmissionPhaseInf
 
   // Format milestone dates for user display
   const regStartFormatted = formatDateString(input.registrationStartDate, '01 September 2026');
-  const regEndFormatted = formatDateString(input.registrationEndDate, '30 September 2026');
-  const admitDateFormatted = formatDateString(input.admitCardReleaseDate, '20 November 2026');
-  const examDateFormatted = formatDateString(input.entranceExamDate, '10 December 2026');
-  const resultDateFormatted = formatDateString(input.resultDeclarationDate, '25 December 2026');
-  const counselingDateFormatted = formatDateString(input.counselingStartDate, '10 January 2027');
+  const regEndFormatted = formatDateString(input.registrationEndDate, '31 January 2027');
+  const admitDateFormatted = formatDateString(input.admitCardReleaseDate, '01 March 2027');
+  const examDateFormatted = formatDateString(input.entranceExamDate, '21 March 2027');
+  const resultDateFormatted = formatDateString(input.resultDeclarationDate, '05 April 2027');
+  const counselingDateFormatted = formatDateString(input.counselingStartDate, '15 April 2027');
 
-  const regStartTime = parseDateToTime(input.registrationStartDate) ?? new Date('2026-09-01T00:00:00Z').getTime();
+  const regStartTime = parseDateToTime(input.registrationStartDate) ?? new Date('2026-09-01T00:00:00+05:30').getTime();
   // Ensure registration end date is evaluated through 23:59:59 IST
-  let regEndTime = parseDateToTime(input.registrationEndDate) ?? new Date('2026-09-30T23:59:59+05:30').getTime();
+  let regEndTime = parseDateToTime(input.registrationEndDate) ?? new Date('2027-01-31T23:59:59+05:30').getTime();
   if (input.registrationEndDate) {
     if (input.registrationEndDate.length === 10) {
       const d = new Date(input.registrationEndDate + 'T23:59:59+05:30');
@@ -99,14 +99,20 @@ export function resolveAdmissionPhase(input: PhaseDatesInput): AdmissionPhaseInf
     }
   }
 
-  const admitDateTime = parseDateToTime(input.admitCardReleaseDate) ?? new Date('2026-11-20T00:00:00Z').getTime();
-  const examDateTime = parseDateToTime(input.entranceExamDate) ?? new Date('2026-12-10T00:00:00Z').getTime();
-  const resultDateTime = parseDateToTime(input.resultDeclarationDate) ?? new Date('2026-12-25T00:00:00Z').getTime();
-  const counselingDateTime = parseDateToTime(input.counselingStartDate) ?? new Date('2027-01-10T00:00:00Z').getTime();
+  const admitDateTime = parseDateToTime(input.admitCardReleaseDate) ?? new Date('2027-03-01T00:00:00+05:30').getTime();
+  const examDateTime = parseDateToTime(input.entranceExamDate) ?? new Date('2027-03-21T00:00:00+05:30').getTime();
+  const resultDateTime = parseDateToTime(input.resultDeclarationDate) ?? new Date('2027-04-05T00:00:00+05:30').getTime();
+  const counselingDateTime = parseDateToTime(input.counselingStartDate) ?? new Date('2027-04-15T00:00:00+05:30').getTime();
 
-  // Flags
-  const isAdmitCardReleased = Boolean(input.admitCardsReleased) || (now >= admitDateTime && now < examDateTime);
-  const isResultsDeclared = Boolean(input.resultsDeclared) || (now >= resultDateTime);
+  // Flags: Explicit admin toggles take absolute precedence over date math
+  const isAdmitCardReleased = typeof input.admitCardsReleased === 'boolean'
+    ? input.admitCardsReleased
+    : (input.admitCardReleaseDate ? (now >= admitDateTime && now < examDateTime) : false);
+
+  const isResultsDeclared = typeof input.resultsDeclared === 'boolean'
+    ? input.resultsDeclared
+    : (input.resultDeclarationDate ? (now >= resultDateTime) : false);
+
   const isCounselingTime = isResultsDeclared && (now >= counselingDateTime);
   const isExamConducted = now >= examDateTime && !isResultsDeclared;
   const isOverrideExtended = input.statusOverride === 'extended';
@@ -168,7 +174,7 @@ export function resolveAdmissionPhase(input: PhaseDatesInput): AdmissionPhaseInf
       banner = {
         badge: 'RESULTS DECLARED',
         badgeStyle: 'bg-emerald-600 text-white font-black animate-pulse',
-        message: `Entrance Examination Session ${session} Merit List & Scorecards are now officially declared! Check your results online:`,
+        message: `Entrance Examination Session ${session} Merit List & Scorecards are now officially declared! Check your results online.`,
         containerStyle: 'bg-emerald-50 border-emerald-300 text-emerald-950',
         link: {
           href: '/result',
@@ -183,6 +189,10 @@ export function resolveAdmissionPhase(input: PhaseDatesInput): AdmissionPhaseInf
         badgeStyle: 'bg-blue-600 text-white font-black',
         message: `Written Entrance Examination for Session ${session} was conducted on ${examDateFormatted}. Answer evaluation in progress. Result declaration scheduled for ${resultDateFormatted}.`,
         containerStyle: 'bg-blue-50 border-blue-200 text-blue-950',
+        link: {
+          href: '/status',
+          label: 'Check Exam Details →',
+        },
       };
       break;
 
@@ -190,7 +200,7 @@ export function resolveAdmissionPhase(input: PhaseDatesInput): AdmissionPhaseInf
       banner = {
         badge: 'ADMIT CARD RELEASED',
         badgeStyle: 'bg-emerald-600 text-white font-black animate-pulse',
-        message: `Entrance Examination Session ${session} Admit Cards are now officially released! Click here to download your Hall Ticket:`,
+        message: `Entrance Examination Session ${session} Admit Cards are now officially released! Download your Hall Ticket.`,
         containerStyle: 'bg-emerald-50/90 border-emerald-300 text-emerald-950',
         link: {
           href: '/admit-card',
@@ -218,6 +228,10 @@ export function resolveAdmissionPhase(input: PhaseDatesInput): AdmissionPhaseInf
         badgeStyle: 'bg-amber-500 text-gurukul-navy font-black',
         message: `Notice: Online Application for Entrance Examination Session ${session} has been extended up to ${regEndFormatted}. Submit online application before the final deadline.`,
         containerStyle: 'bg-amber-50 border-amber-300 text-amber-950',
+        link: {
+          href: '/apply',
+          label: 'Apply Online Now →',
+        },
       };
       break;
 
@@ -227,6 +241,10 @@ export function resolveAdmissionPhase(input: PhaseDatesInput): AdmissionPhaseInf
         badgeStyle: 'bg-blue-600 text-white font-black',
         message: `Online Registration for Entrance Examination Session ${session} will commence on ${regStartFormatted}.`,
         containerStyle: 'bg-blue-50 border-blue-200 text-blue-900',
+        link: {
+          href: '/contact',
+          label: 'Admission Helpdesk →',
+        },
       };
       break;
 
@@ -237,6 +255,10 @@ export function resolveAdmissionPhase(input: PhaseDatesInput): AdmissionPhaseInf
         badgeStyle: 'bg-amber-500 text-gurukul-navy font-black',
         message: `Online Application for Entrance Examination Session ${session} is currently OPEN. Last date to register online: ${regEndFormatted}.`,
         containerStyle: 'bg-amber-500/10 border-amber-500/20 text-slate-800',
+        link: {
+          href: '/apply',
+          label: 'Apply Online →',
+        },
       };
       break;
   }

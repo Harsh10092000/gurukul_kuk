@@ -70,6 +70,11 @@ export default function LoginPage() {
     setError('');
     setCaptchaError('');
 
+    if (identifier.includes('@')) {
+      setError('Candidate login requires Registration ID or Mobile Number. Email login is not allowed.');
+      return;
+    }
+
     if (captchaInput.trim() !== captchaCode) {
       generateCaptcha(false);
       setCaptchaError('Incorrect Security PIN. Please try again.');
@@ -163,7 +168,7 @@ export default function LoginPage() {
                       1
                     </span>
                     <span>
-                      <strong className="text-slate-900">Registration Number:</strong> Enter your unique registration ID (e.g. <span className="font-mono font-semibold">NILB-10001</span>) or registered mobile/email.
+                      <strong className="text-slate-900">Registration Number:</strong> Enter your unique registration ID (e.g. <span className="font-mono font-semibold">NILB-10001</span>) or registered 10-digit mobile number.
                     </span>
                   </li>
                   <li className="flex items-start gap-2.5">
@@ -226,7 +231,7 @@ export default function LoginPage() {
                 <div>
                   <div className="flex justify-between items-center mb-1.5">
                     <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wide">
-                      Registration No. / Email / Mobile <span className="text-rose-500">*</span>
+                      Registration No. / Mobile Number <span className="text-rose-500">*</span>
                     </label>
                     <Link href="/forgot-registration" className="text-portal-gold hover:underline text-xs font-semibold">
                       Forgot Reg No?

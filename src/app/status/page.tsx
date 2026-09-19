@@ -146,6 +146,74 @@ export default function StatusPage() {
     } catch { }
   };
 
+  const getStatusDetails = (app: ApplicationTrackerData) => {
+    if (app.admitCard?.available) {
+      return {
+        badge: 'Admit Card Ready',
+        badgeStyle: 'bg-indigo-50 text-indigo-800 border-indigo-200',
+        badgeDot: 'bg-indigo-600',
+        cardStyle: 'bg-indigo-50/70 border-indigo-200',
+        icon: Download,
+        iconBg: 'bg-indigo-100 text-indigo-700',
+        title: 'Entrance Admit Card Released',
+        description: 'Your Entrance Examination Roll Number has been allotted and the official Admit Card / Hall Ticket is ready to download.',
+        nextStep: 'Download and print your coloured Admit Card and carry it along with an original Photo ID to the exam centre.',
+      };
+    }
+    switch (app.status) {
+      case 'approved':
+        return {
+          badge: 'Verified & Approved',
+          badgeStyle: 'bg-emerald-50 text-emerald-800 border-emerald-200',
+          badgeDot: 'bg-emerald-600',
+          cardStyle: 'bg-emerald-50/70 border-emerald-200',
+          icon: CheckCircle2,
+          iconBg: 'bg-emerald-100 text-emerald-700',
+          title: 'Application Verified & Approved',
+          description: 'Your candidate dossier, eligibility criteria, and submitted documents have been successfully verified and approved by the Gurukul Admission Cell.',
+          nextStep: 'Roll number generation and Admit Card release will follow as per the admission schedule.',
+        };
+      case 'correction_needed':
+        return {
+          badge: 'Correction Required',
+          badgeStyle: 'bg-amber-50 text-amber-900 border-amber-300',
+          badgeDot: 'bg-amber-600',
+          cardStyle: 'bg-amber-50/80 border-amber-300',
+          icon: AlertTriangle,
+          iconBg: 'bg-amber-100 text-amber-700',
+          title: 'Action Required: Discrepancy Flagged',
+          description: app.remarks || 'The scrutiny team has identified discrepancies in your application details or uploaded certificates. Please log in to your portal to rectify the issues.',
+          nextStep: 'Log in to the Candidate Portal to update your required documents or information.',
+        };
+      case 'rejected':
+        return {
+          badge: 'Application Rejected',
+          badgeStyle: 'bg-rose-50 text-rose-800 border-rose-200',
+          badgeDot: 'bg-rose-600',
+          cardStyle: 'bg-rose-50/70 border-rose-200',
+          icon: AlertCircle,
+          iconBg: 'bg-rose-100 text-rose-700',
+          title: 'Application Not Approved',
+          description: app.remarks || 'Your application does not fulfill the admission criteria for Session 2027-28.',
+          nextStep: 'Contact Gurukul Admission Helpdesk (01744-259114) for further inquiries.',
+        };
+      case 'submitted':
+      case 'under_review':
+      default:
+        return {
+          badge: 'Under Scrutiny',
+          badgeStyle: 'bg-blue-50 text-blue-900 border-blue-200',
+          badgeDot: 'bg-blue-600',
+          cardStyle: 'bg-blue-50/70 border-blue-200',
+          icon: Clock,
+          iconBg: 'bg-blue-100 text-blue-700',
+          title: 'Under Administrative Scrutiny',
+          description: 'Your admission form has been received with confirmed fee payment. Candidate dossier, photograph, and documents are currently undergoing verification by the Admission Scrutiny Committee.',
+          nextStep: 'No action required from candidate at this time. Admit card and roll number will be issued once scrutiny is complete.',
+        };
+    }
+  };
+
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'approved':
@@ -183,6 +251,9 @@ export default function StatusPage() {
         };
     }
   };
+
+  const statusInfo = application ? getStatusDetails(application) : null;
+  const StatusIcon = statusInfo?.icon;
 
   return (
     <div className="min-h-screen py-10 px-4 sm:px-6">
@@ -327,7 +398,7 @@ export default function StatusPage() {
         )}
 
         {/* Application Status Result */}
-        {application && (
+        {application && statusInfo && StatusIcon && (
           <div className="space-y-6">
             {/* Summary Dossier Card */}
             <div className="portal-card overflow-hidden">
@@ -357,31 +428,80 @@ export default function StatusPage() {
                   <span className="portal-badge-navy text-xs">
                     {application.classApplying}
                   </span>
-                  <div className={`px-2.5 py-0.5 rounded border text-xs font-semibold flex items-center gap-1.5 ${getStatusBadge(application.status).style}`}>
-                    <span className={`w-2 h-2 rounded-full ${getStatusBadge(application.status).dot}`} />
-                    <span>{getStatusBadge(application.status).label}</span>
+                  <div className={`px-2.5 py-0.5 rounded border text-xs font-semibold flex items-center gap-1.5 ${statusInfo.badgeStyle}`}>
+                    <span className={`w-2 h-2 rounded-full ${statusInfo.badgeDot}`} />
+                    <span>{statusInfo.badge}</span>
                   </div>
                 </div>
               </div>
-              <div className="p-6 sm:p-8 space-y-5">
 
+              {/* Prominent Current Status Banner */}
+              <div className={`p-5 sm:p-6 border-b ${statusInfo.cardStyle}`}>
+                <div className="flex items-start gap-4">
+                  <div className={`p-2.5 sm:p-3 rounded-xl ${statusInfo.iconBg} shrink-0 mt-0.5 shadow-sm`}>
+                    <StatusIcon className="w-6 h-6" />
+                  </div>
+                  <div className="space-y-1.5 flex-1 min-w-0">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <div>
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 block">
+                          Current Application Status
+                        </span>
+                        <h2 className="text-lg sm:text-xl font-bold text-slate-900 tracking-tight">
+                          {statusInfo.title}
+                        </h2>
+                      </div>
+                      <span className={`px-3 py-1 rounded-full border text-xs font-bold flex items-center gap-1.5 shadow-xs ${statusInfo.badgeStyle}`}>
+                        <span className={`w-2 h-2 rounded-full ${statusInfo.badgeDot}`} />
+                        {statusInfo.badge}
+                      </span>
+                    </div>
+
+                    <p className="text-xs sm:text-sm text-slate-700 leading-relaxed pt-0.5 font-normal">
+                      {statusInfo.description}
+                    </p>
+
+                    {statusInfo.nextStep && (
+                      <div className="pt-2.5 mt-2 border-t border-slate-200/70 flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 text-xs text-slate-600">
+                        <span className="font-bold text-slate-800 shrink-0">Current Action / Next Step:</span>
+                        <span className="font-medium text-slate-700">{statusInfo.nextStep}</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              <div className="p-6 sm:p-8 space-y-5">
                 {/* Dossier Grid */}
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
-                  <div className="data-cell">
-                    <span className="text-[10px] text-slate-500 block uppercase tracking-wide font-semibold mb-0.5">Candidate</span>
-                    <span className="font-semibold text-slate-900 block truncate">{application.personalInfo.fullName}</span>
-                  </div>
-                  <div className="data-cell">
-                    <span className="text-[10px] text-slate-500 block uppercase tracking-wide font-semibold mb-0.5">Father&apos;s Name</span>
-                    <span className="font-semibold text-slate-900 block truncate">{application.personalInfo.fatherName}</span>
-                  </div>
-                  <div className="data-cell">
-                    <span className="text-[10px] text-slate-500 block uppercase tracking-wide font-semibold mb-0.5">Campus Pref.</span>
-                    <span className="font-semibold text-slate-900 block truncate">{application.preferences.studyLocation}</span>
-                  </div>
-                  <div className="data-cell">
-                    <span className="text-[10px] text-slate-500 block uppercase tracking-wide font-semibold mb-0.5">Fee Status</span>
-                    <span className="font-semibold text-emerald-700 block">₹{application.amountPaid} Confirmed</span>
+                <div>
+                  <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-3">
+                    Candidate Dossier Summary
+                  </h3>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3 text-xs">
+                    <div className="data-cell">
+                      <span className="text-[10px] text-slate-500 block uppercase tracking-wide font-semibold mb-0.5">Candidate</span>
+                      <span className="font-semibold text-slate-900 block truncate">{application.personalInfo.fullName}</span>
+                    </div>
+                    <div className="data-cell">
+                      <span className="text-[10px] text-slate-500 block uppercase tracking-wide font-semibold mb-0.5">Father&apos;s Name</span>
+                      <span className="font-semibold text-slate-900 block truncate">{application.personalInfo.fatherName}</span>
+                    </div>
+                    <div className="data-cell">
+                      <span className="text-[10px] text-slate-500 block uppercase tracking-wide font-semibold mb-0.5">Campus Pref.</span>
+                      <span className="font-semibold text-slate-900 block truncate">{application.preferences.studyLocation}</span>
+                    </div>
+                    <div className="data-cell">
+                      <span className="text-[10px] text-slate-500 block uppercase tracking-wide font-semibold mb-0.5">Class</span>
+                      <span className="font-semibold text-slate-900 block">{application.classApplying}</span>
+                    </div>
+                    <div className="data-cell">
+                      <span className="text-[10px] text-slate-500 block uppercase tracking-wide font-semibold mb-0.5">Category</span>
+                      <span className="font-semibold text-slate-900 block">{application.personalInfo.category || 'General'}</span>
+                    </div>
+                    <div className="data-cell">
+                      <span className="text-[10px] text-slate-500 block uppercase tracking-wide font-semibold mb-0.5">Fee Status</span>
+                      <span className="font-semibold text-emerald-700 block">₹{application.amountPaid} Confirmed</span>
+                    </div>
                   </div>
                 </div>
 
@@ -438,84 +558,6 @@ export default function StatusPage() {
                   </Link>
                 </div>
               </div>
-            </div>
-
-            {/* Milestones Stepper */}
-            <div className="portal-card p-6 sm:p-8 space-y-5">
-              <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-                <h3 className="font-bold text-sm text-slate-900">
-                  Application Milestone Progress
-                </h3>
-                <span className="text-[11px] text-slate-500">
-                  6 Examination Stages
-                </span>
-              </div>
-
-              <div className="relative pl-6 space-y-6 before:absolute before:left-2.5 before:top-2 before:bottom-2 before:w-px before:bg-slate-200">
-                {application.milestones.map((milestone, idx) => {
-                  const isCompleted = milestone.status === 'completed';
-                  const isAction = milestone.status === 'action_needed';
-                  const isRejected = milestone.status === 'rejected';
-                  const isInProgress = milestone.status === 'in_progress';
-
-                  return (
-                    <div key={milestone.id} className="relative">
-                      <div className={`absolute -left-6 top-0.5 w-5 h-5 rounded-full flex items-center justify-center font-bold text-[10px] ${isCompleted
-                        ? 'bg-emerald-600 text-white'
-                        : isAction
-                          ? 'bg-amber-500 text-white'
-                          : isRejected
-                            ? 'bg-rose-600 text-white'
-                            : isInProgress
-                              ? 'bg-portal-navy text-white'
-                              : 'bg-slate-200 text-slate-600'
-                        }`}>
-                        {isCompleted ? '✓' : idx + 1}
-                      </div>
-
-                      <div className="bg-slate-50 border border-slate-200 rounded-lg p-3.5 space-y-1">
-                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
-                          <h4 className="font-semibold text-xs text-slate-900">
-                            {milestone.title}
-                          </h4>
-                          <span className={`text-[10px] font-semibold px-2 py-0.5 rounded w-fit ${isCompleted
-                            ? 'bg-emerald-100 text-emerald-800'
-                            : isAction
-                              ? 'bg-amber-100 text-amber-900'
-                              : isRejected
-                                ? 'bg-rose-100 text-rose-800'
-                                : isInProgress
-                                  ? 'bg-blue-100 text-blue-800'
-                                  : 'bg-slate-200 text-slate-600'
-                            }`}>
-                            {milestone.subtitle}
-                          </span>
-                        </div>
-                        <p className="text-xs text-slate-600 leading-normal">
-                          {milestone.details}
-                        </p>
-                        {milestone.date && (
-                          <div className="text-[10px] text-slate-400 font-mono pt-0.5">
-                            {milestone.date}
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* Candidate Advisory Card */}
-            <div className="p-4 rounded-lg bg-portal-navy/5 border border-portal-navy/10 text-xs text-slate-700 space-y-1.5">
-              <h4 className="font-semibold text-portal-navy text-[11px] uppercase tracking-wide">
-                Candidate Advisory
-              </h4>
-              <ul className="list-disc pl-4 space-y-1 text-slate-600">
-                <li>Keep your permanent Registration Number (<code className="font-mono bg-slate-100 px-1 rounded">{application.registrationNumber}</code>) safe for future reference.</li>
-                <li>Hall Tickets must be printed in clear color and presented alongside original photo identity proof at the exam venue.</li>
-                <li>Reporting time on exam day is strictly 45 minutes prior to the examination start time.</li>
-              </ul>
             </div>
           </div>
         )}

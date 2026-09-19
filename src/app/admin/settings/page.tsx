@@ -127,15 +127,17 @@ export default function AdminSettingsPage() {
             ...prev,
             ...data.settings,
           }));
-          if (typeof data.settings.resultsDeclared === 'boolean') {
-            setResultsDeclared(data.settings.resultsDeclared);
-          }
-          if (typeof data.settings.admitCardsReleased === 'boolean') {
-            setAdmitCardsReleased(data.settings.admitCardsReleased);
-          }
+          setResultsDeclared(typeof data.settings.resultsDeclared === 'boolean' ? data.settings.resultsDeclared : false);
+          setAdmitCardsReleased(typeof data.settings.admitCardsReleased === 'boolean' ? data.settings.admitCardsReleased : false);
+        } else {
+          setResultsDeclared((prev) => prev ?? false);
+          setAdmitCardsReleased((prev) => prev ?? false);
         }
       })
-      .catch(() => {});
+      .catch(() => {
+        setResultsDeclared((prev) => prev ?? false);
+        setAdmitCardsReleased((prev) => prev ?? false);
+      });
   };
 
   useEffect(() => {
@@ -708,57 +710,93 @@ export default function AdminSettingsPage() {
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           {/* Result Toggle */}
-          <div className="border border-slate-200 rounded-lg p-4 space-y-3">
+          <div className="border border-slate-200 rounded-lg p-4 space-y-3 bg-white">
             <div className="flex justify-between items-center">
               <span className="font-semibold text-xs text-slate-900">Entrance Results</span>
-              <span className={`text-[10px] font-semibold px-2 py-0.5 rounded ${
-                resultsDeclared ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-600'
-              }`}>
-                {resultsDeclared ? 'Visible' : 'Hidden'}
-              </span>
+              {resultsDeclared === null ? (
+                <span className="inline-flex items-center gap-1.5 text-[10px] font-semibold px-2 py-0.5 rounded bg-slate-100 text-slate-500 animate-pulse">
+                  <Loader2 className="w-2.5 h-2.5 animate-spin text-slate-400" /> Checking...
+                </span>
+              ) : (
+                <span className={`text-[10px] font-semibold px-2 py-0.5 rounded ${
+                  resultsDeclared ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-slate-100 text-slate-600'
+                }`}>
+                  {resultsDeclared ? 'Visible & Declared' : 'Hidden'}
+                </span>
+              )}
             </div>
-            <p className="text-xs text-slate-500">
-              {resultsDeclared ? 'Candidates can search and view published scorecards.' : 'Results are hidden from candidates.'}
+            <p className="text-xs text-slate-500 min-h-[32px] flex items-center">
+              {resultsDeclared === null ? (
+                <span className="inline-flex items-center gap-2 text-slate-400">
+                  <Loader2 className="w-3.5 h-3.5 animate-spin text-portal-navy/50" />
+                  <span>Loading results visibility status...</span>
+                </span>
+              ) : resultsDeclared ? (
+                'Candidates can search and view published scorecards.'
+              ) : (
+                'Results are hidden from candidates.'
+              )}
             </p>
             <div className="flex gap-2">
               <button
                 type="button"
-                disabled={resultToggling || resultsDeclared === true}
+                disabled={resultsDeclared === null || resultToggling || resultsDeclared === true}
                 onClick={() => handleToggleResults(true)}
-                className="btn-primary text-xs px-3 py-1.5 flex-1 font-medium"
+                className="btn-primary text-xs px-3 py-1.5 flex-1 font-medium flex items-center justify-center gap-1.5 disabled:opacity-50"
               >
-                Declare Results
+                {resultToggling && resultsDeclared !== true && (
+                  <Loader2 className="w-3.5 h-3.5 animate-spin text-white" />
+                )}
+                <span>Declare Results</span>
               </button>
               <button
                 type="button"
-                disabled={resultToggling || resultsDeclared === false}
+                disabled={resultsDeclared === null || resultToggling || resultsDeclared === false}
                 onClick={() => handleToggleResults(false)}
-                className="btn-secondary text-xs px-3 py-1.5 flex-1"
+                className="btn-secondary text-xs px-3 py-1.5 flex-1 flex items-center justify-center gap-1.5 disabled:opacity-50"
               >
-                Hide Results
+                {resultToggling && resultsDeclared === true && (
+                  <Loader2 className="w-3.5 h-3.5 animate-spin text-portal-navy" />
+                )}
+                <span>Hide Results</span>
               </button>
             </div>
           </div>
 
           {/* Admit Card Toggle */}
-          <div className="border border-slate-200 rounded-lg p-4 space-y-3">
+          <div className="border border-slate-200 rounded-lg p-4 space-y-3 bg-white">
             <div className="flex justify-between items-center">
               <span className="font-semibold text-xs text-slate-900">Admit Cards</span>
-              <span className={`text-[10px] font-semibold px-2 py-0.5 rounded ${
-                admitCardsReleased ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-600'
-              }`}>
-                {admitCardsReleased ? 'Visible' : 'Hidden'}
-              </span>
+              {admitCardsReleased === null ? (
+                <span className="inline-flex items-center gap-1.5 text-[10px] font-semibold px-2 py-0.5 rounded bg-slate-100 text-slate-500 animate-pulse">
+                  <Loader2 className="w-2.5 h-2.5 animate-spin text-slate-400" /> Checking...
+                </span>
+              ) : (
+                <span className={`text-[10px] font-semibold px-2 py-0.5 rounded ${
+                  admitCardsReleased ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-slate-100 text-slate-600'
+                }`}>
+                  {admitCardsReleased ? 'Visible & Released' : 'Hidden'}
+                </span>
+              )}
             </div>
-            <p className="text-xs text-slate-500">
-              {admitCardsReleased ? 'Candidates can download Hall Tickets from the portal.' : 'Admit Cards are hidden from candidates.'}
+            <p className="text-xs text-slate-500 min-h-[32px] flex items-center">
+              {admitCardsReleased === null ? (
+                <span className="inline-flex items-center gap-2 text-slate-400">
+                  <Loader2 className="w-3.5 h-3.5 animate-spin text-portal-navy/50" />
+                  <span>Loading admit card release status...</span>
+                </span>
+              ) : admitCardsReleased ? (
+                'Candidates can download Hall Tickets from the portal.'
+              ) : (
+                'Admit Cards are hidden from candidates.'
+              )}
             </p>
             <div className="flex gap-2">
               <button
                 type="button"
-                disabled={admitCardToggling || admitCardsReleased === true}
+                disabled={admitCardsReleased === null || admitCardToggling || admitCardsReleased === true}
                 onClick={() => handleToggleAdmitCards(true)}
-                className="btn-primary text-xs px-3 py-1.5 flex-1 font-medium flex items-center justify-center gap-1.5"
+                className="btn-primary text-xs px-3 py-1.5 flex-1 font-medium flex items-center justify-center gap-1.5 disabled:opacity-50"
               >
                 {admitCardToggling && admitCardsReleased !== true && (
                   <Loader2 className="w-3.5 h-3.5 animate-spin text-white" />
@@ -767,9 +805,9 @@ export default function AdminSettingsPage() {
               </button>
               <button
                 type="button"
-                disabled={admitCardToggling || admitCardsReleased === false}
+                disabled={admitCardsReleased === null || admitCardToggling || admitCardsReleased === false}
                 onClick={() => handleToggleAdmitCards(false)}
-                className="btn-secondary text-xs px-3 py-1.5 flex-1 flex items-center justify-center gap-1.5"
+                className="btn-secondary text-xs px-3 py-1.5 flex-1 flex items-center justify-center gap-1.5 disabled:opacity-50"
               >
                 {admitCardToggling && admitCardsReleased === true && (
                   <Loader2 className="w-3.5 h-3.5 animate-spin text-portal-navy" />

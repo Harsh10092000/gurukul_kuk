@@ -213,6 +213,15 @@ export default function RegisterPage() {
       }
 
       try {
+        sessionStorage.setItem(
+          'gurukul_reg_info',
+          JSON.stringify({
+            fullName: name.trim(),
+            candidateEmail: email.trim().toLowerCase(),
+            candidateMobile: cleanPhone,
+            password: password,
+          })
+        );
         localStorage.removeItem('gurukul_application_draft');
       } catch (e) {}
 
@@ -227,7 +236,7 @@ export default function RegisterPage() {
   if (step === 'otp') {
     return (
       <div className="min-h-[85vh] flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8 font-sans">
-        <div className="max-w-md w-full space-y-6 bg-white p-8 rounded-xl shadow-xs border border-slate-200">
+        <div className="max-w-md w-full space-y-6 bg-white p-8 rounded-xl border border-slate-200/90 shadow-[0_14px_36px_-4px_rgba(11,25,44,0.20),0_4px_16px_-2px_rgba(11,25,44,0.12)]">
           <div className="text-center space-y-1.5">
             <span className="text-[10px] font-bold uppercase tracking-wider text-portal-navy bg-slate-100 px-3 py-1 rounded-full inline-block">
               Security Step 2: Verification
@@ -355,7 +364,7 @@ export default function RegisterPage() {
   // Screen 1: Details Entry
   return (
     <div className="min-h-[85vh] flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8 font-sans">
-      <div className="max-w-md w-full space-y-6 bg-white p-8 rounded-xl shadow-xs border border-slate-200">
+      <div className="max-w-md w-full space-y-6 bg-white p-8 rounded-xl border border-slate-200/90 shadow-[0_14px_36px_-4px_rgba(11,25,44,0.20),0_4px_16px_-2px_rgba(11,25,44,0.12)]">
         <div className="text-center space-y-1.5">
           <div className="w-12 h-12 mx-auto flex items-center justify-center">
             <Image

@@ -11,6 +11,7 @@ export default function Header() {
   const pathname = usePathname();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [currentUser, setCurrentUser] = useState<any>(null);
+  const [authLoading, setAuthLoading] = useState(true);
   const [resultsDeclared, setResultsDeclared] = useState(false);
 
   const isAdminRoute = pathname.startsWith('/admin');
@@ -19,19 +20,27 @@ export default function Header() {
   const isAdmin = currentUser?.role === 'admin' || isAdminRoute;
 
   useEffect(() => {
+    let isMounted = true;
     fetch('/api/auth/me')
       .then((res) => res.json())
       .then((data) => {
-        if (data.user) setCurrentUser(data.user);
+        if (isMounted && data?.user) setCurrentUser(data.user);
       })
-      .catch(() => {});
+      .catch(() => {})
+      .finally(() => {
+        if (isMounted) setAuthLoading(false);
+      });
 
     fetch('/api/results/status')
       .then((res) => res.json())
       .then((data) => {
-        if (data.resultsDeclared) setResultsDeclared(true);
+        if (isMounted && data?.resultsDeclared) setResultsDeclared(true);
       })
       .catch(() => {});
+
+    return () => {
+      isMounted = false;
+    };
   }, [pathname]);
 
   const handleLogout = async () => {
@@ -45,10 +54,10 @@ export default function Header() {
   const brandRedirectHref = currentUser
     ? currentUser.role === 'admin'
       ? '/admin/dashboard'
-      : currentUser.isTemporary
-        ? '/apply'
-        : '/dashboard'
-    : '/';
+      : '/dashboard'
+    : isAdminRoute
+      ? '/admin/dashboard'
+      : '/';
 
   return (
     <header className="w-full bg-white border-b border-slate-200 sticky top-0 z-30 shadow-subtle no-print flex-shrink-0">
@@ -166,33 +175,32 @@ export default function Header() {
             </div>
           )}
 
-          {currentUser ? (
+          {currentUser && !currentUser.isTemporary ? (
             <div className="flex items-center gap-3 pl-3 border-l border-slate-200">
               {currentUser?.role === 'admin' && <AdminNotificationBell />}
-              {!currentUser?.isTemporary && pathname !== '/apply' ? (
-                <>
-                  <Link
-                    href={currentUser?.role === 'admin' ? '/admin/dashboard' : '/dashboard'}
-                    className="flex items-center gap-1.5 bg-slate-100 text-slate-800 border border-slate-200 px-3 py-1.5 rounded-lg text-xs font-semibold hover:bg-slate-200 transition"
-                  >
-                    <span>{currentUser?.name || (currentUser?.role === 'admin' ? 'Admin' : 'Candidate')}</span>
-                  </Link>
-                  <button
-                    onClick={handleLogout}
-                    className="flex items-center gap-1 bg-rose-600 hover:bg-rose-700 text-white px-3 py-1.5 rounded-lg text-xs font-semibold transition"
-                    title="Sign Out"
-                  >
-                    <LogOut className="w-3.5 h-3.5" />
-                    <span>Sign Out</span>
-                  </button>
-                </>
-              ) : (
-                <span className="bg-amber-50 text-amber-900 border border-amber-200 text-xs font-semibold px-3 py-1.5 rounded-lg">
-                  Applicant: {currentUser?.name || 'In Registration'}
-                </span>
-              )}
+              <Link
+                href={currentUser?.role === 'admin' ? '/admin/dashboard' : '/dashboard'}
+                className="flex items-center gap-1.5 bg-slate-100 text-slate-800 border border-slate-200 px-3 py-1.5 rounded-lg text-xs font-semibold hover:bg-slate-200 transition"
+              >
+                <span>{currentUser?.name || (currentUser?.role === 'admin' ? 'Admin' : 'Candidate')}</span>
+              </Link>
+              <button
+                onClick={handleLogout}
+                className="flex items-center gap-1 bg-rose-600 hover:bg-rose-700 text-white px-3 py-1.5 rounded-lg text-xs font-semibold transition"
+                title="Sign Out"
+              >
+                <LogOut className="w-3.5 h-3.5" />
+                <span>Sign Out</span>
+              </button>
             </div>
-          ) : !isAdminLogin ? (
+          ) : isAdminRoute ? (
+            /* On ANY admin route, NEVER show candidate login or registration buttons */
+            isAdminLogin ? null : (
+              <div className="h-8 w-28 bg-slate-100/70 rounded-lg animate-pulse" />
+            )
+          ) : authLoading ? (
+            <div className="h-8 w-32 bg-slate-100/70 rounded-lg animate-pulse" />
+          ) : (
             <div className="flex items-center gap-2">
               <Link
                 href="/login"
@@ -211,7 +219,7 @@ export default function Header() {
                 New Registration
               </Link>
             </div>
-          ) : null}
+          )}
         </nav>
 
         {/* Mobile menu toggle */}
@@ -297,7 +305,7 @@ export default function Header() {
           )}
 
           <div className="pt-3 border-t border-slate-100">
-            {currentUser ? (
+            {currentUser && !currentUser.isTemporary ? (
               <div className="space-y-2">
                 <div className="text-xs text-slate-500 font-medium px-1">
                   Signed in as <strong>{currentUser?.name || currentUser?.email}</strong>
@@ -312,7 +320,10 @@ export default function Header() {
                   Sign Out
                 </button>
               </div>
-            ) : (
+            ) : isAdminRoute ? (
+              /* On admin routes, never show candidate buttons */
+              null
+            ) : !authLoading ? (
               <div className="flex flex-col gap-2">
                 <Link
                   href="/login"
@@ -329,7 +340,7 @@ export default function Header() {
                   New Registration (2027-28)
                 </Link>
               </div>
-            )}
+            ) : null}
           </div>
         </div>
       )}

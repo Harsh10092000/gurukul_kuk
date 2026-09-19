@@ -32,8 +32,8 @@ export async function GET(request: Request) {
     const resultsDeclared = await db.areResultsDeclared();
     if (!resultsDeclared) {
       return NextResponse.json(
-        { error: 'Results have not been officially declared yet.', resultsDeclared: false, result: null },
-        { status: 403 }
+        { message: 'Results have not been officially declared yet.', resultsDeclared: false, result: null },
+        { status: 200 }
       );
     }
 
@@ -68,27 +68,27 @@ export async function GET(request: Request) {
       return NextResponse.json({ result: null, resultsDeclared: true });
     }
 
-    // Logged in applicant checking from dashboard
-    if (user) {
-      const userApp = await db.getApplicationByUserId(user.userId);
-      if (userApp) {
-        const res = (await db.getResult(userApp.id)) || (userApp.rollNumber ? await db.getResult(userApp.rollNumber) : null);
-        if (res && res.isPublished) {
-          const sanitized = {
-            id: res.id,
-            rollNumber: res.rollNumber,
-            applicationNumber: res.applicationNumber,
-            candidateName: res.candidateName,
-            dob: res.dob || userApp.personalInfo?.dob,
-            classApplying: res.classApplying,
-            qualifyingStatus: res.qualifyingStatus,
-            remarks: res.remarks,
-            counselingDate: res.counselingDate,
-            counselingVenue: res.counselingVenue,
-            isPublished: res.isPublished,
-          };
-          return NextResponse.json({ result: sanitized, resultsDeclared: true });
-        }
+    // Direct appId query or logged-in applicant checking from dashboard
+    if (appId || user) {
+      const userApp = user ? await db.getApplicationByUserId(user.userId) : null;
+      const targetId = appId || userApp?.id || '';
+      const res = (targetId ? await db.getResult(targetId) : null) ||
+                  (userApp?.rollNumber ? await db.getResult(userApp.rollNumber) : null);
+      if (res && res.isPublished) {
+        const sanitized = {
+          id: res.id,
+          rollNumber: res.rollNumber,
+          applicationNumber: res.applicationNumber,
+          candidateName: res.candidateName,
+          dob: res.dob || userApp?.personalInfo?.dob,
+          classApplying: res.classApplying,
+          qualifyingStatus: res.qualifyingStatus,
+          remarks: res.remarks,
+          counselingDate: res.counselingDate,
+          counselingVenue: res.counselingVenue,
+          isPublished: res.isPublished,
+        };
+        return NextResponse.json({ result: sanitized, resultsDeclared: true });
       }
     }
 
@@ -128,18 +128,6 @@ export async function POST(request: Request) {
       remarks: remarks || (qualifyingStatus === 'Qualified' ? 'Qualified for admission counseling.' : 'Not qualified for current session.'),
       createdAt: new Date().toISOString(),
     });
-
-    if (application) {
-      await sendNotification({
-        to: application.personalInfo.fullName,
-        name: application.personalInfo.fullName,
-        type: 'RESULT_DECLARED',
-        data: {
-          rollNumber: finalRoll,
-          status: newResult.qualifyingStatus,
-        },
-      });
-    }
 
     return NextResponse.json({ success: true, result: newResult });
   } catch (error) {

@@ -66,8 +66,8 @@ export default function AdminLoginPage() {
   };
 
   return (
-    <div className="min-h-[85vh] flex items-center justify-center py-8 px-4 sm:px-6 lg:px-8 bg-slate-100 font-sans">
-      <div className="w-full max-w-3xl flex rounded-2xl overflow-hidden shadow-sm border border-slate-200 self-center">
+    <div className="min-h-[85vh] flex items-center justify-center py-8 px-4 sm:px-6 lg:px-8 bg-gradient-to-br from-[#fff7ed] via-[#ffedd5] via-45% to-[#fed7aa] font-sans">
+      <div className="w-full max-w-3xl flex rounded-2xl overflow-hidden shadow-elevated border border-amber-200/60 self-center">
 
         {/* Left Panel — Navy Institution Branding */}
         <div className="hidden md:flex flex-col justify-between w-2/5 portal-card-navy px-8 py-10">

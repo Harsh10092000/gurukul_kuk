@@ -16,10 +16,7 @@ import {
 
 export async function POST(request: Request) {
   try {
-    const authUser = await getCurrentUser();
-    if (!authUser) {
-      return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
-    }
+    const authUser = await getCurrentUser(); // Optional: user is only officially authenticated upon payment
 
     const body = await request.json();
     const {
@@ -149,12 +146,14 @@ export async function POST(request: Request) {
     // GIRLS: NILG-00001
     const registrationId = await db.getNextRegistrationNumber(gender as 'Male' | 'Female');
 
-    // Retrieve temporary session info if this is a temp session
-    let candidateEmail = authUser.email;
-    let candidateMobile = personalInfo?.candidateMobile || '';
+    // Retrieve candidate email & phone from payload or temporary session
+    let candidateEmail = (personalInfo?.candidateEmail || authUser?.email || '').trim().toLowerCase();
+    let candidateMobile = (personalInfo?.candidateMobile || parentInfo?.fatherPhone || authUser?.phone || '').trim();
     let passwordHash = '';
 
-    if (authUser.userId && authUser.userId.startsWith('temp_')) {
+    if (body.password) {
+      passwordHash = await hashPassword(body.password);
+    } else if (authUser?.userId && authUser.userId.startsWith('temp_')) {
       const tempApp = await db.getTempApplication(authUser.userId);
       if (tempApp) {
         candidateEmail = tempApp.email || candidateEmail;
@@ -167,12 +166,29 @@ export async function POST(request: Request) {
       passwordHash = await hashPassword('Student@123');
     }
 
+    // Check if an official user already exists with this email or mobile
+    const cleanPhone = (candidateMobile || parentInfo?.fatherPhone || '').replace(/\D/g, '').slice(-10);
+    const existingEmailUser = await db.findUserByEmail(candidateEmail);
+    if (existingEmailUser) {
+      return NextResponse.json(
+        { error: 'An official candidate account with this email address is already registered. Please login instead.' },
+        { status: 409 }
+      );
+    }
+    const existingPhoneUser = await db.findUserByPhone(cleanPhone);
+    if (existingPhoneUser) {
+      return NextResponse.json(
+        { error: `A candidate account with mobile +91-${cleanPhone} is already registered.` },
+        { status: 409 }
+      );
+    }
+
     // 14. Create Official User Account in Database
     const officialUserId = 'usr-' + Date.now() + '-' + Math.random().toString(36).substring(2, 7);
     const officialUser = await db.createUser({
       name: personalInfo.fullName.trim(),
       email: candidateEmail.trim().toLowerCase(),
-      phone: candidateMobile || parentInfo.fatherPhone,
+      phone: cleanPhone,
       role: 'applicant',
       passwordHash,
       registrationNumber: registrationId,
@@ -261,8 +277,8 @@ export async function POST(request: Request) {
       createdAt: new Date().toISOString(),
     });
 
-    // 17. Clean Up Temporary Session
-    if (authUser.userId && authUser.userId.startsWith('temp_')) {
+    // 17. Clean Up Temporary Session if any existed
+    if (authUser?.userId && authUser.userId.startsWith('temp_')) {
       await db.deleteTempApplication(authUser.userId);
     }
 

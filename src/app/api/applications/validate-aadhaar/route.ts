@@ -6,9 +6,6 @@ import { validateAadhaar } from '@/lib/validations';
 export async function POST(req: Request) {
   try {
     const user = await getCurrentUser();
-    if (!user) {
-      return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
-    }
 
     const body = await req.json();
     const { aadhaarNumber } = body;
@@ -24,7 +21,7 @@ export async function POST(req: Request) {
 
     // 2. Uniqueness check in database
     const existing = await db.findApplicationByAadhaar(aadhaarNumber);
-    if (existing && existing.userId !== user.userId && existing.status !== 'rejected') {
+    if (existing && existing.userId !== user?.userId && existing.status !== 'rejected') {
       return NextResponse.json(
         {
           valid: false,

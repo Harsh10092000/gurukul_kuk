@@ -1,4 +1,4 @@
-﻿import nodemailer from 'nodemailer';
+import nodemailer from 'nodemailer';
 
 export interface NotificationPayload {
   to: string;
@@ -561,15 +561,60 @@ export async function sendNotification(payload: NotificationPayload) {
       break;
 
     case 'ADMIT_CARD_RELEASED':
-      subject = `Gurukul Kurukshetra - Admit Card Released (Roll No: ${data.rollNumber})`;
-      message = `Dear ${name}, your Admit Card for Gurukul Kurukshetra Entrance Examination has been issued! Roll No: ${data.rollNumber}. Please login to download.`;
-      htmlContent = `<p>${message}</p>`;
-      break;
+      // Under strict policy: Do not send any email to users when admit cards are declared
+      console.log('[Notification] Suppressed email for ADMIT_CARD_RELEASED (admit card emails are disabled).');
+      return {
+        success: true,
+        channels: [],
+        message: 'Admit card email dispatch disabled per policy.',
+      };
 
     case 'RESULT_DECLARED':
-      subject = `Gurukul Kurukshetra - Entrance Examination Result Declared`;
-      message = `Dear ${name}, entrance exam result for Roll No: ${data.rollNumber} has been published. Status: ${data.status}. Login to view scorecard.`;
-      htmlContent = `<p>${message}</p>`;
+      subject = 'Gurukul Kurukshetra - Entrance Examination Result Declared';
+      message = 'Dear Candidate, The Entrance Examination Result has been declared. Please visit the official portal to check your result.';
+      htmlContent = `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta charset="utf-8">
+          <style>
+            body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #f8fafc; margin: 0; padding: 24px 12px; color: #1e293b; }
+            .container { max-width: 580px; margin: 0 auto; background: #ffffff; border-radius: 16px; overflow: hidden; border: 1px solid #e2e8f0; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); }
+            .header { background: #0b192c; padding: 24px; text-align: center; border-bottom: 3px solid #f59e0b; }
+            .header h1 { color: #ffffff; margin: 0 0 4px 0; font-size: 22px; font-weight: 800; letter-spacing: 0.5px; }
+            .header p { color: #f59e0b; margin: 0; font-size: 12px; font-weight: bold; letter-spacing: 1px; }
+            .content { padding: 32px 28px; text-align: center; }
+            .status-badge { display: inline-block; background: #ecfdf5; color: #065f46; font-size: 12px; font-weight: 700; padding: 6px 16px; border-radius: 9999px; border: 1px solid #a7f3d0; margin-bottom: 18px; }
+            .title { font-size: 20px; font-weight: 800; color: #0f172a; margin: 0 0 14px 0; }
+            .message { font-size: 14px; line-height: 1.6; color: #475569; margin: 0 0 24px 0; }
+            .btn { display: inline-block; background: #0b192c; color: #ffffff !important; text-decoration: none; padding: 12px 28px; border-radius: 10px; font-weight: 700; font-size: 13px; }
+            .footer { background: #f1f5f9; padding: 18px 24px; text-align: center; font-size: 11px; color: #64748b; border-top: 1px solid #e2e8f0; line-height: 1.5; }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="header">
+              <h1>GURUKUL KURUKSHETRA</h1>
+              <p>ENTRANCE EXAMINATION • SESSION 2027-28</p>
+            </div>
+            <div class="content">
+              <div class="status-badge">Official Announcement</div>
+              <h2 class="title">Result Has Been Declared</h2>
+              <p class="message">
+                The entrance examination result has been declared. You may visit the official admission portal to check your result status.
+              </p>
+              <div>
+                <a href="http://localhost:3000/result" class="btn">Check Result on Portal →</a>
+              </div>
+            </div>
+            <div class="footer">
+              Gurukul Kurukshetra, Near 3rd Gate, Kurukshetra University, Haryana - 136119<br>
+              Admissions &amp; Examination Cell • admissions@gurukulkurukshetra.com
+            </div>
+          </div>
+        </body>
+        </html>
+      `;
       break;
   }
 
