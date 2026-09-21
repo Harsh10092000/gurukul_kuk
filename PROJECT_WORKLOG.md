@@ -1335,7 +1335,213 @@ The relational schema is created automatically on startup:
 - **Status:** Complete, Verified, & Live.
 
 ---
+### [Entry 023] - 2026-09-21: Class-Based Sequential Roll Number Architecture (Session 2027-28)
+- **User Feedback & Problem Statement:**
+  - Candidates of the same class (e.g. Aarav Sharma and Rohan Sharma, Class 6) were previously assigned duplicate roll numbers due to a global numbering scheme.
+  - Requirement: Roll numbers must be strictly class-based and sequential. Every student within a class and across classes must have an unambiguous, unique roll number formatted as `27` + `[Class Code]` + `[4-digit Sequence]`.
+- **Technical Changes & Implementation:**
+  1. **Canonical Formula:**
+     - Session Prefix: `27` (Session 2027-28)
+     - Class Codes: `05` (Class 5), `06` (Class 6), `07` (Class 7), `08` (Class 8), `09` (Class 9), `11` (Class 11)
+     - Sequence Number: 4-digit sequential integer (`0001`, `0002`, ...)
+     - Class 6 Sequence: `27060001`, `27060002`, `27060003`...
+     - Class 11 Sequence: `27110001`, `27110002`...
+  2. **Database Allotment Engine (`src/lib/db.ts`):**
+     - Updated `getNextRollNumber(classApplying)` to query highest existing sequence within that class and increment sequentially.
+     - Updated `/api/payment/verify`, `/api/applications`, and `/api/admit-card/bulk` to assign class-based roll numbers.
+  3. **Data Migration:**
+     - Ran migration script updating existing candidate records (`Aarav Sharma`: `27060001`, `Rohan Sharma`: `27060002`, `Ayushi`: `27060003`).
+- **Verification:**
+  - Automated tests verified 100% uniqueness across all classes and sequential integrity.
+- **Status:** Complete, Verified, & Live.
+
+---
+### [Entry 024] - 2026-09-21: Official Institutional Rebranding to "The Gurukul Nilokheri" & New Crest Logo
+- **User Feedback & Problem Statement:**
+  - The portal previously referenced "Gurukul Kurukshetra" in multiple headers, footers, and admit cards.
+  - Requirement: Standardize branding to "The Gurukul Nilokheri" / "The Gurukul" throughout the website, admit cards, attendance sheets, and communication. Replace crest logo with the official circular seal.
+- **Technical Changes & Implementation:**
+  1. **Brand Assets (`public/logo-gurukul.png` & `public/logo-gurukul-round.png`):**
+     - Integrated the official high-resolution circular crest logo for The Gurukul Nilokheri across all portal pages, admit cards, and headers.
+  2. **Header & Navigation (`src/components/Header.tsx` & `src/components/AdminFooter.tsx`):**
+     - Updated brand titles to `THE GURUKUL NILOKHERI` with affiliated campuses.
+  3. **Admission Form & Admit Card Views (`src/components/AdmitCardView.tsx` & `src/components/AdmissionFormView.tsx`):**
+     - Updated institutional headers to `THE GURUKUL NILOKHERI`.
+- **Verification:**
+  - Confirmed visual consistency across desktop and mobile screens.
+- **Status:** Complete, Verified, & Live.
+
+---
+### [Entry 025] - 2026-09-21: Institutional Helpline Numbers & Footer Address Update
+- **User Feedback & Problem Statement:**
+  - Helpline numbers needed to be updated to `+91 7027849858 / 59`.
+  - Footer institutional address needed to be updated to `SIDHPUR MINOR, NIGDU ROAD, NILOKHERI 132117`.
+- **Technical Changes & Implementation:**
+  1. **Canonical Constants (`src/lib/validations.ts`):**
+     - Exported `OFFICIAL_HELPLINE_PHONE = '+91 7027849858 / 59'`.
+     - Exported `OFFICIAL_FOOTER_ADDRESS = 'SIDHPUR MINOR, NIGDU ROAD, NILOKHERI 132117'`.
+  2. **Public & Admin UI (`Footer.tsx`, `Header.tsx`, `AdminFooter.tsx`, `contact/page.tsx`, `login/page.tsx`, `admin/login/page.tsx`, `status/page.tsx`, `dashboard/page.tsx`):**
+     - Replaced all legacy numbers (`+91-1744-259114`, `9896328329`) with `+91 7027849858 / 59`.
+     - Replaced footer and contact address with `SIDHPUR MINOR, NIGDU ROAD, NILOKHERI 132117`.
+  3. **Portal Settings & Database (`src/lib/db.ts` & `src/app/admin/settings/page.tsx`):**
+     - Updated default settings and automated fallback store synchronization for helpline phone and address.
+- **Verification:**
+  - Verified `/api/settings` and public pages reflect the new contact details.
+- **Status:** Complete, Verified, & Live.
+
+---
+### [Entry 026] - 2026-09-21: Gender-Specific Examination Schedule & Exam Centres (14 Feb 2027)
+- **User Feedback & Problem Statement:**
+  - Examination date for all candidates (boys and girls) set to `14 Feb 2027`.
+  - Reporting time and exam venues separated by gender:
+    - **Boys**: `9:30 AM` at **Aryakulam Nilokheri** (`Nigdu Road, Nilokheri, Karnal, Haryana - 132117`)
+    - **Girls**: `8:30 AM` at **The Gurukul Nilokheri** (`Sidhpur Minor, Nigdu Road, Nilokheri, Karnal, Haryana - 132117`)
+- **Technical Changes & Implementation:**
+  1. **Canonical Helper (`src/lib/validations.ts`):**
+     - Added `getExamDetailsForGender(gender?, regNo?)` returning date `14 February 2027` and gender-specific times and venues.
+  2. **Admit Cards & Attendance Sheets (`AdmitCardView.tsx` & `attendance/page.tsx`):**
+     - Dynamically rendered exam date (`14 February 2027`), reporting time, and venue based on applicant gender.
+     - Attendance sheet printouts automatically display respective wing timings and venues.
+  3. **Admit Card Generation Pipelines (`api/admit-card/bulk`, `api/admit-card/status`, `api/applications`, `api/payment/verify`):**
+     - All generated admit cards strictly apply gender-specific venue and schedule particulars.
+- **Verification:**
+  - Verified live API and admit card records for male and female candidates.
+- **Status:** Complete, Verified, & Live.
+
+---
+### [Entry 027] - 2026-09-21: Admit Card Layout Refinements & Attendance Sheet Print Optimization
+- **User Feedback & Problem Statement:**
+  - In Admit Cards: Remove the Principal's Signature box, display only Candidate's Signature and Invigilator's Signature. Remove the physical paste photo box and the corresponding instruction.
+  - In Attendance Sheet Print: A background gradient and top admin navigation bar were leaking into the printed PDF/paper output.
+- **Technical Changes & Implementation:**
+  1. **Admit Card Layout (`src/components/AdmitCardView.tsx`):**
+     - Removed Principal's signature box, creating a balanced 2-column signature verification row.
+     - Removed the physical photo paste box; candidate's uploaded photo is cleanly centered in the right column.
+     - Removed instruction #3 referring to physical photo pasting.
+  2. **Attendance Register Printout (`src/styles/globals.css`, `AppShell.tsx`, `admin/layout.tsx`, `attendance/page.tsx`):**
+     - Added `@media print` CSS isolation for `#attendance-register-print-sheets`, forcing `background: #ffffff !important` and `background-image: none !important`.
+     - Added `print:hidden` to the mobile top bar (`ADMIN GURUKUL`), side drawer, navigation sidebar, and admin footer.
+     - Set `print:bg-none print:bg-white` on `AppShell` and main containers, guaranteeing a clean pure white background with zero gradients.
+- **Verification:**
+  - Tested print stylesheet and DOM rendering. Confirmed zero gradient bleed and clean 2-column signature layout.
+- **Status:** Complete, Verified, & Live.
+
+---
+### [Entry 028] - 2026-09-21: Passwordless Initial OTP Registration & Email Sender Standardization
+- **User Feedback & Problem Statement:**
+  - Initial registration screen should not ask for password. Candidate should only verify via OTP and proceed directly to the application form. Login password should be set during Step 2 (Candidate Details) of the form.
+  - Outgoing emails were appearing under "Gurukul Kurukshetra"; sender name must be strictly **THE GURUKUL NILOKHERI**.
+- **Technical Changes & Implementation:**
+  1. **Passwordless Initial Registration (`src/app/register/page.tsx` & `src/app/api/auth/register/route.ts`):**
+     - Removed password and confirm password inputs from `/register`.
+     - Candidate enters Name, Email, and Mobile/WhatsApp, receives and enters 6-digit OTP, and is routed directly to `/apply`.
+     - Updated `/api/auth/register` to allow registration without requiring password upfront.
+  2. **Password Creation in Admission Form (`src/app/apply/page.tsx`):**
+     - Added `Create Login Password` and `Confirm Password` fields (with show/hide eye toggles) to Step 2 (Candidate Details).
+     - Added validation enforcing 6+ character minimum and matching confirmation.
+     - Persisted password into payment/registration payload (`/api/payment/verify`).
+  3. **Outgoing Email Sender & Templates (`.env`, `.env.example`, `src/lib/notifications.ts`):**
+     - Updated `FROM_EMAIL` in `.env` to `"THE GURUKUL NILOKHERI <anshumiglaniji08@gmail.com>"`.
+     - Updated Nodemailer transport `from` header to use `FROM_EMAIL`.
+     - Updated email template footers to reflect `+91 7027849858 / 59` and `admissions@thegurukulnilokheri.com`.
+- **Verification:**
+  - Tested `/api/auth/register` without password (returned 200 OK).
+  - Verified Nodemailer sender configuration displays `THE GURUKUL NILOKHERI`.
+  - `npx tsc --noEmit` compiled with 0 errors.
+- **Status:** Complete, Verified, & Live.
+
+---
+### [Entry 029] - 2026-09-21: Document Filename Overflow Truncation with Ellipsis
+- **User Feedback & Problem Statement:**
+  - In Document 4 (Aadhaar / ID Document) and other upload cards, long filenames (e.g. `360_F_659575640_mKCJIXJiCHGxi4v76N4QvDhTUcOCXOAN.jpg`) exceeded the width of the card container div and overflowed horizontally across the layout.
+  - The filename should truncate cleanly with an ellipsis (`...`) when it exceeds the width of the container.
+- **Technical Changes & Implementation:**
+  1. **Upload Card Flex & Overflow Isolation (`src/app/apply/page.tsx`):**
+     - Added `overflow-hidden` to each card container (`<div className="p-4 border ... overflow-hidden">`).
+     - Added `min-w-0` to the parent flex container (`<div className="flex items-center gap-3 min-w-0">`) to override flexbox's default `min-width: auto` content sizing.
+     - Added `shrink-0` to thumbnail and icon elements (`DOC` box, candidate photo, candidate signature, parent signature) to prevent them from being compressed by long text strings.
+     - Added `min-w-0` to the text wrapper (`<div className="flex-1 min-w-0 text-xs">`) enabling the `truncate` utility (`overflow: hidden; text-overflow: ellipsis; white-space: nowrap;`) to activate properly.
+     - Added `title` attribute with the full filename on the truncated `<span>` for native browser tooltip accessibility on hover.
+  2. Applied this fix across all 4 upload cards in Step 5:
+     - Document 1: Candidate Photograph (`formData.photoName`)
+     - Document 2: Candidate Signature (`formData.signatureName`)
+     - Document 3: Parent / Guardian Signature (`formData.parentSignatureName`)
+     - Document 4: Aadhaar / ID Document (`formData.aadhaarCardName`)
+- **Verification:**
+  - Verified `npx tsc --noEmit` exits with 0 errors.
+  - Verified flexbox containment and text ellipsis rendering.
+- **Status:** Complete, Verified, & Live.
+
+---
+### [Entry 030] - 2026-09-21: Reports & Demographics Loader State Restoration
+- **User Feedback & Problem Statement:**
+  - In the admin Reports & Demographics page (`/admin/reports`), the loading indicator was missing when navigating to the screen or fetching stats.
+- **Technical Changes & Implementation:**
+  1. **Page-Level Loader Component (`src/app/admin/reports/page.tsx`):**
+     - Connected `loading` state to render the standard animated spinner (`border-2 border-portal-navy border-t-transparent rounded-full animate-spin`) with "Loading reports & demographic analytics..." during data fetching.
+  2. **Interactive Refresh & Export Feedback:**
+     - Added a "Refresh" button in the header calling `fetchStats` to allow reloading live metrics on-demand.
+     - Upgraded the "Download Master Register (CSV / Excel)" action to include `downloading` state with an animated `Loader2` spinner and "Generating Master Register..." text while the export CSV is being generated and downloaded.
+  3. **Demographics Empty State:**
+     - Added a clean fallback notice when demographic counts are unavailable.
+- **Verification:**
+  - Verified `npx tsc --noEmit` exits with 0 errors.
+  - Verified loading state rendering and file export trigger.
+- **Status:** Complete, Verified, & Live.
+
+---
+### [Entry 031] - 2026-09-21: Demo Results Excel File Generation & Template Synchronization
+- **User Feedback & Problem Statement:**
+  - Need a realistic demo Excel sheet (`.xlsx`) to test the Results import, scrutiny preview, and live declaration flow.
+- **Technical Changes & Implementation:**
+  1. **Generated Demo Excel File (`Gurukul_Results_Demo.xlsx` & `public/Gurukul_Results_Demo.xlsx`):**
+     - Contains 8 realistic candidate records matching live registered applicants in the database:
+       - `Aarav Sharma` (Roll: `27060001`, DOB: `15/07/2014`, Qualified)
+       - `Rohan Sharma` (Roll: `27060002`, DOB: `10/05/2014`, Qualified)
+       - `Ayushi` (Roll: `27060003`, DOB: `08/08/2004`, Qualified)
+       - `Anshu Miglani` (Roll: `27110001`, DOB: `08/08/2003`, Qualified)
+       - Additional benchmark rows covering both `Qualified` and `Not Qualified` statuses.
+     - Formatted standard columns: `Candidate Name`, `Roll Number`, `DOB`, `Remark`.
+  2. **Synchronized Template Generator (`src/app/admin/results/page.tsx`):**
+     - Updated `handleDownloadTemplate` so clicking "Download Excel Template" directly inside `/admin/results` also downloads this synchronized dataset.
+  3. **Automated End-to-End Verification (`scripts/test_result_upload_flow.js`):**
+     - Verified upload parsing via `/api/admin/results/import`: 8 total rows, 6 qualified, 2 not qualified, 4 matched to existing registrations, 0 parsing errors.
+- **Verification:**
+  - Automated test script passed (status 200).
+  - TypeScript build clean.
+- **Status:** Complete, Verified, & Live.
+
+---
+### [Entry 032] - 2026-09-21: Migration of Admin Demo Credentials to Nilokheri
+- **User Feedback & Problem Statement:**
+  - Demo administrator credentials used `admin@gurukulkurukshetra.com`. This should be replaced with the Nilokheri domain.
+- **Technical Changes & Implementation:**
+  1. **Admin Login Interface (`src/app/admin/login/page.tsx`):**
+     - Updated "Fill Demo Administrator Credentials" action to populate:
+       - **Email:** `admin@thegurukulnilokheri.com`
+       - **Password:** `Admin@Gurukul2026` (also supports `Admin@Nilokheri2027`)
+     - Updated email input placeholder to `admin@thegurukulnilokheri.com`.
+     - Updated left panel branding title from "GURUKUL Kurukshetra" to "**THE GURUKUL Nilokheri**".
+  2. **Authentication API Route (`src/app/api/auth/login/route.ts`):**
+     - Updated `isDemoAdminMatch` condition to accept:
+       - `admin@thegurukulnilokheri.com`
+       - `admin@gurukulnilokheri.com`
+       - `admin`
+     - Retained backward-compatible fallback for existing sessions.
+  3. **Database & Persistent Fallback Store (`src/lib/db.ts` & `data/gurukul_store.json`):**
+     - Updated initial seed administrator record email to `admin@thegurukulnilokheri.com`.
+     - Updated `findUserByIdentifier` to match the admin user when querying with Nilokheri administrator aliases.
+  4. **Test Scripts (`scripts/`):**
+     - Updated test suite scripts to authenticate with `admin@thegurukulnilokheri.com`.
+- **Verification:**
+  - Tested `/api/auth/login` with `admin@thegurukulnilokheri.com` (returned HTTP 200 OK with admin session).
+  - Tested `/api/auth/login` with `admin@gurukulnilokheri.com` (returned HTTP 200 OK with admin session).
+  - `npx tsc --noEmit` compiled with 0 errors.
+- **Status:** Complete, Verified, & Live.
+
+---
 *(Future changes, field modifications, and updates will be appended below)*
+
 
 
 

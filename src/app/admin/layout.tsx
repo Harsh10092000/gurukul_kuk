@@ -100,7 +100,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   return (
     <div className="flex-1 min-h-screen w-full bg-transparent flex flex-col md:flex-row font-sans">
       {/* Mobile Top Bar */}
-      <div className="md:hidden bg-portal-navy text-white p-3 flex justify-between items-center z-40 border-b border-slate-800 flex-shrink-0">
+      <div className="md:hidden print:hidden bg-portal-navy text-white p-3 flex justify-between items-center z-40 border-b border-slate-800 flex-shrink-0">
         <Link href="/admin/dashboard" className="flex items-center gap-2">
           <div className="w-7 h-7 flex items-center justify-center">
             <Image src="/logo-gurukul.png" alt="Logo" width={28} height={28} className="brand-logo-sm object-contain" />
@@ -139,14 +139,14 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       {/* Mobile Drawer Backdrop */}
       {sidebarOpen && (
         <div 
-          className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-40 md:hidden"
+          className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-40 md:hidden print:hidden"
           onClick={() => setSidebarOpen(false)}
         />
       )}
 
       {/* Admin Sidebar Navigation */}
       <aside
-        className={`w-64 bg-portal-navy text-white flex-shrink-0 flex flex-col justify-between transition-transform duration-200 z-20 fixed md:sticky inset-y-0 left-0 md:top-[96px] md:h-[calc(100vh-96px)] overflow-hidden ${
+        className={`print:hidden w-64 bg-portal-navy text-white flex-shrink-0 flex flex-col justify-between transition-transform duration-200 z-20 fixed md:sticky inset-y-0 left-0 md:top-[96px] md:h-[calc(100vh-96px)] overflow-hidden ${
           sidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'
         }`}
       >
@@ -228,13 +228,15 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       </aside>
 
       {/* Main Content Area with Natural Scroll & Admin Footer */}
-      <div className="flex-1 flex flex-col min-w-0 bg-transparent">
-        <main className="flex-1 p-4 sm:p-6 lg:p-8 w-full pb-16">
-          <div className="max-w-6xl mx-auto">
+      <div className="flex-1 flex flex-col min-w-0 bg-transparent print:p-0 print:m-0">
+        <main className="flex-1 p-4 sm:p-6 lg:p-8 w-full pb-16 print:p-0 print:m-0 print:pb-0">
+          <div className="max-w-6xl mx-auto print:max-w-none print:m-0 print:p-0">
             {children}
           </div>
         </main>
-        <AdminFooter />
+        <div className="print:hidden">
+          <AdminFooter />
+        </div>
       </div>
     </div>
   );

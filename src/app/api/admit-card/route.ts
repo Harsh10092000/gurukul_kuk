@@ -132,9 +132,16 @@ export async function POST(request: Request) {
 
     const settings = await db.getSettings();
 
-    // Generate class-based roll number: e.g. 27 + class code + 4-digit serial
-    const classNum = application.classApplying.replace(/\D/g, '') || '06';
-    const rollNumber = `27${classNum.padStart(2, '0')}${Math.floor(1000 + Math.random() * 9000)}`;
+    // Allot or generate class-based sequential roll number
+    const classCode = db.getClassCode(application.classApplying);
+    const classPrefix = `27${classCode}`;
+    let rollNumber = application.rollNumber;
+    if (!rollNumber || !new RegExp(`^${classPrefix}(\\d+)$`).test(rollNumber)) {
+      rollNumber = await db.getNextRollNumber(application.classApplying);
+      try {
+        await db.updateApplication(application.id, { rollNumber });
+      } catch { }
+    }
 
     const defaultVenue = settings.examVenueName || 'The Gurukul Jyotisar Pehowa Road, Kurukshetra';
     const defaultAddress = settings.examVenueAddress || '136119, Haryana';

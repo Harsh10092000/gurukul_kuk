@@ -1,5 +1,5 @@
 /**
- * Gurukul Kurukshetra Portal - Shared Validation & Security Utilities
+ * The Gurukul Nilokheri Portal - Shared Validation & Security Utilities
  * Canonical validation for names, occupations, marks, documents, phone, and Aadhaar.
  * Enforced on both Frontend and Backend API routes.
  */
@@ -247,16 +247,30 @@ export function validateDob(dob: string | undefined | null): ValidationResult {
   return { isValid: true };
 }
 
+export const CAMPUS_STREAMS_MAP: Record<string, string[]> = {
+  'Gurukul Nilokheri': ['Commerce', 'Humanities', 'Non Medical', 'Medical'],
+  'Gurukul Jyotisar': ['Commerce', 'Non Medical', 'Medical'],
+  'Aryakulam Nilokheri': ['Commerce', 'Non Medical', 'Medical'],
+};
+
+export function getStreamsForCampus(campus?: string | null): string[] {
+  if (!campus) return ['Commerce', 'Humanities', 'Non Medical', 'Medical'];
+  return CAMPUS_STREAMS_MAP[campus] || ['Commerce', 'Non Medical', 'Medical'];
+}
+
 /**
  * Validate Class and Stream
  * - Allowed classes: 6, 7, 8, 9, 11 (or 'Class 6', 'Class 7', 'Class 8', 'Class 9', 'Class 11')
  * - Stream:
- *   - For Class 11: MUST be one of 'Non Medical', 'Medical', 'Commerce', 'Arts'
+ *   - For Class 11:
+ *     - Gurukul Nilokheri: Commerce, Humanities, Non Medical, Medical
+ *     - Gurukul Jyotisar & Aryakulam Nilokheri: Commerce, Non Medical, Medical
  *   - For Class 6, 7, 8, 9: Stream must NOT be selected
  */
 export function validateClassAndStream(
   classApplying: string | undefined | null,
-  stream?: string | null
+  stream?: string | null,
+  studyLocation?: string | null
 ): ValidationResult {
   if (!classApplying || typeof classApplying !== 'string' || !classApplying.trim()) {
     return { isValid: false, error: 'Class applying for is required.' };
@@ -273,11 +287,28 @@ export function validateClassAndStream(
   }
 
   if (cleanClass === '11') {
-    const allowedStreams = ['Non Medical', 'Medical', 'Commerce', 'Arts'];
-    if (!stream || !allowedStreams.includes(stream.trim())) {
+    const cleanStream = (stream || '').trim();
+    const cleanLocation = (studyLocation || '').trim();
+
+    if (!cleanStream) {
       return {
         isValid: false,
-        error: 'Stream selection is mandatory for Class 11. Allowed streams: Non Medical, Medical, Commerce, Arts.',
+        error: 'Stream selection is mandatory for Class 11.',
+      };
+    }
+
+    if (cleanStream === 'Humanities' && cleanLocation && cleanLocation !== 'Gurukul Nilokheri') {
+      return {
+        isValid: false,
+        error: `Humanities stream is offered exclusively at The Gurukul Nilokheri campus. It is not available for ${cleanLocation}.`,
+      };
+    }
+
+    const allAllowed = ['Non Medical', 'Medical', 'Commerce', 'Humanities', 'Arts'];
+    if (!allAllowed.includes(cleanStream)) {
+      return {
+        isValid: false,
+        error: `Invalid stream '${cleanStream}'. Allowed streams: Commerce, Humanities, Non Medical, Medical.`,
       };
     }
   } else {
@@ -309,7 +340,6 @@ export function validateClassAndStream(
  * - For BOYS: First preference required; Second preference optional. Second cannot be identical to First.
  */
 export const STUDY_LOCATIONS_BOYS = [
-  'Gurukul Nilokheri',
   'Gurukul Jyotisar',
   'Aryakulam Nilokheri',
 ] as const;
@@ -321,7 +351,8 @@ export const STUDY_LOCATIONS_GIRLS = [
 export function validateStudyLocation(
   gender: string | undefined | null,
   firstPreference: string | undefined | null,
-  secondPreference?: string | null
+  secondPreference?: string | null,
+  activeLocations?: string[] | null
 ): ValidationResult {
   if (!firstPreference || typeof firstPreference !== 'string' || !firstPreference.trim()) {
     return { isValid: false, error: 'First Preferred Study Location is required.' };
@@ -335,26 +366,39 @@ export function validateStudyLocation(
     if (first !== 'Gurukul Nilokheri') {
       return {
         isValid: false,
-        error: 'For female candidates, the available study location is Gurukul Nilokheri.',
+        error: 'For female candidates, the available study location is The Gurukul Nilokheri.',
       };
     }
     return { isValid: true };
   }
 
-  // Boys
-  const validBoys = ['Gurukul Nilokheri', 'Gurukul Jyotisar', 'Aryakulam Nilokheri'];
-  if (!validBoys.includes(first)) {
+  // Boys: The Gurukul Nilokheri is strictly not available for male candidates
+  if (first === 'Gurukul Nilokheri' || second === 'Gurukul Nilokheri') {
     return {
       isValid: false,
-      error: `Invalid First Preferred Study Location. Must be one of: ${validBoys.join(', ')}.`,
+      error: 'The Gurukul Nilokheri campus is exclusively for female candidates. Male candidates can apply for The Gurukul Jyotisar or Aryakulam Nilokheri.',
+    };
+  }
+
+  const defaultBoysLocations = ['Gurukul Jyotisar', 'Aryakulam Nilokheri'];
+  const validBoys = Array.isArray(activeLocations) && activeLocations.length > 0
+    ? defaultBoysLocations.filter((l) => activeLocations.includes(l))
+    : defaultBoysLocations;
+
+  const effectiveBoys = validBoys.length > 0 ? validBoys : defaultBoysLocations;
+
+  if (!effectiveBoys.includes(first)) {
+    return {
+      isValid: false,
+      error: `Invalid First Preferred Study Location. For male candidates, must be one of: ${effectiveBoys.join(', ')}.`,
     };
   }
 
   if (second && second.length > 0 && second !== 'None') {
-    if (!validBoys.includes(second)) {
+    if (!effectiveBoys.includes(second)) {
       return {
         isValid: false,
-        error: `Invalid Second Preferred Study Location. Must be one of: ${validBoys.join(', ')}.`,
+        error: `Invalid Second Preferred Study Location. Must be one of: ${effectiveBoys.join(', ')}.`,
       };
     }
     if (first === second) {
@@ -514,3 +558,41 @@ export function validateAllFourDocuments(documents: any): {
 
 // Backward compatibility alias
 export const validateAllFiveDocuments = validateAllFourDocuments;
+
+/**
+ * Official contact and address constants
+ */
+export const OFFICIAL_HELPLINE_PHONE = '+91 7027849858 / 59';
+export const OFFICIAL_FOOTER_ADDRESS = 'SIDHPUR MINOR, NIGDU ROAD, NILOKHERI 132117';
+
+/**
+ * Exam center, timing and date rules based on candidate gender:
+ * - Exam Date: 14 Feb 2027 for both boys and girls
+ * - Boys: Reporting Time 9:30 AM, Exam Center Aryakulam Nilokheri
+ * - Girls: Reporting Time 8:30 AM, Exam Center The Gurukul Nilokheri
+ */
+export function getExamDetailsForGender(gender?: string, regNo?: string) {
+  const isFemale =
+    (gender || '').trim().toLowerCase() === 'female' ||
+    (regNo || '').trim().toUpperCase().startsWith('NILG');
+
+  if (isFemale) {
+    return {
+      examDate: '14 February 2027',
+      examDateISO: '2027-02-14',
+      reportingTime: '8:30 AM',
+      examDuration: '09:00 AM to 11:30 AM (2.5 Hours)',
+      examCentreName: 'The Gurukul Nilokheri',
+      examCentreAddress: 'Sidhpur Minor, Nigdu Road, Nilokheri, Karnal, Haryana - 132117',
+    };
+  } else {
+    return {
+      examDate: '14 February 2027',
+      examDateISO: '2027-02-14',
+      reportingTime: '9:30 AM',
+      examDuration: '10:00 AM to 12:30 PM (2.5 Hours)',
+      examCentreName: 'Aryakulam Nilokheri',
+      examCentreAddress: 'Nigdu Road, Nilokheri, Karnal, Haryana - 132117',
+    };
+  }
+}

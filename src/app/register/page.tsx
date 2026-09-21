@@ -18,12 +18,6 @@ export default function RegisterPage() {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
-  const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-
-  // Password Visibility State
-  const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   // OTP Verification State
   const [step, setStep] = useState<'details' | 'otp'>('details');
@@ -86,16 +80,6 @@ export default function RegisterPage() {
     const phoneRegex = /^[6-9]\d{9}$/;
     if (!phoneRegex.test(cleanPhone)) {
       setError('Please enter a valid 10-digit Indian mobile number starting with 6, 7, 8, or 9.');
-      return;
-    }
-
-    if (password.length < 6) {
-      setError('Password must be at least 6 characters long.');
-      return;
-    }
-
-    if (password !== confirmPassword) {
-      setError('Passwords do not match. Please ensure both password fields are identical.');
       return;
     }
 
@@ -200,7 +184,6 @@ export default function RegisterPage() {
           name: name.trim(),
           email: email.trim(),
           phone: cleanPhone,
-          password,
           otp: otp.trim(),
         }),
       });
@@ -219,7 +202,6 @@ export default function RegisterPage() {
             fullName: name.trim(),
             candidateEmail: email.trim().toLowerCase(),
             candidateMobile: cleanPhone,
-            password: password,
           })
         );
         localStorage.removeItem('gurukul_application_draft');
@@ -280,7 +262,7 @@ export default function RegisterPage() {
               disabled={loading || otp.length !== 6}
               className="btn-primary w-full"
             >
-              {loading ? 'Verifying...' : 'Verify OTP & Complete Registration'}
+              {loading ? 'Verifying...' : 'Verify OTP & Proceed to Registration'}
             </button>
           </form>
 
@@ -440,65 +422,6 @@ export default function RegisterPage() {
                 placeholder="9876543210"
                 className="form-input-field pl-11 font-mono"
               />
-            </div>
-          </div>
-
-          <div>
-            <label className="form-label">
-              Password <span className="text-rose-500">*</span>
-            </label>
-            <div className="relative">
-              <input
-                type={showPassword ? 'text' : 'password'}
-                required
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="At least 6 characters"
-                className="form-input-field pr-10"
-              />
-              <button
-                type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-2.5 text-slate-400 hover:text-slate-600"
-                title={showPassword ? 'Hide password' : 'Show password'}
-              >
-                {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-              </button>
-            </div>
-          </div>
-
-          <div>
-            <div className="flex justify-between items-center mb-1">
-              <label className="form-label mb-0">
-                Confirm Password <span className="text-rose-500">*</span>
-              </label>
-              {confirmPassword && (
-                <span className={`text-[10px] font-semibold ${
-                  password === confirmPassword ? 'text-emerald-600' : 'text-rose-500'
-                }`}>
-                  {password === confirmPassword ? 'Passwords Match' : 'Passwords Differ'}
-                </span>
-              )}
-            </div>
-            <div className="relative">
-              <input
-                type={showConfirmPassword ? 'text' : 'password'}
-                required
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                placeholder="Re-enter password"
-                className={`form-input-field pr-10 ${
-                  confirmPassword && password !== confirmPassword ? 'border-rose-400 focus:border-rose-500 focus:ring-rose-200' : ''
-                }`}
-              />
-              <button
-                type="button"
-                onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                className="absolute right-3 top-2.5 text-slate-400 hover:text-slate-600"
-                title={showConfirmPassword ? 'Hide password' : 'Show password'}
-              >
-                {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-              </button>
             </div>
           </div>
 

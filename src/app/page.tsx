@@ -449,7 +449,7 @@ export default function ExamPortalGateway() {
             <div className="portal-card-navy p-4 rounded-xl flex items-center justify-between">
               <div>
                 <h5 className="font-bold text-xs text-white">Administrative Portal</h5>
-                <p className="text-[11px] text-slate-300">Gurukul Examination Board &amp; Officers</p>
+                <p className="text-[11px] text-slate-300">The Gurukul Examination Board &amp; Officers</p>
               </div>
               <Link
                 href="/admin/login"
@@ -472,7 +472,7 @@ export default function ExamPortalGateway() {
               </h3>
             </div>
             <span className="text-xs text-slate-500">
-              Gurukul Kurukshetra Institutional Schedule
+              The Gurukul Nilokheri Institutional Schedule
             </span>
           </div>
 

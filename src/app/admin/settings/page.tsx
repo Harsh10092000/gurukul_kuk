@@ -15,7 +15,9 @@ import {
   CalendarCheck, 
   ShieldCheck, 
   AlertTriangle,
-  Loader2
+  Loader2,
+  Building2,
+  MapPin
 } from 'lucide-react';
 import { FormScheduleConfig, FormStatusResult } from '@/lib/formSchedule';
 import { SystemSettings } from '@/lib/types';
@@ -49,15 +51,18 @@ export default function AdminSettingsPage() {
     registrationStartDate: '2026-09-01',
     registrationEndDate: '2027-01-31',
     admitCardReleaseDate: '2027-03-01',
-    entranceExamDate: '2027-03-21',
-    entranceExamTime: '9:30 AM',
-    examVenueName: 'THE GURUKUL JYOTISAR PEHOWA ROAD, KURUKSHETRA',
-    examVenueAddress: '136119, Haryana',
-    resultDeclarationDate: '2027-04-05',
-    counselingStartDate: '2027-04-15',
-    helplinePhone: '+91-1744-259114 / +91-9896328329',
-    helplineEmail: 'admissions@gurukulkurukshetra.com',
+    entranceExamDate: '2027-02-14',
+    entranceExamTime: '9:30 AM (Boys) / 8:30 AM (Girls)',
+    examVenueName: 'Aryakulam Nilokheri (Boys) / The Gurukul Nilokheri (Girls)',
+    examVenueAddress: 'Nilokheri, Karnal, Haryana - 132117',
+    resultDeclarationDate: '2027-03-01',
+    counselingStartDate: '2027-03-10',
+    helplinePhone: '+91 7027849858 / 59',
+    helplineEmail: 'admissions@thegurukulnilokheri.com',
+    activeStudyLocations: ['Gurukul Nilokheri', 'Gurukul Jyotisar', 'Aryakulam Nilokheri'],
   });
+
+  const [locationsSaving, setLocationsSaving] = useState(false);
 
   const [academicSaving, setAcademicSaving] = useState(false);
   const [resultsDeclared, setResultsDeclared] = useState<boolean | null>(null);
@@ -283,6 +288,47 @@ export default function AdminSettingsPage() {
       showToast('Network error while toggling admit card visibility.', 'error');
     } finally {
       setAdmitCardToggling(false);
+    }
+  };
+
+  const handleToggleLocation = (loc: string) => {
+    const current = academicSettings.activeStudyLocations || ['Gurukul Nilokheri', 'Gurukul Jyotisar', 'Aryakulam Nilokheri'];
+    let updated: string[];
+    if (current.includes(loc)) {
+      if (current.length === 1) {
+        showToast('At least one campus/study location must remain enabled.', 'error');
+        return;
+      }
+      updated = current.filter((l) => l !== loc);
+    } else {
+      updated = [...current, loc];
+    }
+    setAcademicSettings((prev) => ({ ...prev, activeStudyLocations: updated }));
+  };
+
+  const handleSaveLocations = async () => {
+    setLocationsSaving(true);
+    try {
+      const res = await fetch('/api/admin/settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ activeStudyLocations: academicSettings.activeStudyLocations }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        showToast(data.error || 'Failed to update study location settings.', 'error');
+        return;
+      }
+      setAcademicSettings((prev) => ({
+        ...prev,
+        ...data.settings,
+        activeStudyLocations: data.settings?.activeStudyLocations || academicSettings.activeStudyLocations,
+      }));
+      showToast('Active preferred study locations updated successfully.', 'success');
+    } catch {
+      showToast('Network error while saving campus availability.', 'error');
+    } finally {
+      setLocationsSaving(false);
     }
   };
 
@@ -816,6 +862,117 @@ export default function AdminSettingsPage() {
               </button>
             </div>
           </div>
+        </div>
+      </div>
+
+      {/* SECTION 4: Preferred Study Locations & Campus Availability */}
+      <div className="portal-card p-6 space-y-5">
+        <div className="border-b border-slate-100 pb-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+          <div>
+            <h2 className="font-bold text-sm text-slate-900 flex items-center gap-2">
+              <Building2 className="w-4 h-4 text-portal-navy" />
+              <span>Preferred Study Locations &amp; Campus Availability</span>
+            </h2>
+            <p className="text-xs text-slate-500 mt-0.5">
+              Control which campuses are displayed to candidates during application registration. Note: The Gurukul Nilokheri is exclusively designated for Girls; Boys can choose from The Gurukul Jyotisar and Aryakulam Nilokheri.
+            </p>
+          </div>
+          <span className="text-[11px] font-semibold text-portal-navy bg-portal-gold/10 px-2.5 py-1 rounded-full self-start sm:self-auto">
+            {(academicSettings.activeStudyLocations || []).length} Active Campus{(academicSettings.activeStudyLocations || []).length === 1 ? '' : 'es'}
+          </span>
+        </div>
+
+        <div className="space-y-3">
+          {[
+            {
+              id: 'Gurukul Nilokheri',
+              title: 'The Gurukul Nilokheri',
+              tag: 'Girls Wing Only',
+              tagColor: 'bg-rose-50 text-rose-700 border-rose-200',
+              streams: 'Commerce, Humanities, Non Medical, Medical',
+              note: 'Sole campus offering Humanities stream. Dedicated campus exclusively for female candidates.',
+            },
+            {
+              id: 'Gurukul Jyotisar',
+              title: 'The Gurukul Jyotisar',
+              tag: 'Boys Only',
+              tagColor: 'bg-blue-50 text-blue-700 border-blue-200',
+              streams: 'Commerce, Non Medical, Medical',
+              note: 'Located on Pehowa Road, Kurukshetra. Available for male candidates.',
+            },
+            {
+              id: 'Aryakulam Nilokheri',
+              title: 'Aryakulam Nilokheri',
+              tag: 'Boys Only',
+              tagColor: 'bg-amber-50 text-amber-700 border-amber-200',
+              streams: 'Commerce, Non Medical, Medical',
+              note: 'CBSE Affiliated, Nilokheri (Karnal). Available for male candidates.',
+            },
+          ].map((campus) => {
+            const isChecked = (academicSettings.activeStudyLocations || ['Gurukul Nilokheri', 'Gurukul Jyotisar', 'Aryakulam Nilokheri']).includes(campus.id);
+            return (
+              <div
+                key={campus.id}
+                onClick={() => handleToggleLocation(campus.id)}
+                className={`p-4 rounded-xl border transition cursor-pointer flex flex-col sm:flex-row sm:items-center justify-between gap-3 ${
+                  isChecked
+                    ? 'border-portal-navy/30 bg-portal-navy/[0.02] hover:bg-portal-navy/[0.04]'
+                    : 'border-slate-200 bg-slate-50/60 opacity-65 hover:opacity-85'
+                }`}
+              >
+                <div className="flex items-start gap-3">
+                  <input
+                    type="checkbox"
+                    checked={isChecked}
+                    onChange={() => {}}
+                    className="mt-1 h-4 w-4 rounded border-slate-300 text-portal-navy focus:ring-portal-navy cursor-pointer"
+                  />
+                  <div>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="font-bold text-sm text-slate-900">{campus.title}</span>
+                      <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border ${campus.tagColor}`}>
+                        {campus.tag}
+                      </span>
+                      <span className={`text-[10px] font-semibold px-2 py-0.5 rounded ${
+                        isChecked ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-slate-200 text-slate-600'
+                      }`}>
+                        {isChecked ? 'Visible to Applicants' : 'Hidden'}
+                      </span>
+                    </div>
+                    <p className="text-xs text-slate-600 mt-1">{campus.note}</p>
+                    <div className="mt-1.5 flex items-center gap-1.5 text-[11px] text-slate-500">
+                      <span className="font-medium text-slate-700">Class 11 Streams:</span>
+                      <span className="font-mono text-slate-600">{campus.streams}</span>
+                    </div>
+                  </div>
+                </div>
+                <div className="flex-shrink-0 self-end sm:self-center">
+                  <span className={`text-xs font-semibold px-3 py-1 rounded-md border ${
+                    isChecked
+                      ? 'border-emerald-300 bg-emerald-50 text-emerald-700'
+                      : 'border-slate-300 bg-white text-slate-500'
+                  }`}>
+                    {isChecked ? 'Enabled' : 'Disabled'}
+                  </span>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        <div className="flex justify-between items-center pt-3 border-t border-slate-100">
+          <p className="text-[11px] text-slate-500">
+            Click checkboxes to toggle availability, then click &ldquo;Save Campus Settings&rdquo; to apply immediately.
+          </p>
+          <button
+            type="button"
+            onClick={handleSaveLocations}
+            disabled={locationsSaving}
+            className="btn-primary text-xs px-5 py-2 font-semibold flex items-center gap-2"
+          >
+            {locationsSaving && <Loader2 className="w-3.5 h-3.5 animate-spin text-white" />}
+            <span>{locationsSaving ? 'Saving...' : 'Save Campus Settings'}</span>
+          </button>
         </div>
       </div>
     </div>

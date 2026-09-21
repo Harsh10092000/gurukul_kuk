@@ -164,7 +164,7 @@ function ResultContent() {
           Entrance Examination Result 2027-28
         </h1>
         <p className="text-xs text-slate-500 max-w-lg mx-auto">
-          Check qualification status and selection remarks declared by Gurukul Kurukshetra Examination Cell.
+          Check qualification status and selection remarks declared by The Gurukul Nilokheri Examination Cell.
         </p>
       </div>
 

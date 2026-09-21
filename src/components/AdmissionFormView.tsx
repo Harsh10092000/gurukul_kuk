@@ -84,10 +84,10 @@ export default function AdmissionFormView({
 
           <div className="flex-1 text-center">
             <h1 className="text-xl sm:text-2xl font-black tracking-tight text-black leading-none font-serif">
-              GURUKUL
+              THE GURUKUL NILOKHERI
             </h1>
             <p className="text-[11px] font-serif font-black text-slate-800 mt-0.5">
-              तमसो मा ज्योतिर्गमय • CBSE AFFILIATED INSTITUTIONAL NETWORK
+              मा प्रगाम पथो वयम् • CBSE AFFILIATED INSTITUTIONAL NETWORK
             </p>
             <p className="text-[9.5px] text-black font-extrabold uppercase tracking-wide mt-0.5">
               CENTRAL ADMISSION CELL &amp; SCRUTINY BOARD • SESSION 2027-28

@@ -38,7 +38,7 @@ export default function AdminDashboard() {
             Admissions &amp; Examination Analytics
           </h1>
           <p className="text-xs text-slate-500">
-            Live candidate metrics for Gurukul Kurukshetra Session 2027-28
+            Live candidate metrics for The Gurukul Nilokheri Session 2027-28
           </p>
         </div>
 

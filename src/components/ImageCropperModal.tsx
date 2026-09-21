@@ -5,7 +5,7 @@ import {
   X, 
   ZoomIn, 
   ZoomOut, 
-  RotateCcw, 
+  RotateCw, 
   Check, 
   Crop, 
   ShieldCheck, 
@@ -35,6 +35,7 @@ export default function ImageCropperModal({
 }: ImageCropperModalProps) {
   const [scale, setScale] = useState(1);
   const [position, setPosition] = useState({ x: 0, y: 0 });
+  const [rotation, setRotation] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
   const [imageLoaded, setImageLoaded] = useState(false);
@@ -47,6 +48,7 @@ export default function ImageCropperModal({
     if (isOpen) {
       setScale(1);
       setPosition({ x: 0, y: 0 });
+      setRotation(0);
       setImageLoaded(false);
       setPreviewUrl(null);
     }
@@ -97,9 +99,14 @@ export default function ImageCropperModal({
     setIsDragging(false);
   };
 
+  const handleRotate = () => {
+    setRotation((prev) => (prev + 90) % 360);
+  };
+
   const handleReset = () => {
     setScale(1);
     setPosition({ x: 0, y: 0 });
+    setRotation(0);
   };
 
   const handleExecuteCrop = () => {
@@ -118,9 +125,6 @@ export default function ImageCropperModal({
       boxWidth = boxHeight * aspectRatio;
     }
 
-    const boxX = (containerRect.width - boxWidth) / 2;
-    const boxY = (containerRect.height - boxHeight) / 2;
-
     // Offscreen canvas for cropping
     const targetW = outputWidth || 400;
     const targetH = Math.round(targetW / aspectRatio);
@@ -136,30 +140,27 @@ export default function ImageCropperModal({
     ctx.fillStyle = '#FFFFFF';
     ctx.fillRect(0, 0, targetW, targetH);
 
-    // Image position relative to the container centre
-    const imgNaturalW = img.naturalWidth;
-    const imgNaturalH = img.naturalHeight;
+    const zoomToTarget = targetW / boxWidth;
 
-    // Displayed image size
-    const imgDisplayW = img.width * scale;
-    const imgDisplayH = img.height * scale;
+    ctx.save();
+    // 1. Move to canvas center
+    ctx.translate(targetW / 2, targetH / 2);
 
-    const imgDisplayX = (containerRect.width - imgDisplayW) / 2 + position.x;
-    const imgDisplayY = (containerRect.height - imgDisplayH) / 2 + position.y;
+    // 2. Move by drag translation scaled to target resolution
+    ctx.translate(position.x * zoomToTarget, position.y * zoomToTarget);
 
-    // Crop box coordinates relative to the displayed image
-    const relX = (boxX - imgDisplayX) / imgDisplayW;
-    const relY = (boxY - imgDisplayY) / imgDisplayH;
-    const relW = boxWidth / imgDisplayW;
-    const relH = boxHeight / imgDisplayH;
+    // 3. Apply rotation
+    ctx.rotate((rotation * Math.PI) / 180);
 
-    // Source rect on natural image
-    const sx = relX * imgNaturalW;
-    const sy = relY * imgNaturalH;
-    const sw = relW * imgNaturalW;
-    const sh = relH * imgNaturalH;
+    // 4. Apply scale
+    ctx.scale(scale * zoomToTarget, scale * zoomToTarget);
 
-    ctx.drawImage(img, sx, sy, sw, sh, 0, 0, targetW, targetH);
+    // 5. Draw image centered
+    const imgW = img.naturalWidth || img.width;
+    const imgH = img.naturalHeight || img.height;
+    ctx.drawImage(img, -imgW / 2, -imgH / 2, imgW, imgH);
+
+    ctx.restore();
 
     const croppedDataUrl = canvas.toDataURL('image/jpeg', 0.92);
     onCropComplete(croppedDataUrl);
@@ -205,7 +206,7 @@ export default function ImageCropperModal({
         {/* Advisory banner */}
         <div className="bg-amber-50 px-5 py-2.5 border-b border-amber-200 text-[11px] text-amber-900 flex items-center gap-2">
           <ShieldCheck className="w-4 h-4 text-amber-600 flex-shrink-0" />
-          <span>Drag the image to center. Use the slider below to zoom in or out.</span>
+          <span>Drag image to center. Use slider to zoom, or button to rotate 90°.</span>
         </div>
 
         {/* Cropping Canvas Viewport */}
@@ -230,9 +231,9 @@ export default function ImageCropperModal({
               onLoad={() => setImageLoaded(true)}
               draggable={false}
               style={{
-                transform: `translate(${position.x}px, ${position.y}px) scale(${scale})`,
+                transform: `translate(${position.x}px, ${position.y}px) rotate(${rotation}deg) scale(${scale})`,
                 transformOrigin: 'center center',
-                transition: isDragging ? 'none' : 'transform 0.05s ease-out',
+                transition: isDragging ? 'none' : 'transform 0.1s ease-out',
                 maxWidth: 'none',
                 userSelect: 'none',
               }}
@@ -286,11 +287,11 @@ export default function ImageCropperModal({
 
             <button
               type="button"
-              onClick={handleReset}
-              className="p-1 rounded-lg text-slate-500 hover:text-slate-900 hover:bg-slate-100 transition ml-1"
-              title="Reset position and zoom"
+              onClick={handleRotate}
+              className="p-1 rounded-lg text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition ml-1"
+              title="Rotate 90° clockwise"
             >
-              <RotateCcw className="w-4 h-4" />
+              <RotateCw className="w-4 h-4" />
             </button>
           </div>
         </div>

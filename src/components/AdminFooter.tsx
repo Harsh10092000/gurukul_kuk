@@ -71,11 +71,11 @@ export default function AdminFooter() {
             <div className="space-y-1 text-slate-400">
               <div className="flex items-center gap-2">
                 <Phone className="w-3.5 h-3.5 text-portal-gold shrink-0" />
-                <span>+91-1744-259114, 9896328329</span>
+                <span>+91 7027849858 / 59</span>
               </div>
               <div className="flex items-center gap-2">
                 <Mail className="w-3.5 h-3.5 text-portal-gold shrink-0" />
-                <span>admissions@gurukuladmissions.org</span>
+                <span>admissions@thegurukulnilokheri.com</span>
               </div>
               <div className="flex items-center gap-1.5 pt-1 text-slate-400">
                 <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
@@ -88,7 +88,7 @@ export default function AdminFooter() {
         {/* Lower Footer Strip */}
         <div className="pt-4 flex flex-col sm:flex-row justify-between items-center text-[11px] text-slate-500 gap-2">
           <div>
-            &copy; {currentYear} Gurukul Kurukshetra Examination &amp; Admission Board. All rights reserved.
+            &copy; {currentYear} The Gurukul Nilokheri Examination &amp; Admission Board. All rights reserved.
           </div>
           <div className="flex items-center gap-4">
             <Link

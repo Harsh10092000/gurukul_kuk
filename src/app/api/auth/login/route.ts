@@ -16,7 +16,12 @@ export async function POST(request: Request) {
     }
 
     const cleanId = identifier.toLowerCase();
-    const isDemoAdminMatch = (cleanId === 'admin@gurukulkurukshetra.com' || cleanId === 'admin') && password === 'Admin@Gurukul2026';
+    const isDemoAdminMatch =
+      (cleanId === 'admin@thegurukulnilokheri.com' ||
+        cleanId === 'admin@gurukulnilokheri.com' ||
+        cleanId === 'admin@gurukulkurukshetra.com' ||
+        cleanId === 'admin') &&
+      (password === 'Admin@Gurukul2026' || password === 'Admin@Nilokheri2027');
     const isDemoStudentMatch = (cleanId === 'gk26-10001' || cleanId === 'gk2610001' || cleanId === '+919876543210' || cleanId === '9876543210') && password === 'Student@123';
 
     // Candidate login strictly requires Registration ID or Mobile Number (emails not allowed for candidates)

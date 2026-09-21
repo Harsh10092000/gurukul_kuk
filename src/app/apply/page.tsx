@@ -7,7 +7,9 @@ import {
   CheckCircle,
   AlertCircle,
   Trash2,
-  Upload
+  Upload,
+  Eye,
+  EyeOff
 } from 'lucide-react';
 import { INDIAN_STATES_AND_DISTRICTS } from '@/lib/indianLocations';
 import {
@@ -19,6 +21,7 @@ import {
   validateClassAndStream,
   validateStudyLocation,
   validateAllFourDocuments,
+  getStreamsForCampus,
   STUDY_LOCATIONS_BOYS,
   STUDY_LOCATIONS_GIRLS,
 } from '@/lib/validations';
@@ -36,6 +39,15 @@ export default function ApplyPage() {
   const [ntaCheckbox, setNtaCheckbox] = useState(false);
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [cancelLoading, setCancelLoading] = useState(false);
+  const [activeLocations, setActiveLocations] = useState<string[]>([
+    'Gurukul Nilokheri',
+    'Gurukul Jyotisar',
+    'Aryakulam Nilokheri',
+  ]);
+
+  // Password Visibility States
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   // Cropper Modal State
   const [cropModal, setCropModal] = useState<{
@@ -72,6 +84,8 @@ export default function ApplyPage() {
     candidateEmail: '',
     candidateMobile: '',
     whatsappNumber: '',
+    password: '',
+    confirmPassword: '',
 
     // Step 3: Parent/Guardian Details
     fatherName: '',
@@ -90,11 +104,11 @@ export default function ApplyPage() {
     state: 'Haryana',
     pincode: '',
 
-    // Step 5: Preferred Study Location
-    firstPreference: 'Gurukul Nilokheri',
-    secondPreference: 'Gurukul Jyotisar',
+    // Step 1: Preferred Study Location
+    firstPreference: 'Gurukul Jyotisar',
+    secondPreference: 'Aryakulam Nilokheri',
 
-    // Step 6: 4 Mandatory Documents
+    // Step 5: 4 Mandatory Documents
     photo: '',
     photoName: '',
     signature: '',
@@ -108,7 +122,7 @@ export default function ApplyPage() {
   // Calculate today's date formatted as YYYY-MM-DD for max DOB validation
   const todayString = new Date().toISOString().split('T')[0];
 
-  // Adjust study locations when gender changes
+  // Adjust study locations when gender or activeLocations change
   useEffect(() => {
     if (formData.gender === 'Female') {
       setFormData((prev) => ({
@@ -117,31 +131,41 @@ export default function ApplyPage() {
         secondPreference: '',
       }));
     } else {
+      const validBoys = ['Gurukul Jyotisar', 'Aryakulam Nilokheri'].filter((l) =>
+        activeLocations.includes(l)
+      );
+      const effectiveBoys = validBoys.length > 0 ? validBoys : ['Gurukul Jyotisar', 'Aryakulam Nilokheri'];
       setFormData((prev) => {
-        if (prev.firstPreference === prev.secondPreference) {
-          return {
-            ...prev,
-            firstPreference: 'Gurukul Nilokheri',
-            secondPreference: 'Gurukul Jyotisar',
-          };
+        let first = prev.firstPreference;
+        if (!effectiveBoys.includes(first) || first === 'Gurukul Nilokheri') {
+          first = effectiveBoys[0] || 'Gurukul Jyotisar';
         }
-        return prev;
+        let second = prev.secondPreference;
+        if (second && (!effectiveBoys.includes(second) || second === first || second === 'Gurukul Nilokheri')) {
+          second = effectiveBoys.find((l) => l !== first) || '';
+        }
+        return {
+          ...prev,
+          firstPreference: first,
+          secondPreference: second,
+        };
       });
     }
-  }, [formData.gender]);
+  }, [formData.gender, activeLocations]);
 
-  // Adjust stream when class changes
+  // Adjust stream when class or firstPreference campus changes
   useEffect(() => {
     if (!formData.applyingClass.includes('11') && formData.applyingClass !== '11') {
       if (formData.stream) {
         setFormData((prev) => ({ ...prev, stream: '' }));
       }
     } else {
-      if (!formData.stream) {
-        setFormData((prev) => ({ ...prev, stream: 'Non Medical' }));
+      const allowedStreams = getStreamsForCampus(formData.firstPreference);
+      if (!formData.stream || !allowedStreams.includes(formData.stream as any)) {
+        setFormData((prev) => ({ ...prev, stream: allowedStreams[0] || 'Commerce' }));
       }
     }
-  }, [formData.applyingClass]);
+  }, [formData.applyingClass, formData.firstPreference]);
 
   // Restore contact info and pre-fill on mount
   useEffect(() => {
@@ -159,6 +183,16 @@ export default function ApplyPage() {
         }));
       }
     } catch { }
+
+    // Fetch public settings for activeStudyLocations
+    fetch('/api/settings')
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.settings?.activeStudyLocations && Array.isArray(data.settings.activeStudyLocations)) {
+          setActiveLocations(data.settings.activeStudyLocations);
+        }
+      })
+      .catch(() => { });
 
     fetch('/api/auth/me')
       .then((res) => res.json())
@@ -228,7 +262,7 @@ export default function ApplyPage() {
                 aadhaarCardName: app.documents?.aadhaarCard ? 'Aadhaar-Document.pdf' : prev.aadhaarCardName,
               }));
 
-              if (app.currentStep && app.currentStep > 1 && app.currentStep <= 7) {
+              if (app.currentStep && app.currentStep > 1 && app.currentStep <= 6) {
                 setStep(app.currentStep);
                 setNtaCheckbox(true);
               }
@@ -245,10 +279,11 @@ export default function ApplyPage() {
     const { name, value } = e.target;
     if (name === 'applyingClass') {
       const is11 = value.includes('11');
+      const allowedStreams = getStreamsForCampus(formData.firstPreference);
       setFormData((prev) => ({
         ...prev,
         applyingClass: value,
-        stream: is11 ? (prev.stream && prev.stream !== 'None' ? prev.stream : 'Non Medical') : '',
+        stream: is11 ? (prev.stream && allowedStreams.includes(prev.stream as any) ? prev.stream : allowedStreams[0] || 'Commerce') : '',
       }));
     } else if (name === 'state') {
       const districts = INDIAN_STATES_AND_DISTRICTS[value] || ['Other'];
@@ -269,17 +304,37 @@ export default function ApplyPage() {
     } else if (name === 'gender') {
       const isFem = value === 'Female';
       const genValue = (value === 'Female' ? 'Female' : 'Male') as 'Male' | 'Female';
-      setFormData((prev) => ({
-        ...prev,
-        gender: genValue,
-        firstPreference: isFem ? 'Gurukul Nilokheri' : prev.firstPreference,
-        secondPreference: isFem ? '' : prev.secondPreference,
-      }));
+      const validBoys = ['Gurukul Jyotisar', 'Aryakulam Nilokheri'].filter((l) =>
+        activeLocations.includes(l)
+      );
+      const effectiveBoys = validBoys.length > 0 ? validBoys : ['Gurukul Jyotisar', 'Aryakulam Nilokheri'];
+      setFormData((prev) => {
+        const nextFirst = isFem
+          ? 'Gurukul Nilokheri'
+          : (effectiveBoys.includes(prev.firstPreference) && prev.firstPreference !== 'Gurukul Nilokheri'
+            ? prev.firstPreference
+            : effectiveBoys[0] || 'Gurukul Jyotisar');
+        const nextSecond = isFem
+          ? ''
+          : (prev.secondPreference === nextFirst || prev.secondPreference === 'Gurukul Nilokheri'
+            ? ''
+            : prev.secondPreference);
+        return {
+          ...prev,
+          gender: genValue,
+          firstPreference: nextFirst,
+          secondPreference: nextSecond,
+        };
+      });
     } else if (name === 'firstPreference') {
+      const allowedStreams = getStreamsForCampus(value);
       setFormData((prev) => ({
         ...prev,
         firstPreference: value,
         secondPreference: prev.secondPreference === value ? '' : prev.secondPreference,
+        stream: prev.applyingClass.includes('11')
+          ? (prev.stream && allowedStreams.includes(prev.stream as any) ? prev.stream : allowedStreams[0] || 'Commerce')
+          : prev.stream,
       }));
     } else {
       setFormData({ ...formData, [name]: value });
@@ -342,13 +397,18 @@ export default function ApplyPage() {
     }
   };
 
-  // Step Validation & Navigation
+  // Step Validation & Navigation (6 Steps Total)
   const nextStep = () => {
     setError('');
 
     if (step === 1) {
       if (!ntaCheckbox) {
         setError('Please review and check the undertaking declaration before proceeding.');
+        return;
+      }
+      const locVal = validateStudyLocation(formData.gender, formData.firstPreference, formData.secondPreference, activeLocations);
+      if (!locVal.isValid) {
+        setError(locVal.error || 'Please select a valid study location preference.');
         return;
       }
       setStep(2);
@@ -372,7 +432,7 @@ export default function ApplyPage() {
         setError(aadhaarVal.error || 'Invalid Aadhaar Number');
         return;
       }
-      const classVal = validateClassAndStream(formData.applyingClass, formData.stream);
+      const classVal = validateClassAndStream(formData.applyingClass, formData.stream, formData.firstPreference);
       if (!classVal.isValid) {
         setError(classVal.error || 'Invalid Class selection');
         return;
@@ -387,6 +447,14 @@ export default function ApplyPage() {
       }
       if (formData.previousBoard === 'Others' && !formData.otherBoard.trim()) {
         setError('Please specify your Previous Educational Board name.');
+        return;
+      }
+      if (!formData.password || formData.password.length < 6) {
+        setError('Please create a candidate login password of at least 6 characters.');
+        return;
+      }
+      if (formData.password !== formData.confirmPassword) {
+        setError('Candidate login passwords do not match. Please ensure both fields are identical.');
         return;
       }
       setStep(3);
@@ -449,23 +517,12 @@ export default function ApplyPage() {
     }
 
     if (step === 5) {
-      const locVal = validateStudyLocation(formData.gender, formData.firstPreference, formData.secondPreference);
-      if (!locVal.isValid) {
-        setError(locVal.error || 'Invalid Study Location Preference');
-        return;
-      }
-      setStep(6);
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-      return;
-    }
-
-    if (step === 6) {
       const docsVal = validateAllFourDocuments(formData);
       if (!docsVal.isValid) {
         setError(docsVal.error || 'All 4 documents are mandatory.');
         return;
       }
-      setStep(7);
+      setStep(6);
       window.scrollTo({ top: 0, behavior: 'smooth' });
       return;
     }
@@ -490,14 +547,16 @@ export default function ApplyPage() {
 
     setLoading(true);
 
-    let chosenPassword = '';
-    try {
-      const stored = sessionStorage.getItem('gurukul_reg_info');
-      if (stored) {
-        const parsed = JSON.parse(stored);
-        if (parsed.password) chosenPassword = parsed.password;
-      }
-    } catch { }
+    let chosenPassword = formData.password || '';
+    if (!chosenPassword) {
+      try {
+        const stored = sessionStorage.getItem('gurukul_reg_info');
+        if (stored) {
+          const parsed = JSON.parse(stored);
+          if (parsed.password) chosenPassword = parsed.password;
+        }
+      } catch { }
+    }
 
     try {
       const payload = {
@@ -582,16 +641,20 @@ export default function ApplyPage() {
   };
 
   const steps = [
-    { num: 1, label: 'Instructions' },
+    { num: 1, label: 'Instructions & Campus' },
     { num: 2, label: 'Candidate' },
     { num: 3, label: 'Parents' },
     { num: 4, label: 'Address' },
-    { num: 5, label: 'Campus' },
-    { num: 6, label: 'Documents' },
-    { num: 7, label: 'Payment' },
+    { num: 5, label: 'Documents' },
+    { num: 6, label: 'Payment' },
   ];
 
   const currentDistricts = INDIAN_STATES_AND_DISTRICTS[formData.state] || ['Other'];
+
+  const rawBoysActive = ['Gurukul Jyotisar', 'Aryakulam Nilokheri'].filter((l) =>
+    activeLocations.includes(l)
+  );
+  const boysActiveLocations = rawBoysActive.length > 0 ? rawBoysActive : ['Gurukul Jyotisar', 'Aryakulam Nilokheri'];
 
   // SCREEN: Registration Confirmed Screen
   if (submittedApp) {
@@ -700,15 +763,15 @@ export default function ApplyPage() {
 
       {/* Form Content Card */}
       <div className="portal-card p-6 sm:p-8">
-        {/* STEP 1: Instructions & Declaration */}
+        {/* STEP 1: Instructions, Gender & Study Location */}
         {step === 1 && (
-          <div className="space-y-5">
+          <div className="space-y-6">
             <div className="border-b border-slate-200 pb-3">
               <h2 className="text-base font-bold text-slate-900">
-                Pre-Application Advisory &amp; Candidate Undertaking
+                Step 1: Instructions &amp; Preferred Study Location
               </h2>
               <p className="text-xs text-slate-500">
-                Read all conditions carefully before filling out the online application.
+                Review registration terms and select candidate gender and preferred Gurukul campus.
               </p>
             </div>
 
@@ -739,6 +802,126 @@ export default function ApplyPage() {
               </div>
             </div>
 
+            {/* Candidate Gender & Study Location Selection */}
+            <div className="border border-slate-200 rounded-xl p-5 bg-white space-y-4 shadow-2xs">
+              <div className="border-b border-slate-100 pb-2.5">
+                <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                  <span>Candidate Gender &amp; Preferred Campus</span>
+                  <span className="text-rose-500">*</span>
+                </h3>
+                <p className="text-xs text-slate-500">
+                  Select candidate gender to view eligible Gurukul campuses.
+                </p>
+              </div>
+
+              {/* Gender Selector */}
+              <div>
+                <label className="form-label mb-2">
+                  Candidate Gender <span className="text-rose-500">*</span>
+                </label>
+                <div className="grid grid-cols-2 gap-3 max-w-md">
+                  <label className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition ${formData.gender === 'Male'
+                    ? 'border-portal-navy bg-portal-navy/5 text-portal-navy font-bold shadow-xs'
+                    : 'border-slate-200 hover:bg-slate-50 text-slate-700'
+                    }`}>
+                    <input
+                      type="radio"
+                      name="gender"
+                      value="Male"
+                      checked={formData.gender === 'Male'}
+                      onChange={handleChange}
+                      className="text-portal-navy focus:ring-portal-navy"
+                    />
+                    <span className="text-xs">Male (Boys)</span>
+                  </label>
+
+                  <label className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition ${formData.gender === 'Female'
+                    ? 'border-portal-navy bg-portal-navy/5 text-portal-navy font-bold shadow-xs'
+                    : 'border-slate-200 hover:bg-slate-50 text-slate-700'
+                    }`}>
+                    <input
+                      type="radio"
+                      name="gender"
+                      value="Female"
+                      checked={formData.gender === 'Female'}
+                      onChange={handleChange}
+                      className="text-portal-navy focus:ring-portal-navy"
+                    />
+                    <span className="text-xs">Female (Girls)</span>
+                  </label>
+                </div>
+              </div>
+
+              {/* Preferred Study Location Options */}
+              {formData.gender === 'Female' ? (
+                <div className="p-4 rounded-lg bg-indigo-50/70 border border-indigo-200 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-indigo-950">Preferred Study Location</span>
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-700 border border-indigo-200">
+                      Girls Wing
+                    </span>
+                  </div>
+                  <input
+                    type="text"
+                    disabled
+                    value="The Gurukul Nilokheri (Girls Wing)"
+                    className="form-input-field bg-white text-slate-800 font-semibold cursor-not-allowed border-indigo-200"
+                  />
+                  <p className="text-[11px] text-indigo-800 leading-relaxed">
+                    <strong>Institutional Policy:</strong> Admissions for female candidates are conducted exclusively at <strong>The Gurukul Nilokheri</strong>. Dedicated boarding and educational facilities for girls are situated at this campus.
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-3 pt-1">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="form-label">
+                        1st Preference Study Location <span className="text-rose-500">*</span>
+                      </label>
+                      <select
+                        name="firstPreference"
+                        required
+                        value={formData.firstPreference}
+                        onChange={handleChange}
+                        className="form-input-field font-semibold"
+                      >
+                        <option value="">Select 1st Preference</option>
+                        {boysActiveLocations.map((loc) => (
+                          <option key={loc} value={loc}>{loc}</option>
+                        ))}
+                      </select>
+                      {boysActiveLocations.length === 1 && (
+                        <p className="text-[11px] text-emerald-700 mt-1">
+                          Currently the active campus enabled for admission.
+                        </p>
+                      )}
+                    </div>
+
+                    {boysActiveLocations.length > 1 && (
+                      <div>
+                        <label className="form-label">
+                          2nd Preference Study Location <span className="text-slate-400 font-normal">(Optional)</span>
+                        </label>
+                        <select
+                          name="secondPreference"
+                          value={formData.secondPreference}
+                          onChange={handleChange}
+                          className="form-input-field"
+                        >
+                          <option value="">None / No Second Choice</option>
+                          {boysActiveLocations
+                            .filter((l) => l !== formData.firstPreference)
+                            .map((loc) => (
+                              <option key={loc} value={loc}>{loc}</option>
+                            ))}
+                        </select>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+
             <label className="flex items-start gap-3 p-3.5 bg-slate-50 border border-slate-300 rounded-lg cursor-pointer">
               <input
                 type="checkbox"
@@ -747,7 +930,7 @@ export default function ApplyPage() {
                 className="mt-0.5 w-4 h-4 text-portal-navy rounded border-slate-300 focus:ring-portal-navy"
               />
               <span className="text-xs text-slate-800 leading-normal">
-                I have read, understood, and accept all eligibility terms and examination guidelines for the Gurukul Entrance Examination 2027-28. I declare that all furnished particulars are accurate.
+                I have read, understood, and accept all eligibility terms, campus guidelines, and examination conditions for The Gurukul Entrance Examination 2027-28. I declare that all furnished particulars are accurate.
               </span>
             </label>
           </div>
@@ -848,20 +1031,21 @@ export default function ApplyPage() {
 
               {formData.applyingClass.includes('11') && (
                 <div>
-                  <label className="form-label">
-                    Stream <span className="text-rose-500">*</span>
+                  <label className="form-label flex items-center justify-between">
+                    <span>
+                      Stream <span className="text-rose-500">*</span>
+                    </span>
                   </label>
                   <select
                     name="stream"
                     required
-                    value={formData.stream || 'Non Medical'}
+                    value={formData.stream || getStreamsForCampus(formData.firstPreference)[0] || 'Commerce'}
                     onChange={handleChange}
                     className="form-input-field font-semibold"
                   >
-                    <option value="Non Medical">Non Medical</option>
-                    <option value="Medical">Medical</option>
-                    <option value="Commerce">Commerce</option>
-                    <option value="Arts">Arts</option>
+                    {getStreamsForCampus(formData.firstPreference).map((st) => (
+                      <option key={st} value={st}>{st}</option>
+                    ))}
                   </select>
                 </div>
               )}
@@ -960,6 +1144,69 @@ export default function ApplyPage() {
                   placeholder="Optional (if applicable)"
                   className="form-input-field"
                 />
+              </div>
+
+              {/* Candidate Portal Login Password */}
+              <div>
+                <label className="form-label">
+                  Create Login Password <span className="text-rose-500">*</span>
+                </label>
+                <div className="relative">
+                  <input
+                    type={showPassword ? 'text' : 'password'}
+                    name="password"
+                    required
+                    value={formData.password}
+                    onChange={handleChange}
+                    placeholder="At least 6 characters"
+                    className="form-input-field pr-10"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-2.5 text-slate-400 hover:text-slate-600"
+                    title={showPassword ? 'Hide password' : 'Show password'}
+                  >
+                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
+                <p className="text-[11px] text-slate-400 mt-1">
+                  Used for logging into Candidate Portal after registration.
+                </p>
+              </div>
+
+              <div>
+                <div className="flex justify-between items-center mb-1">
+                  <label className="form-label mb-0">
+                    Confirm Password <span className="text-rose-500">*</span>
+                  </label>
+                  {formData.confirmPassword && (
+                    <span className={`text-[10px] font-semibold ${formData.password === formData.confirmPassword ? 'text-emerald-600' : 'text-rose-500'
+                      }`}>
+                      {formData.password === formData.confirmPassword ? 'Passwords Match' : 'Passwords Differ'}
+                    </span>
+                  )}
+                </div>
+                <div className="relative">
+                  <input
+                    type={showConfirmPassword ? 'text' : 'password'}
+                    name="confirmPassword"
+                    required
+                    value={formData.confirmPassword}
+                    onChange={handleChange}
+                    placeholder="Re-enter password"
+                    className={`form-input-field pr-10 ${formData.confirmPassword && formData.password !== formData.confirmPassword ? 'border-rose-400 focus:border-rose-500' : ''
+                      }`}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                    className="absolute right-3 top-2.5 text-slate-400 hover:text-slate-600"
+                    title={showConfirmPassword ? 'Hide password' : 'Show password'}
+                  >
+                    {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
               </div>
             </div>
           </div>
@@ -1195,76 +1442,11 @@ export default function ApplyPage() {
           </div>
         )}
 
-        {/* STEP 5: Study Location Preference */}
+        {/* STEP 5: Mandatory Documents Upload */}
         {step === 5 && (
           <div className="space-y-5">
             <div className="border-b border-slate-200 pb-3">
-              <h2 className="text-base font-bold text-slate-900">Step 5: Preferred Study Location</h2>
-              <p className="text-xs text-slate-500">Select campus preferences for admission.</p>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <label className="form-label">
-                  1st Preference Study Location <span className="text-rose-500">*</span>
-                </label>
-                {formData.gender === 'Female' ? (
-                  <input
-                    type="text"
-                    disabled
-                    value={formData.firstPreference || 'Gurukul Nilokheri'}
-                    className="form-input-field bg-slate-50 text-slate-700 font-semibold cursor-not-allowed"
-                  />
-                ) : (
-                  <select
-                    name="firstPreference"
-                    required
-                    value={formData.firstPreference}
-                    onChange={handleChange}
-                    className="form-input-field font-semibold"
-                  >
-                    <option value="">Select 1st Preference</option>
-                    {STUDY_LOCATIONS_BOYS.map((loc) => (
-                      <option key={loc} value={loc}>{loc}</option>
-                    ))}
-                  </select>
-                )}
-              </div>
-
-              <div>
-                <label className="form-label">
-                  2nd Preference Study Location {formData.gender === 'Female' ? '(Not Applicable)' : '(Optional)'}
-                </label>
-                {formData.gender === 'Female' ? (
-                  <input
-                    type="text"
-                    disabled
-                    value="Not Applicable for Girls"
-                    className="form-input-field bg-slate-50 text-slate-400 cursor-not-allowed"
-                  />
-                ) : (
-                  <select
-                    name="secondPreference"
-                    value={formData.secondPreference}
-                    onChange={handleChange}
-                    className="form-input-field"
-                  >
-                    <option value="">None / No Second Choice</option>
-                    {STUDY_LOCATIONS_BOYS.filter((l) => l !== formData.firstPreference).map((loc) => (
-                      <option key={loc} value={loc}>{loc}</option>
-                    ))}
-                  </select>
-                )}
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* STEP 6: Mandatory Documents Upload */}
-        {step === 6 && (
-          <div className="space-y-5">
-            <div className="border-b border-slate-200 pb-3">
-              <h2 className="text-base font-bold text-slate-900">Step 6: Upload Documents</h2>
+              <h2 className="text-base font-bold text-slate-900">Step 5: Upload Documents</h2>
               <p className="text-xs text-slate-500">
                 Upload clear scans or photographs (JPG, PNG, or PDF, max 2 MB each). All 4 documents are required.
               </p>
@@ -1272,16 +1454,16 @@ export default function ApplyPage() {
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {/* Document 1: Photo */}
-              <div className="p-4 border border-slate-200 rounded-lg bg-slate-50 space-y-3">
+              <div className="p-4 border border-slate-200 rounded-lg bg-slate-50 space-y-3 overflow-hidden">
                 <div className="flex justify-between items-center">
                   <span className="text-xs font-semibold text-slate-800">1. Candidate Photograph <span className="text-rose-500">*</span></span>
-                  {formData.photo && <span className="text-[10px] font-semibold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded">Uploaded</span>}
+                  {formData.photo && <span className="text-[10px] font-semibold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded shrink-0">Uploaded</span>}
                 </div>
                 {formData.photo ? (
-                  <div className="flex items-center gap-3">
-                    <img src={formData.photo} alt="Candidate" className="w-16 h-20 object-cover rounded border border-slate-200" />
-                    <div className="flex-1 text-xs">
-                      <span className="font-medium text-slate-800 block truncate">{formData.photoName}</span>
+                  <div className="flex items-center gap-3 min-w-0">
+                    <img src={formData.photo} alt="Candidate" className="w-16 h-20 object-cover rounded border border-slate-200 shrink-0" />
+                    <div className="flex-1 min-w-0 text-xs">
+                      <span className="font-medium text-slate-800 block truncate" title={formData.photoName}>{formData.photoName}</span>
                       <label className="text-portal-navy hover:underline font-semibold cursor-pointer inline-block mt-1">
                         Change Photo
                         <input type="file" accept="image/jpeg,image/png" className="hidden" onChange={(e) => handleFileUpload(e, 'photo', 'photoName')} />
@@ -1299,16 +1481,16 @@ export default function ApplyPage() {
               </div>
 
               {/* Document 2: Candidate Signature */}
-              <div className="p-4 border border-slate-200 rounded-lg bg-slate-50 space-y-3">
+              <div className="p-4 border border-slate-200 rounded-lg bg-slate-50 space-y-3 overflow-hidden">
                 <div className="flex justify-between items-center">
                   <span className="text-xs font-semibold text-slate-800">2. Candidate Signature <span className="text-rose-500">*</span></span>
-                  {formData.signature && <span className="text-[10px] font-semibold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded">Uploaded</span>}
+                  {formData.signature && <span className="text-[10px] font-semibold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded shrink-0">Uploaded</span>}
                 </div>
                 {formData.signature ? (
-                  <div className="flex items-center gap-3">
-                    <img src={formData.signature} alt="Signature" className="w-24 h-12 object-contain bg-white rounded border border-slate-200" />
-                    <div className="flex-1 text-xs">
-                      <span className="font-medium text-slate-800 block truncate">{formData.signatureName}</span>
+                  <div className="flex items-center gap-3 min-w-0">
+                    <img src={formData.signature} alt="Signature" className="w-24 h-12 object-contain bg-white rounded border border-slate-200 shrink-0" />
+                    <div className="flex-1 min-w-0 text-xs">
+                      <span className="font-medium text-slate-800 block truncate" title={formData.signatureName}>{formData.signatureName}</span>
                       <label className="text-portal-navy hover:underline font-semibold cursor-pointer inline-block mt-1">
                         Change Signature
                         <input type="file" accept="image/jpeg,image/png" className="hidden" onChange={(e) => handleFileUpload(e, 'signature', 'signatureName')} />
@@ -1326,16 +1508,16 @@ export default function ApplyPage() {
               </div>
 
               {/* Document 3: Parent Signature */}
-              <div className="p-4 border border-slate-200 rounded-lg bg-slate-50 space-y-3">
+              <div className="p-4 border border-slate-200 rounded-lg bg-slate-50 space-y-3 overflow-hidden">
                 <div className="flex justify-between items-center">
                   <span className="text-xs font-semibold text-slate-800">3. Parent / Guardian Signature <span className="text-rose-500">*</span></span>
-                  {formData.parentSignature && <span className="text-[10px] font-semibold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded">Uploaded</span>}
+                  {formData.parentSignature && <span className="text-[10px] font-semibold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded shrink-0">Uploaded</span>}
                 </div>
                 {formData.parentSignature ? (
-                  <div className="flex items-center gap-3">
-                    <img src={formData.parentSignature} alt="Parent Signature" className="w-24 h-12 object-contain bg-white rounded border border-slate-200" />
-                    <div className="flex-1 text-xs">
-                      <span className="font-medium text-slate-800 block truncate">{formData.parentSignatureName}</span>
+                  <div className="flex items-center gap-3 min-w-0">
+                    <img src={formData.parentSignature} alt="Parent Signature" className="w-24 h-12 object-contain bg-white rounded border border-slate-200 shrink-0" />
+                    <div className="flex-1 min-w-0 text-xs">
+                      <span className="font-medium text-slate-800 block truncate" title={formData.parentSignatureName}>{formData.parentSignatureName}</span>
                       <label className="text-portal-navy hover:underline font-semibold cursor-pointer inline-block mt-1">
                         Change Signature
                         <input type="file" accept="image/jpeg,image/png" className="hidden" onChange={(e) => handleFileUpload(e, 'parentSignature', 'parentSignatureName')} />
@@ -1353,18 +1535,18 @@ export default function ApplyPage() {
               </div>
 
               {/* Document 4: Aadhaar Card */}
-              <div className="p-4 border border-slate-200 rounded-lg bg-slate-50 space-y-3">
+              <div className="p-4 border border-slate-200 rounded-lg bg-slate-50 space-y-3 overflow-hidden">
                 <div className="flex justify-between items-center">
                   <span className="text-xs font-semibold text-slate-800">4. Aadhaar / ID Document <span className="text-rose-500">*</span></span>
-                  {formData.aadhaarCard && <span className="text-[10px] font-semibold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded">Uploaded</span>}
+                  {formData.aadhaarCard && <span className="text-[10px] font-semibold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded shrink-0">Uploaded</span>}
                 </div>
                 {formData.aadhaarCard ? (
-                  <div className="flex items-center gap-3">
-                    <div className="w-14 h-12 bg-white border border-slate-200 rounded flex items-center justify-center text-slate-500 font-mono text-[10px] font-bold">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="w-14 h-12 shrink-0 bg-white border border-slate-200 rounded flex items-center justify-center text-slate-500 font-mono text-[10px] font-bold">
                       DOC
                     </div>
-                    <div className="flex-1 text-xs">
-                      <span className="font-medium text-slate-800 block truncate">{formData.aadhaarCardName}</span>
+                    <div className="flex-1 min-w-0 text-xs">
+                      <span className="font-medium text-slate-800 block truncate" title={formData.aadhaarCardName}>{formData.aadhaarCardName}</span>
                       <label className="text-portal-navy hover:underline font-semibold cursor-pointer inline-block mt-1">
                         Change Document
                         <input type="file" accept="image/jpeg,image/png,application/pdf" className="hidden" onChange={(e) => handleFileUpload(e, 'aadhaarCard', 'aadhaarCardName')} />
@@ -1384,11 +1566,11 @@ export default function ApplyPage() {
           </div>
         )}
 
-        {/* STEP 7: Application Review & Fee Payment */}
-        {step === 7 && (
+        {/* STEP 6: Application Review & Fee Payment */}
+        {step === 6 && (
           <div className="space-y-5">
             <div className="border-b border-slate-200 pb-3">
-              <h2 className="text-base font-bold text-slate-900">Step 7: Application Review &amp; Fee Payment</h2>
+              <h2 className="text-base font-bold text-slate-900">Step 6: Application Review &amp; Fee Payment</h2>
               <p className="text-xs text-slate-500">Review your particulars and complete the examination fee payment.</p>
             </div>
 
@@ -1415,7 +1597,9 @@ export default function ApplyPage() {
                 </div>
                 <div>
                   <span className="text-slate-500 block text-[11px]">Study Location</span>
-                  <span className="font-semibold text-slate-900">{formData.firstPreference}</span>
+                  <span className="font-semibold text-slate-900">
+                    {formData.firstPreference} {formData.secondPreference ? `(2nd: ${formData.secondPreference})` : ''}
+                  </span>
                 </div>
                 <div>
                   <span className="text-slate-500 block text-[11px]">Residence</span>
@@ -1478,13 +1662,13 @@ export default function ApplyPage() {
             )}
           </div>
 
-          {step < 7 ? (
+          {step < 6 ? (
             <button
               type="button"
               onClick={nextStep}
               className="btn-primary text-xs px-5 py-2"
             >
-              {step === 1 ? 'Accept Declaration & Continue' : 'Continue to Next Step'}
+              {step === 1 ? 'Accept & Continue to Candidate Details' : 'Continue to Next Step'}
             </button>
           ) : (
             <button

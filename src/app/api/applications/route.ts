@@ -13,6 +13,7 @@ import {
   validateStudyLocation,
   validateAllFourDocuments,
   validateUploadedFile,
+  getExamDetailsForGender,
 } from '@/lib/validations';
 
 export async function GET(request: Request) {
@@ -146,14 +147,22 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Gender must be selected as either Male or Female.' }, { status: 400 });
     }
 
-    // 4. Class & Stream
+    // 4. Preferred Study Location
+    const systemSettings = await db.getSettings();
+    const finalStudyPref = studyLocationPref || examCentrePref || {};
+    const locVal = validateStudyLocation(gender, finalStudyPref.firstPreference, finalStudyPref.secondPreference, systemSettings?.activeStudyLocations);
+    if (!locVal.isValid) {
+      return NextResponse.json({ error: locVal.error }, { status: 400 });
+    }
+
+    // 5. Class & Stream (Stream availability checked against preferred campus)
     const finalStream = stream || academicInfo?.stream;
-    const classVal = validateClassAndStream(classApplying, finalStream);
+    const classVal = validateClassAndStream(classApplying, finalStream, finalStudyPref.firstPreference);
     if (!classVal.isValid) {
       return NextResponse.json({ error: classVal.error }, { status: 400 });
     }
 
-    // 5. Father's and Mother's Full Names & Phone
+    // 6. Father's and Mother's Full Names & Phone
     const fatherNameVal = validateName(parentInfo?.fatherName, "Father's Full Name");
     if (!fatherNameVal.isValid) {
       return NextResponse.json({ error: fatherNameVal.error }, { status: 400 });
@@ -179,7 +188,7 @@ export async function POST(request: Request) {
       }
     }
 
-    // 6. Aadhaar Validation & Uniqueness
+    // 7. Aadhaar Validation & Uniqueness
     const aadhaarVal = validateAadhaar(personalInfo?.aadhaarNumber);
     if (!aadhaarVal.isValid) {
       return NextResponse.json({ error: aadhaarVal.error }, { status: 400 });
@@ -190,13 +199,6 @@ export async function POST(request: Request) {
         { error: 'This Aadhaar number is already associated with an existing application.' },
         { status: 409 }
       );
-    }
-
-    // 7. Preferred Study Location
-    const finalStudyPref = studyLocationPref || examCentrePref || {};
-    const locVal = validateStudyLocation(gender, finalStudyPref.firstPreference, finalStudyPref.secondPreference);
-    if (!locVal.isValid) {
-      return NextResponse.json({ error: locVal.error }, { status: 400 });
     }
 
     // 8. Mandatory 4 Documents (Marksheet removed!)
@@ -213,9 +215,9 @@ export async function POST(request: Request) {
       }
     }
 
-    // 10. Generate Registration ID: NILB-xxxxx / NILG-xxxxx & Roll Number: 260... / 261...
+    // 10. Generate Registration ID: NILB-xxxxx / NILG-xxxxx & Class-based Roll Number: 2706... / 2711...
     const registrationId = await db.getNextRegistrationNumber(gender as 'Male' | 'Female');
-    const assignedRollNo = await db.getNextRollNumber(gender as 'Male' | 'Female');
+    const assignedRollNo = await db.getNextRollNumber(classApplying);
 
     const newApp = await db.createApplication({
       userId: user.userId,
@@ -244,12 +246,7 @@ export async function POST(request: Request) {
 
     // Generate Official Admit Card Record Simultaneously (isReleased: false until Admin declares)
     const settings = await db.getSettings();
-    const examDate = settings.entranceExamDate || '06 December 2026';
-    const centres = await db.getCentres();
-    const primaryCentre = centres[0] || {
-      name: 'Gurukul Kurukshetra Main Campus',
-      address: 'Near 3rd Gate, Kurukshetra University, Kurukshetra, Haryana - 136119',
-    };
+    const examDetails = getExamDetailsForGender(personalInfo.gender, registrationId);
 
     const seqNum = parseInt(assignedRollNo.slice(3), 10) || 1;
     const hallNumber = Math.ceil(seqNum / 30);
@@ -260,15 +257,16 @@ export async function POST(request: Request) {
       applicationId: newApp.id,
       applicationNumber: registrationId,
       rollNumber: assignedRollNo,
+      gender: personalInfo.gender,
       candidateName: personalInfo.fullName.trim(),
       fatherName: parentInfo.fatherName.trim(),
       classApplying: newApp.classApplying,
       stream: newApp.stream,
-      examCentreName: primaryCentre.name,
-      examCentreAddress: primaryCentre.address,
-      examDate,
-      reportingTime: '08:30 AM',
-      examDuration: '10:00 AM to 12:30 PM (2.5 Hours)',
+      examCentreName: examDetails.examCentreName,
+      examCentreAddress: examDetails.examCentreAddress,
+      examDate: examDetails.examDate,
+      reportingTime: examDetails.reportingTime,
+      examDuration: examDetails.examDuration,
       roomNumber: `Hall-${hallNumber}, Desk ${deskNumber}`,
       candidatePhotoUrl: documents?.photo || '/logo-gurukul.png',
       candidateSignatureUrl: documents?.signature || undefined,

@@ -123,7 +123,7 @@ export async function POST(request: Request) {
       classApplying: classApplying || application?.classApplying || 'Class 6',
       qualifyingStatus: qualifyingStatus === 'Qualified' ? 'Qualified' : 'Not Qualified',
       counselingDate: qualifyingStatus === 'Qualified' ? '10 January 2027 at 10:00 AM' : undefined,
-      counselingVenue: qualifyingStatus === 'Qualified' ? 'Main Administrative Block, Gurukul Kurukshetra Campus' : undefined,
+      counselingVenue: qualifyingStatus === 'Qualified' ? 'Main Administrative Block, The Gurukul Nilokheri Campus' : undefined,
       isPublished: true,
       remarks: remarks || (qualifyingStatus === 'Qualified' ? 'Qualified for admission counseling.' : 'Not qualified for current session.'),
       createdAt: new Date().toISOString(),

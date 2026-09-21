@@ -12,6 +12,7 @@ import {
   validateStudyLocation,
   validateAllFourDocuments,
   validateUploadedFile,
+  getExamDetailsForGender,
 } from '@/lib/validations';
 
 export async function POST(request: Request) {
@@ -65,13 +66,21 @@ export async function POST(request: Request) {
       );
     }
 
-    // 5. Class & Stream Validation
-    const classVal = validateClassAndStream(classApplying, stream);
+    // 5. Preferred Study Location Validation
+    const systemSettings = await db.getSettings();
+    const studyPref = studyLocationPref || body.examCentrePref || {};
+    const locVal = validateStudyLocation(gender, studyPref.firstPreference, studyPref.secondPreference, systemSettings?.activeStudyLocations);
+    if (!locVal.isValid) {
+      return NextResponse.json({ error: locVal.error }, { status: 400 });
+    }
+
+    // 6. Class & Stream Validation (Stream availability checked against preferred campus)
+    const classVal = validateClassAndStream(classApplying, stream, studyPref.firstPreference);
     if (!classVal.isValid) {
       return NextResponse.json({ error: classVal.error }, { status: 400 });
     }
 
-    // 6. Previous School & Board Validation
+    // 7. Previous School & Board Validation
     if (!personalInfo?.previousSchoolName || !personalInfo.previousSchoolName.trim()) {
       return NextResponse.json({ error: 'Previous School Name is required.' }, { status: 400 });
     }
@@ -82,7 +91,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Please specify your Educational Board.' }, { status: 400 });
     }
 
-    // 7. Parent Information Validation
+    // 8. Parent Information Validation
     const fatherNameVal = validateName(parentInfo?.fatherName, "Father's Full Name");
     if (!fatherNameVal.isValid) {
       return NextResponse.json({ error: fatherNameVal.error }, { status: 400 });
@@ -100,17 +109,10 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: fatherOccVal.error }, { status: 400 });
     }
 
-    // 8. Address Validation
+    // 9. Address Validation
     const cityVal = addressInfo?.city?.trim() || addressInfo?.district?.trim();
     if (!addressInfo?.streetAddress?.trim() || !cityVal || !addressInfo?.state?.trim() || !addressInfo?.pincode?.trim()) {
       return NextResponse.json({ error: 'Complete permanent address (Street, City/District, State, PIN Code) is required.' }, { status: 400 });
-    }
-
-    // 9. Preferred Study Location Validation
-    const studyPref = studyLocationPref || body.examCentrePref || {};
-    const locVal = validateStudyLocation(gender, studyPref.firstPreference, studyPref.secondPreference);
-    if (!locVal.isValid) {
-      return NextResponse.json({ error: locVal.error }, { status: 400 });
     }
 
     // 10. Mandatory 4 Documents Validation (Marksheet removed!)
@@ -148,7 +150,7 @@ export async function POST(request: Request) {
 
     // Retrieve candidate email & phone from payload or temporary session
     let candidateEmail = (personalInfo?.candidateEmail || authUser?.email || '').trim().toLowerCase();
-    let candidateMobile = (personalInfo?.candidateMobile || parentInfo?.fatherPhone || authUser?.phone || '').trim();
+    let candidateMobile = (personalInfo?.candidateMobile || parentInfo?.fatherPhone || (authUser as any)?.phone || '').trim();
     let passwordHash = '';
 
     if (body.password) {
@@ -194,8 +196,8 @@ export async function POST(request: Request) {
       registrationNumber: registrationId,
     });
 
-    // 15. Generate Roll Number (Boys: 260..., Girls: 261...) and Create Official Application Record
-    const assignedRollNo = await db.getNextRollNumber(gender as 'Male' | 'Female');
+    // 15. Generate Class-based Sequential Roll Number (e.g. 2706..., 2711...) and Create Official Application Record
+    const assignedRollNo = await db.getNextRollNumber(classApplying);
 
     const newApplication = await db.createApplication({
       userId: officialUser.id,
@@ -240,10 +242,7 @@ export async function POST(request: Request) {
 
     // 16. Generate Official Admit Card Record Simultaneously (isReleased: false until Admin declares)
     const settings = await db.getSettings();
-    const examDate = settings.entranceExamDate || '21 March 2027';
-    const reportingTime = settings.entranceExamTime || '9:30 AM';
-    const examCentreName = settings.examVenueName || 'THE GURUKUL JYOTISAR PEHOWA ROAD, KURUKSHETRA';
-    const examCentreAddress = settings.examVenueAddress || '136119, Haryana';
+    const examDetails = getExamDetailsForGender(personalInfo.gender, registrationId);
 
     // Calculate room / desk sequential number from roll sequence
     const seqNum = parseInt(assignedRollNo.slice(3), 10) || 1;
@@ -259,11 +258,11 @@ export async function POST(request: Request) {
       fatherName: parentInfo.fatherName.trim(),
       classApplying: newApplication.classApplying,
       stream: newApplication.stream,
-      examCentreName,
-      examCentreAddress,
-      examDate,
-      reportingTime,
-      examDuration: '10:00 AM to 12:30 PM (2.5 Hours)',
+      examCentreName: examDetails.examCentreName,
+      examCentreAddress: examDetails.examCentreAddress,
+      examDate: examDetails.examDate,
+      reportingTime: examDetails.reportingTime,
+      examDuration: examDetails.examDuration,
       roomNumber: `Hall-${hallNumber}, Desk ${deskNumber}`,
       candidatePhotoUrl: documents.photo || '/logo-gurukul.png',
       candidateSignatureUrl: documents.signature || undefined,

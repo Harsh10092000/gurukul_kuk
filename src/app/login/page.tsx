@@ -147,10 +147,10 @@ export default function LoginPage() {
                 </div>
                 <div>
                   <h3 className="text-base font-bold text-portal-navy leading-tight">
-                    GURUKUL KURUKSHETRA
+                    THE GURUKUL NILOKHERI
                   </h3>
                   <p className="text-xs text-amber-700 font-serif">
-                    तमसो मा ज्योतिर्गमय
+                    मा प्रगाम पथो वयम् • Modernity with Traditions
                   </p>
                   <p className="text-[11px] text-slate-500">
                     CBSE Affiliated • No. 530006
@@ -193,8 +193,8 @@ export default function LoginPage() {
               {/* Admissions Helpline Box */}
               <div className="bg-slate-50 border border-slate-200 rounded-lg p-4 space-y-1.5 text-xs text-slate-600">
                 <div className="font-semibold text-slate-900">Admissions Helpdesk</div>
-                <div>Phone: +91-1744-259114, 9896328329</div>
-                <div>Email: admissions@gurukuladmissions.org</div>
+                <div>Phone: +91 7027849858 / 59</div>
+                <div>Email: admissions@thegurukulnilokheri.com</div>
                 <div className="text-[11px] text-slate-500 pt-1">Hours: 9:00 AM – 4:00 PM (Mon – Sat)</div>
               </div>
             </div>

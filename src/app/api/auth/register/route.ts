@@ -21,9 +21,9 @@ export async function POST(request: Request) {
     const body = await request.json();
     const { name, email, phone, password } = body;
 
-    if (!name || !email || !phone || !password) {
+    if (!name || !email || !phone) {
       return NextResponse.json(
-        { error: 'All fields (name, email, phone, password) are required.' },
+        { error: 'Candidate name, email address, and mobile number are required.' },
         { status: 400 }
       );
     }
@@ -47,7 +47,7 @@ export async function POST(request: Request) {
       );
     }
 
-    if (password.length < 6) {
+    if (password && password.length < 6) {
       return NextResponse.json(
         { error: 'Password must be at least 6 characters long.' },
         { status: 400 }

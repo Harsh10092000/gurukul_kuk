@@ -4,6 +4,7 @@ import React from 'react';
 import Image from 'next/image';
 import { Printer, CheckCircle } from 'lucide-react';
 import { AdmitCard } from '@/lib/types';
+import { getExamDetailsForGender } from '@/lib/validations';
 
 interface AdmitCardViewProps {
   admitCard: AdmitCard;
@@ -159,11 +160,20 @@ export default function AdmitCardView({ admitCard }: AdmitCardViewProps) {
     return () => window.removeEventListener('keydown', onKeyDown);
   }, [admitCard]);
 
-  // Dynamic Venue, Exam Date, and Timing values
-  const venueName = (admitCard.examCentreName || 'THE GURUKUL JYOTISAR PEHOWA ROAD, KURUKSHETRA').toUpperCase();
-  const venueAddress = admitCard.examCentreAddress || '136119, Haryana';
-  const examDate = admitCard.examDate || '21 March 2027';
-  const examTime = admitCard.reportingTime || '9:30 AM';
+  // Dynamic Venue, Exam Date, and Timing values tailored for Boys vs Girls
+  const details = getExamDetailsForGender(admitCard.gender, admitCard.rollNumber || admitCard.applicationNumber);
+  const examDate = (admitCard.examDate && !admitCard.examDate.includes('21 March') && !admitCard.examDate.includes('2027-03-21'))
+    ? admitCard.examDate
+    : details.examDate;
+  const examTime = (admitCard.reportingTime && admitCard.reportingTime !== '9:00 AM' && !admitCard.reportingTime.includes('/'))
+    ? admitCard.reportingTime
+    : details.reportingTime;
+  const venueName = (admitCard.examCentreName && !admitCard.examCentreName.toUpperCase().includes('JYOTISAR') && !admitCard.examCentreName.toUpperCase().includes('KURUKSHETRA') && !admitCard.examCentreName.includes('/'))
+    ? admitCard.examCentreName.toUpperCase()
+    : details.examCentreName.toUpperCase();
+  const venueAddress = (admitCard.examCentreAddress && !admitCard.examCentreAddress.includes('136119') && !admitCard.examCentreAddress.toLowerCase().includes('pehowa'))
+    ? admitCard.examCentreAddress
+    : details.examCentreAddress;
 
   return (
     <div className="w-full max-w-4xl mx-auto my-6 px-2 sm:px-4 font-sans text-slate-900 print:m-0 print:p-0 print:max-w-full">
@@ -228,8 +238,8 @@ export default function AdmitCardView({ admitCard }: AdmitCardViewProps) {
 
           {/* Center Institutional Details */}
           <div className="flex-1 text-center px-1">
-            <h1 className="text-2xl sm:text-3xl print:text-xl font-black tracking-tight uppercase leading-none font-serif text-slate-900">
-              GURUKUL
+            <h1 className="text-xl sm:text-2xl print:text-lg font-black tracking-tight uppercase leading-none font-serif text-slate-900">
+              THE GURUKUL NILOKHERI
             </h1>
             <p className="text-[11px] sm:text-xs print:text-[10px] font-semibold text-slate-700 mt-1 print:mt-0.5">
               Affiliated to C.B.S.E. New Delhi up to 10+2 Level
@@ -349,10 +359,9 @@ export default function AdmitCardView({ admitCard }: AdmitCardViewProps) {
             </div>
           </div>
 
-          {/* Right Side: Dual Photo Boxes (Col 3 / 25%) */}
-          <div className="md:col-span-3 print:col-span-3 flex flex-row md:flex-col print:flex-col justify-between items-center gap-3 print:gap-1.5">
-            {/* Box 1 (Top): Uploaded Candidate Photograph */}
-            <div className="w-28 sm:w-32 h-36 sm:h-40 print:w-28 print:h-32 border border-black bg-slate-50 flex items-center justify-center relative overflow-hidden shadow-inner">
+          {/* Right Side: Uploaded Candidate Photograph (Col 3 / 25%) */}
+          <div className="md:col-span-3 print:col-span-3 flex flex-col justify-center items-center gap-1.5 print:gap-1">
+            <div className="w-32 sm:w-36 h-40 sm:h-44 print:w-28 print:h-34 border border-black bg-slate-50 flex items-center justify-center relative overflow-hidden shadow-inner">
               {admitCard.candidatePhotoUrl ? (
                 /* eslint-disable-next-line @next/next/no-img-element */
                 <img
@@ -366,40 +375,17 @@ export default function AdmitCardView({ admitCard }: AdmitCardViewProps) {
                 </div>
               )}
             </div>
-
-            {/* Box 2 (Bottom): Physical Paste Box with Watermark outline */}
-            <div className="w-28 sm:w-32 h-36 sm:h-40 print:w-28 print:h-32 border border-black bg-slate-50/60 flex flex-col items-center justify-center p-2 print:p-1 text-center relative">
-              {/* Silhouette / Watermark Icon */}
-              <div className="w-10 h-10 print:w-7 print:h-7 border-2 border-dashed border-slate-400 rounded-full mb-2 print:mb-1 flex items-center justify-center text-slate-400 opacity-60">
-                <span className="text-lg print:text-sm">👤</span>
-              </div>
-              <p className="text-[9px] sm:text-[10px] print:text-[8.5px] font-extrabold uppercase text-slate-600 leading-tight">
-                Paste Your Recent Coloured Photograph On Admit Card
-              </p>
-            </div>
+            <span className="text-[9px] print:text-[8px] font-bold uppercase tracking-wider text-slate-600">
+              Candidate Photograph
+            </span>
           </div>
         </div>
 
-        {/* 6. Signatures Verification Row */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 print:grid-cols-3 gap-3 print:gap-2 pt-3 print:pt-1.5 items-end">
-          {/* Principal's Signature */}
-          <div className="text-center">
-            <div className="h-14 print:h-9 border-b border-black flex items-center justify-center mx-auto max-w-[170px] pb-1 print:pb-0.5">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src="/principal-signature.png"
-                alt="Principal Signature"
-                className="max-h-12 print:max-h-8 w-auto object-contain"
-              />
-            </div>
-            <p className="mt-1 print:mt-0.5 font-bold text-[10px] sm:text-xs print:text-[9.5px] uppercase tracking-tight text-slate-900">
-              PRINCIPAL&apos;S SIGNATURE
-            </p>
-          </div>
-
+        {/* 6. Signatures Verification Row (Candidate & Invigilator) */}
+        <div className="grid grid-cols-2 print:grid-cols-2 gap-8 print:gap-4 pt-3 print:pt-1.5 items-end px-4 print:px-2">
           {/* Candidate's Signature */}
           <div className="text-center">
-            <div className="h-14 print:h-9 border-b border-black mx-auto max-w-[170px]"></div>
+            <div className="h-14 print:h-9 border-b border-black mx-auto max-w-[200px]"></div>
             <p className="mt-1 print:mt-0.5 font-bold text-[10px] sm:text-xs print:text-[9.5px] uppercase tracking-tight text-slate-900">
               CANDIDATE&apos;S SIGNATURE
             </p>
@@ -410,7 +396,7 @@ export default function AdmitCardView({ admitCard }: AdmitCardViewProps) {
 
           {/* Invigilator's Signature & Legal Statement */}
           <div className="text-center">
-            <div className="h-14 print:h-9 border-b border-black mx-auto max-w-[200px]"></div>
+            <div className="h-14 print:h-9 border-b border-black mx-auto max-w-[220px]"></div>
             <p className="mt-1 print:mt-0.5 font-bold text-[10px] sm:text-xs print:text-[9.5px] uppercase tracking-tight text-slate-900 leading-tight">
               NAME AND SIGNATURE OF INVIGILATOR
             </p>
@@ -428,7 +414,6 @@ export default function AdmitCardView({ admitCard }: AdmitCardViewProps) {
           <ol className="list-decimal list-inside space-y-1 print:space-y-0.5 text-[10px] sm:text-[11px] print:text-[9px] text-slate-900 font-medium leading-relaxed print:leading-tight pl-1 sm:pl-2">
             <li><strong>MANDATORY:</strong> Candidate MUST bring a <strong>COLOURED copy / printout of this Admit Card</strong> to the examination venue (Black &amp; white printouts will NOT be accepted).</li>
             <li><strong>MANDATORY:</strong> Candidate MUST bring <strong>ONE ORIGINAL valid Photo ID Proof</strong> (e.g. Original Aadhaar Card, Passport, or Original School ID Card). Photocopies will not be accepted.</li>
-            <li>Paste your recent passport-size coloured photograph in the designated physical box above.</li>
             <li>Please bring Black or Blue Ball point pen and one writing clipboard / cardboard.</li>
             <li>Kindly reach the examination venue at least 45 minutes prior to the reporting time mentioned on this admit card.</li>
           </ol>

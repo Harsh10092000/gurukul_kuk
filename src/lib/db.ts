@@ -13,6 +13,7 @@ import {
   ContactEnquiry,
   ContactEnquiryStatus
 } from './types';
+import { getExamDetailsForGender } from './validations';
 
 // Default configuration from environment
 const DB_CONFIG = {
@@ -54,27 +55,39 @@ const DEFAULT_SETTINGS: SystemSettings = {
   registrationStartDate: '2026-09-01',
   registrationEndDate: '2027-01-31',
   admitCardReleaseDate: '2027-03-01',
-  entranceExamDate: '2027-03-21',
-  entranceExamTime: '9:30 AM',
-  examVenueName: 'THE GURUKUL JYOTISAR PEHOWA ROAD, KURUKSHETRA',
-  examVenueAddress: '136119, Haryana',
-  resultDeclarationDate: '2027-04-05',
-  counselingStartDate: '2027-04-15',
-  helplinePhone: '+91-1744-259114 / +91-9896328329',
-  helplineEmail: 'admissions@gurukulkurukshetra.com',
+  entranceExamDate: '2027-02-14',
+  entranceExamTime: '9:30 AM (Boys) / 8:30 AM (Girls)',
+  examVenueName: 'Aryakulam Nilokheri (Boys) / The Gurukul Nilokheri (Girls)',
+  examVenueAddress: 'Nilokheri, Karnal, Haryana - 132117',
+  resultDeclarationDate: '2027-03-01',
+  counselingStartDate: '2027-03-10',
+  helplinePhone: '+91 7027849858 / 59',
+  helplineEmail: 'admissions@thegurukulnilokheri.com',
+  activeStudyLocations: ['Gurukul Nilokheri', 'Gurukul Jyotisar', 'Aryakulam Nilokheri'],
 };
 
 const DEFAULT_CENTRES: ExamCentre[] = [
   {
     id: 'center-1',
-    code: 'GK-01',
-    name: 'The Gurukul Jyotisar Pehowa Road, Kurukshetra',
-    city: 'Kurukshetra',
+    code: 'ARYA-01',
+    name: 'Aryakulam Nilokheri (Boys Centre)',
+    city: 'Nilokheri',
     state: 'Haryana',
     capacity: 3000,
-    address: 'Jyotisar, Pehowa Road, Kurukshetra, Haryana - 136119',
+    address: 'Nigdu Road, Nilokheri, Karnal, Haryana - 132117',
     contactPerson: 'Exam Superintendent',
-    contactPhone: '+91-1744-259114',
+    contactPhone: '+91 7027849858',
+  },
+  {
+    id: 'center-2',
+    code: 'GUR-01',
+    name: 'The Gurukul Nilokheri (Girls Centre)',
+    city: 'Nilokheri',
+    state: 'Haryana',
+    capacity: 2000,
+    address: 'Sidhpur Minor, Nigdu Road, Nilokheri, Karnal, Haryana - 132117',
+    contactPerson: 'Exam Superintendent',
+    contactPhone: '+91 7027849859',
   },
 ];
 
@@ -100,10 +113,49 @@ function initFallbackFile(): FallbackStore {
         parsed.tempApplications = {};
         changed = true;
       }
-      if (parsed.settings && parsed.settings.applicationFee !== 800) {
-        parsed.settings.applicationFee = 800;
+      if (!parsed.settings) {
+        parsed.settings = { ...DEFAULT_SETTINGS };
         changed = true;
+      } else {
+        if (parsed.settings.applicationFee !== 800) {
+          parsed.settings.applicationFee = 800;
+          changed = true;
+        }
+        if (parsed.settings.entranceExamDate !== '2027-02-14') {
+          parsed.settings.entranceExamDate = '2027-02-14';
+          changed = true;
+        }
+        if (parsed.settings.entranceExamTime !== '9:30 AM (Boys) / 8:30 AM (Girls)') {
+          parsed.settings.entranceExamTime = '9:30 AM (Boys) / 8:30 AM (Girls)';
+          changed = true;
+        }
+        if (parsed.settings.helplinePhone !== '+91 7027849858 / 59') {
+          parsed.settings.helplinePhone = '+91 7027849858 / 59';
+          changed = true;
+        }
+        if (parsed.settings.examVenueName !== 'Aryakulam Nilokheri (Boys) / The Gurukul Nilokheri (Girls)') {
+          parsed.settings.examVenueName = 'Aryakulam Nilokheri (Boys) / The Gurukul Nilokheri (Girls)';
+          changed = true;
+        }
+        if (parsed.settings.examVenueAddress !== 'Nilokheri, Karnal, Haryana - 132117') {
+          parsed.settings.examVenueAddress = 'Nilokheri, Karnal, Haryana - 132117';
+          changed = true;
+        }
       }
+
+      if (Array.isArray(parsed.admitCards)) {
+        for (const ac of parsed.admitCards) {
+          const det = getExamDetailsForGender(ac.gender, ac.rollNumber || ac.applicationNumber);
+          if (ac.examDate !== det.examDate || ac.reportingTime !== det.reportingTime || ac.examCentreName !== det.examCentreName) {
+            ac.examDate = det.examDate;
+            ac.reportingTime = det.reportingTime;
+            ac.examCentreName = det.examCentreName;
+            ac.examCentreAddress = det.examCentreAddress;
+            changed = true;
+          }
+        }
+      }
+
       if (changed) {
         fs.writeFileSync(STORE_FILE, JSON.stringify(parsed, null, 2), 'utf-8');
       }
@@ -122,7 +174,7 @@ function initFallbackFile(): FallbackStore {
       {
         id: 'usr-admin-1',
         name: 'Principal / Exam Controller',
-        email: 'admin@gurukulkurukshetra.com',
+        email: 'admin@thegurukulnilokheri.com',
         phone: '+919896328329',
         role: 'admin',
         createdAt: new Date().toISOString(),
@@ -180,8 +232,8 @@ function initFallbackFile(): FallbackStore {
           passingYear: '2025',
         },
         examCentrePref: {
-          preferredCenter1: 'Gurukul Kurukshetra Main Campus',
-          preferredCenter2: 'Arya Samaj Mandir Complex, Delhi NCR',
+          preferredCenter1: 'The Gurukul Nilokheri Main Campus',
+          preferredCenter2: 'The Gurukul Jyotisar',
         },
         documents: {
           photo: '/logo-gurukul.png',
@@ -200,12 +252,12 @@ function initFallbackFile(): FallbackStore {
         id: 'admit-demo-1',
         applicationId: 'app-demo-1',
         applicationNumber: 'GK-2026-1001',
-        rollNumber: '2606001',
+        rollNumber: '27060001',
         candidateName: 'Aarav Sharma',
         fatherName: 'Dr. Rajesh Sharma',
         classApplying: 'Class 6',
-        examCentreName: 'Gurukul Kurukshetra Main Campus',
-        examCentreAddress: 'Near 3rd Gate, Kurukshetra University, Kurukshetra, Haryana - 136119',
+        examCentreName: 'The Gurukul Nilokheri Main Campus',
+        examCentreAddress: 'Nilokheri, Karnal, Haryana - 132117',
         examDate: '06 December 2026',
         reportingTime: '08:30 AM',
         examDuration: '10:00 AM to 12:30 PM (2.5 Hours)',
@@ -226,7 +278,7 @@ function initFallbackFile(): FallbackStore {
         id: 'res-demo-1',
         applicationId: 'app-demo-1',
         applicationNumber: 'GK-2026-1001',
-        rollNumber: '2606001',
+        rollNumber: '27060001',
         candidateName: 'Aarav Sharma',
         classApplying: 'Class 6',
         subjects: [
@@ -241,7 +293,7 @@ function initFallbackFile(): FallbackStore {
         rank: 14,
         qualifyingStatus: 'Qualified for Admission',
         counselingDate: '10 January 2027 at 10:00 AM',
-        counselingVenue: 'Main Administrative Block, Gurukul Kurukshetra',
+        counselingVenue: 'Main Administrative Block, The Gurukul Nilokheri',
         isPublished: true,
         remarks: 'Excellent performance. Selected in First Merit List.',
       },
@@ -450,7 +502,15 @@ export const db = {
         const uPhone = u.phone ? u.phone.toLowerCase() : '';
         const uPhoneClean = u.phone ? u.phone.replace(/\D/g, '').slice(-10) : '';
 
+        const isAdminAlias =
+          u.role === 'admin' &&
+          (trimmed === 'admin@thegurukulnilokheri.com' ||
+            trimmed === 'admin@gurukulnilokheri.com' ||
+            trimmed === 'admin@gurukulkurukshetra.com' ||
+            trimmed === 'admin');
+
         return (
+          isAdminAlias ||
           u.id === identifier ||
           u.id === trimmed ||
           uEmail === trimmed ||
@@ -899,10 +959,21 @@ export const db = {
     }
   },
 
-  async getNextRollNumber(gender: 'Male' | 'Female'): Promise<string> {
-    const isFemale = (gender || '').toLowerCase() === 'female';
-    const prefix = isFemale ? '261' : '260';
-    const regex = new RegExp(`^${prefix}(\\d{5})$`);
+  getClassCode(classApplying?: string | null): string {
+    if (!classApplying) return '06';
+    const num = String(classApplying).replace(/\D/g, '');
+    if (!num) return '06';
+    return num.padStart(2, '0');
+  },
+
+  async getNextRollNumber(classApplyingOrGender?: string): Promise<string> {
+    let classApplying = 'Class 6';
+    if (classApplyingOrGender && /\d/.test(classApplyingOrGender)) {
+      classApplying = classApplyingOrGender;
+    }
+    const classCode = this.getClassCode(classApplying);
+    const prefix = `27${classCode}`;
+    const regex = new RegExp(`^${prefix}(\\d+)$`);
     let maxSeq = 0;
 
     const checkRoll = (val?: string | null) => {
@@ -921,7 +992,7 @@ export const db = {
       (store.admitCards || []).forEach(c => checkRoll(c.rollNumber));
       (store.applications || []).forEach(a => checkRoll(a.rollNumber));
       const nextSeq = maxSeq + 1;
-      return `${prefix}${String(nextSeq).padStart(5, '0')}`;
+      return `${prefix}${String(nextSeq).padStart(4, '0')}`;
     }
 
     try {
@@ -930,10 +1001,10 @@ export const db = {
       admitRows.forEach((r: any) => checkRoll(r.roll_number));
       appRows.forEach((r: any) => checkRoll(r.roll_number));
       const nextSeq = maxSeq + 1;
-      return `${prefix}${String(nextSeq).padStart(5, '0')}`;
+      return `${prefix}${String(nextSeq).padStart(4, '0')}`;
     } catch {
       const nextSeq = maxSeq + 1;
-      return `${prefix}${String(nextSeq).padStart(5, '0')}`;
+      return `${prefix}${String(nextSeq).padStart(4, '0')}`;
     }
   },
 
@@ -1411,25 +1482,18 @@ export const db = {
           card.candidatePhotoUrl = app.documents.photo;
         }
       }
-      // Dynamic fallback from settings for venue, date & time if configured
-      const settings = await this.getSettings();
-      if (settings?.examVenueName) {
-        card.examCentreName = settings.examVenueName;
-      }
-      if (settings?.examVenueAddress) {
-        card.examCentreAddress = settings.examVenueAddress;
-      }
-      if (settings?.entranceExamDate) {
-        const d = new Date(settings.entranceExamDate);
-        if (!isNaN(d.getTime())) {
-          card.examDate = d.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
-        } else {
-          card.examDate = settings.entranceExamDate;
-        }
-      }
-      if (settings?.entranceExamTime) {
-        card.reportingTime = settings.entranceExamTime;
-      }
+      // Gender-based exam center, reporting time, and date rules:
+      // Boys: 14 Feb 2027, 9:30 AM, Aryakulam Nilokheri
+      // Girls: 14 Feb 2027, 8:30 AM, The Gurukul Nilokheri
+      const examGender = app?.personalInfo?.gender;
+      const examRegNo = card.applicationNumber || app?.registrationNumber;
+      const examDetails = getExamDetailsForGender(examGender, examRegNo);
+
+      card.examCentreName = examDetails.examCentreName;
+      card.examCentreAddress = examDetails.examCentreAddress;
+      card.examDate = examDetails.examDate;
+      card.reportingTime = examDetails.reportingTime;
+      card.examDuration = examDetails.examDuration;
     } catch (err) {
       console.warn('Admit card enrichment error:', err);
     }

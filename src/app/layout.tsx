@@ -2,7 +2,6 @@ import type { Metadata } from 'next';
 import { Inter, Merriweather } from 'next/font/google';
 import '@/styles/globals.css';
 import AppShell from '@/components/AppShell';
-import AdmitCardReleasePopup from '@/components/AdmitCardReleasePopup';
 
 const inter = Inter({
   subsets: ['latin'],
@@ -16,9 +15,9 @@ const merriweather = Merriweather({
 });
 
 export const metadata: Metadata = {
-  title: 'GURUKUL - Entrance Examination & Admission Portal (2027-28)',
+  title: 'The Gurukul Nilokheri - Entrance Examination & Admission Portal (2027-28)',
   description:
-    'Official Online Entrance Examination and Admission Portal for GURUKUL (Nilokheri, Jyotisar, Aryakulam). Apply online for Classes 6th, 7th, 8th, 9th, and 11th with online ₹800 fee payment, immediate Admission form, and admit card download.',
+    'Official Online Entrance Examination and Admission Portal for The Gurukul Nilokheri (with affiliated campuses Jyotisar & Aryakulam). Apply online for Classes 6th, 7th, 8th, 9th, and 11th with online ₹800 fee payment, immediate Admission form, and admit card download.',
   icons: {
     icon: '/favicon.ico',
     apple: '/logo-gurukul.png',
@@ -71,7 +70,6 @@ export default function RootLayout({
         />
       </head>
       <body className="font-sans text-slate-900 bg-slate-50 antialiased">
-        <AdmitCardReleasePopup />
         <AppShell>{children}</AppShell>
       </body>
     </html>

@@ -34,7 +34,7 @@ export default function Footer() {
             <div className="w-12 h-12 flex-shrink-0 flex items-center justify-center">
               <Image
                 src="/logo-gurukul.png"
-                alt="Gurukul Kurukshetra Logo"
+                alt="The Gurukul Nilokheri Logo"
                 width={48}
                 height={48}
                 className="brand-logo-sm object-contain"
@@ -42,10 +42,10 @@ export default function Footer() {
             </div>
             <div>
               <h3 className="text-white font-bold text-lg tracking-tight">
-                GURUKUL
+                THE GURUKUL NILOKHERI
               </h3>
               <p className="text-portal-gold font-serif text-xs">
-                तमसो मा ज्योतिर्गमय
+                मा प्रगाम पथो वयम्
               </p>
             </div>
           </div>
@@ -107,12 +107,11 @@ export default function Footer() {
             Programs Offered
           </h4>
           <ul className="space-y-2 text-xs text-slate-400">
-            <li>Class 5th &amp; 6th (Middle Wing)</li>
-            <li>Class 7th &amp; 8th (Secondary Wing)</li>
-            <li>Class 9th (Senior Secondary Foundation)</li>
+            <li>Class 5th &amp; 6th</li>
+            <li>Class 7th &amp; 8th</li>
+            <li>Class 9th</li>
             <li>Class 11th Science (Medical &amp; Non-Medical)</li>
             <li>Class 11th Commerce &amp; Humanities</li>
-            <li>NDA &amp; Armed Forces Wing (Rigorous Cadre)</li>
           </ul>
         </div>
 
@@ -122,14 +121,14 @@ export default function Footer() {
             Admissions Office
           </h4>
           <div className="text-xs space-y-2 text-slate-400 leading-relaxed">
-            <p className="text-white font-medium">
-              The Gurukul Jyotisar, Pehowa Road, Kurukshetra - 136119, Haryana
+            <p className="text-white font-medium uppercase">
+              SIDHPUR MINOR, NIGDU ROAD, NILOKHERI 132117
             </p>
             <p>
-              Helpline: +91-1744-259114, 9896328329
+              Helpline: +91 7027849858 / 59
             </p>
             <p>
-              Email: admissions@gurukuladmissions.org
+              Email: admissions@thegurukulnilokheri.com
             </p>
             <p className="text-[11px] text-slate-500 pt-1">
               Office Hours: 9:00 AM – 4:00 PM (Monday to Saturday)
@@ -141,7 +140,7 @@ export default function Footer() {
       {/* Bottom Legal Strip */}
       <div className="border-t border-slate-800 py-4 px-4 sm:px-8 text-[11px] text-slate-500 text-center flex flex-col sm:flex-row justify-between items-center max-w-7xl mx-auto gap-2">
         <div>
-          &copy; {new Date().getFullYear()} Gurukul Kurukshetra Examination &amp; Admission Board. All rights reserved.
+          &copy; {new Date().getFullYear()} The Gurukul Nilokheri Examination &amp; Admission Board. All rights reserved.
         </div>
         <div className="flex items-center gap-4">
           <Link href="/admin/login" className="hover:text-slate-400 transition">

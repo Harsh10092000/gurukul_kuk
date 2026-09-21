@@ -1,13 +1,13 @@
 'use client';
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { 
-  Printer, 
-  Building, 
-  Loader2, 
-  ChevronLeft, 
-  ChevronRight, 
-  ChevronsLeft, 
+import {
+  Printer,
+  Building,
+  Loader2,
+  ChevronLeft,
+  ChevronRight,
+  ChevronsLeft,
   ChevronsRight,
   Layers,
   FileDown
@@ -20,10 +20,10 @@ export default function AdminAttendancePage() {
   const [loading, setLoading] = useState(true);
   const [selectedClass, setSelectedClass] = useState('');
   const [selectedWing, setSelectedWing] = useState<'all' | 'boys' | 'girls'>('all');
-  const [officialCentre, setOfficialCentre] = useState('THE GURUKUL JYOTISAR PEHOWA ROAD, KURUKSHETRA');
-  const [officialVenueAddress, setOfficialVenueAddress] = useState('136119, Haryana');
-  const [officialExamDate, setOfficialExamDate] = useState('21 March 2027');
-  const [officialExamTime, setOfficialExamTime] = useState('9:30 AM');
+  const [officialCentre, setOfficialCentre] = useState('Aryakulam Nilokheri (Boys) / The Gurukul Nilokheri (Girls)');
+  const [officialVenueAddress, setOfficialVenueAddress] = useState('Nilokheri, Karnal - 132117');
+  const [officialExamDate, setOfficialExamDate] = useState('14 February 2027');
+  const [officialExamTime, setOfficialExamTime] = useState('9:30 AM (Boys) / 8:30 AM (Girls)');
 
   // Screen Pagination State
   const [currentPage, setCurrentPage] = useState(1);
@@ -38,13 +38,21 @@ export default function AdminAttendancePage() {
       .then((res) => res.json())
       .then((data) => {
         if (data.settings) {
-          if (data.settings.examVenueName) setOfficialCentre(data.settings.examVenueName);
-          if (data.settings.examVenueAddress) setOfficialVenueAddress(data.settings.examVenueAddress);
-          if (data.settings.entranceExamDate) setOfficialExamDate(data.settings.entranceExamDate);
-          if (data.settings.entranceExamTime) setOfficialExamTime(data.settings.entranceExamTime);
+          if (data.settings.examVenueName && !data.settings.examVenueName.includes('KURUKSHETRA')) {
+            setOfficialCentre(data.settings.examVenueName);
+          }
+          if (data.settings.examVenueAddress && !data.settings.examVenueAddress.includes('136119')) {
+            setOfficialVenueAddress(data.settings.examVenueAddress);
+          }
+          if (data.settings.entranceExamDate && !data.settings.entranceExamDate.includes('21 March')) {
+            setOfficialExamDate(data.settings.entranceExamDate);
+          }
+          if (data.settings.entranceExamTime && data.settings.entranceExamTime !== '9:00 AM') {
+            setOfficialExamTime(data.settings.entranceExamTime);
+          }
         }
       })
-      .catch(() => {});
+      .catch(() => { });
   }, []);
 
   useEffect(() => {
@@ -156,10 +164,28 @@ export default function AdminAttendancePage() {
   };
 
   const getWingTitle = () => {
-    if (selectedWing === 'boys') return 'BOYS ATTENDANCE REGISTER (GURUKUL)';
-    if (selectedWing === 'girls') return 'GIRLS ATTENDANCE REGISTER (ARYAKULAM)';
+    if (selectedWing === 'boys') return 'BOYS ATTENDANCE REGISTER (ARYAKULAM NILOKHERI)';
+    if (selectedWing === 'girls') return 'GIRLS ATTENDANCE REGISTER (THE GURUKUL NILOKHERI)';
     return 'CENTRAL ATTENDANCE REGISTER';
   };
+
+  const currentSheetCentre = useMemo(() => {
+    if (selectedWing === 'boys') return 'Aryakulam Nilokheri';
+    if (selectedWing === 'girls') return 'The Gurukul Nilokheri';
+    return officialCentre;
+  }, [selectedWing, officialCentre]);
+
+  const currentSheetAddress = useMemo(() => {
+    if (selectedWing === 'boys') return 'Nigdu Road, Nilokheri, Karnal, Haryana - 132117';
+    if (selectedWing === 'girls') return 'Sidhpur Minor, Nigdu Road, Nilokheri, Karnal, Haryana - 132117';
+    return officialVenueAddress;
+  }, [selectedWing, officialVenueAddress]);
+
+  const currentSheetTime = useMemo(() => {
+    if (selectedWing === 'boys') return '9:30 AM';
+    if (selectedWing === 'girls') return '8:30 AM';
+    return officialExamTime;
+  }, [selectedWing, officialExamTime]);
 
   return (
     <div className="space-y-6">
@@ -226,35 +252,32 @@ export default function AdminAttendancePage() {
                 <button
                   type="button"
                   onClick={() => setSelectedWing('all')}
-                  className={`px-3 py-1.5 rounded-md text-xs font-semibold transition ${
-                    selectedWing === 'all'
+                  className={`px-3 py-1.5 rounded-md text-xs font-semibold transition ${selectedWing === 'all'
                       ? 'bg-portal-navy text-white shadow-xs'
                       : 'text-slate-600 hover:text-slate-900'
-                  }`}
+                    }`}
                 >
                   All Candidates ({candidates.length})
                 </button>
                 <button
                   type="button"
                   onClick={() => setSelectedWing('boys')}
-                  className={`px-3 py-1.5 rounded-md text-xs font-semibold transition ${
-                    selectedWing === 'boys'
+                  className={`px-3 py-1.5 rounded-md text-xs font-semibold transition ${selectedWing === 'boys'
                       ? 'bg-portal-navy text-white shadow-xs'
                       : 'text-slate-600 hover:text-slate-900'
-                  }`}
+                    }`}
                 >
-                  Boys Wing (Gurukul)
+                  Boys Wing
                 </button>
                 <button
                   type="button"
                   onClick={() => setSelectedWing('girls')}
-                  className={`px-3 py-1.5 rounded-md text-xs font-semibold transition ${
-                    selectedWing === 'girls'
+                  className={`px-3 py-1.5 rounded-md text-xs font-semibold transition ${selectedWing === 'girls'
                       ? 'bg-portal-navy text-white shadow-xs'
                       : 'text-slate-600 hover:text-slate-900'
-                  }`}
+                    }`}
                 >
-                  Girls Wing (Aryakulam)
+                  Girls Wing
                 </button>
               </div>
             </div>
@@ -276,6 +299,7 @@ export default function AdminAttendancePage() {
                   <option value="Class 11|Non Medical">Class 11th — Non Medical</option>
                   <option value="Class 11|Medical">Class 11th — Medical</option>
                   <option value="Class 11|Commerce">Class 11th — Commerce</option>
+                  <option value="Class 11|Humanities">Class 11th — Humanities</option>
                   <option value="Class 11|Arts">Class 11th — Arts</option>
                 </select>
               </div>
@@ -490,11 +514,10 @@ export default function AdminAttendancePage() {
                       key={`page-${page}`}
                       type="button"
                       onClick={() => handlePageChange(Number(page))}
-                      className={`min-w-[28px] h-7 px-2 rounded font-mono text-xs font-bold transition ${
-                        safeCurrentPage === page
+                      className={`min-w-[28px] h-7 px-2 rounded font-mono text-xs font-bold transition ${safeCurrentPage === page
                           ? 'bg-portal-navy text-portal-gold shadow-xs'
                           : 'border border-slate-300 bg-white text-slate-700 hover:bg-slate-100'
-                      }`}
+                        }`}
                     >
                       {page}
                     </button>
@@ -553,9 +576,9 @@ export default function AdminAttendancePage() {
       {/* ========================================================================= */}
       {/* 2. PRINT / PDF VIEW: Chunked Across A4 Printable Sheets (Current or All)  */}
       {/* ========================================================================= */}
-      <div id="attendance-register-print-sheets" className="hidden print:block text-black">
+      <div id="attendance-register-print-sheets" className="hidden print:block text-black bg-white print:bg-white print:bg-none">
         {candidatesToPrint.length === 0 ? (
-          <div className="p-8 text-center text-black border-2 border-black">
+          <div className="p-8 text-center text-black border-2 border-black bg-white">
             <h3 className="font-bold text-sm">NO CANDIDATE ATTENDANCE DATA FOUND</h3>
           </div>
         ) : (
@@ -567,7 +590,7 @@ export default function AdminAttendancePage() {
             return (
               <div
                 key={`print-sheet-${sheetIdx}`}
-                className="attendance-sheet-page bg-white p-3 font-sans text-black"
+                className="attendance-sheet-page bg-white print:bg-white print:bg-none p-3 font-sans text-black"
               >
                 {/* Print Sheet Header */}
                 <div className="border-2 border-black pb-1 pt-1.5 mb-2 text-center">
@@ -580,7 +603,7 @@ export default function AdminAttendancePage() {
                     </span>
                   </div>
                   <h2 className="text-xl font-black text-black uppercase tracking-wider font-serif mt-0.5">
-                    GURUKUL KURUKSHETRA
+                    THE GURUKUL NILOKHERI
                   </h2>
                   <p className="text-xs font-black text-black uppercase tracking-wide">
                     ENTRANCE EXAMINATION 2027-28 — {getWingTitle()}
@@ -589,7 +612,7 @@ export default function AdminAttendancePage() {
                     {selectedClass ? selectedClass.toUpperCase() : 'ALL CLASSES'}
                   </p>
                   <p className="text-[10px] font-bold text-black uppercase mt-0.5">
-                    EXAM CENTRE: {officialCentre} {officialVenueAddress ? `(${officialVenueAddress})` : ''} • DATE: {officialExamDate} • TIME: {officialExamTime}
+                    EXAM CENTRE: {currentSheetCentre} {currentSheetAddress ? `(${currentSheetAddress})` : ''} • DATE: {officialExamDate} • TIME: {currentSheetTime}
                   </p>
                 </div>
 

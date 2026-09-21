@@ -39,7 +39,7 @@ async function runBulkFlowTest() {
 
   // 1. Admin login
   const loginRes = await makeRequest('/api/auth/login', 'POST', {
-    identifier: 'admin@gurukulkurukshetra.com',
+    identifier: 'admin@thegurukulnilokheri.com',
     password: 'Admin@Gurukul2026',
   });
 

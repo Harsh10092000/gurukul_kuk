@@ -63,7 +63,7 @@ export interface AddressInfo {
 }
 
 export type EligibleClass = 'Class 6' | 'Class 7' | 'Class 8' | 'Class 9' | 'Class 11' | '6' | '7' | '8' | '9' | '11';
-export type Class11Stream = 'Non Medical' | 'Medical' | 'Commerce' | 'Arts';
+export type Class11Stream = 'Non Medical' | 'Medical' | 'Commerce' | 'Humanities' | 'Arts';
 
 export interface AcademicInfo {
   applyingClass: EligibleClass;
@@ -138,6 +138,7 @@ export interface AdmitCard {
   candidateName: string;
   fatherName: string;
   motherName?: string;
+  gender?: string;
   previousSchoolName?: string;
   aadhaarNumber?: string;
   address?: string;
@@ -213,6 +214,7 @@ export interface SystemSettings {
   counselingStartDate: string;
   helplinePhone: string;
   helplineEmail: string;
+  activeStudyLocations?: string[];
 }
 
 export type AdminNotificationType =

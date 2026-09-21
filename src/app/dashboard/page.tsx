@@ -200,7 +200,7 @@ export default function ApplicantDashboard() {
               Welcome, {currentUser?.name || 'Candidate'}
             </h1>
             <p className="text-xs text-slate-300">
-              Gurukul Kurukshetra Online Entrance Examination Portal • Session 2027-28
+              The Gurukul Nilokheri Online Entrance Examination Portal • Session 2027-28
             </p>
           </div>
           <Link
@@ -802,21 +802,17 @@ export default function ApplicantDashboard() {
             </div>
 
             <p className="text-xs text-slate-300 leading-relaxed">
-              Have questions regarding document verification, syllabus, or exam centres? Contact the Gurukul Examination Cell.
+              Have questions regarding document verification, syllabus, or exam centres? Contact The Gurukul Examination Cell.
             </p>
 
             <div className="pt-2 border-t border-slate-800 space-y-1.5 text-xs font-mono text-slate-200">
               <div className="flex items-center justify-between">
-                <span className="text-slate-400 font-sans text-[11px]">Helpline 1:</span>
-                <span>+91-1744-259114</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-slate-400 font-sans text-[11px]">Helpline 2:</span>
-                <span>+91-9896328329</span>
+                <span className="text-slate-400 font-sans text-[11px]">Helpline:</span>
+                <span>+91 7027849858 / 59</span>
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-slate-400 font-sans text-[11px]">Email:</span>
-                <span className="text-[11px]">admissions@gurukuladmissions.org</span>
+                <span className="text-[11px]">admissions@thegurukulnilokheri.com</span>
               </div>
             </div>
           </div>

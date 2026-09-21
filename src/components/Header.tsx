@@ -69,9 +69,9 @@ export default function Header() {
               CBSE Affiliated Institutional Network
             </span>
             <span className="hidden sm:inline text-slate-600">|</span>
-            <span>Helpline: +91-1744-259114, 9896328329</span>
+            <span>Helpline: +91 7027849858 / 59</span>
             <span className="hidden md:inline text-slate-600">|</span>
-            <span className="hidden md:inline">admissions@gurukuladmissions.org</span>
+            <span className="hidden md:inline">admissions@thegurukulnilokheri.com</span>
           </div>
           <div className="flex items-center gap-3">
             <span className="bg-portal-gold/20 text-portal-gold px-2 py-0.5 rounded text-[11px] font-semibold font-mono">
@@ -95,7 +95,7 @@ export default function Header() {
           <div className="w-12 h-12 sm:w-14 sm:h-14 flex-shrink-0 flex items-center justify-center">
             <Image
               src="/logo-gurukul.png"
-              alt="Gurukul Emblem"
+              alt="The Gurukul Nilokheri Emblem"
               width={56}
               height={56}
               priority
@@ -103,11 +103,11 @@ export default function Header() {
             />
           </div>
           <div>
-            <div className="text-xl sm:text-2xl font-black text-portal-navy tracking-tight leading-none">
-              GURUKUL
+            <div className="text-lg sm:text-xl md:text-2xl font-black text-portal-navy tracking-tight leading-none">
+              THE GURUKUL NILOKHERI
             </div>
             <p className="text-xs text-amber-700 font-semibold tracking-wide mt-1">
-              तमसो मा ज्योतिर्गमय
+              मा प्रगाम पथो वयम् • Modernity with Traditions
             </p>
             <p className="text-[11px] text-slate-500 hidden sm:block mt-0.5">
               Entrance Examination &amp; Admission Portal

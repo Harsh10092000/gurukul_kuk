@@ -194,13 +194,13 @@ export async function GET(request: Request) {
         maskedAadhaar,
       },
       preferences: {
-        studyLocation: matchingApp.studyLocationPref?.firstPreference || 'Gurukul Nilokheri',
-        examCentre: matchingApp.examCentrePref?.firstPreference || 'Gurukul Kurukshetra Main Campus',
+        studyLocation: matchingApp.studyLocationPref?.firstPreference || 'The Gurukul Nilokheri',
+        examCentre: matchingApp.examCentrePref?.firstPreference || 'The Gurukul Nilokheri Main Campus',
       },
       admitCard: isAdmitCardReleased && (matchingApp.rollNumber || admitCard?.rollNumber) ? {
         available: true,
         rollNumber: matchingApp.rollNumber || admitCard?.rollNumber,
-        examCentreName: admitCard?.examCentreName || 'Gurukul Kurukshetra Main Campus',
+        examCentreName: admitCard?.examCentreName || 'The Gurukul Nilokheri Main Campus',
         examDate: admitCard?.examDate || formatDateString(settings.entranceExamDate, '10 December 2026'),
         reportingTime: admitCard?.reportingTime || '08:30 AM',
         downloadUrl: `/admit-card?appId=${encodeURIComponent(matchingApp.registrationNumber || matchingApp.applicationNumber)}`,

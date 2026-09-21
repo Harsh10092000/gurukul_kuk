@@ -110,10 +110,10 @@ export default function ContactPage() {
             <div className="bg-portal-navy text-white rounded-xl p-6 space-y-5">
               <div className="space-y-1">
                 <h3 className="text-base font-bold text-white">
-                  Gurukul Kurukshetra Campus
+                  The Gurukul Nilokheri Campus
                 </h3>
                 <p className="text-xs text-slate-300 leading-relaxed">
-                  Founded in 1912 by Swami Shraddhanand Ji. CBSE Affiliated (No. 530006). Residential Senior Secondary School with specialized NDA Wing.
+                  CBSE Affiliated. Premier Residential Senior Secondary School combining Vedic values with modern scientific education.
                 </p>
               </div>
 
@@ -122,8 +122,8 @@ export default function ContactPage() {
                   <MapPin className="w-4 h-4 text-amber-400 flex-shrink-0 mt-0.5" />
                   <div>
                     <span className="font-semibold text-white block">Location</span>
-                    <span className="text-slate-300 leading-normal">
-                      Near 3rd Gate, Kurukshetra University, Kurukshetra, Haryana - 136119, India
+                    <span className="text-slate-300 leading-normal uppercase">
+                      SIDHPUR MINOR, NIGDU ROAD, NILOKHERI 132117, Haryana, India
                     </span>
                   </div>
                 </div>
@@ -133,8 +133,7 @@ export default function ContactPage() {
                   <div>
                     <span className="font-semibold text-white block">Helpline Numbers</span>
                     <div className="font-mono text-slate-300 text-xs space-y-0.5">
-                      <div>01744-259114, 259115</div>
-                      <div>+91-9896328329 / 7015886675</div>
+                      <div>+91 7027849858 / 59</div>
                     </div>
                   </div>
                 </div>
@@ -143,7 +142,7 @@ export default function ContactPage() {
                   <Mail className="w-4 h-4 text-amber-400 flex-shrink-0 mt-0.5" />
                   <div>
                     <span className="font-semibold text-white block">Official Email</span>
-                    <span className="text-slate-300">admissions@gurukulkurukshetra.com</span>
+                    <span className="text-slate-300">admissions@thegurukulnilokheri.com</span>
                   </div>
                 </div>
 

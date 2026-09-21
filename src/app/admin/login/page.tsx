@@ -61,7 +61,7 @@ export default function AdminLoginPage() {
   };
 
   const fillDemoAdmin = () => {
-    setEmail('admin@gurukulkurukshetra.com');
+    setEmail('admin@thegurukulnilokheri.com');
     setPassword('Admin@Gurukul2026');
   };
 
@@ -81,8 +81,8 @@ export default function AdminLoginPage() {
                 className="object-contain opacity-90"
               />
               <div>
-                <div className="text-white font-black text-lg tracking-tight leading-tight">GURUKUL</div>
-                <div className="text-slate-300 text-[10px] font-semibold uppercase tracking-widest">Kurukshetra</div>
+                <div className="text-white font-black text-lg tracking-tight leading-tight">THE GURUKUL</div>
+                <div className="text-slate-300 text-[10px] font-semibold uppercase tracking-widest">Nilokheri</div>
               </div>
             </div>
 
@@ -92,15 +92,15 @@ export default function AdminLoginPage() {
                 Examination &amp; Admissions Management Portal
               </h2>
               <p className="text-slate-300 text-xs leading-relaxed">
-                Restricted access for authorized Gurukul Examination Board officers and administrative staff only.
+                Restricted access for authorized The Gurukul Examination Board officers and administrative staff only.
               </p>
             </div>
           </div>
 
           <div className="pt-8 border-t border-white/10 space-y-1.5">
-            <div className="text-[10px] text-slate-400 uppercase tracking-wider font-semibold">Gurukul Kurukshetra</div>
+            <div className="text-[10px] text-slate-400 uppercase tracking-wider font-semibold">The Gurukul Nilokheri</div>
             <p className="text-slate-400 text-[11px]">Session 2027-28 · CBSE Affiliated</p>
-            <p className="text-slate-500 text-[11px]">01744-259114 · 9896328329</p>
+            <p className="text-slate-500 text-[11px]">+91 7027849858 / 59</p>
           </div>
         </div>
 
@@ -109,8 +109,8 @@ export default function AdminLoginPage() {
 
           {/* Mobile header (hidden on md+) */}
           <div className="flex md:hidden items-center gap-2 mb-1">
-            <Image src="/logo-gurukul.png" alt="Gurukul Logo" width={28} height={28} className="object-contain" />
-            <span className="font-black text-portal-navy text-sm tracking-tight">GURUKUL Admin</span>
+            <Image src="/logo-gurukul.png" alt="The Gurukul Logo" width={28} height={28} className="object-contain" />
+            <span className="font-black text-portal-navy text-sm tracking-tight">THE GURUKUL Admin</span>
           </div>
 
           <div className="space-y-1">
@@ -135,7 +135,7 @@ export default function AdminLoginPage() {
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="admin@gurukulkurukshetra.com"
+                placeholder="admin@thegurukulnilokheri.com"
                 className="form-input-field"
               />
             </div>

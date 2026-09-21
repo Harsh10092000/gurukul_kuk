@@ -24,6 +24,7 @@ export async function GET() {
         resultsDeclared: settings.resultsDeclared,
         admitCardsReleased: settings.admitCardsReleased === true,
         admitCardsReleasedAt: settings.admitCardsReleasedAt || null,
+        activeStudyLocations: settings.activeStudyLocations || ['Gurukul Nilokheri', 'Gurukul Jyotisar', 'Aryakulam Nilokheri'],
       },
     });
   } catch (error: any) {

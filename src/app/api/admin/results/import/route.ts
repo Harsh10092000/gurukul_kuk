@@ -173,7 +173,7 @@ export async function POST(req: Request) {
         remarks: r.remarks,
         isPublished: Boolean(publishDirectly),
         counselingDate: r.qualifyingStatus === 'Qualified' ? '10 January 2027 at 10:00 AM' : undefined,
-        counselingVenue: r.qualifyingStatus === 'Qualified' ? 'Main Administrative Block, Gurukul Kurukshetra' : undefined,
+        counselingVenue: r.qualifyingStatus === 'Qualified' ? 'Main Administrative Block, The Gurukul Nilokheri' : undefined,
         createdAt: new Date().toISOString(),
       }));
 

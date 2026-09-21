@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { getCurrentUser } from '@/lib/auth';
 import { sendNotification } from '@/lib/notifications';
+import { getExamDetailsForGender } from '@/lib/validations';
 
 export async function POST(request: Request) {
   try {
@@ -28,33 +29,67 @@ export async function POST(request: Request) {
     const examDate = settings.entranceExamDate || '21 March 2027';
     const reportingTime = settings.entranceExamTime || '9:30 AM';
 
-    // Group or sort candidates by class and registration number for clean, professional roll numbers
-    paidApps.sort((a, b) => (a.registrationNumber || '').localeCompare(b.registrationNumber || ''));
+    // Sort candidates by class and registration number for clean, class-sequential roll numbers
+    paidApps.sort((a, b) => {
+      const classA = db.getClassCode(a.classApplying);
+      const classB = db.getClassCode(b.classApplying);
+      if (classA !== classB) {
+        return classA.localeCompare(classB, undefined, { numeric: true });
+      }
+      return (a.registrationNumber || a.applicationNumber || '').localeCompare(
+        b.registrationNumber || b.applicationNumber || ''
+      );
+    });
 
     let generatedCount = 0;
-    let boysCounter = 0;
-    let girlsCounter = 0;
+    const classCounters: { [classCode: string]: number } = {};
+    const usedRollNumbers = new Set<string>();
 
+    // Pass 1: Collect existing valid unique class-based roll numbers to preserve valid allotments
     for (const app of paidApps) {
-      const isGirl =
-        app.personalInfo?.gender === 'Female' ||
-        (app.registrationNumber || '').startsWith('NILG-') ||
-        (app.studyLocation?.firstPreference || '').toLowerCase().includes('aryakulam');
-
-      let rollNumber = app.rollNumber;
-      if (!rollNumber || !/^26[01]\d{5}$/.test(rollNumber)) {
-        if (isGirl) {
-          girlsCounter++;
-          rollNumber = `261${String(girlsCounter).padStart(5, '0')}`;
-        } else {
-          boysCounter++;
-          rollNumber = `260${String(boysCounter).padStart(5, '0')}`;
+      const classCode = db.getClassCode(app.classApplying);
+      const classPrefix = `27${classCode}`;
+      const roll = app.rollNumber;
+      if (roll && new RegExp(`^${classPrefix}(\\d+)$`).test(roll)) {
+        const seq = parseInt(roll.slice(classPrefix.length), 10);
+        if (!isNaN(seq) && !usedRollNumbers.has(roll)) {
+          usedRollNumbers.add(roll);
+          if (!classCounters[classCode] || seq > classCounters[classCode]) {
+            classCounters[classCode] = seq;
+          }
         }
       }
+    }
 
-      const seqNum = parseInt(rollNumber.slice(3), 10) || 1;
+    // Pass 2: Assign unique sequential roll numbers per class
+    for (const app of paidApps) {
+      const classCode = db.getClassCode(app.classApplying);
+      const classPrefix = `27${classCode}`;
+      let rollNumber: string;
+      if (
+        app.rollNumber &&
+        new RegExp(`^${classPrefix}(\\d+)$`).test(app.rollNumber) &&
+        usedRollNumbers.has(app.rollNumber)
+      ) {
+        rollNumber = app.rollNumber;
+      } else {
+        let nextSeq = (classCounters[classCode] || 0) + 1;
+        while (usedRollNumbers.has(`${classPrefix}${String(nextSeq).padStart(4, '0')}`)) {
+          nextSeq++;
+        }
+        classCounters[classCode] = nextSeq;
+        rollNumber = `${classPrefix}${String(nextSeq).padStart(4, '0')}`;
+        usedRollNumbers.add(rollNumber);
+      }
+
+      const seqNum = parseInt(rollNumber.slice(classPrefix.length), 10) || 1;
       const hallNumber = Math.ceil(seqNum / 30);
       const deskNumber = ((seqNum - 1) % 30) + 1;
+
+      const examDetails = getExamDetailsForGender(
+        app.personalInfo?.gender,
+        app.registrationNumber || app.applicationNumber
+      );
 
       await db.generateOrReleaseAdmitCard({
         id: 'admit-' + app.id,
@@ -65,11 +100,11 @@ export async function POST(request: Request) {
         fatherName: app.parentInfo.fatherName,
         classApplying: app.classApplying,
         stream: app.stream,
-        examCentreName,
-        examCentreAddress,
-        examDate,
-        reportingTime,
-        examDuration: '10:00 AM to 12:30 PM (2.5 Hours)',
+        examCentreName: examDetails.examCentreName,
+        examCentreAddress: examDetails.examCentreAddress,
+        examDate: examDetails.examDate,
+        reportingTime: examDetails.reportingTime,
+        examDuration: examDetails.examDuration,
         roomNumber: `Hall-${hallNumber}, Desk ${deskNumber}`,
         candidatePhotoUrl: app.documents?.photo || '/logo-gurukul.png',
         candidateSignatureUrl: app.documents?.signature || undefined,
