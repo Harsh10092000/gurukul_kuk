@@ -102,8 +102,9 @@
       "amountPaid": 1200,
       "transactionId": "TXN_GK_DEMO_99812",
       "createdAt": "2026-09-17T05:10:22.119Z",
-      "updatedAt": "2026-09-21T10:55:12.433Z",
-      "rollNumber": "27060001"
+      "updatedAt": "2026-09-22T07:38:43.732Z",
+      "rollNumber": "27060001",
+      "remarks": "Health check restore"
     },
     {
       "userId": "usr-1789638296738-57lj2",
@@ -549,6 +550,72 @@
   },
   "notifications": [
     {
+      "type": "APPLICATION_APPROVED",
+      "title": "Application Approved: Aarav Sharma",
+      "message": "Dossier for Aarav Sharma (GK26-10001, Class 6) approved and verified.",
+      "entityId": "app-demo-1",
+      "entityType": "application",
+      "link": "/admin/applications/app-demo-1",
+      "metadata": {
+        "applicationId": "app-demo-1",
+        "candidateName": "Aarav Sharma",
+        "applicationNumber": "GK26-10001",
+        "classApplying": "Class 6",
+        "email": "aarav@example.com",
+        "phone": "+919876543210",
+        "status": "approved",
+        "remarks": "Health check restore",
+        "updatedAt": "2026-09-22T07:38:46.861Z"
+      },
+      "id": "notif-1790062726861-7g9wf",
+      "isRead": true,
+      "createdAt": "2026-09-22T07:38:46.861Z"
+    },
+    {
+      "type": "APPLICATION_STATUS_CHANGED",
+      "title": "Application Status Updated: Aarav Sharma",
+      "message": "Application GK26-10001 status changed to SUBMITTED.",
+      "entityId": "app-demo-1",
+      "entityType": "application",
+      "link": "/admin/applications/app-demo-1",
+      "metadata": {
+        "applicationId": "app-demo-1",
+        "candidateName": "Aarav Sharma",
+        "applicationNumber": "GK26-10001",
+        "classApplying": "Class 6",
+        "email": "aarav@example.com",
+        "phone": "+919876543210",
+        "status": "submitted",
+        "remarks": "Health check restore",
+        "updatedAt": "2026-09-22T07:38:43.528Z"
+      },
+      "id": "notif-1790062723528-17rl7",
+      "isRead": true,
+      "createdAt": "2026-09-22T07:38:43.528Z"
+    },
+    {
+      "type": "APPLICATION_STATUS_CHANGED",
+      "title": "Application Status Updated: Aarav Sharma",
+      "message": "Application GK26-10001 status changed to DRAFT.",
+      "entityId": "app-demo-1",
+      "entityType": "application",
+      "link": "/admin/applications/app-demo-1",
+      "metadata": {
+        "applicationId": "app-demo-1",
+        "candidateName": "Aarav Sharma",
+        "applicationNumber": "GK26-10001",
+        "classApplying": "Class 6",
+        "email": "aarav@example.com",
+        "phone": "+919876543210",
+        "status": "draft",
+        "remarks": "Health check restore",
+        "updatedAt": "2026-09-22T07:38:42.970Z"
+      },
+      "id": "notif-1790062722970-c2bju",
+      "isRead": true,
+      "createdAt": "2026-09-22T07:38:42.970Z"
+    },
+    {
       "type": "APPLICATION_SUBMITTED",
       "title": "New Registered Candidate: Anshu Miglani (NILB-00002)",
       "message": "Anshu Miglani has completed registration and paid fee ₹800. Study Location: Gurukul Jyotisar.",
@@ -564,7 +631,7 @@
         "phone": "9897979878"
       },
       "id": "notif-1789987603234-l0m62",
-      "isRead": false,
+      "isRead": true,
       "createdAt": "2026-09-21T10:46:43.234Z"
     },
     {
@@ -575,7 +642,7 @@
       "entityType": "system",
       "link": "/admin/applications",
       "id": "notif-1789985182217-428e2",
-      "isRead": false,
+      "isRead": true,
       "createdAt": "2026-09-21T10:06:22.217Z"
     },
     {
@@ -594,7 +661,7 @@
         "phone": "8908989884"
       },
       "id": "notif-1789980888226-h6al8",
-      "isRead": false,
+      "isRead": true,
       "createdAt": "2026-09-21T08:54:48.226Z"
     },
     {
