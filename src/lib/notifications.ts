@@ -104,7 +104,7 @@ export async function sendNotification(payload: NotificationPayload) {
 
     case 'FEE_PAYMENT_RECEIPT':
       subject = `Official Payment Receipt: The Gurukul Entrance Registration (${data.registrationNumber})`;
-      message = `Dear ${name}, your application fee of Rs. ${data.amount || 800} for The Gurukul Entrance Examination (Session 2027-28) has been successfully received. Permanent Registration ID: ${data.registrationNumber}. Transaction ID: ${data.transactionId}. Please retain this receipt for candidate login, Admission form and admit card download.`;
+      message = `Dear ${name}, your application fee of Rs. ${data.amount || 800} for The Gurukul Entrance Examination (Session 2027-28) has been successfully received. Permanent Registration ID: ${data.registrationNumber}. Transaction ID: ${data.transactionId}. Please retain this receipt for candidate login and downloading your Admit Card with Registration ID: ${data.registrationNumber}.`;
       htmlContent = `
         <!DOCTYPE html>
         <html>
@@ -158,7 +158,7 @@ export async function sendNotification(payload: NotificationPayload) {
               <table class="receipt-table">
                 <tr><td>Official Receipt Number</td><td>${data.receiptNumber}</td></tr>
                 <tr><td>Candidate Full Name</td><td>${name}</td></tr>
-                <tr><td>Class Applying For</td><td>${data.classApplying || 'Entrance Exam 2026'}</td></tr>
+                <tr><td>Class Applying For</td><td>${data.classApplying || 'Entrance Exam 2027-28'}</td></tr>
                 <tr><td>Fee Amount Paid</td><td style="color: #166534; font-size: 14px;">₹${data.amount || 800} (Paid - Verified)</td></tr>
                 <tr><td>Payment Mode</td><td>Online Netbanking / UPI / Cards</td></tr>
                 <tr><td>Transaction ID / Reference</td><td>${data.transactionId || 'TXN_CONFIRMED'}</td></tr>
@@ -170,8 +170,7 @@ export async function sendNotification(payload: NotificationPayload) {
                 <strong>Important Instructions:</strong>
                 <ul style="margin: 6px 0 0 0; padding-left: 18px;">
                   <li>Log in to the portal using your <strong>Registration ID (${data.registrationNumber})</strong> and <strong>Password</strong>.</li>
-                  <li>Download your official <strong>Admission Form (A4)</strong> and <strong>Admit Card</strong>.</li>
-                  <li>Bring printed copies to your examination center on exam day.</li>
+                  <li>Download your official <strong>Admit Card</strong> using this <strong>Registration Number (${data.registrationNumber})</strong>.</li>
                 </ul>
               </div>
 
@@ -468,14 +467,14 @@ export async function sendNotification(payload: NotificationPayload) {
 
     case 'APPLICATION_APPROVED':
       subject = `The Gurukul Nilokheri - Application Dossier Approved: ${data.applicationNumber}`;
-      message = `Dear ${name}, congratulations! Your application dossier (${data.applicationNumber}) for The Gurukul Nilokheri Entrance Examination (Session 2027-28) has been officially approved and verified by the Admissions Committee. You can log in to download your Admission Form.`;
+      message = `Dear ${name}, congratulations! Your application dossier (${data.applicationNumber}) for The Gurukul Nilokheri Entrance Examination (Session 2027-28) has been officially approved and verified by the Admissions Committee. You can log in to view entrance examination schedule updates and download your Admit Card once released.`;
       htmlContent = `
         <div style="font-family: sans-serif; padding: 20px; color: #1e293b; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 12px;">
           <h2 style="color: #166534; margin-top: 0;">🎉 Application Dossier Approved & Verified!</h2>
           <p>Dear <strong>${name}</strong>,</p>
           <p>Congratulations! Your entrance examination application (<strong>${data.applicationNumber}</strong>) has been verified and approved by the The Gurukul Nilokheri Admissions Committee.</p>
           <p>Remarks: <em>${data.remarks || 'All submitted documents verified successfully.'}</em></p>
-          <p>You can now log in to the portal to print your verified Admission Form and view entrance examination schedule updates.</p>
+          <p>You can now log in to the portal to track your application status and download your Admit Card once released.</p>
         </div>
       `;
       break;
