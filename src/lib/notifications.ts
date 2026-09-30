@@ -175,7 +175,7 @@ export async function sendNotification(payload: NotificationPayload) {
               </div>
 
               <p style="font-size: 12px; color: #64748b; line-height: 1.5; margin: 0;">
-                For queries regarding entrance examination, please contact the Admission Helpdesk at <strong>+91 7027849858 / 59</strong> or email <strong>admissions@thegurukulnilokheri.com</strong>.
+                For queries regarding entrance examination, please contact the Admission Helpdesk at <strong>+91 7027849858 / 59</strong> or email <strong>thegurukulnilokheri@gmail.com</strong>.
               </p>
             </div>
             <div class="footer">
@@ -374,7 +374,7 @@ export async function sendNotification(payload: NotificationPayload) {
             </div>
             <div class="footer">
               The Gurukul Nilokheri, Haryana<br>
-              Helpline: +91 7027849858 / 59 • Email: admissions@thegurukulnilokheri.com
+              Helpline: +91 7027849858 / 59 • Email: thegurukulnilokheri@gmail.com
             </div>
           </div>
         </body>
@@ -435,7 +435,7 @@ export async function sendNotification(payload: NotificationPayload) {
             </div>
             <div class="footer">
               The Gurukul Nilokheri, Haryana<br>
-              Helpline: +91 7027849858 / 59 • Email: admissions@thegurukulnilokheri.com
+              Helpline: +91 7027849858 / 59 • Email: thegurukulnilokheri@gmail.com
             </div>
           </div>
         </body>
@@ -552,7 +552,7 @@ export async function sendNotification(payload: NotificationPayload) {
             </div>
             <div class="footer">
               Examination Control Division • The Gurukul Nilokheri, Haryana - 132117<br>
-              Helpline: +91 7027849858 / 59 • Email: admissions@thegurukulnilokheri.com
+              Helpline: +91 7027849858 / 59 • Email: thegurukulnilokheri@gmail.com
             </div>
           </div>
         </body>
@@ -609,7 +609,7 @@ export async function sendNotification(payload: NotificationPayload) {
             </div>
             <div class="footer">
               The Gurukul Nilokheri, Haryana<br>
-              Admissions &amp; Examination Cell • admissions@thegurukulnilokheri.com
+              Admissions &amp; Examination Cell • thegurukulnilokheri@gmail.com
             </div>
           </div>
         </body>

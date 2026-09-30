@@ -251,6 +251,10 @@ export default function ApplicationVerificationPage({ params }: { params: { id: 
                 <span className="font-mono text-slate-900">{application.personalInfo.panNumber || '—'}</span>
               </div>
               <div>
+                <span className="text-slate-500 block text-[11px]">APAAR ID</span>
+                <span className="font-mono text-slate-900">{application.personalInfo.apaarId || '—'}</span>
+              </div>
+              <div>
                 <span className="text-slate-500 block text-[11px]">Family ID</span>
                 <span className="font-mono text-slate-900">{application.personalInfo.familyId || '—'}</span>
               </div>

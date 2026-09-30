@@ -142,7 +142,7 @@ export default function ContactPage() {
                   <Mail className="w-4 h-4 text-amber-400 flex-shrink-0 mt-0.5" />
                   <div>
                     <span className="font-semibold text-white block">Official Email</span>
-                    <span className="text-slate-300">admissions@thegurukulnilokheri.com</span>
+                    <span className="text-slate-300">thegurukulnilokheri@gmail.com</span>
                   </div>
                 </div>
 

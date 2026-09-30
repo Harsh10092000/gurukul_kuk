@@ -76,13 +76,6 @@ export default function RegisterPage() {
       return;
     }
 
-    const cleanPhone = phone.replace(/\D/g, '').slice(-10);
-    const phoneRegex = /^[6-9]\d{9}$/;
-    if (!phoneRegex.test(cleanPhone)) {
-      setError('Please enter a valid 10-digit Indian mobile number starting with 6, 7, 8, or 9.');
-      return;
-    }
-
     setLoading(true);
 
     try {
@@ -93,7 +86,6 @@ export default function RegisterPage() {
           action: 'send',
           actionType: 'register',
           email: email.trim(),
-          phone: cleanPhone,
           name: name.trim(),
         }),
       });
@@ -118,7 +110,6 @@ export default function RegisterPage() {
   const handleResendOtp = async () => {
     setError('');
     setLoading(true);
-    const cleanPhone = phone.replace(/\D/g, '').slice(-10);
 
     try {
       const res = await fetch('/api/auth/otp', {
@@ -128,7 +119,6 @@ export default function RegisterPage() {
           action: 'send',
           actionType: 'register',
           email: email.trim(),
-          phone: cleanPhone,
           name: name.trim(),
         }),
       });
@@ -152,12 +142,11 @@ export default function RegisterPage() {
     setError('');
 
     if (!otp.trim() || otp.trim().length !== 6) {
-      setError('Please enter the 6-digit OTP received on your email / mobile.');
+      setError('Please enter the 6-digit OTP received on your email.');
       return;
     }
 
     setLoading(true);
-    const cleanPhone = phone.replace(/\D/g, '').slice(-10);
 
     try {
       const verifyRes = await fetch('/api/auth/otp', {
@@ -183,7 +172,7 @@ export default function RegisterPage() {
         body: JSON.stringify({
           name: name.trim(),
           email: email.trim(),
-          phone: cleanPhone,
+          phone: phone.trim() ? phone.replace(/\D/g, '').slice(-10) : undefined,
           otp: otp.trim(),
         }),
       });
@@ -201,7 +190,7 @@ export default function RegisterPage() {
           JSON.stringify({
             fullName: name.trim(),
             candidateEmail: email.trim().toLowerCase(),
-            candidateMobile: cleanPhone,
+            candidateMobile: phone.trim() ? phone.replace(/\D/g, '').slice(-10) : '',
           })
         );
         localStorage.removeItem('gurukul_application_draft');
@@ -221,16 +210,15 @@ export default function RegisterPage() {
         <div className="max-w-md w-full space-y-6 bg-white p-8 rounded-xl border border-slate-200/90 shadow-[0_14px_36px_-4px_rgba(11,25,44,0.20),0_4px_16px_-2px_rgba(11,25,44,0.12)]">
           <div className="text-center space-y-1.5">
             <span className="text-[10px] font-bold uppercase tracking-wider text-portal-navy bg-slate-100 px-3 py-1 rounded-full inline-block">
-              Security Step 2: Verification
+              Security Step 2: Email Verification
             </span>
             <h2 className="text-xl font-bold tracking-tight text-portal-navy">
-              Enter Verification Code
+              Enter Email Verification Code
             </h2>
             <p className="text-xs text-slate-500">
-              We have dispatched a 6-digit OTP to:
+              We have dispatched a 6-digit OTP code to your email:
               <br />
-              <strong className="text-slate-800">{email}</strong> and{' '}
-              <strong className="text-slate-800">+91-{phone.slice(-10)}</strong>
+              <strong className="text-slate-800 text-sm font-semibold">{email}</strong>
             </p>
           </div>
 
@@ -244,7 +232,7 @@ export default function RegisterPage() {
           <form onSubmit={handleVerifyAndRegister} className="space-y-4">
             <div>
               <label className="form-label text-center">
-                Enter 6-Digit OTP <span className="text-rose-500">*</span>
+                Enter 6-Digit Email OTP <span className="text-rose-500">*</span>
               </label>
               <input
                 type="text"
@@ -364,7 +352,7 @@ export default function RegisterPage() {
             Candidate Registration
           </h2>
           <p className="text-xs text-slate-500">
-            Verify via Email/Mobile OTP to begin your entrance examination application.
+            Verify via Email OTP to begin your entrance examination application.
           </p>
         </div>
 
@@ -403,26 +391,8 @@ export default function RegisterPage() {
               className="form-input-field"
             />
             <p className="text-[11px] text-slate-400 mt-1">
-              Used for dispatching Registration Number and Admit Card.
+              A 6-digit verification code will be sent to this email address. Used for dispatching Registration Number and Admit Card.
             </p>
-          </div>
-
-          <div>
-            <label className="form-label">
-              Mobile / WhatsApp Number <span className="text-rose-500">*</span>
-            </label>
-            <div className="relative">
-              <span className="absolute left-3 top-2.5 text-xs font-semibold text-slate-500">+91</span>
-              <input
-                type="tel"
-                required
-                maxLength={10}
-                value={phone}
-                onChange={(e) => setPhone(e.target.value.replace(/\D/g, ''))}
-                placeholder="9876543210"
-                className="form-input-field pl-11 font-mono"
-              />
-            </div>
           </div>
 
           <button
@@ -430,7 +400,7 @@ export default function RegisterPage() {
             disabled={loading}
             className="btn-primary w-full mt-2"
           >
-            {loading ? 'Dispatching OTP...' : 'Send Verification OTP'}
+            {loading ? 'Dispatching OTP to Email...' : 'Send Verification OTP to Email'}
           </button>
         </form>
 

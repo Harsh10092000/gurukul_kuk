@@ -132,14 +132,31 @@ export async function POST(request: Request) {
 
     const settings = await db.getSettings();
 
-    // Allot or generate class-based sequential roll number
+    // Allot or generate class and gender/centre-based sequential roll number
+    // Boys: 27{class}0001 - 5000 (capacity 5000)
+    // Girls: 27{class}5001 - 10000 (capacity 5000)
     const classCode = db.getClassCode(application.classApplying);
-    const classPrefix = `27${classCode}`;
-    let rollNumber = application.rollNumber;
-    if (!rollNumber || !new RegExp(`^${classPrefix}(\\d+)$`).test(rollNumber)) {
-      rollNumber = await db.getNextRollNumber(application.classApplying);
+    const isFemale =
+      (application.personalInfo?.gender || '').toLowerCase() === 'female' ||
+      (application.personalInfo?.gender || '').toLowerCase() === 'girl' ||
+      (application.registrationNumber || '').startsWith('NILG');
+    const rollPrefix = `27${classCode}`;
+    let finalRollNumber: string;
+    if (application.rollNumber && new RegExp(`^${rollPrefix}(\\d{4,})$`).test(application.rollNumber)) {
+      const seq = parseInt(application.rollNumber.slice(rollPrefix.length), 10);
+      const valid = isFemale ? seq >= 5001 : (seq >= 1 && seq <= 5000);
+      if (valid) {
+        finalRollNumber = application.rollNumber;
+      } else {
+        finalRollNumber = await db.getNextRollNumber(application.classApplying, application.personalInfo?.gender);
+        try {
+          await db.updateApplication(application.id, { rollNumber: finalRollNumber });
+        } catch { }
+      }
+    } else {
+      finalRollNumber = await db.getNextRollNumber(application.classApplying, application.personalInfo?.gender);
       try {
-        await db.updateApplication(application.id, { rollNumber });
+        await db.updateApplication(application.id, { rollNumber: finalRollNumber });
       } catch { }
     }
 
@@ -152,7 +169,7 @@ export async function POST(request: Request) {
       id: 'admit-' + Date.now(),
       applicationId: application.id,
       applicationNumber: application.applicationNumber,
-      rollNumber,
+      rollNumber: finalRollNumber,
       candidateName: application.personalInfo.fullName,
       fatherName: application.parentInfo.fatherName,
       motherName: application.parentInfo.motherName,
@@ -184,13 +201,13 @@ export async function POST(request: Request) {
       await db.createAdminNotification({
         type: 'ADMIN_UPDATE',
         title: `Admit Card Issued: ${application.personalInfo.fullName}`,
-        message: `Roll Number ${rollNumber} allotted to ${application.personalInfo.fullName} (${application.applicationNumber}, ${application.classApplying}).`,
+        message: `Roll Number ${finalRollNumber} allotted to ${application.personalInfo.fullName} (${application.applicationNumber}, ${application.classApplying}).`,
         entityId: application.id,
         entityType: 'application',
         link: `/admin/applications/${application.id}`,
         metadata: {
           applicationId: application.id,
-          rollNumber,
+          rollNumber: finalRollNumber,
           candidateName: application.personalInfo.fullName,
           applicationNumber: application.applicationNumber,
           classApplying: application.classApplying,

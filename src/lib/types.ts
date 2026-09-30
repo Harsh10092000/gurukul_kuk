@@ -27,6 +27,7 @@ export interface PersonalInfo {
   category: 'General' | 'OBC' | 'SC' | 'ST' | 'EWS';
   aadhaarNumber: string;
   panNumber?: string;
+  apaarId?: string;
   familyId?: string;
   previousSchoolName?: string;
   previousBoard?: string;
@@ -62,7 +63,7 @@ export interface AddressInfo {
   alternatePhone?: string;
 }
 
-export type EligibleClass = 'Class 6' | 'Class 7' | 'Class 8' | 'Class 9' | 'Class 11' | '6' | '7' | '8' | '9' | '11';
+export type EligibleClass = 'Class 5' | 'Class 6' | 'Class 7' | 'Class 8' | 'Class 9' | 'Class 11' | '5' | '6' | '7' | '8' | '9' | '11';
 export type Class11Stream = 'Non Medical' | 'Medical' | 'Commerce' | 'Humanities' | 'Arts';
 
 export interface AcademicInfo {

@@ -162,6 +162,16 @@ export default function AdmitCardView({ admitCard }: AdmitCardViewProps) {
 
   // Dynamic Venue, Exam Date, and Timing values tailored for Boys vs Girls
   const details = getExamDetailsForGender(admitCard.gender, admitCard.rollNumber || admitCard.applicationNumber);
+  const isGirl =
+    (admitCard.gender || '').toLowerCase() === 'female' ||
+    (admitCard.gender || '').toLowerCase() === 'girl' ||
+    (admitCard.applicationNumber || '').startsWith('NILG') ||
+    (admitCard.rollNumber ? parseInt((admitCard.rollNumber.match(/^27\d{2}(\d{4,})$/) || [])[1] || '0', 10) >= 5001 : false);
+
+  const instituteName = isGirl
+    ? 'The Gurukul Nilokheri (Girls Wing)'
+    : 'Aryakulam Nilokheri';
+
   const examDate = (admitCard.examDate && !admitCard.examDate.includes('21 March') && !admitCard.examDate.includes('2027-03-21'))
     ? admitCard.examDate
     : details.examDate;
@@ -217,14 +227,7 @@ export default function AdmitCardView({ admitCard }: AdmitCardViewProps) {
           </span>
         </div>
 
-        {/* 3. Ranking Banner Subtitle */}
-        <div className="text-center pt-0.5 print:pt-0">
-          <p className="text-[10px] sm:text-[11px] print:text-[9.5px] font-extrabold uppercase tracking-tight text-slate-800">
-            RANKED HARYANA&apos;S NO.1 BEST VINTAGE LEGACY BOYS BOARDING SCHOOL BY EDUCATION WORLD FOR THE YEAR 2025-26
-          </p>
-        </div>
-
-        {/* 4. Institutional Header Section with Dual Logos */}
+        {/* 3. Institutional Header Section with Logo and Balance */}
         <div className="flex items-center justify-between gap-3 pt-1 pb-2 print:pt-0.5 print:pb-1 border-b border-black">
           {/* Left Crest Logo */}
           <div className="w-20 h-20 sm:w-24 sm:h-24 print:w-16 print:h-16 flex-shrink-0 flex items-center justify-center">
@@ -239,9 +242,12 @@ export default function AdmitCardView({ admitCard }: AdmitCardViewProps) {
           {/* Center Institutional Details */}
           <div className="flex-1 text-center px-1">
             <h1 className="text-xl sm:text-2xl print:text-lg font-black tracking-tight uppercase leading-none font-serif text-slate-900">
-              THE GURUKUL NILOKHERI
+              THE GURUKUL
             </h1>
-            <p className="text-[11px] sm:text-xs print:text-[10px] font-semibold text-slate-700 mt-1 print:mt-0.5">
+            <p className="text-xs sm:text-sm print:text-xs font-bold text-slate-900 mt-1 print:mt-0.5 uppercase tracking-wide">
+              {instituteName}
+            </p>
+            <p className="text-[11px] sm:text-xs print:text-[10px] font-semibold text-slate-700 mt-0.5">
               Affiliated to C.B.S.E. New Delhi up to 10+2 Level
             </p>
             <div className="mt-1.5 print:mt-1 inline-block border border-black bg-slate-50 text-black text-xs sm:text-sm print:text-xs font-black tracking-wider px-4 py-0.5 print:px-3 print:py-0.2 uppercase">
@@ -252,18 +258,11 @@ export default function AdmitCardView({ admitCard }: AdmitCardViewProps) {
             </p>
           </div>
 
-          {/* Right Patron Portrait */}
-          <div className="w-20 h-20 sm:w-24 sm:h-24 print:w-16 print:h-16 flex-shrink-0 flex items-center justify-center">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src="/gurukul-patron.png"
-              alt="Gurukul Patron"
-              className="max-h-20 sm:max-h-24 print:max-h-16 max-w-full object-contain rounded-full shadow-sm"
-            />
-          </div>
+          {/* Right Section (Patron logo removed, kept empty to maintain symmetrical balance) */}
+          <div className="w-20 h-20 sm:w-24 sm:h-24 print:w-16 print:h-16 flex-shrink-0" />
         </div>
 
-        {/* 5. Main Section: Candidate Details Table + Dual Photos */}
+        {/* 4. Main Section: Candidate Details Table + Dual Photos */}
         <div className="grid grid-cols-1 md:grid-cols-12 print:grid-cols-12 gap-3 print:gap-2 pt-1 print:pt-0.5">
           {/* Candidate's Details Table (Left Side - 9 Columns / 75%) */}
           <div className="md:col-span-9 print:col-span-9">
@@ -284,6 +283,17 @@ export default function AdmitCardView({ admitCard }: AdmitCardViewProps) {
                   </div>
                 </div>
 
+                {/* Roll Number displayed FIRST */}
+                <div className="grid grid-cols-12">
+                  <div className="col-span-5 sm:col-span-4 p-1.5 print:py-0.5 print:px-1.5 font-bold border-r border-black bg-slate-50/70">
+                    Roll Number
+                  </div>
+                  <div className="col-span-7 sm:col-span-8 p-1.5 print:py-0.5 print:px-1.5 font-mono font-black text-sm print:text-xs text-slate-900">
+                    {admitCard.rollNumber}
+                  </div>
+                </div>
+
+                {/* Registration Number displayed BELOW Roll Number */}
                 <div className="grid grid-cols-12">
                   <div className="col-span-5 sm:col-span-4 p-1.5 print:py-0.5 print:px-1.5 font-bold border-r border-black bg-slate-50/70">
                     Registration Number
@@ -293,12 +303,13 @@ export default function AdmitCardView({ admitCard }: AdmitCardViewProps) {
                   </div>
                 </div>
 
+                {/* Respective Institute separate for boys and girls */}
                 <div className="grid grid-cols-12">
                   <div className="col-span-5 sm:col-span-4 p-1.5 print:py-0.5 print:px-1.5 font-bold border-r border-black bg-slate-50/70">
-                    Roll Number
+                    Respective Institute
                   </div>
-                  <div className="col-span-7 sm:col-span-8 p-1.5 print:py-0.5 print:px-1.5 font-mono font-black text-sm print:text-xs text-slate-900">
-                    {admitCard.rollNumber}
+                  <div className="col-span-7 sm:col-span-8 p-1.5 print:py-0.5 print:px-1.5 font-bold uppercase text-slate-900">
+                    {instituteName}
                   </div>
                 </div>
 
@@ -422,7 +433,7 @@ export default function AdmitCardView({ admitCard }: AdmitCardViewProps) {
         {/* 8. Dynamic Bottom Venue Box */}
         <div className="text-center pt-2 print:pt-1 border-t border-black">
           <p className="font-black text-xs sm:text-sm print:text-xs uppercase tracking-wide text-slate-900">
-            VENUE: {venueName}
+            ALLOTTED INSTITUTE &amp; VENUE: {instituteName.toUpperCase()}
           </p>
           <p className="font-bold text-xs sm:text-sm print:text-[10.5px] text-slate-800 uppercase mt-0.5">
             {venueAddress}

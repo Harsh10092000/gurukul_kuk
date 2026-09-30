@@ -42,49 +42,83 @@ export async function POST(request: Request) {
     });
 
     let generatedCount = 0;
-    const classCounters: { [classCode: string]: number } = {};
+    const groupCounters: { [groupKey: string]: number } = {};
     const usedRollNumbers = new Set<string>();
 
-    // Pass 1: Collect existing valid unique class-based roll numbers to preserve valid allotments
+    // Pass 1: Collect existing valid unique class & gender-based roll numbers to preserve valid allotments
     for (const app of paidApps) {
       const classCode = db.getClassCode(app.classApplying);
-      const classPrefix = `27${classCode}`;
+      const isFemale =
+        (app.personalInfo?.gender || '').toLowerCase() === 'female' ||
+        (app.personalInfo?.gender || '').toLowerCase() === 'girl' ||
+        (app.registrationNumber || '').startsWith('NILG');
+      const groupKey = `${classCode}_${isFemale ? 'female' : 'male'}`;
+      const rollPrefix = `27${classCode}`;
       const roll = app.rollNumber;
-      if (roll && new RegExp(`^${classPrefix}(\\d+)$`).test(roll)) {
-        const seq = parseInt(roll.slice(classPrefix.length), 10);
-        if (!isNaN(seq) && !usedRollNumbers.has(roll)) {
+      if (roll && new RegExp(`^${rollPrefix}(\\d{4,})$`).test(roll)) {
+        const seq = parseInt(roll.slice(rollPrefix.length), 10);
+        const isValidForGender = isFemale ? seq >= 5001 : (seq >= 1 && seq <= 5000);
+        if (!isNaN(seq) && isValidForGender && !usedRollNumbers.has(roll)) {
           usedRollNumbers.add(roll);
-          if (!classCounters[classCode] || seq > classCounters[classCode]) {
-            classCounters[classCode] = seq;
+          if (!groupCounters[groupKey] || seq > groupCounters[groupKey]) {
+            groupCounters[groupKey] = seq;
           }
         }
       }
     }
 
-    // Pass 2: Assign unique sequential roll numbers per class
+    // Pass 2: Assign unique sequential roll numbers per class and gender/centre
+    // Boys: 27{class}0001 - 5000 (capacity 5000, Exam Centre: Aryakulam Nilokheri)
+    // Girls: 27{class}5001 - 10000 (capacity 5000, Exam Centre: The Gurukul Nilokheri)
     for (const app of paidApps) {
       const classCode = db.getClassCode(app.classApplying);
-      const classPrefix = `27${classCode}`;
+      const isFemale =
+        (app.personalInfo?.gender || '').toLowerCase() === 'female' ||
+        (app.personalInfo?.gender || '').toLowerCase() === 'girl' ||
+        (app.registrationNumber || '').startsWith('NILG');
+      const groupKey = `${classCode}_${isFemale ? 'female' : 'male'}`;
+      const rollPrefix = `27${classCode}`;
+      const minBase = isFemale ? 5000 : 0;
+      if (!groupCounters[groupKey] || groupCounters[groupKey] < minBase) {
+        groupCounters[groupKey] = minBase;
+      }
+
       let rollNumber: string;
       if (
         app.rollNumber &&
-        new RegExp(`^${classPrefix}(\\d+)$`).test(app.rollNumber) &&
-        usedRollNumbers.has(app.rollNumber)
+        new RegExp(`^${rollPrefix}(\\d{4,})$`).test(app.rollNumber)
       ) {
-        rollNumber = app.rollNumber;
+        const existingSeq = parseInt(app.rollNumber.slice(rollPrefix.length), 10);
+        const isValidForGender = isFemale ? existingSeq >= 5001 : (existingSeq >= 1 && existingSeq <= 5000);
+        if (isValidForGender && !usedRollNumbers.has(app.rollNumber)) {
+          rollNumber = app.rollNumber;
+          usedRollNumbers.add(rollNumber);
+        } else if (isValidForGender) {
+          rollNumber = app.rollNumber;
+        } else {
+          let nextSeq = groupCounters[groupKey] + 1;
+          while (usedRollNumbers.has(`${rollPrefix}${String(nextSeq).padStart(4, '0')}`)) {
+            nextSeq++;
+          }
+          groupCounters[groupKey] = nextSeq;
+          rollNumber = `${rollPrefix}${String(nextSeq).padStart(4, '0')}`;
+          usedRollNumbers.add(rollNumber);
+        }
       } else {
-        let nextSeq = (classCounters[classCode] || 0) + 1;
-        while (usedRollNumbers.has(`${classPrefix}${String(nextSeq).padStart(4, '0')}`)) {
+        let nextSeq = groupCounters[groupKey] + 1;
+        while (usedRollNumbers.has(`${rollPrefix}${String(nextSeq).padStart(4, '0')}`)) {
           nextSeq++;
         }
-        classCounters[classCode] = nextSeq;
-        rollNumber = `${classPrefix}${String(nextSeq).padStart(4, '0')}`;
+        groupCounters[groupKey] = nextSeq;
+        rollNumber = `${rollPrefix}${String(nextSeq).padStart(4, '0')}`;
         usedRollNumbers.add(rollNumber);
       }
 
-      const seqNum = parseInt(rollNumber.slice(classPrefix.length), 10) || 1;
-      const hallNumber = Math.ceil(seqNum / 30);
-      const deskNumber = ((seqNum - 1) % 30) + 1;
+      const rawSeq = parseInt(rollNumber.slice(rollPrefix.length), 10) || 1;
+      const candidateIndex = isFemale ? (rawSeq - 5000) : rawSeq;
+      const indexForSeating = candidateIndex > 0 ? candidateIndex : 1;
+      const hallNumber = Math.ceil(indexForSeating / 30);
+      const deskNumber = ((indexForSeating - 1) % 30) + 1;
 
       const examDetails = getExamDetailsForGender(
         app.personalInfo?.gender,

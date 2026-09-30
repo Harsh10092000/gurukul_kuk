@@ -194,7 +194,7 @@ export default function LoginPage() {
               <div className="bg-slate-50 border border-slate-200 rounded-lg p-4 space-y-1.5 text-xs text-slate-600">
                 <div className="font-semibold text-slate-900">Admissions Helpdesk</div>
                 <div>Phone: +91 7027849858 / 59</div>
-                <div>Email: admissions@thegurukulnilokheri.com</div>
+                <div>Email: thegurukulnilokheri@gmail.com</div>
                 <div className="text-[11px] text-slate-500 pt-1">Hours: 9:00 AM – 4:00 PM (Mon – Sat)</div>
               </div>
             </div>

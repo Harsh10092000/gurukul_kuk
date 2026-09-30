@@ -292,6 +292,7 @@ export default function AdminAttendancePage() {
                   className="text-xs border border-slate-300 rounded-lg px-3 py-1.5 outline-none font-medium text-slate-800 bg-white shadow-xs focus:border-portal-navy"
                 >
                   <option value="">All Classes</option>
+                  <option value="Class 5">Class 5th (Boys)</option>
                   <option value="Class 6">Class 6th</option>
                   <option value="Class 7">Class 7th</option>
                   <option value="Class 8">Class 8th</option>

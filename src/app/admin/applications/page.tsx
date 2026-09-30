@@ -26,6 +26,7 @@ export default function AdminApplicationsPage() {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedClass, setSelectedClass] = useState('All');
+  const [selectedGender, setSelectedGender] = useState('All');
   const [selectedStatus, setSelectedStatus] = useState('All');
   const [appToDelete, setAppToDelete] = useState<Application | null>(null);
   const [actionLoading, setActionLoading] = useState(false);
@@ -163,7 +164,16 @@ export default function AdminApplicationsPage() {
         ? true
         : app.status === selectedStatus;
 
-    return matchesSearch && matchesClass && matchesStatus;
+    const appGender = (app.personalInfo?.gender || '').toLowerCase();
+    const isFemale = appGender === 'female' || appGender === 'girl' || (app.registrationNumber || '').startsWith('NILG');
+    const matchesGender =
+      selectedGender === 'All'
+        ? true
+        : selectedGender === 'Female'
+        ? isFemale
+        : !isFemale;
+
+    return matchesSearch && matchesClass && matchesGender && matchesStatus;
   });
 
   const totalPages = Math.max(1, Math.ceil(filteredApps.length / pageSize));
@@ -354,12 +364,15 @@ export default function AdminApplicationsPage() {
       </div>
 
       {/* Filter & Search Toolbar */}
-      <div className="portal-card p-4 grid grid-cols-1 sm:grid-cols-3 gap-3">
+      <div className="portal-card p-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
         <div className="relative">
           <input
             type="text"
             value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
+            onChange={(e) => {
+              setSearchQuery(e.target.value);
+              setCurrentPage(1);
+            }}
             placeholder="Search by name, ID, phone, email..."
             className="form-input-field"
           />
@@ -368,10 +381,14 @@ export default function AdminApplicationsPage() {
         <div>
           <select
             value={selectedClass}
-            onChange={(e) => setSelectedClass(e.target.value)}
+            onChange={(e) => {
+              setSelectedClass(e.target.value);
+              setCurrentPage(1);
+            }}
             className="form-input-field font-medium"
           >
-            <option value="All">All Classes (6, 7, 8, 9, 11)</option>
+            <option value="All">All Classes (5, 6, 7, 8, 9, 11)</option>
+            <option value="Class 5">Class 5th</option>
             <option value="Class 6">Class 6th</option>
             <option value="Class 7">Class 7th</option>
             <option value="Class 8">Class 8th</option>
@@ -382,8 +399,26 @@ export default function AdminApplicationsPage() {
 
         <div>
           <select
+            value={selectedGender}
+            onChange={(e) => {
+              setSelectedGender(e.target.value);
+              setCurrentPage(1);
+            }}
+            className="form-input-field font-medium"
+          >
+            <option value="All">All Genders (Boys &amp; Girls)</option>
+            <option value="Male">Boys (Male)</option>
+            <option value="Female">Girls (Female)</option>
+          </select>
+        </div>
+
+        <div>
+          <select
             value={selectedStatus}
-            onChange={(e) => setSelectedStatus(e.target.value)}
+            onChange={(e) => {
+              setSelectedStatus(e.target.value);
+              setCurrentPage(1);
+            }}
             className="form-input-field font-medium"
           >
             <option value="All">All Registered Candidates</option>
@@ -459,7 +494,7 @@ export default function AdminApplicationsPage() {
                       </td>
                       <td className="py-3.5 px-4">
                         <span className="bg-slate-100 text-slate-800 border border-slate-200 px-2.5 py-0.5 rounded-md text-[11px] font-semibold">
-                          Class {app.classApplying}{app.stream ? ` (${app.stream})` : ''}
+                          {app.classApplying?.startsWith('Class') ? app.classApplying : `Class ${app.classApplying}`}{app.stream ? ` (${app.stream})` : ''}
                         </span>
                       </td>
                       <td className="py-3.5 px-4">

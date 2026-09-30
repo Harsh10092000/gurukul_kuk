@@ -74,8 +74,8 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: locVal.error }, { status: 400 });
     }
 
-    // 6. Class & Stream Validation (Stream availability checked against preferred campus)
-    const classVal = validateClassAndStream(classApplying, stream, studyPref.firstPreference);
+    // 6. Class & Stream Validation (Stream availability checked against preferred campus and gender eligibility)
+    const classVal = validateClassAndStream(classApplying, stream, studyPref.firstPreference, gender);
     if (!classVal.isValid) {
       return NextResponse.json({ error: classVal.error }, { status: 400 });
     }
@@ -196,8 +196,8 @@ export async function POST(request: Request) {
       registrationNumber: registrationId,
     });
 
-    // 15. Generate Class-based Sequential Roll Number (e.g. 2706..., 2711...) and Create Official Application Record
-    const assignedRollNo = await db.getNextRollNumber(classApplying);
+    // 15. Generate Class and Gender-based Sequential Roll Number (e.g. 27061... for Boys, 27062... for Girls) and Create Official Application Record
+    const assignedRollNo = await db.getNextRollNumber(classApplying, personalInfo?.gender || gender);
 
     const newApplication = await db.createApplication({
       userId: officialUser.id,
@@ -245,9 +245,15 @@ export async function POST(request: Request) {
     const examDetails = getExamDetailsForGender(personalInfo.gender, registrationId);
 
     // Calculate room / desk sequential number from roll sequence
-    const seqNum = parseInt(assignedRollNo.slice(3), 10) || 1;
-    const hallNumber = Math.ceil(seqNum / 30);
-    const deskNumber = ((seqNum - 1) % 30) + 1;
+    const isFemale =
+      (personalInfo.gender || '').toLowerCase() === 'female' ||
+      (personalInfo.gender || '').toLowerCase() === 'girl' ||
+      registrationId.startsWith('NILG');
+    const rawSeq = parseInt(assignedRollNo.slice(4), 10) || 1;
+    const candidateIndex = isFemale ? (rawSeq - 5000) : rawSeq;
+    const indexForSeating = candidateIndex > 0 ? candidateIndex : 1;
+    const hallNumber = Math.ceil(indexForSeating / 30);
+    const deskNumber = ((indexForSeating - 1) % 30) + 1;
 
     await db.generateOrReleaseAdmitCard({
       id: 'admit-' + newApplication.id,

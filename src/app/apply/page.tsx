@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
@@ -75,6 +75,7 @@ export default function ApplyPage() {
     applyingClass: 'Class 6',
     stream: '',
     panNumber: '',
+    apaarId: '',
     familyId: '',
     previousSchoolName: '',
     previousBoard: 'CBSE',
@@ -122,23 +123,24 @@ export default function ApplyPage() {
   // Calculate today's date formatted as YYYY-MM-DD for max DOB validation
   const todayString = new Date().toISOString().split('T')[0];
 
-  // Adjust study locations when gender or activeLocations change
+  // Adjust study locations and class when gender or activeLocations change
   useEffect(() => {
     if (formData.gender === 'Female') {
       setFormData((prev) => ({
         ...prev,
         firstPreference: 'Gurukul Nilokheri',
         secondPreference: '',
+        applyingClass: prev.applyingClass === 'Class 5' ? 'Class 6' : prev.applyingClass,
       }));
     } else {
-      const validBoys = ['Gurukul Jyotisar', 'Aryakulam Nilokheri'].filter((l) =>
+      const validBoys = ['Aryakulam Nilokheri', 'Gurukul Jyotisar'].filter((l) =>
         activeLocations.includes(l)
       );
-      const effectiveBoys = validBoys.length > 0 ? validBoys : ['Gurukul Jyotisar', 'Aryakulam Nilokheri'];
+      const effectiveBoys = validBoys.length > 0 ? validBoys : ['Aryakulam Nilokheri', 'Gurukul Jyotisar'];
       setFormData((prev) => {
         let first = prev.firstPreference;
         if (!effectiveBoys.includes(first) || first === 'Gurukul Nilokheri') {
-          first = effectiveBoys[0] || 'Gurukul Jyotisar';
+          first = effectiveBoys[0] || 'Aryakulam Nilokheri';
         }
         let second = prev.secondPreference;
         if (second && (!effectiveBoys.includes(second) || second === first || second === 'Gurukul Nilokheri')) {
@@ -231,6 +233,7 @@ export default function ApplyPage() {
                 category: app.personalInfo?.category || prev.category,
                 aadhaarNumber: app.personalInfo?.aadhaarNumber || prev.aadhaarNumber,
                 panNumber: app.personalInfo?.panNumber || prev.panNumber,
+                apaarId: app.personalInfo?.apaarId || prev.apaarId,
                 familyId: app.personalInfo?.familyId || prev.familyId,
                 previousSchoolName: app.personalInfo?.previousSchoolName || prev.previousSchoolName,
                 previousBoard: app.personalInfo?.previousBoard || prev.previousBoard,
@@ -432,7 +435,7 @@ export default function ApplyPage() {
         setError(aadhaarVal.error || 'Invalid Aadhaar Number');
         return;
       }
-      const classVal = validateClassAndStream(formData.applyingClass, formData.stream, formData.firstPreference);
+      const classVal = validateClassAndStream(formData.applyingClass, formData.stream, formData.firstPreference, formData.gender);
       if (!classVal.isValid) {
         setError(classVal.error || 'Invalid Class selection');
         return;
@@ -570,6 +573,7 @@ export default function ApplyPage() {
           category: formData.category,
           aadhaarNumber: formData.aadhaarNumber,
           panNumber: formData.panNumber || undefined,
+          apaarId: formData.apaarId || undefined,
           familyId: formData.familyId || undefined,
           previousSchoolName: formData.previousSchoolName,
           previousBoard: formData.previousBoard,
@@ -651,10 +655,10 @@ export default function ApplyPage() {
 
   const currentDistricts = INDIAN_STATES_AND_DISTRICTS[formData.state] || ['Other'];
 
-  const rawBoysActive = ['Gurukul Jyotisar', 'Aryakulam Nilokheri'].filter((l) =>
+  const rawBoysActive = ['Aryakulam Nilokheri', 'Gurukul Jyotisar'].filter((l) =>
     activeLocations.includes(l)
   );
-  const boysActiveLocations = rawBoysActive.length > 0 ? rawBoysActive : ['Gurukul Jyotisar', 'Aryakulam Nilokheri'];
+  const boysActiveLocations = rawBoysActive.length > 0 ? rawBoysActive : ['Aryakulam Nilokheri', 'Gurukul Jyotisar'];
 
   // SCREEN: Registration Confirmed Screen
   if (submittedApp) {
@@ -976,19 +980,21 @@ export default function ApplyPage() {
               </div>
 
               <div>
-                <label className="form-label">
-                  Gender <span className="text-rose-500">*</span>
+                <label className="form-label flex items-center justify-between">
+                  <span>
+                    Gender <span className="text-rose-500">*</span>
+                  </span>
                 </label>
-                <select
-                  name="gender"
-                  required
-                  value={formData.gender}
-                  onChange={handleChange}
-                  className="form-input-field"
-                >
-                  <option value="Male">Male</option>
-                  <option value="Female">Female</option>
-                </select>
+                <div className="relative">
+                  <select
+                    name="gender"
+                    disabled
+                    value={formData.gender}
+                    className="form-input-field bg-slate-100 text-slate-700 font-semibold cursor-not-allowed border-slate-300 opacity-90 shadow-none"
+                  >
+                    <option value={formData.gender}>{formData.gender}</option>
+                  </select>
+                </div>
               </div>
 
               <div>
@@ -1021,6 +1027,7 @@ export default function ApplyPage() {
                   onChange={handleChange}
                   className="form-input-field font-semibold"
                 >
+                  {formData.gender === 'Male' && <option value="Class 5">Class 5</option>}
                   <option value="Class 6">Class 6</option>
                   <option value="Class 7">Class 7</option>
                   <option value="Class 8">Class 8</option>
@@ -1129,6 +1136,21 @@ export default function ApplyPage() {
                   onChange={handleChange}
                   placeholder="Optional (if allotted)"
                   className="form-input-field"
+                />
+              </div>
+
+              <div>
+                <label className="form-label">
+                  APAAR ID (One Nation, One Student ID)
+                </label>
+                <input
+                  type="text"
+                  name="apaarId"
+                  maxLength={14}
+                  value={formData.apaarId}
+                  onChange={handleChange}
+                  placeholder="12-digit APAAR ID (if allotted)"
+                  className="form-input-field font-mono"
                 />
               </div>
 

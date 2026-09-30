@@ -270,20 +270,38 @@ export function getStreamsForCampus(campus?: string | null): string[] {
 export function validateClassAndStream(
   classApplying: string | undefined | null,
   stream?: string | null,
-  studyLocation?: string | null
+  studyLocation?: string | null,
+  gender?: string | null
 ): ValidationResult {
   if (!classApplying || typeof classApplying !== 'string' || !classApplying.trim()) {
     return { isValid: false, error: 'Class applying for is required.' };
   }
 
   const cleanClass = classApplying.replace(/^Class\s*/i, '').trim();
-  const allowedClasses = ['6', '7', '8', '9', '11'];
+  const isFemale = (gender || '').trim().toLowerCase() === 'female';
 
-  if (!allowedClasses.includes(cleanClass)) {
-    return {
-      isValid: false,
-      error: `Invalid Class '${classApplying}'. Applications are accepted ONLY for Classes 6, 7, 8, 9, and 11.`,
-    };
+  if (isFemale) {
+    const allowedGirlsClasses = ['6', '7', '8', '9', '11'];
+    if (!allowedGirlsClasses.includes(cleanClass)) {
+      if (cleanClass === '5') {
+        return {
+          isValid: false,
+          error: 'Class 5 admission is open for boys only. For girls, admissions are open for Classes 6, 7, 8, 9, and 11.',
+        };
+      }
+      return {
+        isValid: false,
+        error: `Invalid Class '${classApplying}'. For girls, applications are accepted for Classes 6, 7, 8, 9, and 11.`,
+      };
+    }
+  } else {
+    const allowedBoysClasses = ['5', '6', '7', '8', '9', '11'];
+    if (!allowedBoysClasses.includes(cleanClass)) {
+      return {
+        isValid: false,
+        error: `Invalid Class '${classApplying}'. Applications are accepted for Classes 5, 6, 7, 8, 9, and 11.`,
+      };
+    }
   }
 
   if (cleanClass === '11') {
@@ -572,9 +590,14 @@ export const OFFICIAL_FOOTER_ADDRESS = 'SIDHPUR MINOR, NIGDU ROAD, NILOKHERI 132
  * - Girls: Reporting Time 8:30 AM, Exam Center The Gurukul Nilokheri
  */
 export function getExamDetailsForGender(gender?: string, regNo?: string) {
+  const rollMatch = (regNo || '').trim().match(/^27\d{2}(\d{4,})$/);
+  const isFemaleFromRoll = rollMatch ? parseInt(rollMatch[1], 10) >= 5001 : false;
+
   const isFemale =
     (gender || '').trim().toLowerCase() === 'female' ||
-    (regNo || '').trim().toUpperCase().startsWith('NILG');
+    (gender || '').trim().toLowerCase() === 'girl' ||
+    (regNo || '').trim().toUpperCase().startsWith('NILG') ||
+    isFemaleFromRoll;
 
   if (isFemale) {
     return {

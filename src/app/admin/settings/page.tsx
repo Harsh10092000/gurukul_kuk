@@ -58,7 +58,7 @@ export default function AdminSettingsPage() {
     resultDeclarationDate: '2027-03-01',
     counselingStartDate: '2027-03-10',
     helplinePhone: '+91 7027849858 / 59',
-    helplineEmail: 'admissions@thegurukulnilokheri.com',
+    helplineEmail: 'thegurukulnilokheri@gmail.com',
     activeStudyLocations: ['Gurukul Nilokheri', 'Gurukul Jyotisar', 'Aryakulam Nilokheri'],
   });
 

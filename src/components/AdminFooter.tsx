@@ -75,7 +75,7 @@ export default function AdminFooter() {
               </div>
               <div className="flex items-center gap-2">
                 <Mail className="w-3.5 h-3.5 text-portal-gold shrink-0" />
-                <span>admissions@thegurukulnilokheri.com</span>
+                <span>thegurukulnilokheri@gmail.com</span>
               </div>
               <div className="flex items-center gap-1.5 pt-1 text-slate-400">
                 <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />

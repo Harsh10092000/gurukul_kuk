@@ -71,7 +71,7 @@ export default function Header() {
             <span className="hidden sm:inline text-slate-600">|</span>
             <span>Helpline: +91 7027849858 / 59</span>
             <span className="hidden md:inline text-slate-600">|</span>
-            <span className="hidden md:inline">admissions@thegurukulnilokheri.com</span>
+            <span className="hidden md:inline">thegurukulnilokheri@gmail.com</span>
           </div>
           <div className="flex items-center gap-3">
             <span className="bg-portal-gold/20 text-portal-gold px-2 py-0.5 rounded text-[11px] font-semibold font-mono">

@@ -128,7 +128,7 @@ export default function Footer() {
               Helpline: +91 7027849858 / 59
             </p>
             <p>
-              Email: admissions@thegurukulnilokheri.com
+              Email: thegurukulnilokheri@gmail.com
             </p>
             <p className="text-[11px] text-slate-500 pt-1">
               Office Hours: 9:00 AM – 4:00 PM (Monday to Saturday)

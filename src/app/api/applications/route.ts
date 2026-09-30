@@ -155,9 +155,9 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: locVal.error }, { status: 400 });
     }
 
-    // 5. Class & Stream (Stream availability checked against preferred campus)
+    // 5. Class & Stream (Stream availability checked against preferred campus, and gender eligibility)
     const finalStream = stream || academicInfo?.stream;
-    const classVal = validateClassAndStream(classApplying, finalStream, finalStudyPref.firstPreference);
+    const classVal = validateClassAndStream(classApplying, finalStream, finalStudyPref.firstPreference, gender);
     if (!classVal.isValid) {
       return NextResponse.json({ error: classVal.error }, { status: 400 });
     }
@@ -217,7 +217,7 @@ export async function POST(request: Request) {
 
     // 10. Generate Registration ID: NILB-xxxxx / NILG-xxxxx & Class-based Roll Number: 2706... / 2711...
     const registrationId = await db.getNextRegistrationNumber(gender as 'Male' | 'Female');
-    const assignedRollNo = await db.getNextRollNumber(classApplying);
+    const assignedRollNo = await db.getNextRollNumber(classApplying, gender);
 
     const newApp = await db.createApplication({
       userId: user.userId,
@@ -248,9 +248,15 @@ export async function POST(request: Request) {
     const settings = await db.getSettings();
     const examDetails = getExamDetailsForGender(personalInfo.gender, registrationId);
 
-    const seqNum = parseInt(assignedRollNo.slice(3), 10) || 1;
-    const hallNumber = Math.ceil(seqNum / 30);
-    const deskNumber = ((seqNum - 1) % 30) + 1;
+    const isFemale =
+      (personalInfo.gender || '').toLowerCase() === 'female' ||
+      (personalInfo.gender || '').toLowerCase() === 'girl' ||
+      registrationId.startsWith('NILG');
+    const rawSeq = parseInt(assignedRollNo.slice(4), 10) || 1;
+    const candidateIndex = isFemale ? (rawSeq - 5000) : rawSeq;
+    const indexForSeating = candidateIndex > 0 ? candidateIndex : 1;
+    const hallNumber = Math.ceil(indexForSeating / 30);
+    const deskNumber = ((indexForSeating - 1) % 30) + 1;
 
     await db.generateOrReleaseAdmitCard({
       id: 'admit-' + newApp.id,

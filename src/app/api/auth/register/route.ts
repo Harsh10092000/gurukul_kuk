@@ -21,9 +21,9 @@ export async function POST(request: Request) {
     const body = await request.json();
     const { name, email, phone, password } = body;
 
-    if (!name || !email || !phone) {
+    if (!name || !email) {
       return NextResponse.json(
-        { error: 'Candidate name, email address, and mobile number are required.' },
+        { error: 'Candidate name and email address are required.' },
         { status: 400 }
       );
     }
@@ -37,14 +37,17 @@ export async function POST(request: Request) {
       );
     }
 
-    // Strict 10-digit Indian Mobile Validation
-    const phoneClean = phone.replace(/\D/g, '').slice(-10);
-    const phoneRegex = /^[6-9]\d{9}$/;
-    if (!phoneRegex.test(phoneClean)) {
-      return NextResponse.json(
-        { error: 'Please enter a valid 10-digit Indian mobile number.' },
-        { status: 400 }
-      );
+    // Optional 10-digit Indian Mobile Validation if provided
+    let phoneClean = '';
+    if (phone) {
+      phoneClean = phone.replace(/\D/g, '').slice(-10);
+      const phoneRegex = /^[6-9]\d{9}$/;
+      if (phoneClean && !phoneRegex.test(phoneClean)) {
+        return NextResponse.json(
+          { error: 'Please enter a valid 10-digit Indian mobile number.' },
+          { status: 400 }
+        );
+      }
     }
 
     if (password && password.length < 6) {
@@ -54,11 +57,11 @@ export async function POST(request: Request) {
       );
     }
 
-    // Optional OTP verification if otp passed
+    // Email-based OTP verification
     if (body.otp) {
       const otpStore = (global as any)._gurukulOtps;
       const targetId = email.trim().toLowerCase();
-      const stored = otpStore ? (otpStore.get(targetId) || otpStore.get(phoneClean)) : null;
+      const stored = otpStore ? otpStore.get(targetId) : null;
       if (!stored || stored.otp !== body.otp.trim()) {
         return NextResponse.json(
           { error: 'Invalid or expired OTP verification code.' },
@@ -76,13 +79,15 @@ export async function POST(request: Request) {
       );
     }
 
-    // Enforce Unique Mobile Number per candidate (Duplicate mobile prevention)
-    const existingPhoneUser = await db.findUserByPhone(phoneClean);
-    if (existingPhoneUser) {
-      return NextResponse.json(
-        { error: `A candidate account with mobile number +91-${phoneClean} is already registered. Duplicate mobile registrations are strictly prohibited.` },
-        { status: 409 }
-      );
+    // Check unique phone only if phone was provided
+    if (phoneClean) {
+      const existingPhoneUser = await db.findUserByPhone(phoneClean);
+      if (existingPhoneUser) {
+        return NextResponse.json(
+          { error: `A candidate account with mobile number +91-${phoneClean} is already registered. Please sign in instead.` },
+          { status: 409 }
+        );
+      }
     }
 
     // Registration details verified (NO authentication cookie or official account created before ₹800 fee payment)

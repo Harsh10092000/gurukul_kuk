@@ -663,6 +663,10 @@ export default function ApplicantDashboard() {
                 <span className="font-mono text-slate-800 mt-0.5 block">{application.personalInfo?.panNumber || '—'}</span>
               </div>
               <div className="data-cell">
+                <span className="text-slate-500 block text-[10px] font-semibold uppercase tracking-wider">APAAR ID</span>
+                <span className="font-mono text-slate-800 mt-0.5 block">{application.personalInfo?.apaarId || '—'}</span>
+              </div>
+              <div className="data-cell">
                 <span className="text-slate-500 block text-[10px] font-semibold uppercase tracking-wider">Family ID</span>
                 <span className="font-mono text-slate-800 mt-0.5 block">{application.personalInfo?.familyId || '—'}</span>
               </div>
@@ -812,7 +816,7 @@ export default function ApplicantDashboard() {
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-slate-400 font-sans text-[11px]">Email:</span>
-                <span className="text-[11px]">admissions@thegurukulnilokheri.com</span>
+                <span className="text-[11px]">thegurukulnilokheri@gmail.com</span>
               </div>
             </div>
           </div>

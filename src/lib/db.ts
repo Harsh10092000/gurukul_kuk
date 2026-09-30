@@ -62,7 +62,7 @@ const DEFAULT_SETTINGS: SystemSettings = {
   resultDeclarationDate: '2027-03-01',
   counselingStartDate: '2027-03-10',
   helplinePhone: '+91 7027849858 / 59',
-  helplineEmail: 'admissions@thegurukulnilokheri.com',
+  helplineEmail: 'thegurukulnilokheri@gmail.com',
   activeStudyLocations: ['Gurukul Nilokheri', 'Gurukul Jyotisar', 'Aryakulam Nilokheri'],
 };
 
@@ -966,22 +966,40 @@ export const db = {
     return num.padStart(2, '0');
   },
 
-  async getNextRollNumber(classApplyingOrGender?: string): Promise<string> {
+  async getNextRollNumber(classApplyingOrGender?: string, genderParam?: string): Promise<string> {
     let classApplying = 'Class 6';
-    if (classApplyingOrGender && /\d/.test(classApplyingOrGender)) {
-      classApplying = classApplyingOrGender;
+    let gender = genderParam;
+
+    if (classApplyingOrGender) {
+      if (/\d/.test(classApplyingOrGender)) {
+        classApplying = classApplyingOrGender;
+      } else if (!gender) {
+        gender = classApplyingOrGender;
+      }
     }
+
     const classCode = this.getClassCode(classApplying);
+    const isFemale =
+      (gender || '').trim().toLowerCase() === 'female' ||
+      (gender || '').trim().toLowerCase() === 'girl' ||
+      (gender || '').trim().toUpperCase().startsWith('NILG');
+
+    // 8-Digit Roll Number Format: 27 + [classCode (2 digits)] + [4-digit sequence]
+    // Boys: starts from 0001 up to 5000 (Centre: Aryakulam Nilokheri)
+    // Girls: starts from 5001 up to 10000 (Centre: The Gurukul Nilokheri)
     const prefix = `27${classCode}`;
-    const regex = new RegExp(`^${prefix}(\\d+)$`);
-    let maxSeq = 0;
+    const regex = new RegExp(`^${prefix}(\\d{4,})$`);
+
+    const minSeq = isFemale ? 5000 : 0;
+    const maxLimit = isFemale ? 10000 : 5000;
+    let maxSeq = minSeq;
 
     const checkRoll = (val?: string | null) => {
       if (!val) return;
       const m = String(val).trim().match(regex);
       if (m && m[1]) {
         const num = parseInt(m[1], 10);
-        if (!isNaN(num) && num > maxSeq) {
+        if (!isNaN(num) && num > maxSeq && num <= maxLimit && (isFemale ? num >= 5001 : num <= 5000)) {
           maxSeq = num;
         }
       }
@@ -1053,7 +1071,7 @@ export const db = {
       id,
       registrationNumber: regNumber,
       applicationNumber: regNumber,
-      rollNumber: undefined, // Roll number is strictly deferred per user instructions
+      rollNumber: app.rollNumber || undefined,
       studyLocationPref: studyLocation,
       examCentrePref: studyLocation,
       amountPaid: app.amountPaid || 800,

@@ -44,44 +44,32 @@ export async function POST(req: Request) {
       let recipientPhone = (phone || '').replace(/\D/g, '').slice(-10);
       let recipientName = (name || '').trim();
 
-      // Case A: New Registration
+      // Case A: New Registration (Strictly Email Verification Only)
       if (actionType === 'register') {
-        if (email) {
-          const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
-          if (!emailRegex.test(email.trim())) {
-            return NextResponse.json(
-              { error: 'Invalid email address format. Example: candidate@example.com' },
-              { status: 400 }
-            );
-          }
-
-          const existingEmailUser = await db.findUserByEmail(email.trim().toLowerCase());
-          if (existingEmailUser) {
-            return NextResponse.json(
-              { error: 'An account with this email address already exists. Please sign in instead.' },
-              { status: 409 }
-            );
-          }
+        if (!email || !email.trim()) {
+          return NextResponse.json(
+            { error: 'Email address is required for registration verification.' },
+            { status: 400 }
+          );
         }
 
-        if (phone) {
-          const phoneClean = phone.replace(/\D/g, '').slice(-10);
-          const phoneRegex = /^[6-9]\d{9}$/;
-          if (!phoneRegex.test(phoneClean)) {
-            return NextResponse.json(
-              { error: 'Invalid mobile number. Must be a valid 10-digit Indian mobile number.' },
-              { status: 400 }
-            );
-          }
-
-          const existingPhoneUser = await db.findUserByPhone(phoneClean);
-          if (existingPhoneUser) {
-            return NextResponse.json(
-              { error: `Mobile number +91-${phoneClean} is already registered. Each candidate must have a unique mobile number. Please sign in instead.` },
-              { status: 409 }
-            );
-          }
+        const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+        if (!emailRegex.test(email.trim())) {
+          return NextResponse.json(
+            { error: 'Invalid email address format. Example: candidate@example.com' },
+            { status: 400 }
+          );
         }
+
+        const existingEmailUser = await db.findUserByEmail(email.trim().toLowerCase());
+        if (existingEmailUser) {
+          return NextResponse.json(
+            { error: 'An account with this email address already exists. Please sign in instead.' },
+            { status: 409 }
+          );
+        }
+
+        recipientPhone = ''; // Remove mobile verification from registration flow
       } 
       // Case B: Account Recovery / Forgot Password / Verification
       else {

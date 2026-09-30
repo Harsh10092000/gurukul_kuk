@@ -160,6 +160,10 @@ export default function AdmissionFormView({
                   <span className="font-mono font-semibold">{application.personalInfo?.panNumber || '—'}</span>
                 </div>
                 <div>
+                  <span className="text-slate-600 block text-[8.5px]">APAAR ID:</span>
+                  <span className="font-mono font-semibold">{application.personalInfo?.apaarId || '—'}</span>
+                </div>
+                <div>
                   <span className="text-slate-600 block text-[8.5px]">Family ID / PPP:</span>
                   <span className="font-mono font-semibold">{application.personalInfo?.familyId || '—'}</span>
                 </div>
