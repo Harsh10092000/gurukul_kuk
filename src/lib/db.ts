@@ -1395,11 +1395,34 @@ export const db = {
 
   async updateApplicationDetails(id: string, updates: Partial<Application>): Promise<Application | null> {
     const now = new Date().toISOString();
-    const store = initFallbackFile();
-    const idx = store.applications.findIndex((a) => a.id === id);
-    if (idx === -1) return null;
 
-    const existing = store.applications[idx];
+    if (useFallbackStorage || !pool) {
+      const store = initFallbackFile();
+      const idx = store.applications.findIndex((a) => a.id === id || a.applicationNumber === id || a.registrationNumber === id);
+      if (idx === -1) return null;
+
+      const existing = store.applications[idx];
+      const updated: Application = {
+        ...existing,
+        ...updates,
+        personalInfo: updates.personalInfo ? { ...existing.personalInfo, ...updates.personalInfo } : existing.personalInfo,
+        parentInfo: updates.parentInfo ? { ...existing.parentInfo, ...updates.parentInfo } : existing.parentInfo,
+        addressInfo: updates.addressInfo ? { ...existing.addressInfo, ...updates.addressInfo } : existing.addressInfo,
+        academicInfo: updates.academicInfo ? { ...existing.academicInfo, ...updates.academicInfo } : existing.academicInfo,
+        examCentrePref: updates.examCentrePref ? { ...existing.examCentrePref, ...updates.examCentrePref } : existing.examCentrePref,
+        documents: updates.documents ? { ...existing.documents, ...updates.documents } : existing.documents,
+        updatedAt: now,
+      };
+
+      store.applications[idx] = updated;
+      saveFallbackStore(store);
+      return updated;
+    }
+
+    // Database mode (MySQL)
+    const existing = await this.getApplicationById(id);
+    if (!existing) return null;
+
     const updated: Application = {
       ...existing,
       ...updates,
@@ -1412,29 +1435,27 @@ export const db = {
       updatedAt: now,
     };
 
-    store.applications[idx] = updated;
-    saveFallbackStore(store);
-
-    if (pool && !useFallbackStorage) {
-      try {
-        await pool.query(
-          `UPDATE applications SET
-            status = ?, remarks = ?, personal_info = ?, academic_info = ?,
-            documents = ?, updated_at = ?
-           WHERE id = ?`,
-          [
-            updated.status,
-            updated.remarks || null,
-            JSON.stringify(updated.personalInfo),
-            JSON.stringify(updated.academicInfo),
-            JSON.stringify(updated.documents || {}),
-            now,
-            id,
-          ]
-        );
-      } catch (e) {
-        console.warn('MySQL updateApplicationDetails error (fallback saved):', e);
-      }
+    try {
+      await pool.query(
+        `UPDATE applications SET
+          status = ?, remarks = ?, personal_info = ?, academic_info = ?,
+          documents = ?, updated_at = ?
+         WHERE id = ? OR application_number = ? OR registration_number = ?`,
+        [
+          updated.status,
+          updated.remarks || null,
+          JSON.stringify(updated.personalInfo),
+          JSON.stringify(updated.academicInfo),
+          JSON.stringify(updated.documents || {}),
+          now,
+          existing.id,
+          existing.applicationNumber || existing.id,
+          existing.registrationNumber || existing.id,
+        ]
+      );
+    } catch (e) {
+      console.warn('MySQL updateApplicationDetails error:', e);
+      return null;
     }
 
     return updated;

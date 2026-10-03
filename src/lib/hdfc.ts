@@ -31,6 +31,13 @@ let cachedJuspayInstance: any = null;
  * Resolve RSA Private Key from either environment variable or file
  */
 function getPrivateKey(): string {
+  if (process.env.HDFC_PRIVATE_KEY_B64) {
+    try {
+      const decoded = Buffer.from(process.env.HDFC_PRIVATE_KEY_B64, 'base64').toString('utf8');
+      if (decoded.includes('PRIVATE KEY')) return decoded;
+    } catch { }
+  }
+
   if (process.env.HDFC_PRIVATE_KEY && process.env.HDFC_PRIVATE_KEY.includes('PRIVATE KEY')) {
     return process.env.HDFC_PRIVATE_KEY.replace(/\\n/g, '\n');
   }
@@ -48,13 +55,20 @@ function getPrivateKey(): string {
     return fs.readFileSync(fallbackPath, 'utf8');
   }
 
-  throw new Error(`HDFC SmartGateway: Private key file not found at ${primaryPath} or ${fallbackPath}`);
+  throw new Error(`HDFC SmartGateway: Private key file not found. Set HDFC_PRIVATE_KEY or HDFC_PRIVATE_KEY_B64 in environment variables, or provide certs/privateKey.pem.`);
 }
 
 /**
  * Resolve RSA Public Key from either environment variable or file
  */
 function getPublicKey(): string {
+  if (process.env.HDFC_PUBLIC_KEY_B64) {
+    try {
+      const decoded = Buffer.from(process.env.HDFC_PUBLIC_KEY_B64, 'base64').toString('utf8');
+      if (decoded.includes('PUBLIC KEY')) return decoded;
+    } catch { }
+  }
+
   if (process.env.HDFC_PUBLIC_KEY && process.env.HDFC_PUBLIC_KEY.includes('PUBLIC KEY')) {
     return process.env.HDFC_PUBLIC_KEY.replace(/\\n/g, '\n');
   }
@@ -72,7 +86,7 @@ function getPublicKey(): string {
     return fs.readFileSync(fallbackPath, 'utf8');
   }
 
-  throw new Error(`HDFC SmartGateway: Public key file not found at ${primaryPath} or ${fallbackPath}`);
+  throw new Error(`HDFC SmartGateway: Public key file not found. Set HDFC_PUBLIC_KEY or HDFC_PUBLIC_KEY_B64 in Vercel environment variables, or provide certs/key_b826ce4454a34986969f40123a1cb26e.pem.`);
 }
 
 /**
