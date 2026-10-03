@@ -166,7 +166,22 @@ export default function AdmitCardView({ admitCard }: AdmitCardViewProps) {
     (admitCard.gender || '').toLowerCase() === 'female' ||
     (admitCard.gender || '').toLowerCase() === 'girl' ||
     (admitCard.applicationNumber || '').startsWith('NILG') ||
-    (admitCard.rollNumber ? parseInt((admitCard.rollNumber.match(/^27\d{2}(\d{4,})$/) || [])[1] || '0', 10) >= 5001 : false);
+    (() => {
+      const m = (admitCard.rollNumber || '').trim().match(/^27(\d{2})(\d{4,})$/);
+      if (!m) return false;
+      const classCode = m[1];
+      const seq = parseInt(m[2], 10);
+      if (classCode === '11') {
+        return (seq >= 1001 && seq <= 2000) ||
+               (seq >= 3001 && seq <= 4000) ||
+               (seq >= 5001 && seq <= 6000) ||
+               (seq >= 7001 && seq <= 8000);
+      }
+      return seq >= 5001;
+    })();
+
+  const headerTitle = isGirl ? 'THE GURUKUL NILOKHERI' : 'THE GURUKUL';
+  const headerSubtitle = isGirl ? '(Girls)' : '(Aryakulam Nilokheri/ Gurukul Jyotisar)';
 
   const instituteName = isGirl
     ? 'The Gurukul Nilokheri (Girls Wing)'
@@ -242,10 +257,10 @@ export default function AdmitCardView({ admitCard }: AdmitCardViewProps) {
           {/* Center Institutional Details */}
           <div className="flex-1 text-center px-1">
             <h1 className="text-xl sm:text-2xl print:text-lg font-black tracking-tight uppercase leading-none font-serif text-slate-900">
-              THE GURUKUL
+              {headerTitle}
             </h1>
-            <p className="text-xs sm:text-sm print:text-xs font-bold text-slate-900 mt-1 print:mt-0.5 uppercase tracking-wide">
-              {instituteName}
+            <p className="text-xs sm:text-sm print:text-xs font-bold text-slate-900 mt-1 print:mt-0.5 tracking-wide">
+              {headerSubtitle}
             </p>
             <p className="text-[11px] sm:text-xs print:text-[10px] font-semibold text-slate-700 mt-0.5">
               Affiliated to C.B.S.E. New Delhi up to 10+2 Level

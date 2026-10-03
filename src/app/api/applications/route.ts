@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { getCurrentUser } from '@/lib/auth';
-import { sendNotification } from '@/lib/notifications';
+import { sendNotification, ADMIN_NOTIFICATION_EMAIL } from '@/lib/notifications';
 import { computeApplicationMetrics } from '@/lib/applicationMetrics';
 import {
   validateName,
@@ -217,7 +217,7 @@ export async function POST(request: Request) {
 
     // 10. Generate Registration ID: NILB-xxxxx / NILG-xxxxx & Class-based Roll Number: 2706... / 2711...
     const registrationId = await db.getNextRegistrationNumber(gender as 'Male' | 'Female');
-    const assignedRollNo = await db.getNextRollNumber(classApplying, gender);
+    const assignedRollNo = await db.getNextRollNumber(classApplying, gender, finalStream);
 
     const newApp = await db.createApplication({
       userId: user.userId,
@@ -332,9 +332,9 @@ export async function POST(request: Request) {
       console.error('Failed to send candidate fee receipt email:', receiptErr);
     }
 
-    // 2. Send ONE administrative registration & payment alert with candidate details to anshumiglaniji08@gmail.com
+    // 2. Send ONE administrative registration & payment alert with candidate details to admin
     await sendNotification({
-      to: 'anshumiglaniji08@gmail.com',
+      to: ADMIN_NOTIFICATION_EMAIL,
       name: 'Admissions Desk',
       type: 'ADMIN_NEW_REGISTRATION_ALERT',
       data: {

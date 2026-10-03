@@ -33,6 +33,18 @@ export default function RegisterPage() {
     message?: string;
   } | null>(null);
 
+  // Check if user is already authenticated -> redirect to dashboard immediately
+  React.useEffect(() => {
+    fetch('/api/auth/me')
+      .then((r) => r.json())
+      .then((data) => {
+        if (data?.user) {
+          window.location.replace(data.user.role === 'admin' ? '/admin/dashboard' : '/dashboard');
+        }
+      })
+      .catch(() => {});
+  }, []);
+
   // Check schedule on load
   React.useEffect(() => {
     fetch('/api/schedule')

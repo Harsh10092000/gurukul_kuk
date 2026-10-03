@@ -248,23 +248,20 @@ export function validateDob(dob: string | undefined | null): ValidationResult {
 }
 
 export const CAMPUS_STREAMS_MAP: Record<string, string[]> = {
-  'Gurukul Nilokheri': ['Commerce', 'Humanities', 'Non Medical', 'Medical'],
-  'Gurukul Jyotisar': ['Commerce', 'Non Medical', 'Medical'],
-  'Aryakulam Nilokheri': ['Commerce', 'Non Medical', 'Medical'],
+  'Gurukul Nilokheri': ['Non Medical', 'Medical', 'Commerce', 'Humanities'],
+  'Gurukul Jyotisar': ['Non Medical', 'Medical', 'Commerce', 'Humanities'],
+  'Aryakulam Nilokheri': ['Non Medical', 'Medical', 'Commerce', 'Humanities'],
 };
 
 export function getStreamsForCampus(campus?: string | null): string[] {
-  if (!campus) return ['Commerce', 'Humanities', 'Non Medical', 'Medical'];
-  return CAMPUS_STREAMS_MAP[campus] || ['Commerce', 'Non Medical', 'Medical'];
+  return ['Non Medical', 'Medical', 'Commerce', 'Humanities'];
 }
 
 /**
  * Validate Class and Stream
  * - Allowed classes: 6, 7, 8, 9, 11 (or 'Class 6', 'Class 7', 'Class 8', 'Class 9', 'Class 11')
  * - Stream:
- *   - For Class 11:
- *     - Gurukul Nilokheri: Commerce, Humanities, Non Medical, Medical
- *     - Gurukul Jyotisar & Aryakulam Nilokheri: Commerce, Non Medical, Medical
+ *   - For Class 11: Non Medical, Medical, Commerce, Humanities
  *   - For Class 6, 7, 8, 9: Stream must NOT be selected
  */
 export function validateClassAndStream(
@@ -305,8 +302,7 @@ export function validateClassAndStream(
   }
 
   if (cleanClass === '11') {
-    const cleanStream = (stream || '').trim();
-    const cleanLocation = (studyLocation || '').trim();
+    let cleanStream = (stream || '').trim();
 
     if (!cleanStream) {
       return {
@@ -315,18 +311,15 @@ export function validateClassAndStream(
       };
     }
 
-    if (cleanStream === 'Humanities' && cleanLocation && cleanLocation !== 'Gurukul Nilokheri') {
-      return {
-        isValid: false,
-        error: `Humanities stream is offered exclusively at The Gurukul Nilokheri campus. It is not available for ${cleanLocation}.`,
-      };
+    if (cleanStream.toLowerCase() === 'arts') {
+      cleanStream = 'Humanities';
     }
 
-    const allAllowed = ['Non Medical', 'Medical', 'Commerce', 'Humanities', 'Arts'];
+    const allAllowed = ['Non Medical', 'Medical', 'Commerce', 'Humanities'];
     if (!allAllowed.includes(cleanStream)) {
       return {
         isValid: false,
-        error: `Invalid stream '${cleanStream}'. Allowed streams: Commerce, Humanities, Non Medical, Medical.`,
+        error: `Invalid stream '${cleanStream}'. Allowed streams: Non Medical, Medical, Commerce, Humanities.`,
       };
     }
   } else {
@@ -590,8 +583,20 @@ export const OFFICIAL_FOOTER_ADDRESS = 'SIDHPUR MINOR, NIGDU ROAD, NILOKHERI 132
  * - Girls: Reporting Time 8:30 AM, Exam Center The Gurukul Nilokheri
  */
 export function getExamDetailsForGender(gender?: string, regNo?: string) {
-  const rollMatch = (regNo || '').trim().match(/^27\d{2}(\d{4,})$/);
-  const isFemaleFromRoll = rollMatch ? parseInt(rollMatch[1], 10) >= 5001 : false;
+  const rollMatch = (regNo || '').trim().match(/^27(\d{2})(\d{4,})$/);
+  let isFemaleFromRoll = false;
+  if (rollMatch) {
+    const classCode = rollMatch[1];
+    const seq = parseInt(rollMatch[2], 10);
+    if (classCode === '11') {
+      isFemaleFromRoll = (seq >= 1001 && seq <= 2000) ||
+                         (seq >= 3001 && seq <= 4000) ||
+                         (seq >= 5001 && seq <= 6000) ||
+                         (seq >= 7001 && seq <= 8000);
+    } else {
+      isFemaleFromRoll = seq >= 5001;
+    }
+  }
 
   const isFemale =
     (gender || '').trim().toLowerCase() === 'female' ||

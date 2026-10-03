@@ -11,7 +11,8 @@ import {
   SystemSettings,
   AdminNotification,
   ContactEnquiry,
-  ContactEnquiryStatus
+  ContactEnquiryStatus,
+  PaymentOrderRecord
 } from './types';
 import { getExamDetailsForGender } from './validations';
 
@@ -44,6 +45,7 @@ interface FallbackStore {
   settings: SystemSettings;
   notifications?: AdminNotification[];
   enquiries?: ContactEnquiry[];
+  paymentOrders?: PaymentOrderRecord[];
   tempApplications?: { [sessionId: string]: any };
 }
 
@@ -107,6 +109,10 @@ function initFallbackFile(): FallbackStore {
       }
       if (!parsed.enquiries) {
         parsed.enquiries = [];
+        changed = true;
+      }
+      if (!parsed.paymentOrders) {
+        parsed.paymentOrders = [];
         changed = true;
       }
       if (!parsed.tempApplications) {
@@ -468,6 +474,25 @@ export async function initDatabase(): Promise<void> {
         source VARCHAR(32) DEFAULT 'public_contact',
         status VARCHAR(32) DEFAULT 'new',
         admin_remarks TEXT,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+      );
+    `);
+
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS payment_orders (
+        id VARCHAR(64) PRIMARY KEY,
+        order_id VARCHAR(64) UNIQUE NOT NULL,
+        amount DECIMAL(10, 2) NOT NULL DEFAULT 800.00,
+        currency VARCHAR(10) NOT NULL DEFAULT 'INR',
+        status VARCHAR(32) NOT NULL DEFAULT 'PENDING',
+        customer_email VARCHAR(255),
+        customer_phone VARCHAR(32),
+        customer_id VARCHAR(64),
+        application_id VARCHAR(64),
+        registration_number VARCHAR(64),
+        application_payload JSON,
+        payment_response JSON,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
       );
@@ -966,9 +991,10 @@ export const db = {
     return num.padStart(2, '0');
   },
 
-  async getNextRollNumber(classApplyingOrGender?: string, genderParam?: string): Promise<string> {
+  async getNextRollNumber(classApplyingOrGender?: string, genderParam?: string, streamParam?: string): Promise<string> {
     let classApplying = 'Class 6';
     let gender = genderParam;
+    let stream = streamParam;
 
     if (classApplyingOrGender) {
       if (/\d/.test(classApplyingOrGender)) {
@@ -984,14 +1010,45 @@ export const db = {
       (gender || '').trim().toLowerCase() === 'girl' ||
       (gender || '').trim().toUpperCase().startsWith('NILG');
 
-    // 8-Digit Roll Number Format: 27 + [classCode (2 digits)] + [4-digit sequence]
-    // Boys: starts from 0001 up to 5000 (Centre: Aryakulam Nilokheri)
-    // Girls: starts from 5001 up to 10000 (Centre: The Gurukul Nilokheri)
     const prefix = `27${classCode}`;
     const regex = new RegExp(`^${prefix}(\\d{4,})$`);
 
-    const minSeq = isFemale ? 5000 : 0;
-    const maxLimit = isFemale ? 10000 : 5000;
+    let minSeq = 0;
+    let maxLimit = 5000;
+
+    if (classCode === '11') {
+      // Class 11 Stream-wise and Gender-wise Roll Number ranges:
+      // Non Medical: Boys 0001 - 1000 (starts 27110001), Girls 1001 - 2000 (starts 27111001)
+      // Medical:     Boys 2001 - 3000 (starts 27112001), Girls 3001 - 4000 (starts 27113001)
+      // Commerce:    Boys 4001 - 5000 (starts 27114001), Girls 5001 - 6000 (starts 27115001)
+      // Humanities:  Boys 6001 - 7000 (starts 27116001), Girls 7001 - 8000 (starts 27117001)
+      const normStream = (stream || '').trim().toLowerCase().replace(/[^a-z]/g, '');
+
+      if (normStream.includes('nonmed')) {
+        minSeq = isFemale ? 1000 : 0;
+        maxLimit = isFemale ? 2000 : 1000;
+      } else if (normStream.includes('med')) {
+        minSeq = isFemale ? 3000 : 2000;
+        maxLimit = isFemale ? 4000 : 3000;
+      } else if (normStream.includes('com')) {
+        minSeq = isFemale ? 5000 : 4000;
+        maxLimit = isFemale ? 6000 : 5000;
+      } else if (normStream.includes('human') || normStream.includes('art')) {
+        minSeq = isFemale ? 7000 : 6000;
+        maxLimit = isFemale ? 8000 : 7000;
+      } else {
+        // Fallback default: Non Medical range
+        minSeq = isFemale ? 1000 : 0;
+        maxLimit = isFemale ? 2000 : 1000;
+      }
+    } else {
+      // Other classes (5, 6, 7, 8, 9, 10):
+      // Boys: starts from 0001 up to 5000 (Centre: Aryakulam Nilokheri)
+      // Girls: starts from 5001 up to 10000 (Centre: The Gurukul Nilokheri)
+      minSeq = isFemale ? 5000 : 0;
+      maxLimit = isFemale ? 10000 : 5000;
+    }
+
     let maxSeq = minSeq;
 
     const checkRoll = (val?: string | null) => {
@@ -999,7 +1056,7 @@ export const db = {
       const m = String(val).trim().match(regex);
       if (m && m[1]) {
         const num = parseInt(m[1], 10);
-        if (!isNaN(num) && num > maxSeq && num <= maxLimit && (isFemale ? num >= 5001 : num <= 5000)) {
+        if (!isNaN(num) && num > maxSeq && num <= maxLimit && num > minSeq) {
           maxSeq = num;
         }
       }
@@ -1009,7 +1066,7 @@ export const db = {
       const store = initFallbackFile();
       (store.admitCards || []).forEach(c => checkRoll(c.rollNumber));
       (store.applications || []).forEach(a => checkRoll(a.rollNumber));
-      const nextSeq = maxSeq + 1;
+      const nextSeq = Math.min(maxSeq + 1, maxLimit);
       return `${prefix}${String(nextSeq).padStart(4, '0')}`;
     }
 
@@ -1018,10 +1075,10 @@ export const db = {
       const [appRows]: any = await pool.query('SELECT roll_number FROM applications WHERE roll_number LIKE ?', [`${prefix}%`]);
       admitRows.forEach((r: any) => checkRoll(r.roll_number));
       appRows.forEach((r: any) => checkRoll(r.roll_number));
-      const nextSeq = maxSeq + 1;
+      const nextSeq = Math.min(maxSeq + 1, maxLimit);
       return `${prefix}${String(nextSeq).padStart(4, '0')}`;
     } catch {
-      const nextSeq = maxSeq + 1;
+      const nextSeq = Math.min(maxSeq + 1, maxLimit);
       return `${prefix}${String(nextSeq).padStart(4, '0')}`;
     }
   },
@@ -1074,7 +1131,7 @@ export const db = {
       rollNumber: app.rollNumber || undefined,
       studyLocationPref: studyLocation,
       examCentrePref: studyLocation,
-      amountPaid: app.amountPaid || 800,
+      amountPaid: (app.amountPaid && app.amountPaid >= 500) ? app.amountPaid : 800,
       personalInfo: {
         ...app.personalInfo,
         fullName: candidateName,
@@ -2209,6 +2266,142 @@ export const db = {
     }
 
     return updated;
+  },
+
+  async createPaymentOrderRecord(record: Omit<PaymentOrderRecord, 'id' | 'createdAt' | 'updatedAt'>): Promise<PaymentOrderRecord> {
+    const store = initFallbackFile();
+    if (!store.paymentOrders) store.paymentOrders = [];
+    const id = 'pord-' + Date.now() + '-' + Math.random().toString(36).substring(2, 7);
+    const now = new Date().toISOString();
+
+    const newRecord: PaymentOrderRecord = {
+      ...record,
+      id,
+      amount: record.amount !== undefined ? record.amount : 1,
+      currency: record.currency || 'INR',
+      status: record.status || 'PENDING',
+      createdAt: now,
+      updatedAt: now,
+    };
+
+    store.paymentOrders.push(newRecord);
+    saveFallbackStore(store);
+
+    if (pool && !useFallbackStorage) {
+      try {
+        await pool.query(
+          `INSERT INTO payment_orders (
+            id, order_id, amount, currency, status, customer_email,
+            customer_phone, customer_id, application_id, registration_number,
+            application_payload, payment_response, created_at, updated_at
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          [
+            newRecord.id,
+            newRecord.orderId,
+            newRecord.amount,
+            newRecord.currency,
+            newRecord.status,
+            newRecord.customerEmail || null,
+            newRecord.customerPhone || null,
+            newRecord.customerId || null,
+            newRecord.applicationId || null,
+            newRecord.registrationNumber || null,
+            newRecord.applicationPayload ? JSON.stringify(newRecord.applicationPayload) : null,
+            newRecord.paymentResponse ? JSON.stringify(newRecord.paymentResponse) : null,
+            now,
+            now,
+          ]
+        );
+      } catch (e) {
+        console.warn('MySQL createPaymentOrderRecord error:', e);
+      }
+    }
+
+    return newRecord;
+  },
+
+  async getPaymentOrderByOrderId(orderId: string): Promise<PaymentOrderRecord | null> {
+    if (!orderId) return null;
+
+    if (pool && !useFallbackStorage) {
+      try {
+        const [rows]: any = await pool.query('SELECT * FROM payment_orders WHERE order_id = ?', [orderId]);
+        if (rows && rows.length > 0) {
+          const r = rows[0];
+          return {
+            id: r.id,
+            orderId: r.order_id,
+            amount: parseFloat(r.amount),
+            currency: r.currency,
+            status: r.status,
+            customerEmail: r.customer_email,
+            customerPhone: r.customer_phone,
+            customerId: r.customer_id,
+            applicationId: r.application_id,
+            registrationNumber: r.registration_number,
+            applicationPayload: typeof r.application_payload === 'string' ? JSON.parse(r.application_payload) : r.application_payload,
+            paymentResponse: typeof r.payment_response === 'string' ? JSON.parse(r.payment_response) : r.payment_response,
+            createdAt: r.created_at ? new Date(r.created_at).toISOString() : new Date().toISOString(),
+            updatedAt: r.updated_at ? new Date(r.updated_at).toISOString() : new Date().toISOString(),
+          };
+        }
+      } catch (e) {
+        console.warn('MySQL getPaymentOrderByOrderId error:', e);
+      }
+    }
+
+    const store = initFallbackFile();
+    if (!store.paymentOrders) return null;
+    return store.paymentOrders.find(p => p.orderId === orderId) || null;
+  },
+
+  async updatePaymentOrderRecord(orderId: string, updates: Partial<PaymentOrderRecord>): Promise<PaymentOrderRecord | null> {
+    const now = new Date().toISOString();
+    const store = initFallbackFile();
+    if (!store.paymentOrders) store.paymentOrders = [];
+    const idx = store.paymentOrders.findIndex(p => p.orderId === orderId);
+
+    let updatedRecord: PaymentOrderRecord | null = null;
+    if (idx !== -1) {
+      store.paymentOrders[idx] = {
+        ...store.paymentOrders[idx],
+        ...updates,
+        updatedAt: now,
+      };
+      updatedRecord = store.paymentOrders[idx];
+      saveFallbackStore(store);
+    }
+
+    if (pool && !useFallbackStorage) {
+      try {
+        const setClauses: string[] = ['updated_at = ?'];
+        const values: any[] = [now];
+
+        if (updates.status !== undefined) {
+          setClauses.push('status = ?');
+          values.push(updates.status);
+        }
+        if (updates.applicationId !== undefined) {
+          setClauses.push('application_id = ?');
+          values.push(updates.applicationId);
+        }
+        if (updates.registrationNumber !== undefined) {
+          setClauses.push('registration_number = ?');
+          values.push(updates.registrationNumber);
+        }
+        if (updates.paymentResponse !== undefined) {
+          setClauses.push('payment_response = ?');
+          values.push(JSON.stringify(updates.paymentResponse));
+        }
+
+        values.push(orderId);
+        await pool.query(`UPDATE payment_orders SET ${setClauses.join(', ')} WHERE order_id = ?`, values);
+      } catch (e) {
+        console.warn('MySQL updatePaymentOrderRecord error:', e);
+      }
+    }
+
+    return updatedRecord || (await this.getPaymentOrderByOrderId(orderId));
   },
 };
 

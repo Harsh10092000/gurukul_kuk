@@ -63,6 +63,19 @@ export default function ApplicantDashboard() {
     onConfirm: () => { },
   });
 
+  // Lock browser history on dashboard: user cannot go back to register/apply form; must logout to exit
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    window.history.pushState(null, '', window.location.href);
+    const handlePopState = () => {
+      window.history.pushState(null, '', window.location.href);
+    };
+    window.addEventListener('popstate', handlePopState);
+    return () => {
+      window.removeEventListener('popstate', handlePopState);
+    };
+  }, []);
+
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const params = new URLSearchParams(window.location.search);
@@ -217,10 +230,10 @@ export default function ApplicantDashboard() {
           </div>
           <div className="max-w-md mx-auto space-y-2">
             <h2 className="text-lg font-bold text-slate-900">
-              No Admission Form Submitted Yet
+              No Application Submitted Yet
             </h2>
             <p className="text-xs text-slate-600 leading-relaxed">
-              Dear <strong className="text-slate-900">{currentUser?.name || 'Applicant'}</strong>, your candidate account is active. Please complete your online admission application, upload verification documents, and pay the entrance fee to receive your permanent Registration Number and Admit Card.
+              Dear <strong className="text-slate-900">{currentUser?.name || 'Applicant'}</strong>, your candidate account is active. Please complete your online application, upload verification documents, and pay the entrance fee to receive your permanent Registration Number and Admit Card.
             </p>
           </div>
           <div className="pt-2 flex justify-center">
@@ -228,7 +241,7 @@ export default function ApplicantDashboard() {
               href="/apply"
               className="btn-primary text-xs px-6 py-2.5"
             >
-              Begin Admission Form 2027-28
+              Begin Application 2027-28
             </Link>
           </div>
         </div>
@@ -631,7 +644,10 @@ export default function ApplicantDashboard() {
               <div className="data-cell">
                 <span className="text-slate-500 block text-[10px] font-semibold uppercase tracking-wider">Class Seeking</span>
                 <span className="font-bold text-sm text-slate-900 mt-0.5 block">
-                  Class {application.classApplying}{application.stream ? ` (${application.stream})` : ''}
+                  {(application.classApplying || '').toLowerCase().startsWith('class')
+                    ? application.classApplying
+                    : `Class ${application.classApplying}`}
+                  {application.stream ? ` (${application.stream})` : ''}
                 </span>
               </div>
               <div className="data-cell">
@@ -758,7 +774,7 @@ export default function ApplicantDashboard() {
             <div className="p-4 rounded-xl bg-slate-50 border border-slate-200/80 text-center space-y-1">
               <span className="text-[10px] uppercase font-bold text-slate-500 tracking-wider">Total Entrance Fee</span>
               <div className="text-2xl font-black text-slate-900 font-mono">
-                ₹{application.amountPaid || 800}.00
+                ₹800.00
               </div>
               <span className="text-[11px] text-emerald-700 font-semibold block">
                 Paid Successfully
@@ -778,7 +794,7 @@ export default function ApplicantDashboard() {
               </div>
               <div className="flex justify-between items-center py-1 border-b border-slate-100">
                 <span className="text-slate-500">Payment Gateway</span>
-                <span className="text-slate-800 font-medium">Online Verified (Razorpay)</span>
+                <span className="text-slate-800 font-medium">Online Verified (HDFC SmartGateway)</span>
               </div>
               <div className="flex justify-between items-center py-1">
                 <span className="text-slate-500">Academic Session</span>

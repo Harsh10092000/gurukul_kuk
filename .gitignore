@@ -52,6 +52,9 @@ jspm_packages/
 .env.test.local
 .env.production.local
 !.env.example
+*.pem
+*.key
+certs/
 
 # Next.js build output
 .next

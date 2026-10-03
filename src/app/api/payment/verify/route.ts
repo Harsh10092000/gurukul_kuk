@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { getCurrentUser, signToken, getAuthCookieOptions, hashPassword } from '@/lib/auth';
-import { sendNotification } from '@/lib/notifications';
+import { sendNotification, ADMIN_NOTIFICATION_EMAIL } from '@/lib/notifications';
 import {
   validateName,
   validateOccupation,
@@ -197,7 +197,7 @@ export async function POST(request: Request) {
     });
 
     // 15. Generate Class and Gender-based Sequential Roll Number (e.g. 27061... for Boys, 27062... for Girls) and Create Official Application Record
-    const assignedRollNo = await db.getNextRollNumber(classApplying, personalInfo?.gender || gender);
+    const assignedRollNo = await db.getNextRollNumber(classApplying, personalInfo?.gender || gender, stream || body.stream);
 
     const newApplication = await db.createApplication({
       userId: officialUser.id,
@@ -236,7 +236,7 @@ export async function POST(request: Request) {
       },
       status: 'submitted',
       paymentStatus: 'completed',
-      amountPaid: verifiedAmount,
+      amountPaid: 800,
       transactionId: finalTxnId,
     });
 
@@ -325,8 +325,22 @@ export async function POST(request: Request) {
 
     // 19. Dispatch Admin Alert
     try {
+      const fullAddress = [
+        addressInfo?.streetAddress,
+        addressInfo?.city,
+        addressInfo?.district,
+        addressInfo?.state,
+        addressInfo?.pincode ? `PIN: ${addressInfo.pincode}` : '',
+      ].filter(Boolean).join(', ') || addressInfo?.city || studyPref.firstPreference || 'Not provided';
+
+      const prevSchool = personalInfo?.previousSchoolName
+        ? `${personalInfo.previousSchoolName}${personalInfo.previousBoard ? ` (${personalInfo.previousBoard})` : ''}`
+        : (personalInfo?.previousBoard || 'N/A');
+
+      const prevMarks = personalInfo?.previousMarks || personalInfo?.previousPercentage || personalInfo?.previousClassMarksPercentage || (personalInfo?.previousBoard ? `Board: ${personalInfo.previousBoard}` : 'N/A');
+
       await sendNotification({
-        to: 'anshumiglaniji08@gmail.com',
+        to: ADMIN_NOTIFICATION_EMAIL,
         name: 'Admissions Desk',
         type: 'ADMIN_NEW_REGISTRATION_ALERT',
         data: {
@@ -337,13 +351,17 @@ export async function POST(request: Request) {
           classApplying: newApplication.classApplying,
           candidateEmail,
           candidateMobile,
-          fatherName: parentInfo.fatherName,
-          fatherPhone: parentInfo.fatherPhone,
-          dob: personalInfo.dob,
+          fatherName: parentInfo.fatherName || 'N/A',
+          fatherPhone: parentInfo.fatherPhone || 'N/A',
+          motherName: parentInfo.motherName || 'N/A',
+          dob: personalInfo.dob || 'N/A',
           gender,
-          category: personalInfo.category,
-          aadhaarNumber: `XXXXXXXX${personalInfo.aadhaarNumber.slice(-4)}`,
+          category: personalInfo.category || 'General',
+          aadhaarNumber: personalInfo?.aadhaarNumber ? `XXXXXXXX${personalInfo.aadhaarNumber.slice(-4)}` : 'N/A',
+          address: fullAddress,
           studyLocation: studyPref.firstPreference,
+          previousSchool: prevSchool,
+          previousMarks: prevMarks,
           amountPaid: verifiedAmount,
           transactionId: finalTxnId,
           registrationTime: paymentTimestamp,

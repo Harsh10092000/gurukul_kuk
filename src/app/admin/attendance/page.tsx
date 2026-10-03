@@ -301,7 +301,6 @@ export default function AdminAttendancePage() {
                   <option value="Class 11|Medical">Class 11th — Medical</option>
                   <option value="Class 11|Commerce">Class 11th — Commerce</option>
                   <option value="Class 11|Humanities">Class 11th — Humanities</option>
-                  <option value="Class 11|Arts">Class 11th — Arts</option>
                 </select>
               </div>
 

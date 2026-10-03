@@ -141,20 +141,38 @@ export async function POST(request: Request) {
       (application.personalInfo?.gender || '').toLowerCase() === 'girl' ||
       (application.registrationNumber || '').startsWith('NILG');
     const rollPrefix = `27${classCode}`;
+    const candidateStream = application.stream || application.academicInfo?.stream;
     let finalRollNumber: string;
     if (application.rollNumber && new RegExp(`^${rollPrefix}(\\d{4,})$`).test(application.rollNumber)) {
       const seq = parseInt(application.rollNumber.slice(rollPrefix.length), 10);
-      const valid = isFemale ? seq >= 5001 : (seq >= 1 && seq <= 5000);
+      let valid = false;
+      if (classCode === '11') {
+        const normStream = (candidateStream || '').trim().toLowerCase().replace(/[^a-z]/g, '');
+        if (normStream.includes('nonmed')) {
+          valid = isFemale ? (seq >= 1001 && seq <= 2000) : (seq >= 1 && seq <= 1000);
+        } else if (normStream.includes('med')) {
+          valid = isFemale ? (seq >= 3001 && seq <= 4000) : (seq >= 2001 && seq <= 3000);
+        } else if (normStream.includes('com')) {
+          valid = isFemale ? (seq >= 5001 && seq <= 6000) : (seq >= 4001 && seq <= 5000);
+        } else if (normStream.includes('human') || normStream.includes('art')) {
+          valid = isFemale ? (seq >= 7001 && seq <= 8000) : (seq >= 6001 && seq <= 7000);
+        } else {
+          valid = isFemale ? (seq >= 1001 && seq <= 2000) : (seq >= 1 && seq <= 1000);
+        }
+      } else {
+        valid = isFemale ? seq >= 5001 : (seq >= 1 && seq <= 5000);
+      }
+
       if (valid) {
         finalRollNumber = application.rollNumber;
       } else {
-        finalRollNumber = await db.getNextRollNumber(application.classApplying, application.personalInfo?.gender);
+        finalRollNumber = await db.getNextRollNumber(application.classApplying, application.personalInfo?.gender, candidateStream);
         try {
           await db.updateApplication(application.id, { rollNumber: finalRollNumber });
         } catch { }
       }
     } else {
-      finalRollNumber = await db.getNextRollNumber(application.classApplying, application.personalInfo?.gender);
+      finalRollNumber = await db.getNextRollNumber(application.classApplying, application.personalInfo?.gender, candidateStream);
       try {
         await db.updateApplication(application.id, { rollNumber: finalRollNumber });
       } catch { }

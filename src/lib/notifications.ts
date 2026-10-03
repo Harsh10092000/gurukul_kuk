@@ -19,10 +19,18 @@ export interface NotificationPayload {
   data: Record<string, string | number>;
 }
 
-// Configure real Gmail SMTP with provided credentials
-const SMTP_USER = (process.env.SMTP_USER || process.env.CMAIL || 'anshumiglaniji08@gmail.com').trim();
+const SMTP_USER = (process.env.SMTP_USER || process.env.CMAIL || 'anshu.calinfo@gmail.com').trim();
 const SMTP_PASS = (process.env.SMTP_PASS || process.env.CPASS || '').replace(/\s+/g, '');
 const FROM_EMAIL = (process.env.FROM_EMAIL || `"THE GURUKUL NILOKHERI" <${SMTP_USER}>`).trim();
+
+export const ADMIN_NOTIFICATION_EMAIL = process.env.ADMIN_ALERT_EMAIL || 'anshu.calinfo@gmail.com';
+
+function cleanVal(v: any, fallback = 'N/A'): string {
+  if (v === undefined || v === null) return fallback;
+  const s = String(v).trim();
+  if (s === '' || s.toLowerCase() === 'undefined' || s.toLowerCase() === 'null') return fallback;
+  return s;
+}
 
 const transporter = nodemailer.createTransport({
   service: 'gmail',
@@ -225,25 +233,25 @@ export async function sendNotification(payload: NotificationPayload) {
                 A new member/candidate has registered on the entrance portal and completed the application fee payment. The candidate's particulars are as follows:
               </p>
               <table class="info-table">
-                <tr><td>Registration Number</td><td style="color: #0b192c; font-size: 14px;">${data.registrationNumber}</td></tr>
-                <tr><td>Application Number</td><td>${data.applicationNumber}</td></tr>
-                <tr><td>Receipt Number</td><td>${data.receiptNumber}</td></tr>
-                <tr><td>Candidate Name</td><td>${data.fullName}</td></tr>
-                <tr><td>Class Applying</td><td>${data.classApplying}</td></tr>
-                <tr><td>Candidate Email</td><td><a href="mailto:${data.candidateEmail}">${data.candidateEmail}</a></td></tr>
-                <tr><td>Candidate Mobile</td><td>${data.candidateMobile}</td></tr>
-                <tr><td>Father's Name</td><td>${data.fatherName}</td></tr>
-                <tr><td>Father's Mobile</td><td>${data.fatherPhone}</td></tr>
-                <tr><td>Mother's Name</td><td>${data.motherName}</td></tr>
-                <tr><td>Date of Birth</td><td>${data.dob}</td></tr>
-                <tr><td>Gender & Category</td><td>${data.gender} / ${data.category}</td></tr>
-                <tr><td>Aadhaar Number</td><td>${data.aadhaarNumber}</td></tr>
-                <tr><td>Address / Location</td><td>${data.address}</td></tr>
-                <tr><td>Previous School</td><td>${data.previousSchool}</td></tr>
-                <tr><td>Marks / Percentage</td><td>${data.previousMarks}</td></tr>
-                <tr><td>Fee Amount Paid</td><td style="color: #166534;">₹${data.amountPaid} (Paid)</td></tr>
-                <tr><td>Transaction ID</td><td>${data.transactionId}</td></tr>
-                <tr><td>Registration Time</td><td>${data.registrationTime}</td></tr>
+                <tr><td>Registration Number</td><td style="color: #0b192c; font-size: 14px;">${cleanVal(data.registrationNumber)}</td></tr>
+                <tr><td>Application Number</td><td>${cleanVal(data.applicationNumber || data.registrationNumber)}</td></tr>
+                <tr><td>Receipt Number</td><td>${cleanVal(data.receiptNumber)}</td></tr>
+                <tr><td>Candidate Name</td><td>${cleanVal(data.fullName || name)}</td></tr>
+                <tr><td>Class Applying</td><td>${cleanVal(data.classApplying)}</td></tr>
+                <tr><td>Candidate Email</td><td><a href="mailto:${cleanVal(data.candidateEmail, '')}">${cleanVal(data.candidateEmail)}</a></td></tr>
+                <tr><td>Candidate Mobile</td><td>${cleanVal(data.candidateMobile)}</td></tr>
+                <tr><td>Father's Name</td><td>${cleanVal(data.fatherName)}</td></tr>
+                <tr><td>Father's Mobile</td><td>${cleanVal(data.fatherPhone)}</td></tr>
+                <tr><td>Mother's Name</td><td>${cleanVal(data.motherName)}</td></tr>
+                <tr><td>Date of Birth</td><td>${cleanVal(data.dob)}</td></tr>
+                <tr><td>Gender & Category</td><td>${cleanVal(data.gender)} / ${cleanVal(data.category)}</td></tr>
+                <tr><td>Aadhaar Number</td><td>${cleanVal(data.aadhaarNumber)}</td></tr>
+                <tr><td>Address / Location</td><td>${cleanVal(data.address || data.studyLocation, 'Not provided')}</td></tr>
+                <tr><td>Previous School</td><td>${cleanVal(data.previousSchool || data.previousSchoolName)}</td></tr>
+                <tr><td>Marks / Percentage</td><td>${cleanVal(data.previousMarks || data.previousClassMarksPercentage || data.previousBoard)}</td></tr>
+                <tr><td>Fee Amount Paid</td><td style="color: #166534;">₹${cleanVal(data.amountPaid !== undefined ? data.amountPaid : data.amount, '800')} (Paid)</td></tr>
+                <tr><td>Transaction ID</td><td>${cleanVal(data.transactionId)}</td></tr>
+                <tr><td>Registration Time</td><td>${cleanVal(data.registrationTime, new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' }))}</td></tr>
               </table>
               <p style="font-size: 12px; color: #64748b; margin-top: 20px; line-height: 1.5;">
                 You can view the uploaded documents, verify eligibility, and allot Roll Number in the <a href="http://localhost:3000/admin/dashboard" style="color: #2563eb; font-weight: 600;">Admin Management Portal</a>.

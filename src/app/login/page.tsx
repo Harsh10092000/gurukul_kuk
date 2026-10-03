@@ -55,11 +55,7 @@ export default function LoginPage() {
       .then((res) => res.json())
       .then((data) => {
         if (data.user) {
-          if (data.user.role === 'admin') {
-            router.replace('/admin/dashboard');
-          } else {
-            router.replace('/dashboard');
-          }
+          window.location.replace(data.user.role === 'admin' ? '/admin/dashboard' : '/dashboard');
         }
       })
       .catch(() => {});

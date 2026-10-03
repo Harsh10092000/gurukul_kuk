@@ -64,7 +64,7 @@ export interface AddressInfo {
 }
 
 export type EligibleClass = 'Class 5' | 'Class 6' | 'Class 7' | 'Class 8' | 'Class 9' | 'Class 11' | '5' | '6' | '7' | '8' | '9' | '11';
-export type Class11Stream = 'Non Medical' | 'Medical' | 'Commerce' | 'Humanities' | 'Arts';
+export type Class11Stream = 'Non Medical' | 'Medical' | 'Commerce' | 'Humanities';
 
 export interface AcademicInfo {
   applyingClass: EligibleClass;
@@ -127,6 +127,23 @@ export interface Application {
     paymentId?: string;
     status?: string;
   };
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface PaymentOrderRecord {
+  id: string;
+  orderId: string;
+  amount: number;
+  currency: string;
+  status: 'PENDING' | 'CHARGED' | 'FAILED' | 'AUTHENTICATION_FAILED' | 'AUTHORIZATION_FAILED' | 'CANCELLED';
+  customerEmail: string;
+  customerPhone: string;
+  customerId: string;
+  applicationId?: string;
+  registrationNumber?: string;
+  applicationPayload?: any;
+  paymentResponse?: any;
   createdAt: string;
   updatedAt: string;
 }

@@ -1,5 +1,44 @@
 [
   {
+    "userId": "usr-1791012136282-d0hnd",
+    "userName": "Ayushi",
+    "userRole": "applicant",
+    "action": "PASSWORD_RESET_SUCCESS",
+    "entity": "User",
+    "details": {
+      "identifier": "anshutemp10@gmail.com"
+    },
+    "id": "audit-1791012256633-lv6l9",
+    "timestamp": "2026-10-03T07:24:16.633Z"
+  },
+  {
+    "userId": "usr-admin-1",
+    "userName": "Principal / Exam Controller",
+    "userRole": "admin",
+    "action": "UPLOAD_RESULTS_EXCEL",
+    "entity": "Results",
+    "details": {
+      "totalUploaded": 8,
+      "qualified": 6,
+      "notQualified": 2,
+      "publishedImmediately": true
+    },
+    "id": "audit-1790859956824-1qq3d",
+    "timestamp": "2026-10-01T13:05:56.824Z"
+  },
+  {
+    "userId": "usr-admin-1",
+    "userName": "Principal / Exam Controller",
+    "userRole": "admin",
+    "action": "CLEAR_RESULTS",
+    "entity": "Results",
+    "details": {
+      "clearedBy": "Principal / Exam Controller"
+    },
+    "id": "audit-1790859904077-r6wx2",
+    "timestamp": "2026-10-01T13:05:04.077Z"
+  },
+  {
     "userId": "usr-admin-1",
     "userName": "Principal / Exam Controller",
     "userRole": "admin",

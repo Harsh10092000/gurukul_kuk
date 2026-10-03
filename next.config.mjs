@@ -4,6 +4,9 @@ const nextConfig = {
   images: {
     domains: ['gurukulkurukshetra.com'],
   },
+  experimental: {
+    serverComponentsExternalPackages: ['expresscheckout-nodejs'],
+  },
 };
 
 export default nextConfig;

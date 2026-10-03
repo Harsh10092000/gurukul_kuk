@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
@@ -27,6 +27,34 @@ import {
 } from '@/lib/validations';
 import ImageCropperModal from '@/components/ImageCropperModal';
 
+const FATHER_OCCUPATIONS = [
+  'Service',
+  'Government Service',
+  'Business / Self-Employed',
+  'Agriculture / Farming',
+  'Defense / Armed Forces',
+  'Professional (Doctor, Engineer, CA, Advocate)',
+  'Teaching / Academic',
+  'Others',
+];
+
+const MOTHER_OCCUPATIONS = [
+  'Homemaker',
+  'Service',
+  'Government Service',
+  'Teaching / Academic',
+  'Business / Self-Employed',
+  'Professional (Doctor, Engineer, CA, Advocate)',
+  'Agriculture / Farming',
+  'Others',
+];
+
+const normalizeGender = (g?: string | null): 'Male' | 'Female' => {
+  if (!g) return 'Male';
+  const lower = g.trim().toLowerCase();
+  return lower === 'female' || lower === 'girl' || lower === 'girls' ? 'Female' : 'Male';
+};
+
 export default function ApplyPage() {
   const router = useRouter();
   const [step, setStep] = useState(1);
@@ -44,6 +72,7 @@ export default function ApplyPage() {
     'Gurukul Jyotisar',
     'Aryakulam Nilokheri',
   ]);
+  const [instructionLang, setInstructionLang] = useState<'en' | 'hi'>('en');
 
   // Password Visibility States
   const [showPassword, setShowPassword] = useState(false);
@@ -90,10 +119,14 @@ export default function ApplyPage() {
 
     // Step 3: Parent/Guardian Details
     fatherName: '',
-    fatherOccupation: 'Service',
+    fatherOccupation: '',
+    fatherOccupationOption: '',
+    fatherOccupationOther: '',
     fatherPhone: '',
     motherName: '',
     motherOccupation: '',
+    motherOccupationOption: '',
+    motherOccupationOther: '',
     annualIncome: '',
     guardianName: '',
     guardianRelation: '',
@@ -123,35 +156,70 @@ export default function ApplyPage() {
   // Calculate today's date formatted as YYYY-MM-DD for max DOB validation
   const todayString = new Date().toISOString().split('T')[0];
 
-  // Adjust study locations and class when gender or activeLocations change
-  useEffect(() => {
-    if (formData.gender === 'Female') {
-      setFormData((prev) => ({
+  // Explicit Gender switch handler ensuring instantaneous, atomic state transition
+  const handleGenderSelect = (selectedGender: 'Male' | 'Female') => {
+    setError('');
+    const isFem = selectedGender === 'Female';
+    const validBoys = ['Aryakulam Nilokheri', 'Gurukul Jyotisar'].filter((l) =>
+      activeLocations.includes(l)
+    );
+    const effectiveBoys = validBoys.length > 0 ? validBoys : ['Aryakulam Nilokheri', 'Gurukul Jyotisar'];
+
+    setFormData((prev) => {
+      const nextFirst = isFem
+        ? 'Gurukul Nilokheri'
+        : (effectiveBoys.includes(prev.firstPreference) && prev.firstPreference !== 'Gurukul Nilokheri'
+          ? prev.firstPreference
+          : effectiveBoys[0] || 'Aryakulam Nilokheri');
+
+      const nextSecond = isFem
+        ? ''
+        : (prev.secondPreference === nextFirst || prev.secondPreference === 'Gurukul Nilokheri'
+          ? (effectiveBoys.find((l) => l !== nextFirst) || '')
+          : prev.secondPreference);
+
+      const nextClass = isFem && prev.applyingClass === 'Class 5' ? 'Class 6' : prev.applyingClass;
+
+      return {
         ...prev,
-        firstPreference: 'Gurukul Nilokheri',
-        secondPreference: '',
-        applyingClass: prev.applyingClass === 'Class 5' ? 'Class 6' : prev.applyingClass,
-      }));
+        gender: selectedGender,
+        firstPreference: nextFirst,
+        secondPreference: nextSecond,
+        applyingClass: nextClass,
+      };
+    });
+  };
+
+  // Adjust study locations and class when activeLocations load or settings change
+  useEffect(() => {
+    const isFem = formData.gender === 'Female' || (formData.gender as string)?.toLowerCase() === 'female';
+    if (isFem) {
+      if (formData.firstPreference !== 'Gurukul Nilokheri' || formData.secondPreference !== '') {
+        setFormData((prev) => ({
+          ...prev,
+          firstPreference: 'Gurukul Nilokheri',
+          secondPreference: '',
+          applyingClass: prev.applyingClass === 'Class 5' ? 'Class 6' : prev.applyingClass,
+        }));
+      }
     } else {
       const validBoys = ['Aryakulam Nilokheri', 'Gurukul Jyotisar'].filter((l) =>
         activeLocations.includes(l)
       );
       const effectiveBoys = validBoys.length > 0 ? validBoys : ['Aryakulam Nilokheri', 'Gurukul Jyotisar'];
-      setFormData((prev) => {
-        let first = prev.firstPreference;
-        if (!effectiveBoys.includes(first) || first === 'Gurukul Nilokheri') {
-          first = effectiveBoys[0] || 'Aryakulam Nilokheri';
-        }
-        let second = prev.secondPreference;
-        if (second && (!effectiveBoys.includes(second) || second === first || second === 'Gurukul Nilokheri')) {
-          second = effectiveBoys.find((l) => l !== first) || '';
-        }
-        return {
-          ...prev,
-          firstPreference: first,
-          secondPreference: second,
-        };
-      });
+      if (!effectiveBoys.includes(formData.firstPreference) || formData.firstPreference === 'Gurukul Nilokheri') {
+        setFormData((prev) => {
+          const first = effectiveBoys[0] || 'Aryakulam Nilokheri';
+          const second = prev.secondPreference && prev.secondPreference !== first && effectiveBoys.includes(prev.secondPreference)
+            ? prev.secondPreference
+            : '';
+          return {
+            ...prev,
+            firstPreference: first,
+            secondPreference: second,
+          };
+        });
+      }
     }
   }, [formData.gender, activeLocations]);
 
@@ -164,14 +232,63 @@ export default function ApplyPage() {
     } else {
       const allowedStreams = getStreamsForCampus(formData.firstPreference);
       if (!formData.stream || !allowedStreams.includes(formData.stream as any)) {
-        setFormData((prev) => ({ ...prev, stream: allowedStreams[0] || 'Commerce' }));
+        setFormData((prev) => ({ ...prev, stream: allowedStreams[0] || 'Non Medical' }));
       }
     }
   }, [formData.applyingClass, formData.firstPreference]);
 
   // Restore contact info and pre-fill on mount
   useEffect(() => {
-    // 1. Check session storage from registration step
+    // 1. Restore saved application draft from localStorage (crucial when returning from cancelled payment)
+    try {
+      const localDraft = localStorage.getItem('gurukul_application_draft');
+      if (localDraft) {
+        const parsed = JSON.parse(localDraft);
+        setFormData((prev) => ({
+          ...prev,
+          ...parsed,
+          gender: normalizeGender(parsed.gender || prev.gender),
+        }));
+        if (parsed.photo) setNtaCheckbox(true);
+      }
+    } catch { }
+
+    // 2. Check return payment status from HDFC gateway if returning from payment
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      const paymentStatus = params.get('payment');
+      const orderId = params.get('orderId');
+      const regNo = params.get('regNo');
+      const msg = params.get('msg');
+
+      if (paymentStatus === 'success') {
+        try {
+          sessionStorage.removeItem('gurukul_reg_info');
+          localStorage.removeItem('gurukul_application_draft');
+          window.history.replaceState({}, '', window.location.pathname);
+        } catch { }
+        window.location.replace(`/payment/thank-you?orderId=${encodeURIComponent(orderId || '')}&regNo=${encodeURIComponent(regNo || '')}`);
+        return;
+      }
+
+      if (paymentStatus === 'pending') {
+        setStep(6);
+        setDeclarationAgreed(true);
+        setError(msg || `Your payment (Order: ${orderId || ''}) is pending confirmation. You can review your particulars below and retry submitting anytime.`);
+        try {
+          window.history.replaceState({}, '', window.location.pathname);
+        } catch { }
+      } else if (paymentStatus === 'failed' || paymentStatus === 'error' || paymentStatus === 'cancelled') {
+        setStep(6);
+        setDeclarationAgreed(true);
+        setError(msg || 'Payment session was cancelled. All your application particulars are safely preserved below; click "Pay ₹800 & Submit Application" to retry.');
+        try {
+          window.history.replaceState({}, '', window.location.pathname);
+        } catch { }
+      }
+    }
+
+    // 3. Check session storage from registration step
     try {
       const stored = sessionStorage.getItem('gurukul_reg_info');
       if (stored) {
@@ -200,23 +317,24 @@ export default function ApplyPage() {
       .then((res) => res.json())
       .then((authData) => {
         if (authData.user) {
-          if (authData.user.role === 'admin') {
-            window.location.href = '/admin/dashboard';
+          const user = authData.user;
+          const params = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null;
+          const hasPaymentParam = Boolean(params && params.get('payment'));
+          const hasDraft = Boolean(typeof window !== 'undefined' && localStorage.getItem('gurukul_application_draft'));
+
+          // Only redirect to dashboard if applicant is already paid and NOT actively retrying or filling a new application
+          if (user.role === 'applicant' && !hasPaymentParam && !hasDraft && !user.isTemporary) {
+            fetch('/api/applications')
+              .then((r) => r.json())
+              .then((appRes) => {
+                if (appRes?.application && appRes.application.paymentStatus === 'completed') {
+                  window.location.replace('/dashboard');
+                }
+              })
+              .catch(() => { });
             return;
           }
-
-          const user = authData.user;
           setCurrentUser(user);
-
-          // Pre-fill registered contact info
-          setFormData((prev) => ({
-            ...prev,
-            fullName: user.name || prev.fullName || '',
-            candidateEmail: user.email || prev.candidateEmail || '',
-            candidateMobile: user.phone || prev.candidateMobile || '',
-            whatsappNumber: user.phone || prev.whatsappNumber || '',
-            fatherPhone: prev.fatherPhone || '',
-          }));
         }
 
         // Fetch draft application if any (optional)
@@ -229,7 +347,7 @@ export default function ApplyPage() {
                 ...prev,
                 fullName: app.personalInfo?.fullName || prev.fullName,
                 dob: app.personalInfo?.dob || prev.dob,
-                gender: app.personalInfo?.gender || prev.gender,
+                gender: normalizeGender(app.personalInfo?.gender || prev.gender),
                 category: app.personalInfo?.category || prev.category,
                 aadhaarNumber: app.personalInfo?.aadhaarNumber || prev.aadhaarNumber,
                 panNumber: app.personalInfo?.panNumber || prev.panNumber,
@@ -242,9 +360,29 @@ export default function ApplyPage() {
                 stream: app.stream || prev.stream,
                 fatherName: app.parentInfo?.fatherName || prev.fatherName,
                 fatherOccupation: app.parentInfo?.fatherOccupation || prev.fatherOccupation,
+                fatherOccupationOption: (() => {
+                  const f = app.parentInfo?.fatherOccupation || prev.fatherOccupation;
+                  if (!f) return '';
+                  return FATHER_OCCUPATIONS.some((o) => o.toLowerCase() === f.toLowerCase() && o !== 'Others') ? f : 'Others';
+                })(),
+                fatherOccupationOther: (() => {
+                  const f = app.parentInfo?.fatherOccupation || prev.fatherOccupation;
+                  if (!f) return '';
+                  return FATHER_OCCUPATIONS.some((o) => o.toLowerCase() === f.toLowerCase() && o !== 'Others') ? '' : f;
+                })(),
                 fatherPhone: app.parentInfo?.fatherPhone || prev.fatherPhone,
                 motherName: app.parentInfo?.motherName || prev.motherName,
                 motherOccupation: app.parentInfo?.motherOccupation || prev.motherOccupation,
+                motherOccupationOption: (() => {
+                  const m = app.parentInfo?.motherOccupation || prev.motherOccupation;
+                  if (!m) return '';
+                  return MOTHER_OCCUPATIONS.some((o) => o.toLowerCase() === m.toLowerCase() && o !== 'Others') ? m : 'Others';
+                })(),
+                motherOccupationOther: (() => {
+                  const m = app.parentInfo?.motherOccupation || prev.motherOccupation;
+                  if (!m) return '';
+                  return MOTHER_OCCUPATIONS.some((o) => o.toLowerCase() === m.toLowerCase() && o !== 'Others') ? '' : m;
+                })(),
                 annualIncome: app.parentInfo?.annualIncome || prev.annualIncome,
                 guardianName: app.parentInfo?.guardianName || prev.guardianName,
                 guardianRelation: app.parentInfo?.guardianRelation || prev.guardianRelation,
@@ -286,7 +424,7 @@ export default function ApplyPage() {
       setFormData((prev) => ({
         ...prev,
         applyingClass: value,
-        stream: is11 ? (prev.stream && allowedStreams.includes(prev.stream as any) ? prev.stream : allowedStreams[0] || 'Commerce') : '',
+        stream: is11 ? (prev.stream && allowedStreams.includes(prev.stream as any) ? prev.stream : allowedStreams[0] || 'Non Medical') : '',
       }));
     } else if (name === 'state') {
       const districts = INDIAN_STATES_AND_DISTRICTS[value] || ['Other'];
@@ -305,30 +443,7 @@ export default function ApplyPage() {
       const clean = value.replace(/\D/g, '').slice(0, 6);
       setFormData((prev) => ({ ...prev, [name]: clean }));
     } else if (name === 'gender') {
-      const isFem = value === 'Female';
-      const genValue = (value === 'Female' ? 'Female' : 'Male') as 'Male' | 'Female';
-      const validBoys = ['Gurukul Jyotisar', 'Aryakulam Nilokheri'].filter((l) =>
-        activeLocations.includes(l)
-      );
-      const effectiveBoys = validBoys.length > 0 ? validBoys : ['Gurukul Jyotisar', 'Aryakulam Nilokheri'];
-      setFormData((prev) => {
-        const nextFirst = isFem
-          ? 'Gurukul Nilokheri'
-          : (effectiveBoys.includes(prev.firstPreference) && prev.firstPreference !== 'Gurukul Nilokheri'
-            ? prev.firstPreference
-            : effectiveBoys[0] || 'Gurukul Jyotisar');
-        const nextSecond = isFem
-          ? ''
-          : (prev.secondPreference === nextFirst || prev.secondPreference === 'Gurukul Nilokheri'
-            ? ''
-            : prev.secondPreference);
-        return {
-          ...prev,
-          gender: genValue,
-          firstPreference: nextFirst,
-          secondPreference: nextSecond,
-        };
-      });
+      handleGenderSelect(normalizeGender(value));
     } else if (name === 'firstPreference') {
       const allowedStreams = getStreamsForCampus(value);
       setFormData((prev) => ({
@@ -336,7 +451,7 @@ export default function ApplyPage() {
         firstPreference: value,
         secondPreference: prev.secondPreference === value ? '' : prev.secondPreference,
         stream: prev.applyingClass.includes('11')
-          ? (prev.stream && allowedStreams.includes(prev.stream as any) ? prev.stream : allowedStreams[0] || 'Commerce')
+          ? (prev.stream && allowedStreams.includes(prev.stream as any) ? prev.stream : allowedStreams[0] || 'Non Medical')
           : prev.stream,
       }));
     } else {
@@ -406,7 +521,7 @@ export default function ApplyPage() {
 
     if (step === 1) {
       if (!ntaCheckbox) {
-        setError('Please review and check the undertaking declaration before proceeding.');
+        setError('Please read and accept the Admission & Counselling Instruction Manual above before proceeding.');
         return;
       }
       const locVal = validateStudyLocation(formData.gender, formData.firstPreference, formData.secondPreference, activeLocations);
@@ -471,6 +586,10 @@ export default function ApplyPage() {
         setError(fNameVal.error || 'Invalid Father Name');
         return;
       }
+      if (formData.fatherOccupationOption === 'Others' && (!formData.fatherOccupationOther || !formData.fatherOccupationOther.trim())) {
+        setError("Please specify Father's Occupation.");
+        return;
+      }
       if (formData.fatherOccupation && formData.fatherOccupation.trim()) {
         const fOccVal = validateOccupation(formData.fatherOccupation, "Father's Occupation");
         if (!fOccVal.isValid) {
@@ -487,6 +606,17 @@ export default function ApplyPage() {
       if (!mNameVal.isValid) {
         setError(mNameVal.error || 'Invalid Mother Name');
         return;
+      }
+      if (formData.motherOccupationOption === 'Others' && (!formData.motherOccupationOther || !formData.motherOccupationOther.trim())) {
+        setError("Please specify Mother's Occupation.");
+        return;
+      }
+      if (formData.motherOccupation && formData.motherOccupation.trim()) {
+        const mOccVal = validateOccupation(formData.motherOccupation, "Mother's Occupation");
+        if (!mOccVal.isValid) {
+          setError(mOccVal.error || 'Invalid Mother Occupation');
+          return;
+        }
       }
       if (!formData.annualIncome) {
         setError('Please select Annual Family Income.');
@@ -539,7 +669,7 @@ export default function ApplyPage() {
     }
   };
 
-  // Final ₹800 Payment & Official Registration Submission
+  // Final ₹800 Payment & Official Registration Submission via HDFC SmartGateway
   const handleSubmitPayment = async () => {
     setError('');
 
@@ -610,11 +740,17 @@ export default function ApplyPage() {
           parentSignature: formData.parentSignature,
           aadhaarCard: formData.aadhaarCard,
         },
-        amountPaid: 800,
-        transactionId: `TXN_RZP_${Date.now()}_${Math.random().toString(36).substring(2, 7).toUpperCase()}`,
       };
 
-      const res = await fetch('/api/payment/verify', {
+      // Backup draft in localStorage
+      try {
+        localStorage.setItem('gurukul_application_draft', JSON.stringify({
+          ...formData,
+          step: 6,
+        }));
+      } catch { }
+
+      const res = await fetch('/api/payment/hdfc/initiate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
@@ -622,24 +758,21 @@ export default function ApplyPage() {
 
       const data = await res.json();
 
-      if (!res.ok) {
-        setError(data.error || 'Payment verification failed. Please try again.');
+      if (!res.ok || !data.success) {
+        setError(data.error || 'Payment gateway initialization failed. Please review your details and try again.');
         setLoading(false);
         return;
       }
 
-      setSubmittedApp(data.application);
-
-      try {
-        sessionStorage.removeItem('gurukul_reg_info');
-        localStorage.removeItem('gurukul_application_draft');
-      } catch { }
-
-      setTimeout(() => {
-        window.location.href = '/dashboard?registered=true';
-      }, 1800);
+      if (data.paymentUrl) {
+        // Redirect directly to HDFC Hosted Payment Page
+        window.location.href = data.paymentUrl;
+      } else {
+        setError('Payment gateway returned an invalid session. Please try again.');
+        setLoading(false);
+      }
     } catch {
-      setError('An error occurred during payment processing. Please check your internet connection.');
+      setError('An error occurred while connecting to the payment gateway. Please check your internet connection.');
       setLoading(false);
     }
   };
@@ -660,38 +793,16 @@ export default function ApplyPage() {
   );
   const boysActiveLocations = rawBoysActive.length > 0 ? rawBoysActive : ['Aryakulam Nilokheri', 'Gurukul Jyotisar'];
 
-  // SCREEN: Registration Confirmed Screen
+  // SCREEN: Registration Confirmed Screen -> Redirect to Thank You page
   if (submittedApp) {
-    const regNo = submittedApp.registrationNumber || submittedApp.applicationNumber;
+    if (typeof window !== 'undefined') {
+      window.location.replace(`/payment/thank-you?orderId=${encodeURIComponent(submittedApp.orderId || '')}&regNo=${encodeURIComponent(submittedApp.registrationNumber || '')}`);
+    }
     return (
-      <div className="max-w-md mx-auto my-16 px-4">
-        <div className="bg-white border border-slate-200 rounded-xl shadow-elevated p-8 text-center space-y-5">
-          <div className="w-14 h-14 bg-emerald-50 text-emerald-600 rounded-full flex items-center justify-center mx-auto border border-emerald-200">
-            <CheckCircle className="w-8 h-8" />
-          </div>
-
-          <div className="space-y-2">
-            <span className="text-xs font-semibold uppercase tracking-wider text-emerald-700 bg-emerald-50 px-3 py-1 rounded border border-emerald-200 inline-block">
-              Payment Confirmed
-            </span>
-            <h2 className="text-xl font-bold text-slate-900 pt-1">
-              Registration Successful
-            </h2>
-            <p className="text-xs text-slate-600">
-              Your entrance examination application and fee payment have been received.
-            </p>
-            {regNo && (
-              <div className="pt-2">
-                <span className="text-xs text-slate-500 block">Permanent Registration Number</span>
-                <span className="text-sm font-mono font-bold text-portal-navy tracking-wide">{regNo}</span>
-              </div>
-            )}
-          </div>
-
-          <div className="pt-3 flex flex-col items-center justify-center space-y-2">
-            <div className="w-6 h-6 border-2 border-portal-navy border-t-transparent rounded-full animate-spin" />
-            <p className="text-xs text-slate-500">Redirecting to candidate dashboard...</p>
-          </div>
+      <div className="min-h-[60vh] flex items-center justify-center font-sans">
+        <div className="text-center space-y-3">
+          <div className="w-10 h-10 border-4 border-portal-navy border-t-transparent rounded-full animate-spin mx-auto" />
+          <p className="text-sm font-bold text-slate-800">Payment received! Loading confirmation...</p>
         </div>
       </div>
     );
@@ -723,6 +834,25 @@ export default function ApplyPage() {
           </button>
         </div>
       </div>
+
+      {currentUser && (
+        <div className="mb-5 p-3 bg-amber-50/80 border border-amber-200 rounded-xl flex flex-wrap items-center justify-between gap-2 text-xs text-amber-900">
+          <div className="flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+            <span>Currently logged in as: <strong>{currentUser.name}</strong> ({currentUser.email || currentUser.role})</span>
+          </div>
+          <button
+            type="button"
+            onClick={async () => {
+              await fetch('/api/auth/logout', { method: 'POST' });
+              window.location.reload();
+            }}
+            className="text-xs font-bold text-rose-700 hover:text-rose-900 underline"
+          >
+            Sign Out to Start Fresh
+          </button>
+        </div>
+      )}
 
       {/* Progress Stepper */}
       <div className="mb-6 overflow-x-auto pb-2">
@@ -770,43 +900,317 @@ export default function ApplyPage() {
         {/* STEP 1: Instructions, Gender & Study Location */}
         {step === 1 && (
           <div className="space-y-6">
-            <div className="border-b border-slate-200 pb-3">
-              <h2 className="text-base font-bold text-slate-900">
-                Step 1: Instructions &amp; Preferred Study Location
-              </h2>
-              <p className="text-xs text-slate-500">
-                Review registration terms and select candidate gender and preferred Gurukul campus.
-              </p>
+            {/* Admission & Counselling Instruction Manual (From Official PDF) */}
+            <div className="border border-slate-200 rounded-xl overflow-hidden shadow-xs bg-white">
+              {/* Header Banner */}
+              <div className="bg-gradient-to-r from-portal-navy to-slate-900 text-white p-4 sm:p-5">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div>
+                    <span className="text-[10px] font-mono tracking-widest uppercase bg-white/20 text-white px-2.5 py-0.5 rounded-full font-bold inline-block mb-1">
+                      Academic Session 2027–28
+                    </span>
+                    <h2 className="text-base sm:text-lg font-black tracking-tight text-white font-serif">
+                      {instructionLang === 'hi'
+                        ? 'प्रवेश एवं काउंसलिंग निर्देश विवरणिका'
+                        : 'ADMISSION & COUNSELLING INSTRUCTION MANUAL'}
+                    </h2>
+                    <p className="text-xs text-slate-300">
+                      {instructionLang === 'hi'
+                        ? 'The Gurukul Nilokheri • Aryakulam Nilokheri • Gurukul Jyotisar'
+                        : 'The Gurukul Nilokheri • Aryakulam Nilokheri • Gurukul Jyotisar'}
+                    </p>
+                  </div>
+
+                  {/* Language Switch Buttons */}
+                  <div className="flex items-center gap-1 bg-white/10 p-1 rounded-lg border border-white/20 self-start sm:self-center">
+                    <button
+                      type="button"
+                      onClick={() => setInstructionLang('en')}
+                      className={`px-3 py-1 rounded text-xs font-bold transition ${
+                        instructionLang === 'en'
+                          ? 'bg-white text-portal-navy shadow-xs'
+                          : 'text-white/80 hover:text-white'
+                      }`}
+                    >
+                      English
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setInstructionLang('hi')}
+                      className={`px-3 py-1 rounded text-xs font-bold transition ${
+                        instructionLang === 'hi'
+                          ? 'bg-white text-portal-navy shadow-xs'
+                          : 'text-white/80 hover:text-white'
+                      }`}
+                    >
+                      हिन्दी
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Instructions Content Body */}
+              <div className="p-4 sm:p-6 space-y-5 text-xs text-slate-800 leading-relaxed divide-y divide-slate-100">
+                {instructionLang === 'en' ? (
+                  <>
+                    {/* 1. Registration */}
+                    <div className="space-y-2">
+                      <h3 className="text-xs sm:text-sm font-bold text-portal-navy uppercase tracking-wide flex items-center gap-2">
+                        <span className="w-5 h-5 rounded-full bg-portal-navy text-white text-[11px] flex items-center justify-center font-bold">1</span>
+                        <span>Registration</span>
+                      </h3>
+                      <ul className="list-disc pl-7 space-y-1.5 text-slate-700">
+                        <li>Registration starts on <strong>5 October 2026</strong>.</li>
+                        <li>Registration fee: <strong>₹800</strong>.</li>
+                        <li>Last date for registration: <strong>12 February 2027</strong>.</li>
+                        <li>A latest coloured photograph of the student is mandatory.</li>
+                        <li>Student and parent details must be filled correctly as per supporting documents.</li>
+                        <li>Details once submitted in the registration form cannot be changed.</li>
+                      </ul>
+                    </div>
+
+                    {/* 2. Entrance Examination */}
+                    <div className="pt-4 space-y-2">
+                      <h3 className="text-xs sm:text-sm font-bold text-portal-navy uppercase tracking-wide flex items-center gap-2">
+                        <span className="w-5 h-5 rounded-full bg-portal-navy text-white text-[11px] flex items-center justify-center font-bold">2</span>
+                        <span>Entrance Examination</span>
+                      </h3>
+                      <p className="text-slate-700 leading-relaxed">
+                        The offline entrance examination for <strong>The Gurukul Nilokheri (Girls)</strong> will be held on <strong>Sunday, 14 February 2027 at 8:30 AM</strong> at <strong>The Gurukul Nilokheri</strong>.
+                      </p>
+                      <p className="text-slate-700 leading-relaxed">
+                        The entrance examination for <strong>boys</strong> will be held on <strong>14 February 2027</strong>. Candidates must report at <strong>9:30 AM at Aryakulam Nilokheri</strong>.
+                      </p>
+                      <div className="bg-slate-50 border border-slate-200 p-3 rounded-lg mt-2">
+                        <span className="font-bold text-slate-900 block mb-1">Candidates must bring:</span>
+                        <ul className="list-disc pl-5 space-y-1 text-slate-700">
+                          <li>Admit Card</li>
+                          <li>Aadhaar Card copy as ID proof</li>
+                          <li>Two passport-size photographs</li>
+                        </ul>
+                      </div>
+                    </div>
+
+                    {/* 3. Counselling Schedule */}
+                    <div className="pt-4 space-y-2.5">
+                      <h3 className="text-xs sm:text-sm font-bold text-portal-navy uppercase tracking-wide flex items-center gap-2">
+                        <span className="w-5 h-5 rounded-full bg-portal-navy text-white text-[11px] flex items-center justify-center font-bold">3</span>
+                        <span>Counselling Schedule</span>
+                      </h3>
+                      <div className="overflow-x-auto border border-slate-200 rounded-lg">
+                        <table className="w-full text-left text-xs border-collapse">
+                          <thead className="bg-slate-100 text-slate-800 font-bold border-b border-slate-200 text-[11px]">
+                            <tr>
+                              <th className="p-2 border-r border-slate-200">Category</th>
+                              <th className="p-2 border-r border-slate-200">Exam Date</th>
+                              <th className="p-2 border-r border-slate-200">Venue</th>
+                              <th className="p-2 border-r border-slate-200">Reporting Time</th>
+                              <th className="p-2 border-r border-slate-200">Counselling Dates</th>
+                              <th className="p-2 border-r border-slate-200">Counselling Venue</th>
+                              <th className="p-2">Reporting Time</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-slate-200 text-[11px]">
+                            <tr className="hover:bg-slate-50">
+                              <td className="p-2 font-bold text-purple-900 border-r border-slate-200 bg-purple-50/50">Girls</td>
+                              <td className="p-2 border-r border-slate-200 font-medium">14 Feb 2027</td>
+                              <td className="p-2 border-r border-slate-200">The Gurukul Nilokheri</td>
+                              <td className="p-2 border-r border-slate-200 font-semibold text-rose-700">8:30 AM</td>
+                              <td className="p-2 border-r border-slate-200 font-medium">15, 16 &amp; 17 February 2027</td>
+                              <td className="p-2 border-r border-slate-200">The Gurukul Nilokheri</td>
+                              <td className="p-2 font-medium">9:00 AM to 1:00 PM</td>
+                            </tr>
+                            <tr className="hover:bg-slate-50">
+                              <td className="p-2 font-bold text-blue-900 border-r border-slate-200 bg-blue-50/50">Boys</td>
+                              <td className="p-2 border-r border-slate-200 font-medium">14 Feb 2027</td>
+                              <td className="p-2 border-r border-slate-200">Aryakulam Nilokheri</td>
+                              <td className="p-2 border-r border-slate-200 font-semibold text-rose-700">9:30 AM</td>
+                              <td className="p-2 border-r border-slate-200 font-medium">15, 16 &amp; 17 February 2027</td>
+                              <td className="p-2 border-r border-slate-200">Aryakulam Nilokheri</td>
+                              <td className="p-2 font-medium">9:00 AM to 1:00 PM</td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+
+                    {/* 4. Counselling-Day Deposit */}
+                    <div className="pt-4 space-y-1.5">
+                      <h3 className="text-xs sm:text-sm font-bold text-portal-navy uppercase tracking-wide flex items-center gap-2">
+                        <span className="w-5 h-5 rounded-full bg-portal-navy text-white text-[11px] flex items-center justify-center font-bold">4</span>
+                        <span>Counselling-Day Deposit</span>
+                      </h3>
+                      <div className="bg-amber-50 border border-amber-200 p-3 rounded-lg text-amber-950 font-medium">
+                        A deposit of <strong>₹25,000</strong> is to be deposited on the day of counselling for all three institutions.
+                      </div>
+                    </div>
+
+                    {/* 5. Result */}
+                    <div className="pt-4 space-y-1.5">
+                      <h3 className="text-xs sm:text-sm font-bold text-portal-navy uppercase tracking-wide flex items-center gap-2">
+                        <span className="w-5 h-5 rounded-full bg-portal-navy text-white text-[11px] flex items-center justify-center font-bold">5</span>
+                        <span>Result</span>
+                      </h3>
+                      <p className="text-slate-700">
+                        The entrance examination result will be declared on the official website/portal only.
+                      </p>
+                    </div>
+
+                    {/* 6. Important Portal Instructions */}
+                    <div className="pt-4 space-y-2">
+                      <h3 className="text-xs sm:text-sm font-bold text-portal-navy uppercase tracking-wide flex items-center gap-2">
+                        <span className="w-5 h-5 rounded-full bg-portal-navy text-white text-[11px] flex items-center justify-center font-bold">6</span>
+                        <span>Important Portal Instructions</span>
+                      </h3>
+                      <ul className="list-disc pl-7 space-y-1.5 text-slate-700">
+                        <li>Read all instructions carefully before filling the registration form.</li>
+                        <li>Enter student and parent information exactly as per supporting documents.</li>
+                        <li>Upload the latest coloured photograph.</li>
+                        <li>Keep registration/application details and the admit card safely for examination and counselling.</li>
+                        <li>Carry all required documents on the examination/counselling day.</li>
+                      </ul>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    {/* 1. पंजीकरण */}
+                    <div className="space-y-2">
+                      <h3 className="text-xs sm:text-sm font-bold text-portal-navy uppercase tracking-wide flex items-center gap-2">
+                        <span className="w-5 h-5 rounded-full bg-portal-navy text-white text-[11px] flex items-center justify-center font-bold">1</span>
+                        <span>पंजीकरण</span>
+                      </h3>
+                      <ul className="list-disc pl-7 space-y-1.5 text-slate-700">
+                        <li>पंजीकरण <strong>5 अक्तूबर 2026</strong> से प्रारम्भ होगा।</li>
+                        <li>पंजीकरण शुल्क <strong>₹800</strong> है।</li>
+                        <li>पंजीकरण की अंतिम तिथि <strong>12 फरवरी 2027</strong> है।</li>
+                        <li>विद्यार्थी का नवीनतम रंगीन फोटो अपलोड करना अनिवार्य है।</li>
+                        <li>विद्यार्थी एवं अभिभावक की जानकारी संबंधित दस्तावेजों के अनुसार सही भरनी होगी।</li>
+                        <li>पंजीकरण फॉर्म में दिया गया विवरण एक बार जमा करने के बाद उसमें परिवर्तन नहीं किया जा सकेगा।</li>
+                      </ul>
+                    </div>
+
+                    {/* 2. प्रवेश परीक्षा */}
+                    <div className="pt-4 space-y-2">
+                      <h3 className="text-xs sm:text-sm font-bold text-portal-navy uppercase tracking-wide flex items-center gap-2">
+                        <span className="w-5 h-5 rounded-full bg-portal-navy text-white text-[11px] flex items-center justify-center font-bold">2</span>
+                        <span>प्रवेश परीक्षा</span>
+                      </h3>
+                      <p className="text-slate-700 leading-relaxed">
+                        The Gurukul Nilokheri (Girls) की ऑफलाइन प्रवेश परीक्षा <strong>रविवार, 14 फरवरी 2027 को प्रातः 8:30 बजे</strong> आयोजित होगी। लड़कियों को <strong>प्रातः 8:00 बजे The Gurukul Nilokheri</strong> में रिपोर्ट करना होगा।
+                      </p>
+                      <p className="text-slate-700 leading-relaxed">
+                        लड़कों की प्रवेश परीक्षा <strong>14 फरवरी 2027</strong> को आयोजित की जाएगी। विद्यार्थियों को <strong>प्रातः 9:30 बजे Aryakulam Nilokheri</strong> में रिपोर्ट करना होगा।
+                      </p>
+                      <div className="bg-slate-50 border border-slate-200 p-3 rounded-lg mt-2">
+                        <span className="font-bold text-slate-900 block mb-1">विद्यार्थी निम्नलिखित को अपने साथ लाएँ:</span>
+                        <ul className="list-disc pl-5 space-y-1 text-slate-700">
+                          <li>Admit Card</li>
+                          <li>पहचान हेतु Aadhaar Card की एक प्रति</li>
+                          <li>दो पासपोर्ट साइज फोटो</li>
+                        </ul>
+                      </div>
+                    </div>
+
+                    {/* 3. परीक्षा एवं काउंसलिंग कार्यक्रम */}
+                    <div className="pt-4 space-y-2.5">
+                      <h3 className="text-xs sm:text-sm font-bold text-portal-navy uppercase tracking-wide flex items-center gap-2">
+                        <span className="w-5 h-5 rounded-full bg-portal-navy text-white text-[11px] flex items-center justify-center font-bold">3</span>
+                        <span>परीक्षा एवं काउंसलिंग कार्यक्रम</span>
+                      </h3>
+                      <div className="overflow-x-auto border border-slate-200 rounded-lg">
+                        <table className="w-full text-left text-xs border-collapse">
+                          <thead className="bg-slate-100 text-slate-800 font-bold border-b border-slate-200 text-[11px]">
+                            <tr>
+                              <th className="p-2 border-r border-slate-200">श्रेणी</th>
+                              <th className="p-2 border-r border-slate-200">परीक्षा</th>
+                              <th className="p-2 border-r border-slate-200">स्थान</th>
+                              <th className="p-2 border-r border-slate-200">रिपोर्टिंग समय</th>
+                              <th className="p-2 border-r border-slate-200">काउंसलिंग</th>
+                              <th className="p-2 border-r border-slate-200">स्थान</th>
+                              <th className="p-2">रिपोर्टिंग समय</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-slate-200 text-[11px]">
+                            <tr className="hover:bg-slate-50">
+                              <td className="p-2 font-bold text-purple-900 border-r border-slate-200 bg-purple-50/50">छात्राएँ</td>
+                              <td className="p-2 border-r border-slate-200 font-medium">14 फरवरी 2027</td>
+                              <td className="p-2 border-r border-slate-200">गुरुकुल नीलोखेड़ी</td>
+                              <td className="p-2 border-r border-slate-200 font-semibold text-rose-700">प्रातः 8:30 बजे (रिपोर्ट 8:00 बजे)</td>
+                              <td className="p-2 border-r border-slate-200 font-medium">15, 16 एवं 17 फरवरी 2027</td>
+                              <td className="p-2 border-r border-slate-200">गुरुकुल नीलोखेड़ी</td>
+                              <td className="p-2 font-medium">प्रातः 9:00 से 1:00 बजे</td>
+                            </tr>
+                            <tr className="hover:bg-slate-50">
+                              <td className="p-2 font-bold text-blue-900 border-r border-slate-200 bg-blue-50/50">छात्र</td>
+                              <td className="p-2 border-r border-slate-200 font-medium">14 फरवरी 2027</td>
+                              <td className="p-2 border-r border-slate-200">आर्यकुलम नीलोखेड़ी</td>
+                              <td className="p-2 border-r border-slate-200 font-semibold text-rose-700">प्रातः 9:30 बजे</td>
+                              <td className="p-2 border-r border-slate-200 font-medium">15, 16 एवं 17 फरवरी 2027</td>
+                              <td className="p-2 border-r border-slate-200">आर्यकुलम नीलोखेड़ी</td>
+                              <td className="p-2 font-medium">प्रातः 9:00 से 1:00 बजे</td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+
+                    {/* 4. काउंसलिंग जमा राशि */}
+                    <div className="pt-4 space-y-1.5">
+                      <h3 className="text-xs sm:text-sm font-bold text-portal-navy uppercase tracking-wide flex items-center gap-2">
+                        <span className="w-5 h-5 rounded-full bg-portal-navy text-white text-[11px] flex items-center justify-center font-bold">4</span>
+                        <span>काउंसलिंग जमा राशि</span>
+                      </h3>
+                      <div className="bg-amber-50 border border-amber-200 p-3 rounded-lg text-amber-950 font-medium">
+                        तीनों संस्थानों के लिए काउंसलिंग के दिन <strong>₹25,000</strong> जमा करना होगा।
+                      </div>
+                    </div>
+
+                    {/* 5. परिणाम */}
+                    <div className="pt-4 space-y-1.5">
+                      <h3 className="text-xs sm:text-sm font-bold text-portal-navy uppercase tracking-wide flex items-center gap-2">
+                        <span className="w-5 h-5 rounded-full bg-portal-navy text-white text-[11px] flex items-center justify-center font-bold">5</span>
+                        <span>परिणाम</span>
+                      </h3>
+                      <p className="text-slate-700">
+                        प्रवेश परीक्षा का परिणाम केवल आधिकारिक वेबसाइट/पोर्टल पर घोषित किया जाएगा।
+                      </p>
+                    </div>
+
+                    {/* 6. जरुरी पोर्टल निर्देश */}
+                    <div className="pt-4 space-y-2">
+                      <h3 className="text-xs sm:text-sm font-bold text-portal-navy uppercase tracking-wide flex items-center gap-2">
+                        <span className="w-5 h-5 rounded-full bg-portal-navy text-white text-[11px] flex items-center justify-center font-bold">6</span>
+                        <span>जरुरी पोर्टल निर्देश</span>
+                      </h3>
+                      <ul className="list-disc pl-7 space-y-1.5 text-slate-700">
+                        <li>पंजीकरण फॉर्म भरने से पहले सभी निर्देश ध्यानपूर्वक पढ़ें।</li>
+                        <li>विद्यार्थी एवं अभिभावक की जानकारी संबंधित दस्तावेजों के अनुसार ही भरें।</li>
+                        <li>नवीनतम रंगीन फोटो अपलोड करें।</li>
+                        <li>पंजीकरण/आवेदन विवरण तथा Admit Card को परीक्षा एवं काउंसलिंग तक सुरक्षित रखें।</li>
+                        <li>परीक्षा/काउंसलिंग के दिन सभी आवश्यक दस्तावेज साथ लाएँ।</li>
+                      </ul>
+                    </div>
+                  </>
+                )}
+              </div>
             </div>
 
-            <div className="space-y-3 text-xs text-slate-700 bg-slate-50 p-4 rounded-lg border border-slate-200 leading-relaxed">
-              <div className="flex items-start gap-2">
-                <span className="font-bold text-slate-900">1.</span>
-                <div>
-                  <strong className="text-slate-900">Identity Veracity:</strong> Full name, date of birth, gender, and parents&apos; names must match the candidate&apos;s official school records and Aadhaar Card.
-                </div>
-              </div>
-              <div className="flex items-start gap-2">
-                <span className="font-bold text-slate-900">2.</span>
-                <div>
-                  <strong className="text-slate-900">Single Application Rule:</strong> Only one Admission form is permitted per candidate. Duplicate submissions are systematically rejected.
-                </div>
-              </div>
-              <div className="flex items-start gap-2">
-                <span className="font-bold text-slate-900">3.</span>
-                <div>
-                  <strong className="text-slate-900">Document Uploads:</strong> Candidate photo, candidate signature, parent/guardian signature, and Aadhaar copy must be legible files under 2 MB each.
-                </div>
-              </div>
-              <div className="flex items-start gap-2">
-                <span className="font-bold text-slate-900">4.</span>
-                <div>
-                  <strong className="text-slate-900">Application Fee:</strong> Registration is officially finalized only upon payment of the ₹800 non-refundable examination fee.
-                </div>
-              </div>
-            </div>
+            {/* Checkbox: User Reading & Accepting Instructions */}
+            <label className="flex items-start gap-3 p-4 bg-amber-50/80 border border-amber-300 rounded-xl cursor-pointer hover:bg-amber-50 transition shadow-2xs">
+              <input
+                type="checkbox"
+                checked={ntaCheckbox}
+                onChange={(e) => setNtaCheckbox(e.target.checked)}
+                className="mt-0.5 w-4 h-4 text-portal-navy rounded border-slate-300 focus:ring-portal-navy"
+              />
+              <span className="text-xs text-slate-900 leading-normal font-medium">
+                {instructionLang === 'hi'
+                  ? 'मैंने उपरोक्त प्रवेश एवं काउंसलिंग निर्देश विवरणिका (शैक्षणिक सत्र 2027–28) के सभी 6 निर्देशों को ध्यानपूर्वक पढ़ व समझ लिया है और मैं सभी नियमों, परीक्षा व काउंसलिंग कार्यक्रम को स्वीकार करता/करती हूँ।'
+                  : 'I have read, understood, and accept all the instructions in the Admission & Counselling Instruction Manual (Academic Session 2027–28) as given above. I agree to all examination conditions, schedules, deposit rules, and campus terms.'} <span className="text-rose-500 font-bold">*</span>
+              </span>
+            </label>
 
-            {/* Candidate Gender & Study Location Selection */}
+            {/* Candidate Gender & Study Location Selection (At the end, intact with PDF-aligned instructions) */}
             <div className="border border-slate-200 rounded-xl p-5 bg-white space-y-4 shadow-2xs">
               <div className="border-b border-slate-100 pb-2.5">
                 <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
@@ -814,7 +1218,7 @@ export default function ApplyPage() {
                   <span className="text-rose-500">*</span>
                 </h3>
                 <p className="text-xs text-slate-500">
-                  Select candidate gender to view eligible Gurukul campuses.
+                  Select candidate gender to view eligible Gurukul campuses and specific examination details as per the manual.
                 </p>
               </div>
 
@@ -824,45 +1228,61 @@ export default function ApplyPage() {
                   Candidate Gender <span className="text-rose-500">*</span>
                 </label>
                 <div className="grid grid-cols-2 gap-3 max-w-md">
-                  <label className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition ${formData.gender === 'Male'
-                    ? 'border-portal-navy bg-portal-navy/5 text-portal-navy font-bold shadow-xs'
-                    : 'border-slate-200 hover:bg-slate-50 text-slate-700'
-                    }`}>
-                    <input
-                      type="radio"
-                      name="gender"
-                      value="Male"
-                      checked={formData.gender === 'Male'}
-                      onChange={handleChange}
-                      className="text-portal-navy focus:ring-portal-navy"
-                    />
+                  <button
+                    type="button"
+                    onClick={() => handleGenderSelect('Male')}
+                    className={`flex items-center gap-3 p-3 rounded-lg border text-left cursor-pointer transition select-none ${
+                      formData.gender === 'Male'
+                        ? 'border-portal-navy bg-portal-navy/5 text-portal-navy font-bold shadow-xs ring-1 ring-portal-navy'
+                        : 'border-slate-200 hover:bg-slate-50 text-slate-700 bg-white'
+                    }`}
+                  >
+                    <div
+                      className={`w-4 h-4 rounded-full border flex items-center justify-center transition ${
+                        formData.gender === 'Male'
+                          ? 'border-portal-navy bg-white'
+                          : 'border-slate-300 bg-white'
+                      }`}
+                    >
+                      {formData.gender === 'Male' && (
+                        <div className="w-2 h-2 rounded-full bg-portal-navy" />
+                      )}
+                    </div>
                     <span className="text-xs">Male (Boys)</span>
-                  </label>
+                  </button>
 
-                  <label className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition ${formData.gender === 'Female'
-                    ? 'border-portal-navy bg-portal-navy/5 text-portal-navy font-bold shadow-xs'
-                    : 'border-slate-200 hover:bg-slate-50 text-slate-700'
-                    }`}>
-                    <input
-                      type="radio"
-                      name="gender"
-                      value="Female"
-                      checked={formData.gender === 'Female'}
-                      onChange={handleChange}
-                      className="text-portal-navy focus:ring-portal-navy"
-                    />
+                  <button
+                    type="button"
+                    onClick={() => handleGenderSelect('Female')}
+                    className={`flex items-center gap-3 p-3 rounded-lg border text-left cursor-pointer transition select-none ${
+                      formData.gender === 'Female'
+                        ? 'border-portal-navy bg-portal-navy/5 text-portal-navy font-bold shadow-xs ring-1 ring-portal-navy'
+                        : 'border-slate-200 hover:bg-slate-50 text-slate-700 bg-white'
+                    }`}
+                  >
+                    <div
+                      className={`w-4 h-4 rounded-full border flex items-center justify-center transition ${
+                        formData.gender === 'Female'
+                          ? 'border-portal-navy bg-white'
+                          : 'border-slate-300 bg-white'
+                      }`}
+                    >
+                      {formData.gender === 'Female' && (
+                        <div className="w-2 h-2 rounded-full bg-portal-navy" />
+                      )}
+                    </div>
                     <span className="text-xs">Female (Girls)</span>
-                  </label>
+                  </button>
                 </div>
               </div>
 
-              {/* Preferred Study Location Options */}
-              {formData.gender === 'Female' ? (
-                <div className="p-4 rounded-lg bg-indigo-50/70 border border-indigo-200 space-y-2">
+              {/* Preferred Study Location Options with PDF-aligned details */}
+              {(formData.gender === 'Female' || (formData.gender as string)?.toLowerCase() === 'female') ? (
+                <div className="p-4 rounded-lg bg-indigo-50/70 border border-indigo-200 space-y-3">
                   <div className="flex items-center justify-between">
-                    <span className="text-xs font-bold text-indigo-950">Preferred Study Location</span>
-                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-700 border border-indigo-200">
-                      Girls Wing
+                    <span className="text-xs font-bold text-indigo-950">Study Location Preference (Girls)</span>
+                    <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-indigo-100 text-indigo-700 border border-indigo-200">
+                      The Gurukul Nilokheri (Girls)
                     </span>
                   </div>
                   <input
@@ -871,9 +1291,18 @@ export default function ApplyPage() {
                     value="The Gurukul Nilokheri (Girls Wing)"
                     className="form-input-field bg-white text-slate-800 font-semibold cursor-not-allowed border-indigo-200"
                   />
-                  <p className="text-[11px] text-indigo-800 leading-relaxed">
-                    <strong>Institutional Policy:</strong> Admissions for female candidates are conducted exclusively at <strong>The Gurukul Nilokheri</strong>. Dedicated boarding and educational facilities for girls are situated at this campus.
-                  </p>
+                  <div className="bg-white/80 p-3 rounded-md border border-indigo-100 text-[11px] text-indigo-950 space-y-1">
+                    <p className="font-semibold text-indigo-900">
+                      Official Schedule as per Instruction Manual (Girls):
+                    </p>
+                    <ul className="list-disc pl-4 space-y-0.5 text-slate-700">
+                      <li><strong>Entrance Exam:</strong> Sunday, 14 February 2027 at 8:30 AM at <strong>The Gurukul Nilokheri</strong>.</li>
+                      <li><strong>Reporting Time:</strong> Candidates must report at <strong>8:00 AM / 8:30 AM</strong>.</li>
+                      <li><strong>Counselling Schedule:</strong> 15, 16 &amp; 17 February 2027 (9:00 AM to 1:00 PM) at <strong>The Gurukul Nilokheri</strong>.</li>
+                      <li><strong>Counselling-Day Deposit:</strong> A deposit of <strong>₹25,000</strong> is to be deposited on the day of counselling.</li>
+                      <li><strong>Must Bring:</strong> Admit Card, Aadhaar Card copy, and 2 passport-size photographs.</li>
+                    </ul>
+                  </div>
                 </div>
               ) : (
                 <div className="space-y-3 pt-1">
@@ -922,21 +1351,22 @@ export default function ApplyPage() {
                       </div>
                     )}
                   </div>
+
+                  <div className="bg-blue-50/70 p-3 rounded-md border border-blue-200 text-[11px] text-blue-950 space-y-1">
+                    <p className="font-semibold text-blue-900">
+                      Official Schedule as per Instruction Manual (Boys):
+                    </p>
+                    <ul className="list-disc pl-4 space-y-0.5 text-slate-700">
+                      <li><strong>Entrance Exam:</strong> Sunday, 14 February 2027 at <strong>Aryakulam Nilokheri</strong>.</li>
+                      <li><strong>Reporting Time:</strong> Candidates must report at <strong>9:30 AM</strong> at Aryakulam Nilokheri.</li>
+                      <li><strong>Counselling Schedule:</strong> 15, 16 &amp; 17 February 2027 (9:00 AM to 1:00 PM) at <strong>Aryakulam Nilokheri</strong>.</li>
+                      <li><strong>Counselling-Day Deposit:</strong> A deposit of <strong>₹25,000</strong> is to be deposited on the day of counselling for all institutions.</li>
+                      <li><strong>Must Bring:</strong> Admit Card, Aadhaar Card copy, and 2 passport-size photographs.</li>
+                    </ul>
+                  </div>
                 </div>
               )}
             </div>
-
-            <label className="flex items-start gap-3 p-3.5 bg-slate-50 border border-slate-300 rounded-lg cursor-pointer">
-              <input
-                type="checkbox"
-                checked={ntaCheckbox}
-                onChange={(e) => setNtaCheckbox(e.target.checked)}
-                className="mt-0.5 w-4 h-4 text-portal-navy rounded border-slate-300 focus:ring-portal-navy"
-              />
-              <span className="text-xs text-slate-800 leading-normal">
-                I have read, understood, and accept all eligibility terms, campus guidelines, and examination conditions for The Gurukul Entrance Examination 2027-28. I declare that all furnished particulars are accurate.
-              </span>
-            </label>
           </div>
         )}
 
@@ -992,7 +1422,7 @@ export default function ApplyPage() {
                     value={formData.gender}
                     className="form-input-field bg-slate-100 text-slate-700 font-semibold cursor-not-allowed border-slate-300 opacity-90 shadow-none"
                   >
-                    <option value={formData.gender}>{formData.gender}</option>
+                    <option value={formData.gender}>{formData.gender === 'Female' ? 'Female (Girls)' : 'Male (Boys)'}</option>
                   </select>
                 </div>
               </div>
@@ -1046,7 +1476,7 @@ export default function ApplyPage() {
                   <select
                     name="stream"
                     required
-                    value={formData.stream || getStreamsForCampus(formData.firstPreference)[0] || 'Commerce'}
+                    value={formData.stream || getStreamsForCampus(formData.firstPreference)[0] || 'Non Medical'}
                     onChange={handleChange}
                     className="form-input-field font-semibold"
                   >
@@ -1262,14 +1692,47 @@ export default function ApplyPage() {
                 <label className="form-label">
                   Father&apos;s Occupation
                 </label>
-                <input
-                  type="text"
-                  name="fatherOccupation"
-                  value={formData.fatherOccupation}
-                  onChange={handleChange}
-                  placeholder="e.g. Service, Business, Agriculture"
+                <select
+                  name="fatherOccupationOption"
+                  value={formData.fatherOccupationOption}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setFormData((prev) => ({
+                      ...prev,
+                      fatherOccupationOption: val,
+                      fatherOccupation: val === 'Others' ? (prev.fatherOccupationOther.trim() || 'Others') : val,
+                    }));
+                  }}
                   className="form-input-field"
-                />
+                >
+                  <option value="">Select Father&apos;s Occupation</option>
+                  {FATHER_OCCUPATIONS.map((occ) => (
+                    <option key={occ} value={occ}>{occ}</option>
+                  ))}
+                </select>
+                {formData.fatherOccupationOption === 'Others' && (
+                  <div className="mt-2">
+                    <label className="text-[11px] font-semibold text-slate-700 block mb-1">
+                      Specify Father&apos;s Occupation <span className="text-rose-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      name="fatherOccupationOther"
+                      value={formData.fatherOccupationOther}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setFormData((prev) => ({
+                          ...prev,
+                          fatherOccupationOther: val,
+                          fatherOccupation: val.trim() || 'Others',
+                        }));
+                      }}
+                      placeholder="e.g. Architect, Consultant, Artist"
+                      maxLength={50}
+                      className="form-input-field text-xs"
+                    />
+                  </div>
+                )}
               </div>
 
               <div>
@@ -1310,14 +1773,47 @@ export default function ApplyPage() {
                 <label className="form-label">
                   Mother&apos;s Occupation
                 </label>
-                <input
-                  type="text"
-                  name="motherOccupation"
-                  value={formData.motherOccupation}
-                  onChange={handleChange}
-                  placeholder="e.g. Homemaker, Teacher, Doctor"
+                <select
+                  name="motherOccupationOption"
+                  value={formData.motherOccupationOption}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setFormData((prev) => ({
+                      ...prev,
+                      motherOccupationOption: val,
+                      motherOccupation: val === 'Others' ? (prev.motherOccupationOther.trim() || 'Others') : val,
+                    }));
+                  }}
                   className="form-input-field"
-                />
+                >
+                  <option value="">Select Mother&apos;s Occupation</option>
+                  {MOTHER_OCCUPATIONS.map((occ) => (
+                    <option key={occ} value={occ}>{occ}</option>
+                  ))}
+                </select>
+                {formData.motherOccupationOption === 'Others' && (
+                  <div className="mt-2">
+                    <label className="text-[11px] font-semibold text-slate-700 block mb-1">
+                      Specify Mother&apos;s Occupation <span className="text-rose-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      name="motherOccupationOther"
+                      value={formData.motherOccupationOther}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setFormData((prev) => ({
+                          ...prev,
+                          motherOccupationOther: val,
+                          motherOccupation: val.trim() || 'Others',
+                        }));
+                      }}
+                      placeholder="e.g. Banker, Designer, Healthcare"
+                      maxLength={50}
+                      className="form-input-field text-xs"
+                    />
+                  </div>
+                )}
               </div>
 
               <div>
@@ -1643,6 +2139,7 @@ export default function ApplyPage() {
                 </div>
                 <div className="text-right">
                   <span className="text-2xl font-bold text-portal-navy">₹800</span>
+                  <span className="block text-[11px] text-emerald-600 font-medium">Non-refundable</span>
                 </div>
               </div>
 
@@ -1664,7 +2161,7 @@ export default function ApplyPage() {
                 className="mt-0.5 h-4 w-4 rounded text-portal-navy focus:ring-portal-navy border-slate-300"
               />
               <span className="leading-normal">
-                I hereby declare that the particulars provided in this application are authentic and true. I understand that admission is strictly merit-based on entrance examination performance. <span className="text-rose-500 font-bold">*</span>
+                I hereby declare that provided particulars in application are true. <span className="text-rose-500 font-bold">*</span>
               </span>
             </label>
           </div>
@@ -1700,7 +2197,7 @@ export default function ApplyPage() {
               className={`btn-primary text-xs px-6 py-2.5 font-bold ${!declarationAgreed || loading ? 'opacity-50 cursor-not-allowed' : ''
                 }`}
             >
-              {loading ? 'Processing Payment...' : 'Pay ₹800 & Submit Application'}
+              {loading ? 'Connecting to HDFC Payment Gateway...' : 'Pay ₹800 & Submit Application'}
             </button>
           )}
         </div>
