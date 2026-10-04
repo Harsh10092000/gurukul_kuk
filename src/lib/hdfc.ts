@@ -124,51 +124,88 @@ export function generateHdfcOrderId(prefix = 'GUR'): string {
 }
 
 /**
- * Build dynamic return URL from incoming request or environment
+ * Safely resolve the public base URL of the portal (e.g. https://thegurukuladmission.com).
+ * Dynamically supports the primary domain, any custom domains, Vercel preview domains,
+ * and local development without ever falling back to localhost on a live server.
  */
-export function resolveReturnUrl(req?: Request): string {
-  let resolved: string | null = null;
-
-  // 1. If an active request is available, prioritize the actual incoming Host header
-  if (req) {
-    const rawForwardedHost = req.headers.get('x-forwarded-host');
-    const rawHost = req.headers.get('host');
-    const rawHeader = (rawForwardedHost || rawHost || '').split(',')[0].trim();
-
-    if (rawHeader) {
-      const isLocal = rawHeader.includes('localhost') || rawHeader.includes('127.0.0.1');
-      // On deployed environments, ALWAYS enforce HTTPS for banking compliance
-      const proto = isLocal ? 'http' : 'https';
-      resolved = `${proto}://${rawHeader}/api/payment/hdfc/return`;
+export function getPublicBaseUrl(req?: Request): string {
+  // 1. If explicit environment variable is set and not localhost on production:
+  const envAppUrl = (process.env.NEXT_PUBLIC_APP_URL || '').trim();
+  if (envAppUrl) {
+    const isLocal = envAppUrl.includes('localhost') || envAppUrl.includes('127.0.0.1');
+    const isProd = process.env.NODE_ENV === 'production' || Boolean(process.env.VERCEL);
+    if (!isProd || !isLocal) {
+      return envAppUrl.replace(/\/$/, '');
     }
   }
 
-  // 2. If explicitly configured in HDFC_RETURN_URL, use it unless it is a stale localhost config on production
-  if (!resolved && HDFC_CONFIG.RETURN_URL && HDFC_CONFIG.RETURN_URL.trim() !== '') {
+  // 2. Derive dynamically from active HTTP request headers (Origin, Referer, x-forwarded-host, Host)
+  if (req) {
+    const origin = req.headers.get('origin');
+    if (origin && !origin.includes('localhost') && !origin.includes('127.0.0.1')) {
+      return origin.replace(/\/$/, '');
+    }
+
+    const referer = req.headers.get('referer');
+    if (referer) {
+      try {
+        const refUrl = new URL(referer);
+        if (!refUrl.hostname.includes('localhost') && !refUrl.hostname.includes('127.0.0.1')) {
+          return `${refUrl.protocol}//${refUrl.host}`;
+        }
+      } catch {}
+    }
+
+    const forwardedHost = req.headers.get('x-forwarded-host')?.split(',')[0].trim();
+    if (forwardedHost) {
+      const isLocal = forwardedHost.includes('localhost') || forwardedHost.includes('127.0.0.1');
+      if (!isLocal) {
+        const proto = req.headers.get('x-forwarded-proto') || 'https';
+        return `${proto}://${forwardedHost}`;
+      }
+    }
+
+    const host = req.headers.get('host')?.split(',')[0].trim();
+    if (host) {
+      const isLocal = host.includes('localhost') || host.includes('127.0.0.1');
+      if (!isLocal) {
+        const proto = req.headers.get('x-forwarded-proto') || 'https';
+        return `${proto}://${host}`;
+      }
+    }
+  }
+
+  // 3. Vercel deployment URL if present
+  const vercelHost = process.env.VERCEL_URL || process.env.NEXT_PUBLIC_VERCEL_URL;
+  if (vercelHost) {
+    return `https://${vercelHost.replace(/^https?:\/\//, '').replace(/\/$/, '')}`;
+  }
+
+  // 4. Default production domain for The Gurukul
+  if (process.env.NODE_ENV === 'production' || Boolean(process.env.VERCEL)) {
+    return 'https://thegurukuladmission.com';
+  }
+
+  // 5. Localhost fallback only for local development
+  return 'http://localhost:3000';
+}
+
+/**
+ * Build dynamic return URL from incoming request or environment
+ */
+export function resolveReturnUrl(req?: Request): string {
+  // If explicitly configured in HDFC_RETURN_URL, use it unless it is a stale localhost config on production
+  if (HDFC_CONFIG.RETURN_URL && HDFC_CONFIG.RETURN_URL.trim() !== '') {
     const configured = HDFC_CONFIG.RETURN_URL.trim();
     const isConfigLocal = configured.includes('localhost') || configured.includes('127.0.0.1');
     const isProd = process.env.NODE_ENV === 'production' || Boolean(process.env.VERCEL);
     if (!isProd || !isConfigLocal) {
-      resolved = configured;
+      return configured;
     }
   }
 
-  // 3. Fallback to VERCEL_URL, NEXT_PUBLIC_APP_URL, or localhost
-  if (!resolved) {
-    const vercelHost = process.env.VERCEL_URL || process.env.NEXT_PUBLIC_VERCEL_URL;
-    if (vercelHost) {
-      resolved = `https://${vercelHost.replace(/^https?:\/\//, '').replace(/\/$/, '')}/api/payment/hdfc/return`;
-    } else {
-      const envBase = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
-      const cleanBase = envBase.replace(/\/$/, '');
-      const isLocal = cleanBase.includes('localhost') || cleanBase.includes('127.0.0.1');
-      const proto = isLocal ? 'http' : 'https';
-      const domainOnly = cleanBase.replace(/^https?:\/\//, '');
-      resolved = `${proto}://${domainOnly}/api/payment/hdfc/return`;
-    }
-  }
-
-  return resolved;
+  const base = getPublicBaseUrl(req);
+  return `${base}/api/payment/hdfc/return`;
 }
 
 export interface CreateHdfcOrderSessionOptions {

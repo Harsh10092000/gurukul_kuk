@@ -3,7 +3,7 @@ import { db } from '@/lib/db';
 import { hashPassword, signToken, getAuthCookieOptions } from '@/lib/auth';
 import { sendNotification, ADMIN_NOTIFICATION_EMAIL } from '@/lib/notifications';
 import { getExamDetailsForGender } from '@/lib/validations';
-import { fetchHdfcOrderStatus, HDFC_CONFIG } from '@/lib/hdfc';
+import { fetchHdfcOrderStatus, HDFC_CONFIG, getPublicBaseUrl } from '@/lib/hdfc';
 
 export const dynamic = 'force-dynamic';
 
@@ -46,11 +46,12 @@ async function extractOrderParams(request: Request): Promise<{ orderId: string |
  * Core handler for processing return from HDFC Hosted Payment Page
  */
 async function handleHdfcReturn(request: Request) {
+  const baseUrl = getPublicBaseUrl(request);
   const { orderId, body } = await extractOrderParams(request);
 
   if (!orderId) {
     console.error('HDFC Return: Missing order_id in return callback');
-    return NextResponse.redirect(new URL('/apply?payment=error&msg=Missing+Order+Identifier', request.url), 303);
+    return NextResponse.redirect(new URL('/apply?payment=error&msg=Missing+Order+Identifier', baseUrl), 303);
   }
 
   // 1. Fetch internal payment order record
@@ -58,7 +59,7 @@ async function handleHdfcReturn(request: Request) {
   if (!paymentOrder) {
     console.error(`HDFC Return: Order ${orderId} not found in database`);
     return NextResponse.redirect(
-      new URL(`/apply?payment=error&msg=Order+record+not+found+for+${encodeURIComponent(orderId)}`, request.url),
+      new URL(`/apply?payment=error&msg=Order+record+not+found+for+${encodeURIComponent(orderId)}`, baseUrl),
       303
     );
   }
@@ -73,7 +74,7 @@ async function handleHdfcReturn(request: Request) {
     return NextResponse.redirect(
       new URL(
         `/payment/thank-you?orderId=${encodeURIComponent(orderId)}&regNo=${encodeURIComponent(regNo)}&txnId=${encodeURIComponent(txnId)}`,
-        request.url
+        baseUrl
       ),
       303
     );
@@ -100,7 +101,7 @@ async function handleHdfcReturn(request: Request) {
     } catch (apiErr: any) {
       console.error(`HDFC Return: Failed server-to-server status check for ${orderId}:`, apiErr);
       return NextResponse.redirect(
-        new URL(`/apply?payment=pending&orderId=${orderId}&msg=Verifying+payment+status.+Please+check+back+shortly.`, request.url),
+        new URL(`/apply?payment=pending&orderId=${orderId}&msg=Verifying+payment+status.+Please+check+back+shortly.`, baseUrl),
         303
       );
     }
@@ -114,7 +115,7 @@ async function handleHdfcReturn(request: Request) {
   if (returnedOrderId !== orderId) {
     console.error(`HDFC Return: Order ID mismatch: returned ${returnedOrderId}, expected ${orderId}`);
     return NextResponse.redirect(
-      new URL('/apply?payment=error&msg=Transaction+verification+failed+due+to+order+mismatch', request.url),
+      new URL('/apply?payment=error&msg=Transaction+verification+failed+due+to+order+mismatch', baseUrl),
       303
     );
   }
@@ -127,7 +128,7 @@ async function handleHdfcReturn(request: Request) {
   if (!amountValid) {
     console.error(`HDFC Return: Amount mismatch: returned ${returnedAmount}, expected ${expectedAmount}`);
     return NextResponse.redirect(
-      new URL('/apply?payment=error&msg=Transaction+verification+failed+due+to+amount+discrepancy', request.url),
+      new URL('/apply?payment=error&msg=Transaction+verification+failed+due+to+amount+discrepancy', baseUrl),
       303
     );
   }
@@ -157,7 +158,7 @@ async function handleHdfcReturn(request: Request) {
     return NextResponse.redirect(
       new URL(
         `/apply?payment=cancelled&orderId=${orderId}&msg=Payment+was+cancelled.+All+your+application+details+are+safely+preserved+below;+click+Submit+to+retry.`,
-        request.url
+        baseUrl
       ),
       303
     );
@@ -181,7 +182,7 @@ async function handleHdfcReturn(request: Request) {
       return NextResponse.redirect(
         new URL(
           `/payment/thank-you?orderId=${encodeURIComponent(orderId)}&txnId=${encodeURIComponent(txnId)}`,
-          request.url
+          baseUrl
         ),
         303
       );
@@ -431,7 +432,7 @@ async function handleHdfcReturn(request: Request) {
 
     const redirectUrl = new URL(
       `/payment/thank-you?orderId=${encodeURIComponent(orderId)}&regNo=${encodeURIComponent(registrationId)}&txnId=${encodeURIComponent(txnId)}`,
-      request.url
+      baseUrl
     );
     const response = NextResponse.redirect(redirectUrl, 303);
 
@@ -445,7 +446,7 @@ async function handleHdfcReturn(request: Request) {
     return NextResponse.redirect(
       new URL(
         `/apply?payment=pending&orderId=${orderId}&msg=Payment+authorization+is+pending+with+your+bank.+If+the+amount+was+debited,+your+application+will+be+updated+automatically+once+confirmed.`,
-        request.url
+        baseUrl
       ),
       303
     );
@@ -459,7 +460,7 @@ async function handleHdfcReturn(request: Request) {
     return NextResponse.redirect(
       new URL(
         `/apply?payment=failed&orderId=${orderId}&msg=Payment+authorization+failed+by+bank.+All+details+are+safely+preserved;+please+try+again.`,
-        request.url
+        baseUrl
       ),
       303
     );
@@ -473,7 +474,7 @@ async function handleHdfcReturn(request: Request) {
     return NextResponse.redirect(
       new URL(
         `/apply?payment=failed&orderId=${orderId}&msg=Payment+authentication+failed+or+was+cancelled.+All+details+are+safely+preserved;+please+try+again.`,
-        request.url
+        baseUrl
       ),
       303
     );
@@ -487,7 +488,7 @@ async function handleHdfcReturn(request: Request) {
   return NextResponse.redirect(
     new URL(
       `/apply?payment=cancelled&orderId=${orderId}&msg=Payment+session+was+cancelled.+All+your+application+details+are+safely+preserved+below;+click+Submit+to+retry.`,
-      request.url
+      baseUrl
     ),
     303
   );
