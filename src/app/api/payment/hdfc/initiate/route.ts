@@ -208,6 +208,7 @@ export async function POST(request: Request) {
     // Generate unique order ID
     const orderId = generateHdfcOrderId('GUR');
     const returnUrl = resolveReturnUrl(request);
+    console.log(`[HDFC Initiate] Order: ${orderId} | Resolved return_url: ${returnUrl}`);
     const customerId = cleanPhone ? `cust_${cleanPhone}` : `cust_${Date.now()}`;
 
     // Create session on HDFC SmartGateway

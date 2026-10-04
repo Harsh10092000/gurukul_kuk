@@ -127,18 +127,48 @@ export function generateHdfcOrderId(prefix = 'GUR'): string {
  * Build dynamic return URL from incoming request or environment
  */
 export function resolveReturnUrl(req?: Request): string {
-  if (HDFC_CONFIG.RETURN_URL && HDFC_CONFIG.RETURN_URL.trim() !== '') {
-    return HDFC_CONFIG.RETURN_URL.trim();
-  }
+  let resolved: string | null = null;
 
+  // 1. If an active request is available, prioritize the actual incoming Host header
   if (req) {
-    const host = req.headers.get('x-forwarded-host') || req.headers.get('host') || 'localhost:3000';
-    const proto = req.headers.get('x-forwarded-proto') || (host.includes('localhost') ? 'http' : 'https');
-    return `${proto}://${host}/api/payment/hdfc/return`;
+    const rawForwardedHost = req.headers.get('x-forwarded-host');
+    const rawHost = req.headers.get('host');
+    const rawHeader = (rawForwardedHost || rawHost || '').split(',')[0].trim();
+
+    if (rawHeader) {
+      const isLocal = rawHeader.includes('localhost') || rawHeader.includes('127.0.0.1');
+      // On deployed environments, ALWAYS enforce HTTPS for banking compliance
+      const proto = isLocal ? 'http' : 'https';
+      resolved = `${proto}://${rawHeader}/api/payment/hdfc/return`;
+    }
   }
 
-  const envBase = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
-  return `${envBase.replace(/\/$/, '')}/api/payment/hdfc/return`;
+  // 2. If explicitly configured in HDFC_RETURN_URL, use it unless it is a stale localhost config on production
+  if (!resolved && HDFC_CONFIG.RETURN_URL && HDFC_CONFIG.RETURN_URL.trim() !== '') {
+    const configured = HDFC_CONFIG.RETURN_URL.trim();
+    const isConfigLocal = configured.includes('localhost') || configured.includes('127.0.0.1');
+    const isProd = process.env.NODE_ENV === 'production' || Boolean(process.env.VERCEL);
+    if (!isProd || !isConfigLocal) {
+      resolved = configured;
+    }
+  }
+
+  // 3. Fallback to VERCEL_URL, NEXT_PUBLIC_APP_URL, or localhost
+  if (!resolved) {
+    const vercelHost = process.env.VERCEL_URL || process.env.NEXT_PUBLIC_VERCEL_URL;
+    if (vercelHost) {
+      resolved = `https://${vercelHost.replace(/^https?:\/\//, '').replace(/\/$/, '')}/api/payment/hdfc/return`;
+    } else {
+      const envBase = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+      const cleanBase = envBase.replace(/\/$/, '');
+      const isLocal = cleanBase.includes('localhost') || cleanBase.includes('127.0.0.1');
+      const proto = isLocal ? 'http' : 'https';
+      const domainOnly = cleanBase.replace(/^https?:\/\//, '');
+      resolved = `${proto}://${domainOnly}/api/payment/hdfc/return`;
+    }
+  }
+
+  return resolved;
 }
 
 export interface CreateHdfcOrderSessionOptions {

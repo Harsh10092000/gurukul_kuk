@@ -21,6 +21,7 @@ function ThankYouContent() {
   const searchParams = useSearchParams();
   const orderId = searchParams.get('orderId') || searchParams.get('order_id') || '';
   const regNo = searchParams.get('regNo') || searchParams.get('reg_no') || '';
+  const txnId = searchParams.get('txnId') || searchParams.get('txn_id') || '';
 
   const [candidate, setCandidate] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -144,9 +145,17 @@ function ThankYouContent() {
                 <span className="font-semibold text-slate-800 mt-0.5 block">{studyLoc}</span>
               </div>
               {orderId && (
-                <div className="p-3.5 rounded-lg bg-slate-50 border border-slate-200 sm:col-span-2">
-                  <span className="text-[10px] uppercase font-bold text-slate-400 block tracking-wider">Transaction Reference ID</span>
+                <div className="p-3.5 rounded-lg bg-slate-50 border border-slate-200">
+                  <span className="text-[10px] uppercase font-bold text-slate-400 block tracking-wider">Merchant Order ID</span>
                   <span className="font-mono text-slate-700 text-[11px] mt-0.5 block break-all">{orderId}</span>
+                </div>
+              )}
+              {(txnId || candidate?.application?.transactionId) && (
+                <div className="p-3.5 rounded-lg bg-slate-50 border border-slate-200">
+                  <span className="text-[10px] uppercase font-bold text-slate-400 block tracking-wider">HDFC Transaction ID (Bank Ref)</span>
+                  <span className="font-mono text-slate-700 text-[11px] mt-0.5 block break-all">
+                    {txnId || candidate?.application?.transactionId}
+                  </span>
                 </div>
               )}
             </div>
@@ -162,7 +171,7 @@ function ThankYouContent() {
               </p>
             </div>
 
-            {/* Two Action Buttons Requested: Go to Dashboard & Logout */}
+            {/* Action Buttons: Go to Dashboard & Logout */}
             <div className="pt-2 border-t border-slate-100 flex flex-col sm:flex-row gap-3">
               <Link
                 href="/dashboard"
@@ -171,6 +180,7 @@ function ThankYouContent() {
                 <LayoutDashboard className="w-4 h-4" />
                 <span>Go to Candidate Dashboard</span>
               </Link>
+
               <button
                 type="button"
                 onClick={handleLogout}

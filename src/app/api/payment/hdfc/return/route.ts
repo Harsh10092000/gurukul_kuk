@@ -66,22 +66,44 @@ async function handleHdfcReturn(request: Request) {
   // 2. Prevent duplicate processing if already completed
   if (paymentOrder.status === 'CHARGED') {
     const regNo = paymentOrder.registrationNumber || '';
+    const txnId =
+      paymentOrder.paymentResponse?.txn_id ||
+      paymentOrder.paymentResponse?.transaction_id ||
+      `TXN_${orderId.replace(/^GUR_/, '')}`;
     return NextResponse.redirect(
-      new URL(`/payment/thank-you?orderId=${orderId}&regNo=${encodeURIComponent(regNo)}`, request.url),
+      new URL(
+        `/payment/thank-you?orderId=${encodeURIComponent(orderId)}&regNo=${encodeURIComponent(regNo)}&txnId=${encodeURIComponent(txnId)}`,
+        request.url
+      ),
       303
     );
   }
 
+  const urlObj = new URL(request.url);
+  const isDummy = urlObj.searchParams.get('dummy') === 'true';
+
   // 3. Perform server-to-server HDFC Order Status API call (MANDATORY - Never trust browser redirect)
   let statusResponse: any;
-  try {
-    statusResponse = await fetchHdfcOrderStatus(orderId);
-  } catch (apiErr: any) {
-    console.error(`HDFC Return: Failed server-to-server status check for ${orderId}:`, apiErr);
-    return NextResponse.redirect(
-      new URL(`/apply?payment=pending&orderId=${orderId}&msg=Verifying+payment+status.+Please+check+back+shortly.`, request.url),
-      303
-    );
+  if (isDummy && HDFC_CONFIG.PAYMENT_MODE === 'demo') {
+    // Interactive test gateway submission
+    statusResponse = {
+      order_id: orderId,
+      status: 'CHARGED',
+      amount: paymentOrder.amount || HDFC_CONFIG.FEE_AMOUNT,
+      txn_id: `TXN_${Date.now()}`,
+      payment_method: 'UPI',
+      payment_method_type: 'UPI',
+    };
+  } else {
+    try {
+      statusResponse = await fetchHdfcOrderStatus(orderId);
+    } catch (apiErr: any) {
+      console.error(`HDFC Return: Failed server-to-server status check for ${orderId}:`, apiErr);
+      return NextResponse.redirect(
+        new URL(`/apply?payment=pending&orderId=${orderId}&msg=Verifying+payment+status.+Please+check+back+shortly.`, request.url),
+        303
+      );
+    }
   }
 
   // 4. Verify order ID and transaction amount server-side
@@ -117,7 +139,6 @@ async function handleHdfcReturn(request: Request) {
   const txnId = statusResponse.txn_id || statusResponse.transaction_id || `TXN_${orderId}`;
 
   // Check if candidate explicitly clicked Cancel on HDFC gateway
-  const urlObj = new URL(request.url);
   const isExplicitCancel =
     orderStatus === 'USER_ABORTED' ||
     orderStatus === 'CANCELLED' ||
@@ -143,13 +164,9 @@ async function handleHdfcReturn(request: Request) {
   }
 
   // Determine if payment is successfully completed:
-  // 1. Live mode: CHARGED or SUCCESS with verified amount
-  // 2. Demo mode: CHARGED/SUCCESS, OR when UPI QR / UPI method was used and candidate returns after scanning/approving
-  const isQrDemoSuccess =
-    isDemo &&
-    (paymentMethod === 'UPI_QR' || paymentMethodType === 'UPI' || orderStatus === 'AUTHORIZING');
-
-  const isSuccess = orderStatus === 'CHARGED' || orderStatus === 'SUCCESS' || isQrDemoSuccess;
+  // Strictly verify CHARGED or SUCCESS from HDFC bank.
+  // Incomplete states (e.g. AUTHORIZING, PENDING) MUST NOT be auto-redirected as success.
+  const isSuccess = orderStatus === 'CHARGED' || orderStatus === 'SUCCESS';
 
   // 5. Handle Payment Statuses
   if (isSuccess) {
@@ -162,7 +179,10 @@ async function handleHdfcReturn(request: Request) {
         paymentResponse: statusResponse,
       });
       return NextResponse.redirect(
-        new URL(`/payment/thank-you?orderId=${orderId}`, request.url),
+        new URL(
+          `/payment/thank-you?orderId=${encodeURIComponent(orderId)}&txnId=${encodeURIComponent(txnId)}`,
+          request.url
+        ),
         303
       );
     }
@@ -410,7 +430,7 @@ async function handleHdfcReturn(request: Request) {
     });
 
     const redirectUrl = new URL(
-      `/payment/thank-you?orderId=${orderId}&regNo=${encodeURIComponent(registrationId)}`,
+      `/payment/thank-you?orderId=${encodeURIComponent(orderId)}&regNo=${encodeURIComponent(registrationId)}&txnId=${encodeURIComponent(txnId)}`,
       request.url
     );
     const response = NextResponse.redirect(redirectUrl, 303);
@@ -419,6 +439,16 @@ async function handleHdfcReturn(request: Request) {
     response.cookies.set(cookieOptions.name, token, cookieOptions);
 
     return response;
+  }
+
+  if (orderStatus === 'AUTHORIZING' || orderStatus === 'PENDING' || orderStatus === 'PENDING_VBV') {
+    return NextResponse.redirect(
+      new URL(
+        `/apply?payment=pending&orderId=${orderId}&msg=Payment+authorization+is+pending+with+your+bank.+If+the+amount+was+debited,+your+application+will+be+updated+automatically+once+confirmed.`,
+        request.url
+      ),
+      303
+    );
   }
 
   if (orderStatus === 'AUTHORIZATION_FAILED' || orderStatus === 'AUTHORIZATION_FAILURE') {
