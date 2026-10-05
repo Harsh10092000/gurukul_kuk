@@ -2305,9 +2305,18 @@ export const db = {
       updatedAt: now,
     };
 
+    // 1. Maintain in Node process global memory cache (immune to file permission/disk locks)
+    const g = globalThis as any;
+    if (!g.__paymentOrdersMemoryMap) {
+      g.__paymentOrdersMemoryMap = new Map<string, PaymentOrderRecord>();
+    }
+    g.__paymentOrdersMemoryMap.set(newRecord.orderId, newRecord);
+
+    // 2. Persist to JSON fallback file
     store.paymentOrders.push(newRecord);
     saveFallbackStore(store);
 
+    // 3. Persist to MySQL if available
     if (pool && !useFallbackStorage) {
       try {
         await pool.query(
@@ -2344,12 +2353,19 @@ export const db = {
   async getPaymentOrderByOrderId(orderId: string): Promise<PaymentOrderRecord | null> {
     if (!orderId) return null;
 
+    // 1. Check in-memory cache first (fastest and immune to disk write failures)
+    const g = globalThis as any;
+    if (g.__paymentOrdersMemoryMap && g.__paymentOrdersMemoryMap.has(orderId)) {
+      return g.__paymentOrdersMemoryMap.get(orderId);
+    }
+
+    // 2. Check MySQL if available
     if (pool && !useFallbackStorage) {
       try {
         const [rows]: any = await pool.query('SELECT * FROM payment_orders WHERE order_id = ?', [orderId]);
         if (rows && rows.length > 0) {
           const r = rows[0];
-          return {
+          const rec: PaymentOrderRecord = {
             id: r.id,
             orderId: r.order_id,
             amount: parseFloat(r.amount),
@@ -2365,6 +2381,9 @@ export const db = {
             createdAt: r.created_at ? new Date(r.created_at).toISOString() : new Date().toISOString(),
             updatedAt: r.updated_at ? new Date(r.updated_at).toISOString() : new Date().toISOString(),
           };
+          if (!g.__paymentOrdersMemoryMap) g.__paymentOrdersMemoryMap = new Map();
+          g.__paymentOrdersMemoryMap.set(orderId, rec);
+          return rec;
         }
       } catch (e) {
         console.warn('MySQL getPaymentOrderByOrderId error:', e);
@@ -2373,7 +2392,12 @@ export const db = {
 
     const store = initFallbackFile();
     if (!store.paymentOrders) return null;
-    return store.paymentOrders.find(p => p.orderId === orderId) || null;
+    const found = store.paymentOrders.find(p => p.orderId === orderId) || null;
+    if (found) {
+      if (!g.__paymentOrdersMemoryMap) g.__paymentOrdersMemoryMap = new Map();
+      g.__paymentOrdersMemoryMap.set(orderId, found);
+    }
+    return found;
   },
 
   async updatePaymentOrderRecord(orderId: string, updates: Partial<PaymentOrderRecord>): Promise<PaymentOrderRecord | null> {
@@ -2422,7 +2446,13 @@ export const db = {
       }
     }
 
-    return updatedRecord || (await this.getPaymentOrderByOrderId(orderId));
+    const finalRecord = updatedRecord || (await this.getPaymentOrderByOrderId(orderId));
+    if (finalRecord) {
+      const g = globalThis as any;
+      if (!g.__paymentOrdersMemoryMap) g.__paymentOrdersMemoryMap = new Map();
+      g.__paymentOrdersMemoryMap.set(orderId, finalRecord);
+    }
+    return finalRecord;
   },
 };
 

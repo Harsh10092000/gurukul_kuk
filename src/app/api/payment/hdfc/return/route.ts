@@ -54,12 +54,66 @@ async function handleHdfcReturn(request: Request) {
     return NextResponse.redirect(new URL('/apply?payment=error&msg=Missing+Order+Identifier', baseUrl), 303);
   }
 
+  const urlObj = new URL(request.url);
+  const isDummy = urlObj.searchParams.get('dummy') === 'true';
+
   // 1. Fetch internal payment order record
-  const paymentOrder = await db.getPaymentOrderByOrderId(orderId);
-  if (!paymentOrder) {
-    console.error(`HDFC Return: Order ${orderId} not found in database`);
+  let paymentOrder = await db.getPaymentOrderByOrderId(orderId);
+
+  // If order was cancelled / aborted by user on gateway, handle immediately
+  const rawStatus = (body?.status || urlObj.searchParams.get('status') || urlObj.searchParams.get('payment') || '').toUpperCase();
+  if (rawStatus === 'USER_ABORTED' || rawStatus === 'CANCELLED') {
+    if (paymentOrder) {
+      await db.updatePaymentOrderRecord(orderId, { status: 'CANCELLED', paymentResponse: body });
+    }
     return NextResponse.redirect(
-      new URL(`/apply?payment=error&msg=Order+record+not+found+for+${encodeURIComponent(orderId)}`, baseUrl),
+      new URL(
+        `/apply?payment=cancelled&orderId=${encodeURIComponent(orderId)}&msg=Payment+session+was+cancelled.+All+your+application+particulars+are+safely+preserved+below;+click+Pay+to+retry.`,
+        baseUrl
+      ),
+      303
+    );
+  }
+
+  // If order record is missing (e.g. disk permission issue or server restart), recover from HDFC status API
+  if (!paymentOrder) {
+    console.warn(`HDFC Return: Order ${orderId} not found in database, fetching directly from HDFC status API...`);
+    try {
+      const liveStatus = await fetchHdfcOrderStatus(orderId);
+      const liveStatusUpper = (liveStatus?.status || '').toUpperCase();
+
+      if (liveStatusUpper === 'USER_ABORTED' || liveStatusUpper === 'CANCELLED') {
+        return NextResponse.redirect(
+          new URL(
+            `/apply?payment=cancelled&orderId=${encodeURIComponent(orderId)}&msg=Payment+was+cancelled+at+the+gateway.+All+your+application+particulars+are+safely+preserved+below;+click+Pay+to+retry.`,
+            baseUrl
+          ),
+          303
+        );
+      }
+
+      if (liveStatus) {
+        paymentOrder = await db.createPaymentOrderRecord({
+          orderId,
+          amount: liveStatus.amount || HDFC_CONFIG.FEE_AMOUNT,
+          currency: liveStatus.currency || 'INR',
+          status: liveStatusUpper || 'PENDING',
+          customerEmail: liveStatus.customer_email || body?.customer_email || null,
+          customerPhone: liveStatus.customer_phone || body?.customer_phone || null,
+          customerId: liveStatus.customer_id || null,
+          applicationPayload: liveStatus.metadata || {},
+          paymentResponse: liveStatus,
+        });
+      }
+    } catch (err: any) {
+      console.warn(`HDFC Return: Could not recover order ${orderId} from HDFC API:`, err?.message);
+    }
+  }
+
+  if (!paymentOrder) {
+    console.error(`HDFC Return: Order ${orderId} not found in database and could not be fetched from HDFC`);
+    return NextResponse.redirect(
+      new URL(`/apply?payment=cancelled&orderId=${encodeURIComponent(orderId)}&msg=Payment+session+expired+or+was+cancelled.+All+your+application+particulars+are+safely+preserved+below;+click+Pay+to+retry.`, baseUrl),
       303
     );
   }
@@ -79,9 +133,6 @@ async function handleHdfcReturn(request: Request) {
       303
     );
   }
-
-  const urlObj = new URL(request.url);
-  const isDummy = urlObj.searchParams.get('dummy') === 'true';
 
   // 3. Perform server-to-server HDFC Order Status API call (MANDATORY - Never trust browser redirect)
   let statusResponse: any;
@@ -173,8 +224,8 @@ async function handleHdfcReturn(request: Request) {
   if (isSuccess) {
     // Payment verified successfully! Finalize official registration
     const payload = paymentOrder.applicationPayload;
-    if (!payload) {
-      console.error(`HDFC Return: Missing application payload for order ${orderId}`);
+    if (!payload || !payload.personalInfo) {
+      console.error(`HDFC Return: Missing or incomplete application payload for order ${orderId}`);
       await db.updatePaymentOrderRecord(orderId, {
         status: 'CHARGED',
         paymentResponse: statusResponse,
