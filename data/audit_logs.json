@@ -1,5 +1,95 @@
 [
   {
+    "userId": "usr-admin-1",
+    "userName": "Principal / Exam Controller",
+    "userRole": "admin",
+    "action": "SYSTEM_SETTINGS_UPDATE",
+    "entity": "SystemSettings",
+    "details": {
+      "previous": {
+        "portalOpen": true,
+        "resultsDeclared": false,
+        "academicSession": "2027-2028",
+        "applicationFee": 800,
+        "registrationStartDate": "2026-09-01",
+        "registrationEndDate": "2027-02-10",
+        "admitCardReleaseDate": "2027-02-10",
+        "entranceExamDate": "2027-02-14",
+        "entranceExamTime": "9:30 AM (Boys) / 8:30 AM (Girls)",
+        "examVenueName": "Aryakulam Nilokheri (Boys) / The Gurukul Nilokheri (Girls)",
+        "examVenueAddress": "Nilokheri, Karnal, Haryana - 132117",
+        "resultDeclarationDate": "2027-02-14",
+        "counselingStartDate": "2027-04-15",
+        "helplinePhone": "+91 7027849858 / 59",
+        "helplineEmail": "thegurukulnilokheri@gmail.com",
+        "admitCardsReleased": false,
+        "admitCardsReleasedAt": "2026-10-01T12:58:55.076Z",
+        "activeStudyLocations": [
+          "Gurukul Nilokheri",
+          "Gurukul Jyotisar",
+          "Aryakulam Nilokheri"
+        ]
+      },
+      "updated": {
+        "portalOpen": true,
+        "resultsDeclared": false,
+        "academicSession": "2027-2028",
+        "applicationFee": 800,
+        "registrationStartDate": "2026-09-01",
+        "registrationEndDate": "2027-02-12",
+        "admitCardReleaseDate": "2027-02-12",
+        "entranceExamDate": "2027-02-14",
+        "entranceExamTime": "9:30 AM (Boys) / 8:30 AM (Girls)",
+        "examVenueName": "Aryakulam Nilokheri (Boys) / The Gurukul Nilokheri (Girls)",
+        "examVenueAddress": "Nilokheri, Karnal, Haryana - 132117",
+        "resultDeclarationDate": "2027-02-14",
+        "counselingStartDate": "2027-04-15",
+        "helplinePhone": "+91 7027849858 / 59",
+        "helplineEmail": "thegurukulnilokheri@gmail.com",
+        "activeStudyLocations": [
+          "Gurukul Nilokheri",
+          "Gurukul Jyotisar",
+          "Aryakulam Nilokheri"
+        ],
+        "admitCardsReleased": false,
+        "admitCardsReleasedAt": "2026-10-01T12:58:55.076Z"
+      }
+    },
+    "id": "audit-1791186682165-uzus7",
+    "timestamp": "2026-10-05T07:51:22.165Z"
+  },
+  {
+    "userId": "usr-admin-1",
+    "userName": "Principal / Exam Controller",
+    "userRole": "admin",
+    "action": "UPDATE_FORM_SCHEDULE",
+    "entity": "FormSchedule",
+    "details": {
+      "previous": {
+        "startDate": "2026-08-31T18:30:00.000Z",
+        "endDate": "2027-02-10T18:29:59.000Z",
+        "statusOverride": "auto",
+        "timezone": "Asia/Kolkata (IST)",
+        "announcementNotice": "",
+        "reopenedCount": 1,
+        "lastUpdated": "2026-09-30T10:50:46.682Z",
+        "updatedBy": "Principal / Exam Controller (usr-admin-1)"
+      },
+      "new": {
+        "startDate": "2026-08-31T18:30:00.000Z",
+        "endDate": "2027-02-12T18:29:59.000Z",
+        "statusOverride": "auto",
+        "timezone": "Asia/Kolkata (IST)",
+        "announcementNotice": "",
+        "reopenedCount": 1,
+        "lastUpdated": "2026-10-05T07:51:22.145Z",
+        "updatedBy": "Principal / Exam Controller (usr-admin-1)"
+      }
+    },
+    "id": "audit-1791186682157-v2yu4",
+    "timestamp": "2026-10-05T07:51:22.157Z"
+  },
+  {
     "userId": "usr-1791012136282-d0hnd",
     "userName": "Ayushi",
     "userRole": "applicant",
