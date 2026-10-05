@@ -93,6 +93,11 @@ async function handleHdfcReturn(request: Request) {
       }
 
       if (liveStatus) {
+        // Recover a stub record so we can track this order.
+        // IMPORTANT: applicationPayload will be empty here — the actual form data
+        // was stored on a different serverless container that has since shut down.
+        // We set status to CHARGED_PENDING_REGISTRATION so the webhook/admin can
+        // manually process it, and redirect the candidate to a payment-received page.
         paymentOrder = await db.createPaymentOrderRecord({
           orderId,
           amount: liveStatus.amount || HDFC_CONFIG.FEE_AMOUNT,
@@ -101,9 +106,27 @@ async function handleHdfcReturn(request: Request) {
           customerEmail: liveStatus.customer_email || body?.customer_email || null,
           customerPhone: liveStatus.customer_phone || body?.customer_phone || null,
           customerId: liveStatus.customer_id || null,
-          applicationPayload: liveStatus.metadata || {},
+          applicationPayload: {},  // Form data unavailable — lost across serverless containers
           paymentResponse: liveStatus,
         });
+
+        // If payment is confirmed CHARGED but we have no application data,
+        // we cannot complete registration silently with empty data.
+        // Redirect to a special recovery page informing the candidate.
+        if (liveStatusUpper === 'CHARGED') {
+          const txnIdRecovered = liveStatus.txn_id || liveStatus.transaction_id || `TXN_${orderId}`;
+          console.error(
+            `HDFC Return CRITICAL: Payment CHARGED for ${orderId} but applicationPayload is unavailable. ` +
+            `Candidate must contact admin. TxnId: ${txnIdRecovered}`
+          );
+          return NextResponse.redirect(
+            new URL(
+              `/apply?payment=pending&orderId=${encodeURIComponent(orderId)}&txnId=${encodeURIComponent(txnIdRecovered)}&msg=Your+payment+was+received+successfully.+However+your+registration+session+expired+during+payment.+Please+contact+our+helpdesk+at+%2B91+7027849858+with+your+Order+ID+%28${encodeURIComponent(orderId)}%29+to+complete+registration.`,
+              baseUrl
+            ),
+            303
+          );
+        }
       }
     } catch (err: any) {
       console.warn(`HDFC Return: Could not recover order ${orderId} from HDFC API:`, err?.message);
@@ -118,9 +141,12 @@ async function handleHdfcReturn(request: Request) {
     );
   }
 
-  // 2. Prevent duplicate processing if already completed
-  if (paymentOrder.status === 'CHARGED') {
-    const regNo = paymentOrder.registrationNumber || '';
+  // 2. Prevent duplicate processing ONLY if registration was fully completed.
+  // If status is CHARGED but registrationNumber is missing, it means the order was
+  // recovered from HDFC API (serverless container swap) but user/application creation
+  // was never completed — fall through to complete registration below.
+  if (paymentOrder.status === 'CHARGED' && paymentOrder.registrationNumber) {
+    const regNo = paymentOrder.registrationNumber;
     const txnId =
       paymentOrder.paymentResponse?.txn_id ||
       paymentOrder.paymentResponse?.transaction_id ||
