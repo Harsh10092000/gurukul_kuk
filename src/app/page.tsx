@@ -7,7 +7,9 @@ import { useRouter } from 'next/navigation';
 import {
   AlertCircle,
   Eye,
-  EyeOff
+  EyeOff,
+  CreditCard,
+  ArrowRight
 } from 'lucide-react';
 import VisualCaptcha from '@/components/VisualCaptcha';
 import NotificationBar from '@/components/NotificationBar';
@@ -189,6 +191,35 @@ export default function ExamPortalGateway() {
           <p className="text-xs sm:text-sm text-slate-500">
             Online Registration, Application Verification &amp; Candidate Services
           </p>
+        </div>
+
+        {/* Temporary Payment Sideflow Testing Access (Can be removed later) */}
+        <div className="mb-8 p-4 sm:p-5 bg-white/95 backdrop-blur-xs border-2 border-dashed border-amber-400/90 rounded-2xl shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <div className="flex items-center gap-3.5">
+            <div className="w-11 h-11 rounded-xl bg-amber-500/10 border border-amber-300 flex items-center justify-center text-amber-700 flex-shrink-0">
+              <CreditCard className="w-5 h-5" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-amber-100 text-amber-900 border border-amber-200">
+                  Testing Flow
+                </span>
+                <h3 className="text-sm font-bold text-slate-900">
+                  Payment Gateway Testing Sideflow
+                </h3>
+              </div>
+              <p className="text-xs text-slate-500 mt-0.5">
+                Isolated sandbox session for HDFC SmartGateway review (Login &rarr; Pay &rarr; Thank You &rarr; Logout)
+              </p>
+            </div>
+          </div>
+          <Link
+            href="/payment"
+            className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-portal-navy hover:bg-slate-900 text-portal-gold font-bold text-xs rounded-xl transition-all shadow-sm border border-portal-gold/30 hover:border-portal-gold flex-shrink-0"
+          >
+            <span>Open Payment</span>
+            <ArrowRight className="w-4 h-4" />
+          </Link>
         </div>
 
         {/* Dual-Pane Gateway Layout */}
