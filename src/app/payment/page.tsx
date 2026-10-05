@@ -2,7 +2,6 @@
 
 import React, { useState, useEffect, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
-import Image from 'next/image';
 import {
   Lock,
   ShieldCheck,
@@ -13,10 +12,6 @@ import {
   AlertCircle,
   Sparkles,
   KeyRound,
-  User,
-  Receipt,
-  Building2,
-  Clock,
 } from 'lucide-react';
 
 interface TestUser {
@@ -28,6 +23,8 @@ interface TestUser {
   registrationNumber: string;
 }
 
+const TEST_PAYMENT_AMOUNT = 1; // Strictly ₹1.00 for testing sideflow
+
 function PaymentTestingPortalContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -35,7 +32,7 @@ function PaymentTestingPortalContent() {
   const stepParam = searchParams.get('step');
   const orderId = searchParams.get('orderId') || searchParams.get('order_id') || '';
   const txnId = searchParams.get('txnId') || searchParams.get('txn_id') || '';
-  const amountParam = searchParams.get('amount') || '800';
+  const amountParam = searchParams.get('amount') || '1';
   const statusParam = searchParams.get('status') || '';
 
   // Auth & UI State
@@ -49,9 +46,6 @@ function PaymentTestingPortalContent() {
   // Form State for Login
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
-
-  // Amount Selection (₹800 official or ₹1 sandbox test)
-  const [testAmount, setTestAmount] = useState<number>(800);
 
   // Read stored test session on mount
   useEffect(() => {
@@ -109,7 +103,7 @@ function PaymentTestingPortalContent() {
     setErrorMsg('');
   };
 
-  // Handle Payment Initiation to HDFC SmartGateway
+  // Handle Payment Initiation to HDFC SmartGateway (Strictly ₹1)
   const handleProceedToPay = async () => {
     if (!currentUser) return;
     setSubmittingPayment(true);
@@ -124,7 +118,7 @@ function PaymentTestingPortalContent() {
           email: currentUser.email,
           phone: currentUser.phone,
           registrationNumber: currentUser.registrationNumber,
-          amount: testAmount,
+          amount: TEST_PAYMENT_AMOUNT,
         }),
       });
 
@@ -144,15 +138,6 @@ function PaymentTestingPortalContent() {
     }
   };
 
-  // Dry Run / Instant Simulated Payment (Fallback testing)
-  const handleSimulateInstant = () => {
-    const mockOrderId = 'TEST_' + Date.now();
-    const mockTxnId = 'TXN_SIM_' + Math.floor(100000 + Math.random() * 900000);
-    router.push(
-      `/payment?step=thankyou&orderId=${mockOrderId}&txnId=${mockTxnId}&amount=${testAmount}&status=success`
-    );
-  };
-
   // Handle Logout (Clear test session and return to login)
   const handleLogout = async () => {
     setLoggingOut(true);
@@ -160,7 +145,6 @@ function PaymentTestingPortalContent() {
       await fetch('/api/payment/test/logout', { method: 'POST' });
     } catch { }
 
-    // Clear local state
     setCurrentUser(null);
     document.cookie = 'payment_test_session=; path=/; max-age=0;';
     setLoggingOut(false);
@@ -233,7 +217,7 @@ function PaymentTestingPortalContent() {
                 Payment Successful!
               </h2>
               <p className="text-xs text-emerald-100 max-w-sm mx-auto mt-1">
-                Thank you for completing the payment test. The banking gateway has successfully processed and authorized your transaction.
+                The banking gateway has successfully processed and authorized your payment.
               </p>
             </div>
 
@@ -255,7 +239,7 @@ function PaymentTestingPortalContent() {
                     Amount Paid
                   </span>
                   <span className="font-black text-emerald-900 text-base mt-0.5 block font-mono">
-                    ₹{parseFloat(amountParam).toFixed(2)} INR
+                    ₹{parseFloat(amountParam || '1').toFixed(2)} INR
                   </span>
                 </div>
 
@@ -280,15 +264,6 @@ function PaymentTestingPortalContent() {
                     </span>
                   </div>
                 )}
-
-                <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 sm:col-span-2">
-                  <span className="text-[10px] uppercase font-bold text-slate-400 block tracking-wider">
-                    Payment Gateway
-                  </span>
-                  <span className="font-semibold text-slate-800 text-xs mt-0.5 block">
-                    HDFC SmartGateway (Juspay Hosted Checkout)
-                  </span>
-                </div>
               </div>
 
               {/* ONLY LOGOUT BUTTON ONLY AS REQUESTED */}
@@ -329,24 +304,21 @@ function PaymentTestingPortalContent() {
 
             <form onSubmit={handleLogin} className="space-y-4">
               <div>
-                <label className="text-xs font-bold text-slate-700 block mb-1.5">
-                  Username / Email
+                <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wide mb-1.5">
+                  Username / Email / Mobile / Reg No.
                 </label>
-                <div className="relative">
-                  <User className="w-4 h-4 text-slate-400 absolute left-3 top-3.5" />
-                  <input
-                    type="text"
-                    required
-                    value={username}
-                    onChange={(e) => setUsername(e.target.value)}
-                    placeholder="e.g. test@gurukul.com"
-                    className="input-field text-xs pl-9 py-2.5 w-full"
-                  />
-                </div>
+                <input
+                  type="text"
+                  required
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  placeholder="test@gurukul.com"
+                  className="input-field text-xs py-2.5 w-full"
+                />
               </div>
 
               <div>
-                <label className="text-xs font-bold text-slate-700 block mb-1.5">
+                <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wide mb-1.5">
                   Password
                 </label>
                 <div className="relative">
@@ -392,9 +364,9 @@ function PaymentTestingPortalContent() {
             </div>
           </div>
         ) : (
-          /* STEP 2: PAYMENT EXECUTION SCREEN (LOGGED IN) */
+          /* STEP 2: SIMPLE 1-RUPEE PAYMENT SCREEN (LOGGED IN) */
           <div className="bg-white border border-slate-200 rounded-2xl shadow-elevated p-6 sm:p-8 space-y-6">
-            {/* Authenticated User Status */}
+            {/* Authenticated User Info */}
             <div className="flex items-center justify-between p-3.5 bg-slate-50 rounded-xl border border-slate-200 text-xs">
               <div className="flex items-center gap-2.5">
                 <div className="w-8 h-8 rounded-lg bg-portal-navy text-white flex items-center justify-center font-bold text-xs">
@@ -429,96 +401,47 @@ function PaymentTestingPortalContent() {
               </div>
             )}
 
-            {/* Payment Particulars Box */}
-            <div className="p-5 rounded-xl bg-gradient-to-br from-portal-navy to-slate-900 text-white shadow-md space-y-3">
-              <div className="flex items-center justify-between">
-                <span className="text-xs text-white/70 uppercase tracking-wider font-semibold">
-                  Exam Fee Payment
-                </span>
-                <span className="text-[10px] bg-white/20 px-2 py-0.5 rounded text-white font-mono">
-                  Ref: {currentUser.registrationNumber}
-                </span>
-              </div>
-
-              <div className="flex items-baseline justify-between pt-1 border-t border-white/10">
-                <span className="text-xs text-white/80">Total Amount Payable</span>
-                <div className="flex items-baseline gap-1">
-                  <span className="text-3xl font-extrabold text-amber-400">₹{testAmount.toFixed(2)}</span>
-                  <span className="text-xs text-white/70 font-mono">INR</span>
-                </div>
-              </div>
-
-              {/* Amount Toggle for Testing */}
-              <div className="pt-2 border-t border-white/10 flex items-center justify-between text-xs">
-                <span className="text-[11px] text-white/70">Test Amount:</span>
-                <div className="flex gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setTestAmount(800)}
-                    className={`px-2.5 py-1 rounded text-[11px] font-bold transition-all ${
-                      testAmount === 800
-                        ? 'bg-amber-400 text-slate-900 shadow-xs'
-                        : 'bg-white/10 text-white/80 hover:bg-white/20'
-                    }`}
-                  >
-                    ₹800 (Official Fee)
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setTestAmount(1)}
-                    className={`px-2.5 py-1 rounded text-[11px] font-bold transition-all ${
-                      testAmount === 1
-                        ? 'bg-amber-400 text-slate-900 shadow-xs'
-                        : 'bg-white/10 text-white/80 hover:bg-white/20'
-                    }`}
-                  >
-                    ₹1 (Test / Sandbox)
-                  </button>
-                </div>
+            {/* Simple Clean Amount Card */}
+            <div className="p-6 rounded-2xl bg-slate-900 text-white text-center space-y-1">
+              <span className="text-xs uppercase tracking-wider text-slate-400 font-semibold">
+                Amount to Pay
+              </span>
+              <div className="text-4xl font-black text-amber-400">
+                ₹1.00 <span className="text-sm font-medium text-slate-300">INR</span>
               </div>
             </div>
 
-            {/* Primary Action Button: Opens HDFC SmartGateway */}
-            <div className="space-y-3">
+            {/* Only the Payment Button */}
+            <div>
               <button
                 type="button"
                 onClick={handleProceedToPay}
                 disabled={submittingPayment}
-                className="w-full btn-primary text-xs py-3.5 font-bold justify-center shadow-lg bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl gap-2 text-sm"
+                className="w-full btn-primary py-4 font-bold justify-center shadow-lg bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl gap-2 text-base transition-all"
               >
                 {submittingPayment ? (
                   <div className="flex items-center gap-2">
-                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
                     <span>Connecting to HDFC SmartGateway...</span>
                   </div>
                 ) : (
                   <>
-                    <CreditCard className="w-4 h-4" />
-                    <span>Proceed to Pay ₹{testAmount.toFixed(2)} via HDFC SmartGateway</span>
-                    <ArrowRight className="w-4 h-4" />
+                    <CreditCard className="w-5 h-5" />
+                    <span>Pay ₹1.00 via HDFC Gateway</span>
+                    <ArrowRight className="w-5 h-5" />
                   </>
                 )}
-              </button>
-
-              <button
-                type="button"
-                onClick={handleSimulateInstant}
-                className="w-full btn-secondary text-xs py-2.5 justify-center text-slate-600 border-slate-200 hover:bg-slate-50 gap-1.5"
-              >
-                <Sparkles className="w-3.5 h-3.5 text-amber-500" />
-                <span>Simulate Instant Payment (Dry Run Test)</span>
               </button>
             </div>
           </div>
         )}
 
-        {/* Security & Disclaimer Footer */}
-        <div className="text-center text-xs text-slate-400 space-y-1">
+        {/* Minimal Footer */}
+        <div className="text-center text-xs text-slate-400">
           <p className="flex items-center justify-center gap-1.5">
             <Lock className="w-3.5 h-3.5 text-slate-400" />
-            <span>256-Bit SSL Encrypted Banking • Isolated Payment Testing Sandbox</span>
+            <span>256-Bit SSL Encrypted Banking • HDFC SmartGateway</span>
           </p>
-          <p className="text-[11px]">The Gurukul Kurukshetra • Mid: SG6256</p>
         </div>
       </div>
     </div>

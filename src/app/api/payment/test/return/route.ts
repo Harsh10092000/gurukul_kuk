@@ -54,7 +54,7 @@ async function handleTestReturn(request: Request) {
     statusResponse = {
       order_id: orderId,
       status: 'CHARGED',
-      amount: paymentOrder?.amount || 800,
+      amount: paymentOrder?.amount || 1,
       txn_id: `TXN_TEST_${Date.now()}`,
       payment_method: 'UPI',
     };
@@ -68,7 +68,7 @@ async function handleTestReturn(request: Request) {
         statusResponse = {
           order_id: orderId,
           status: 'CHARGED',
-          amount: paymentOrder?.amount || 800,
+          amount: paymentOrder?.amount || 1,
           txn_id: `TXN_TEST_${Date.now()}`,
           payment_method: 'HDFC SmartGateway',
         };
@@ -83,7 +83,7 @@ async function handleTestReturn(request: Request) {
 
   const orderStatus = (statusResponse?.status || '').toUpperCase();
   const txnId = statusResponse?.txn_id || statusResponse?.transaction_id || `TXN_${orderId.slice(-8)}`;
-  const amountVal = statusResponse?.amount || paymentOrder?.amount || 800;
+  const amountVal = statusResponse?.amount || paymentOrder?.amount || 1;
 
   // Check if cancelled
   const isExplicitCancel =

@@ -216,6 +216,7 @@ export interface CreateHdfcOrderSessionOptions {
   returnUrl: string;
   description?: string;
   metadata?: Record<string, string>;
+  amount?: number;
 }
 
 export interface HdfcOrderSessionResult {
@@ -234,8 +235,10 @@ export async function createHdfcOrderSession(
 ): Promise<HdfcOrderSessionResult> {
   const juspay = getJuspayClient();
 
-  // In demo mode on HDFC UAT sandbox, send 1 INR so the gateway's UPI QR simulator auto-approves and redirects in 15 seconds
-  const sessionAmount = HDFC_CONFIG.PAYMENT_MODE === 'demo' ? 1 : HDFC_CONFIG.FEE_AMOUNT;
+  // Explicit amount if provided (e.g. ₹1 for test flow), otherwise standard fee
+  const sessionAmount = typeof options.amount === 'number' && options.amount > 0
+    ? options.amount
+    : (HDFC_CONFIG.PAYMENT_MODE === 'demo' ? 1 : HDFC_CONFIG.FEE_AMOUNT);
 
   const payload: any = {
     order_id: options.orderId,

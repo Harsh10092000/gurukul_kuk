@@ -16,7 +16,8 @@ export async function POST(request: Request) {
     const userEmail = body.email || 'test@gurukul.com';
     const userPhone = body.phone || '9876543210';
     const regNo = body.registrationNumber || 'TEST-GUR-999';
-    const requestedAmount = typeof body.amount === 'number' && body.amount > 0 ? body.amount : 800;
+    // Fixed ₹1 for payment testing sideflow
+    const requestedAmount = 1;
 
     // Generate unique test order ID
     const orderId = generateHdfcOrderId('TEST');
@@ -25,10 +26,7 @@ export async function POST(request: Request) {
     const baseUrl = getPublicBaseUrl(request);
     const returnUrl = `${baseUrl}/api/payment/test/return`;
 
-    // Amount to charge on HDFC gateway (₹1 in demo mode for quick verification, or requested amount)
-    const sessionAmount = HDFC_CONFIG.PAYMENT_MODE === 'demo' ? 1 : requestedAmount;
-
-    // Create session on HDFC SmartGateway
+    // Create session on HDFC SmartGateway with ₹1 amount
     let session: any = null;
     let gatewayError = null;
 
@@ -39,6 +37,7 @@ export async function POST(request: Request) {
         customerEmail: userEmail,
         customerPhone: userPhone,
         returnUrl,
+        amount: 1,
         description: `Gurukul Kurukshetra Test Payment - ${userName}`,
         metadata: {
           testMode: 'true',
@@ -54,7 +53,7 @@ export async function POST(request: Request) {
     // Persist payment order record
     await db.createPaymentOrderRecord({
       orderId,
-      amount: requestedAmount,
+      amount: 1,
       currency: 'INR',
       status: 'PENDING',
       customerEmail: userEmail,
