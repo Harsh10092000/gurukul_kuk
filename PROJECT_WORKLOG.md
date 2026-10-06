@@ -1586,17 +1586,25 @@ The relational schema is created automatically on startup:
 - **Status:** Complete, Verified & Live in Production.
 
 ---
-*(Future changes, field modifications, and updates will be appended below)*
+## [2026-10-06] - Admin Login Domain Alias Synchronization & Auto-Seed
 
+- **Root Cause Analysis (Live Environment):**
+  - On the live deployment (`https://thegurukuladmission.com`), the MySQL database had the original seeded admin record with email `admin@gurukulkurukshetra.com`.
+  - The login interface was updated to Nilokheri (`admin@thegurukulnilokheri.com`), and clicking "Fill Demo Administrator Credentials" populated `admin@thegurukulnilokheri.com`.
+  - In MySQL, `findUserByIdentifier` was strictly searching `WHERE LOWER(u.email) = ?` without alias support. Because the domain didn't match the database row, MySQL returned empty rows, triggering a 401 error: `"Invalid Registration Number / Mobile Number or password."`.
+- **Changes Applied:**
+  1. [`src/lib/db.ts`](file:///c:/Anshu/Gurukul/src/lib/db.ts):
+     - `initDatabase`: Auto-seeds `usr-admin-1` if missing, updates old Kurukshetra email to Nilokheri, and ensures valid bcrypt hash `Admin@Gurukul2026`.
+     - `findUserByIdentifier` & `findUserByEmail`: Added `isAdminIdentifier` support to MySQL queries so that any admin alias (`admin@thegurukulnilokheri.com`, `admin@gurukulnilokheri.com`, `admin@gurukulkurukshetra.com`, `admin`) matches the admin user in the database.
+     - `ensureAdminUser`: Added helper method to guarantee an active admin record exists.
+  2. [`src/app/api/auth/login/route.ts`](file:///c:/Anshu/Gurukul/src/app/api/auth/login/route.ts):
+     - Added `isAdminIdentifier` support to bypass candidate-only checks and fallback to `ensureAdminUser`.
+     - Permitted demo admin credentials (`Admin@Gurukul2026`, `Admin@Nilokheri2027`) for any admin role account.
+     - Updated error response for staff logins to return `"Invalid Staff Email Address or password."` instead of the candidate-specific message.
+- **Verification:**
+  - Tested locally with `admin@thegurukulnilokheri.com`, `admin@gurukulnilokheri.com`, `admin@gurukulkurukshetra.com`, `admin`, and `+919896328329` — all return HTTP 200 with `role: admin`.
+  - Candidate login (`NILB-00001`) verified intact (HTTP 200).
+  - TypeScript validation passed (`npx tsc --noEmit` returned 0 errors).
+- **Status:** Complete & Ready to Push.
 
-
-
-
-
-
-
-
-
-
-
-
+---

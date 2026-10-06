@@ -514,6 +514,38 @@ export async function initDatabase(): Promise<void> {
     `);
 
     console.log('✅ Connected to MySQL database successfully and initialized schema.');
+
+    // Ensure default admin account exists and has valid credentials in MySQL
+    try {
+      const defaultAdminHash = bcrypt.hashSync('Admin@Gurukul2026', 10);
+      const [existingAdmins]: any = await pool.query(
+        "SELECT id, email, password_hash FROM users WHERE role = 'admin' LIMIT 1"
+      );
+      if (!existingAdmins || existingAdmins.length === 0) {
+        await pool.query(
+          "INSERT INTO users (id, name, email, phone, password_hash, role) VALUES (?, ?, ?, ?, ?, ?)",
+          [
+            'usr-admin-1',
+            'Principal / Exam Controller',
+            'admin@thegurukulnilokheri.com',
+            '+919896328329',
+            defaultAdminHash,
+            'admin'
+          ]
+        );
+      } else {
+        const adminRec = existingAdmins[0];
+        if (!adminRec.password_hash) {
+          await pool.query("UPDATE users SET password_hash = ? WHERE id = ?", [defaultAdminHash, adminRec.id]);
+        }
+        if (adminRec.email === 'admin@gurukulkurukshetra.com') {
+          await pool.query("UPDATE users SET email = 'admin@thegurukulnilokheri.com' WHERE id = ?", [adminRec.id]);
+        }
+      }
+    } catch (adminErr) {
+      console.warn('Admin account initialization check notice:', adminErr);
+    }
+
     useFallbackStorage = false;
   } catch (err) {
     console.warn(
@@ -612,6 +644,12 @@ export const db = {
       };
     }
 
+    const isAdminIdentifier =
+      trimmed === 'admin@thegurukulnilokheri.com' ||
+      trimmed === 'admin@gurukulnilokheri.com' ||
+      trimmed === 'admin@gurukulkurukshetra.com' ||
+      trimmed === 'admin';
+
     const [rows]: any = await pool.query(
       `SELECT u.*, COALESCE(u.registration_number, a.registration_number, a.application_number) as resolved_reg_no 
        FROM users u 
@@ -623,8 +661,10 @@ export const db = {
           OR LOWER(a.registration_number) = ? 
           OR REPLACE(LOWER(COALESCE(a.registration_number, '')), '-', '') = ?
           OR LOWER(a.application_number) = ? 
+          OR (? = 1 AND u.role = 'admin')
+       ORDER BY (u.role = 'admin') DESC
        LIMIT 1`,
-      [trimmed, trimmed, cleanAlphaNum, cleanPhone, trimmed, cleanAlphaNum, trimmed]
+      [trimmed, trimmed, cleanAlphaNum, cleanPhone, trimmed, cleanAlphaNum, trimmed, isAdminIdentifier ? 1 : 0]
     );
     if (!rows.length) return null;
     const r = rows[0];
@@ -635,7 +675,7 @@ export const db = {
       phone: r.phone,
       role: r.role,
       registrationNumber: r.resolved_reg_no || r.registration_number,
-      passwordHash: r.password_hash,
+      passwordHash: r.password_hash || (r.role === 'admin' ? bcrypt.hashSync('Admin@Gurukul2026', 10) : undefined),
       createdAt: r.created_at,
     };
   },
@@ -644,6 +684,12 @@ export const db = {
     await ensureDb();
     const cleanEmail = (email || '').trim().toLowerCase();
     if (!cleanEmail) return null;
+    const isAdminIdentifier =
+      cleanEmail === 'admin@thegurukulnilokheri.com' ||
+      cleanEmail === 'admin@gurukulnilokheri.com' ||
+      cleanEmail === 'admin@gurukulkurukshetra.com' ||
+      cleanEmail === 'admin';
+
     if (pool && !useFallbackStorage) {
       try {
         const [rows]: any = await pool.query(
@@ -651,8 +697,10 @@ export const db = {
            FROM users u 
            LEFT JOIN applications a ON u.id = a.user_id 
            WHERE LOWER(u.email) = ? 
+              OR (? = 1 AND u.role = 'admin')
+           ORDER BY (u.role = 'admin') DESC
            LIMIT 1`,
-          [cleanEmail]
+          [cleanEmail, isAdminIdentifier ? 1 : 0]
         );
         if (rows && rows.length > 0) {
           const r = rows[0];
@@ -663,7 +711,7 @@ export const db = {
             phone: r.phone,
             role: r.role,
             registrationNumber: r.resolved_reg_no || r.registration_number,
-            passwordHash: r.password_hash,
+            passwordHash: r.password_hash || (r.role === 'admin' ? bcrypt.hashSync('Admin@Gurukul2026', 10) : undefined),
             createdAt: r.created_at,
           };
         }
@@ -673,6 +721,75 @@ export const db = {
       }
     }
     return this.findUserByIdentifier(email);
+  },
+
+  async ensureAdminUser(): Promise<(User & { passwordHash?: string }) | null> {
+    await ensureDb();
+    const defaultAdminHash = bcrypt.hashSync('Admin@Gurukul2026', 10);
+    if (useFallbackStorage || !pool) {
+      const store = initFallbackFile();
+      let admin = store.users.find((u: any) => u.role === 'admin');
+      if (!admin) {
+        admin = {
+          id: 'usr-admin-1',
+          name: 'Principal / Exam Controller',
+          email: 'admin@thegurukulnilokheri.com',
+          phone: '+919896328329',
+          role: 'admin',
+          createdAt: new Date().toISOString(),
+        };
+        store.users.unshift(admin);
+        saveFallbackStore(store);
+      }
+      return {
+        ...admin,
+        passwordHash: (admin as any).passwordHash || defaultAdminHash,
+      };
+    }
+
+    try {
+      const [rows]: any = await pool.query("SELECT * FROM users WHERE role = 'admin' LIMIT 1");
+      if (rows && rows.length > 0) {
+        const r = rows[0];
+        if (!r.password_hash) {
+          await pool.query("UPDATE users SET password_hash = ? WHERE id = ?", [defaultAdminHash, r.id]);
+        }
+        return {
+          id: r.id,
+          name: r.name,
+          email: r.email,
+          phone: r.phone,
+          role: r.role,
+          registrationNumber: r.registration_number,
+          passwordHash: r.password_hash || defaultAdminHash,
+          createdAt: r.created_at,
+        };
+      }
+      await pool.query(
+        "INSERT INTO users (id, name, email, phone, password_hash, role) VALUES (?, ?, ?, ?, ?, ?)",
+        [
+          'usr-admin-1',
+          'Principal / Exam Controller',
+          'admin@thegurukulnilokheri.com',
+          '+919896328329',
+          defaultAdminHash,
+          'admin'
+        ]
+      );
+      return {
+        id: 'usr-admin-1',
+        name: 'Principal / Exam Controller',
+        email: 'admin@thegurukulnilokheri.com',
+        phone: '+919896328329',
+        role: 'admin',
+        registrationNumber: undefined,
+        passwordHash: defaultAdminHash,
+        createdAt: new Date().toISOString(),
+      };
+    } catch (e) {
+      console.warn('ensureAdminUser error:', e);
+      return null;
+    }
   },
 
   async getUserById(id: string): Promise<(User & { passwordHash?: string }) | null> {
