@@ -180,28 +180,38 @@ export async function POST(request: Request) {
     ).trim();
     const cleanPhone = candidateMobile.replace(/\D/g, '').slice(-10);
 
-    // Check if an official candidate account already exists (only in production)
-    if (!isDemo) {
+    // Strict Check: Candidate email and mobile MUST be unique across the entire system (enforced in all environments)
+    if (candidateEmail) {
       const existingEmailUser = await db.findUserByEmail(candidateEmail);
       if (existingEmailUser && existingEmailUser.role !== 'admin') {
         return NextResponse.json(
           {
-            error:
-              'An official candidate account with this email address is already registered. Please login to your dashboard instead.',
+            error: `An official candidate account with email '${candidateEmail}' already exists. Please login to your dashboard instead of creating a duplicate registration.`,
           },
           { status: 409 }
         );
       }
-      if (cleanPhone) {
-        const existingPhoneUser = await db.findUserByPhone(cleanPhone);
-        if (existingPhoneUser && existingPhoneUser.role !== 'admin') {
-          return NextResponse.json(
-            {
-              error: `A candidate account with mobile +91-${cleanPhone} is already registered. Please login instead.`,
-            },
-            { status: 409 }
-          );
-        }
+
+      const existingEmailApp = await db.findApplicationByEmail(candidateEmail);
+      if (existingEmailApp && existingEmailApp.paymentStatus === 'completed') {
+        return NextResponse.json(
+          {
+            error: `An entrance application with email '${candidateEmail}' has already been submitted and confirmed (Registration ID: ${existingEmailApp.registrationNumber || existingEmailApp.applicationNumber}). Duplicate applications are strictly prohibited.`,
+          },
+          { status: 409 }
+        );
+      }
+    }
+
+    if (cleanPhone) {
+      const existingPhoneUser = await db.findUserByPhone(cleanPhone);
+      if (existingPhoneUser && existingPhoneUser.role !== 'admin') {
+        return NextResponse.json(
+          {
+            error: `A candidate account with mobile +91-${cleanPhone} is already registered. Please login to your dashboard instead.`,
+          },
+          { status: 409 }
+        );
       }
     }
 

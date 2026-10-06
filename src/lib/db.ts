@@ -322,6 +322,21 @@ function saveFallbackStore(store: FallbackStore) {
   }
 }
 
+let initPromise: Promise<void> | null = null;
+
+export async function ensureDb(): Promise<mysql.Pool | null> {
+  if (pool && !useFallbackStorage) return pool;
+  if (!initPromise) {
+    initPromise = initDatabase();
+  }
+  try {
+    await initPromise;
+  } catch (e) {
+    console.error('ensureDb error:', e);
+  }
+  return pool;
+}
+
 /**
  * Initialize Database tables in MySQL or initialize fallback JSON store
  */
@@ -402,28 +417,28 @@ export async function initDatabase(): Promise<void> {
       );
     `);
 
-    await pool.query(`
-      CREATE TABLE IF NOT EXISTS results (
-        id VARCHAR(64) PRIMARY KEY,
-        application_id VARCHAR(64) UNIQUE NOT NULL,
-        application_number VARCHAR(64) NOT NULL,
-        roll_number VARCHAR(64) UNIQUE NOT NULL,
-        candidate_name VARCHAR(255) NOT NULL,
-        class_applying VARCHAR(64) NOT NULL,
-        subjects JSON NOT NULL,
-        total_marks DECIMAL(6, 2) NOT NULL,
-        max_total_marks DECIMAL(6, 2) NOT NULL,
-        percentage DECIMAL(5, 2) NOT NULL,
-        rank INT NOT NULL,
-        qualifying_status VARCHAR(64) NOT NULL,
-        counseling_date VARCHAR(128),
-        counseling_venue TEXT,
-        is_published BOOLEAN DEFAULT FALSE,
-        remarks TEXT,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (application_id) REFERENCES applications(id) ON DELETE CASCADE
-      );
-    `);
+    await pool.query(
+      'CREATE TABLE IF NOT EXISTS results (' +
+      '  id VARCHAR(64) PRIMARY KEY,' +
+      '  application_id VARCHAR(64) UNIQUE NOT NULL,' +
+      '  application_number VARCHAR(64) NOT NULL,' +
+      '  roll_number VARCHAR(64) UNIQUE NOT NULL,' +
+      '  candidate_name VARCHAR(255) NOT NULL,' +
+      '  class_applying VARCHAR(64) NOT NULL,' +
+      '  subjects JSON NOT NULL,' +
+      '  total_marks DECIMAL(6, 2) NOT NULL,' +
+      '  max_total_marks DECIMAL(6, 2) NOT NULL,' +
+      '  percentage DECIMAL(5, 2) NOT NULL,' +
+      '  `rank` INT NOT NULL,' +
+      '  qualifying_status VARCHAR(64) NOT NULL,' +
+      '  counseling_date VARCHAR(128),' +
+      '  counseling_venue TEXT,' +
+      '  is_published BOOLEAN DEFAULT FALSE,' +
+      '  remarks TEXT,' +
+      '  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,' +
+      '  FOREIGN KEY (application_id) REFERENCES applications(id) ON DELETE CASCADE' +
+      ');'
+    );
 
     await pool.query(`
       CREATE TABLE IF NOT EXISTS exam_centres (
@@ -514,6 +529,7 @@ export async function initDatabase(): Promise<void> {
 export const db = {
   // Users
   async findUserByIdentifier(identifier: string): Promise<(User & { passwordHash?: string }) | null> {
+    await ensureDb();
     const trimmed = identifier.trim().toLowerCase();
     const cleanAlphaNum = trimmed.replace(/[^a-z0-9]/g, '');
     const cleanPhone = trimmed.replace(/\D/g, '').slice(-10);
@@ -625,14 +641,47 @@ export const db = {
   },
 
   async findUserByEmail(email: string): Promise<(User & { passwordHash?: string }) | null> {
+    await ensureDb();
+    const cleanEmail = (email || '').trim().toLowerCase();
+    if (!cleanEmail) return null;
+    if (pool && !useFallbackStorage) {
+      try {
+        const [rows]: any = await pool.query(
+          `SELECT u.*, COALESCE(u.registration_number, a.registration_number, a.application_number) as resolved_reg_no 
+           FROM users u 
+           LEFT JOIN applications a ON u.id = a.user_id 
+           WHERE LOWER(u.email) = ? 
+           LIMIT 1`,
+          [cleanEmail]
+        );
+        if (rows && rows.length > 0) {
+          const r = rows[0];
+          return {
+            id: r.id,
+            name: r.name,
+            email: r.email,
+            phone: r.phone,
+            role: r.role,
+            registrationNumber: r.resolved_reg_no || r.registration_number,
+            passwordHash: r.password_hash,
+            createdAt: r.created_at,
+          };
+        }
+        return null;
+      } catch (e) {
+        console.warn('MySQL findUserByEmail error:', e);
+      }
+    }
     return this.findUserByIdentifier(email);
   },
 
   async getUserById(id: string): Promise<(User & { passwordHash?: string }) | null> {
+    await ensureDb();
     return this.findUserByIdentifier(id);
   },
 
   async findUserByPhone(phone: string): Promise<(User & { passwordHash?: string }) | null> {
+    await ensureDb();
     const clean = phone.replace(/\D/g, '').slice(-10);
     if (useFallbackStorage || !pool) {
       const store = initFallbackFile();
@@ -741,10 +790,20 @@ export const db = {
   },
 
   async createUser(user: Omit<User, 'id' | 'createdAt' | 'registrationNumber'> & { passwordHash: string; registrationNumber?: string }): Promise<User> {
+    await ensureDb();
     const id = 'usr-' + Date.now() + '-' + Math.random().toString(36).substring(2, 7);
     const createdAt = new Date().toISOString();
 
     const store = initFallbackFile();
+    // Enforce Unique Email Address per candidate
+    if (user.email) {
+      const cleanEmail = user.email.trim().toLowerCase();
+      const existingEmailUser = await this.findUserByEmail(cleanEmail);
+      if (existingEmailUser) {
+        throw new Error(`Email address "${cleanEmail}" is already registered. Duplicate email accounts are prohibited.`);
+      }
+    }
+
     // Enforce Unique Mobile Number per candidate
     if (user.phone) {
       const cleanPhone = user.phone.replace(/\D/g, '').slice(-10);
@@ -783,6 +842,7 @@ export const db = {
 
   // Applications
   async getApplications(): Promise<Application[]> {
+    await ensureDb();
     if (useFallbackStorage || !pool) {
       const store = initFallbackFile();
       const officialApps = store.applications.filter(
@@ -857,6 +917,7 @@ export const db = {
   },
 
   async getApplicationById(id: string): Promise<Application | null> {
+    await ensureDb();
     if (useFallbackStorage || !pool) {
       const store = initFallbackFile();
       const a = store.applications.find((app) => app.id === id || app.applicationNumber === id || app.registrationNumber === id);
@@ -895,6 +956,7 @@ export const db = {
   },
 
   async getApplicationByUserId(userId: string): Promise<Application | null> {
+    await ensureDb();
     if (useFallbackStorage || !pool) {
       const store = initFallbackFile();
       let a = store.applications.find((app) => app.userId === userId);
@@ -931,6 +993,7 @@ export const db = {
   },
 
   async findApplicationByAadhaar(aadhaarNumber: string): Promise<Application | null> {
+    await ensureDb();
     const clean = aadhaarNumber ? aadhaarNumber.replace(/\D/g, '') : '';
     if (!clean) return null;
 
@@ -942,8 +1005,39 @@ export const db = {
     return found || null;
   },
 
+  async findApplicationByEmail(email: string): Promise<Application | null> {
+    await ensureDb();
+    const cleanEmail = (email || '').trim().toLowerCase();
+    if (!cleanEmail) return null;
+    if (pool && !useFallbackStorage) {
+      try {
+        const [rows]: any = await pool.query(
+          `SELECT a.*, u.email as user_email, u.phone as user_phone
+           FROM applications a
+           LEFT JOIN users u ON a.user_id = u.id
+           WHERE LOWER(u.email) = ? OR LOWER(JSON_UNQUOTE(JSON_EXTRACT(a.personal_info, '$.candidateEmail'))) = ?
+           ORDER BY a.created_at DESC
+           LIMIT 1`,
+          [cleanEmail, cleanEmail]
+        );
+        if (rows && rows.length > 0) {
+          return this.getApplicationById(rows[0].id);
+        }
+        return null;
+      } catch (e) {
+        console.warn('MySQL findApplicationByEmail error:', e);
+      }
+    }
+    const store = initFallbackFile();
+    const found = store.applications.find(a => 
+      (a.personalInfo?.candidateEmail && a.personalInfo.candidateEmail.toLowerCase() === cleanEmail)
+    );
+    return found || null;
+  },
+
 
   async getNextRegistrationNumber(gender: 'Male' | 'Female'): Promise<string> {
+    await ensureDb();
     const isFemale = (gender || '').toLowerCase() === 'female';
     const prefix = isFemale ? 'NILG-' : 'NILB-';
     const regex = new RegExp(`^${prefix}(\\d+)`, 'i');
@@ -1110,6 +1204,7 @@ export const db = {
   },
 
   async createApplication(app: Omit<Application, 'id' | 'registrationNumber' | 'applicationNumber' | 'createdAt' | 'updatedAt'> & { registrationNumber?: string }): Promise<Application> {
+    await ensureDb();
     const store = initFallbackFile();
     const user = store.users.find(u => u.id === app.userId);
     const gender = (app.personalInfo?.gender || 'Male') as 'Male' | 'Female';
@@ -2290,6 +2385,7 @@ export const db = {
   },
 
   async createPaymentOrderRecord(record: Omit<PaymentOrderRecord, 'id' | 'createdAt' | 'updatedAt'>): Promise<PaymentOrderRecord> {
+    await ensureDb();
     const store = initFallbackFile();
     if (!store.paymentOrders) store.paymentOrders = [];
     const id = 'pord-' + Date.now() + '-' + Math.random().toString(36).substring(2, 7);
@@ -2305,18 +2401,7 @@ export const db = {
       updatedAt: now,
     };
 
-    // 1. Maintain in Node process global memory cache (immune to file permission/disk locks)
-    const g = globalThis as any;
-    if (!g.__paymentOrdersMemoryMap) {
-      g.__paymentOrdersMemoryMap = new Map<string, PaymentOrderRecord>();
-    }
-    g.__paymentOrdersMemoryMap.set(newRecord.orderId, newRecord);
-
-    // 2. Persist to JSON fallback file
-    store.paymentOrders.push(newRecord);
-    saveFallbackStore(store);
-
-    // 3. Persist to MySQL if available
+    // 1. Persist to MySQL if available (Direct DB transaction)
     if (pool && !useFallbackStorage) {
       try {
         await pool.query(
@@ -2347,19 +2432,18 @@ export const db = {
       }
     }
 
+    // 2. Persist to JSON fallback file
+    store.paymentOrders.push(newRecord);
+    saveFallbackStore(store);
+
     return newRecord;
   },
 
   async getPaymentOrderByOrderId(orderId: string): Promise<PaymentOrderRecord | null> {
+    await ensureDb();
     if (!orderId) return null;
 
-    // 1. Check in-memory cache first (fastest and immune to disk write failures)
-    const g = globalThis as any;
-    if (g.__paymentOrdersMemoryMap && g.__paymentOrdersMemoryMap.has(orderId)) {
-      return g.__paymentOrdersMemoryMap.get(orderId);
-    }
-
-    // 2. Check MySQL if available
+    // 1. Direct MySQL Query (No in-memory caching to guarantee live DB accuracy)
     if (pool && !useFallbackStorage) {
       try {
         const [rows]: any = await pool.query('SELECT * FROM payment_orders WHERE order_id = ?', [orderId]);
@@ -2381,8 +2465,6 @@ export const db = {
             createdAt: r.created_at ? new Date(r.created_at).toISOString() : new Date().toISOString(),
             updatedAt: r.updated_at ? new Date(r.updated_at).toISOString() : new Date().toISOString(),
           };
-          if (!g.__paymentOrdersMemoryMap) g.__paymentOrdersMemoryMap = new Map();
-          g.__paymentOrdersMemoryMap.set(orderId, rec);
           return rec;
         }
       } catch (e) {
@@ -2390,17 +2472,14 @@ export const db = {
       }
     }
 
+    // 2. Fallback file check
     const store = initFallbackFile();
     if (!store.paymentOrders) return null;
-    const found = store.paymentOrders.find(p => p.orderId === orderId) || null;
-    if (found) {
-      if (!g.__paymentOrdersMemoryMap) g.__paymentOrdersMemoryMap = new Map();
-      g.__paymentOrdersMemoryMap.set(orderId, found);
-    }
-    return found;
+    return store.paymentOrders.find(p => p.orderId === orderId) || null;
   },
 
   async updatePaymentOrderRecord(orderId: string, updates: Partial<PaymentOrderRecord>): Promise<PaymentOrderRecord | null> {
+    await ensureDb();
     const now = new Date().toISOString();
     const store = initFallbackFile();
     if (!store.paymentOrders) store.paymentOrders = [];
@@ -2446,13 +2525,7 @@ export const db = {
       }
     }
 
-    const finalRecord = updatedRecord || (await this.getPaymentOrderByOrderId(orderId));
-    if (finalRecord) {
-      const g = globalThis as any;
-      if (!g.__paymentOrdersMemoryMap) g.__paymentOrdersMemoryMap = new Map();
-      g.__paymentOrdersMemoryMap.set(orderId, finalRecord);
-    }
-    return finalRecord;
+    return await this.getPaymentOrderByOrderId(orderId);
   },
 };
 

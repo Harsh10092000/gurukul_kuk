@@ -318,16 +318,16 @@ export default function ApplyPage() {
       .then((authData) => {
         if (authData.user) {
           const user = authData.user;
-          const params = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null;
-          const hasPaymentParam = Boolean(params && params.get('payment'));
-          const hasDraft = Boolean(typeof window !== 'undefined' && localStorage.getItem('gurukul_application_draft'));
-
-          // Only redirect to dashboard if applicant is already paid and NOT actively retrying or filling a new application
-          if (user.role === 'applicant' && !hasPaymentParam && !hasDraft && !user.isTemporary) {
+          // If applicant is already registered and fee payment is completed, redirect to dashboard immediately
+          if (user.role === 'applicant' && !user.isTemporary) {
             fetch('/api/applications')
               .then((r) => r.json())
               .then((appRes) => {
                 if (appRes?.application && appRes.application.paymentStatus === 'completed') {
+                  try {
+                    localStorage.removeItem('gurukul_application_draft');
+                    sessionStorage.removeItem('gurukul_reg_info');
+                  } catch { }
                   window.location.replace('/dashboard');
                 }
               })

@@ -79,6 +79,14 @@ export async function POST(request: Request) {
       );
     }
 
+    const existingApp = await db.findApplicationByEmail(email.trim().toLowerCase());
+    if (existingApp && existingApp.paymentStatus === 'completed') {
+      return NextResponse.json(
+        { error: 'An entrance application with this email address is already registered. Please login instead.' },
+        { status: 409 }
+      );
+    }
+
     // Check unique phone only if phone was provided
     if (phoneClean) {
       const existingPhoneUser = await db.findUserByPhone(phoneClean);

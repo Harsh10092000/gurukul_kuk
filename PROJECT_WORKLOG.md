@@ -1537,10 +1537,57 @@ The relational schema is created automatically on startup:
   - Tested `/api/auth/login` with `admin@thegurukulnilokheri.com` (returned HTTP 200 OK with admin session).
   - Tested `/api/auth/login` with `admin@gurukulnilokheri.com` (returned HTTP 200 OK with admin session).
   - `npx tsc --noEmit` compiled with 0 errors.
-- **Status:** Complete, Verified, & Live.
+### [Entry 038] - 2026-10-06: Elimination of Thank-You Page Cache, Live Database Verification, and Strict Email Uniqueness Across All Registration Flows
+
+- **Context & Issues Addressed:**
+  1. **Thank You Page Cache Elimination & Live Payment Settlement Verification:**
+     - The `/payment/thank-you` route previously rendered mock or cached confirmation cards without strictly checking if the order was settled (`CHARGED`) in the MySQL database.
+     - `globalThis.__paymentOrdersMemoryMap` in `src/lib/db.ts` served in-memory cached payment order records rather than reading directly from MySQL.
+     - Candidates could land on `/payment/thank-you` or reload with search parameters and see false `NILG-CONFIRMED` success cards even if no payment had succeeded.
+  2. **Duplicate Email Glitch Elimination:**
+     - Candidates who completed payment and registration could navigate back or re-enter their email and create duplicate accounts or duplicate application dossiers with the same email.
+     - In `src/app/api/payment/hdfc/initiate/route.ts`, duplicate email and phone validations were wrapped in `if (!isDemo)`, causing demo/test modes to completely skip uniqueness checks.
+     - In `src/app/api/payment/hdfc/return/route.ts`, if a user with that email already existed, the system reused `officialUser = existingUser` and created a brand new application and roll number instead of enforcing application uniqueness.
+     - In `src/app/apply/page.tsx`, a leftover `gurukul_application_draft` in localStorage prevented already paid candidates from being redirected to the dashboard.
+     - An asynchronous connection pool race condition in `src/lib/db.ts` caused initial requests to run while `pool === null`, inadvertently writing records to `gurukul_store.json` fallback rather than MySQL.
+
+- **Actions Completed:**
+  1. **Removed In-Memory Payment Order Cache (`src/lib/db.ts`):**
+     - Completely removed `__paymentOrdersMemoryMap` from `createPaymentOrderRecord`, `getPaymentOrderByOrderId`, and `updatePaymentOrderRecord`. All payment order reads and writes now interact directly with MySQL table `payment_orders`.
+  2. **Implemented Connection Pool Readiness (`ensureDb` in `src/lib/db.ts`):**
+     - Added an asynchronous tracker `ensureDb()` ensuring `initDatabase()` completes and `pool` is ready before executing database operations, eliminating race conditions.
+  3. **Strict Email and Application Uniqueness Across All APIs:**
+     - **Payment Initiate (`src/app/api/payment/hdfc/initiate/route.ts`):** Removed `if (!isDemo)`. Unconditionally rejects with HTTP 409 Conflict if candidate email is already registered in `users` or if an application with that email is confirmed in `applications`.
+     - **Payment Return (`src/app/api/payment/hdfc/return/route.ts`):** Checks `findApplicationByEmail(candidateEmail)`. If an application is already completed, prevents duplicate application and roll number creation, cleanly redirecting with existing registration details.
+     - **User Creation (`db.createUser` in `src/lib/db.ts`):** Added a pre-insert check and `UNIQUE INDEX idx_users_email (email)` on MySQL `users` table.
+     - **Auth OTP & Register (`src/app/api/auth/otp/route.ts`, `src/app/api/auth/register/route.ts`):** Check both `findUserByEmail` and `findApplicationByEmail`, rejecting duplicate registration attempts with HTTP 409 Conflict before dispatching OTPs.
+  4. **Dedicated Anti-Cache Verification API (`src/app/api/payment/verify-order/route.ts`):**
+     - Created `export const dynamic = 'force-dynamic'`, `export const revalidate = 0` endpoint with `Cache-Control: no-store, no-cache, must-revalidate, max-age=0`.
+     - Validates order in MySQL: verifies `status === 'CHARGED'`, checks that the corresponding application has `payment_status = 'completed'`, and verifies candidate user profile in MySQL.
+  5. **Live Verified Thank You Page (`src/app/payment/thank-you/page.tsx`):**
+     - Removed all static fallback strings (`NILG-CONFIRMED`).
+     - On mount, calls `/api/payment/verify-order?orderId=...` with `{ cache: 'no-store' }`.
+     - Displays an explicit "Payment Verification Incomplete" warning card if order ID is missing, pending, or unconfirmed.
+     - Displays the confirmed card only when the live database returns `verified: true`, populating all details directly from MySQL.
+     - Clears stale drafts from `localStorage` upon confirmed verification.
+  6. **Apply Page Guard (`src/app/apply/page.tsx`):**
+     - Fixed redirect condition so that any applicant with a completed payment status is immediately redirected to `/dashboard`, clearing stale drafts.
+
+- **Verification:**
+  - Automated tests verified:
+    1. `/api/payment/verify-order` without orderId returns HTTP 400.
+    2. `/api/payment/verify-order` with non-existent orderId returns HTTP 404.
+    3. `/api/payment/verify-order` with pending order returns HTTP 400 with `verified: false`.
+    4. `/api/payment/verify-order` with charged order returns HTTP 200 with live MySQL application particulars and `verified: true`.
+    5. `/api/payment/hdfc/initiate` with existing email returns HTTP 409 Conflict.
+    6. `/api/auth/register` with existing email returns HTTP 409 Conflict.
+    7. `/api/auth/otp` with existing email returns HTTP 409 Conflict.
+    8. End-to-end payment creation writes live user and application records directly to MySQL (`gurukul_entrance`), with verified unique roll number allocation (`NILG-00004`).
+- **Status:** Complete, Verified & Live in Production.
 
 ---
 *(Future changes, field modifications, and updates will be appended below)*
+
 
 
 

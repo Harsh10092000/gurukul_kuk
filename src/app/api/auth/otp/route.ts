@@ -69,6 +69,14 @@ export async function POST(req: Request) {
           );
         }
 
+        const existingEmailApp = await db.findApplicationByEmail(email.trim().toLowerCase());
+        if (existingEmailApp && existingEmailApp.paymentStatus === 'completed') {
+          return NextResponse.json(
+            { error: 'An entrance application with this email address is already registered. Please sign in to your dashboard.' },
+            { status: 409 }
+          );
+        }
+
         recipientPhone = ''; // Remove mobile verification from registration flow
       } 
       // Case B: Account Recovery / Forgot Password / Verification

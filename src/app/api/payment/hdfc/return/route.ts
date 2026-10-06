@@ -258,7 +258,7 @@ async function handleHdfcReturn(request: Request) {
       });
       return NextResponse.redirect(
         new URL(
-          `/payment/thank-you?orderId=${encodeURIComponent(orderId)}&txnId=${encodeURIComponent(txnId)}`,
+          `/apply?payment=pending&orderId=${encodeURIComponent(orderId)}&txnId=${encodeURIComponent(txnId)}&msg=Payment+was+received+successfully+but+application+details+are+pending.+Please+contact+admissions+helpline.`,
           baseUrl
         ),
         303
@@ -279,14 +279,45 @@ async function handleHdfcReturn(request: Request) {
 
     const gender = (personalInfo?.gender || 'Male') as 'Male' | 'Female';
 
-    // Atomically Generate Registration ID & Roll Number
-    const registrationId = await db.getNextRegistrationNumber(gender);
-    const assignedRollNo = await db.getNextRollNumber(classApplying, gender, stream || payload.academicInfo?.stream);
-
     // Prepare credentials
     const candidateEmail = (personalInfo?.candidateEmail || paymentOrder.customerEmail || '').trim().toLowerCase();
     const candidateMobile = (personalInfo?.candidateMobile || paymentOrder.customerPhone || '').trim();
     const cleanPhone = candidateMobile.replace(/\D/g, '').slice(-10);
+
+    // Check if an official application already exists for this email
+    const existingAppByEmail = await db.findApplicationByEmail(candidateEmail);
+    if (existingAppByEmail && existingAppByEmail.paymentStatus === 'completed') {
+      const regId = existingAppByEmail.registrationNumber || existingAppByEmail.applicationNumber;
+      console.log(`[HDFC Return] Application already exists for email ${candidateEmail}: RegNo ${regId}`);
+      await db.updatePaymentOrderRecord(orderId, {
+        status: 'CHARGED',
+        applicationId: existingAppByEmail.id,
+        registrationNumber: regId,
+        paymentResponse: statusResponse,
+      });
+
+      const existingUser = await db.findUserByEmail(candidateEmail);
+      if (existingUser) {
+        const token = signToken({
+          userId: existingUser.id,
+          name: existingUser.name,
+          email: existingUser.email,
+          role: existingUser.role,
+        });
+        const redirectUrl = new URL(
+          `/payment/thank-you?orderId=${encodeURIComponent(orderId)}&regNo=${encodeURIComponent(regId)}&txnId=${encodeURIComponent(txnId)}`,
+          baseUrl
+        );
+        const response = NextResponse.redirect(redirectUrl, 303);
+        const cookieOptions = getAuthCookieOptions();
+        response.cookies.set(cookieOptions.name, token, cookieOptions);
+        return response;
+      }
+    }
+
+    // Atomically Generate Registration ID & Roll Number
+    const registrationId = await db.getNextRegistrationNumber(gender);
+    const assignedRollNo = await db.getNextRollNumber(classApplying, gender, stream || payload.academicInfo?.stream);
 
     let passwordHash = '';
     if (password) {
@@ -295,7 +326,7 @@ async function handleHdfcReturn(request: Request) {
       passwordHash = await hashPassword('Student@123');
     }
 
-    // Create official user account
+    // Create official user account if not already existing
     let officialUser: any;
     const existingUser = await db.findUserByEmail(candidateEmail);
     if (existingUser) {
