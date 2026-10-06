@@ -37,7 +37,7 @@ const STORE_FILE = path.join(DATA_DIR, 'gurukul_store.json');
 
 // In-memory / JSON fallback store structure
 interface FallbackStore {
-  users: User[];
+  users: (User & { passwordHash?: string })[];
   applications: Application[];
   admitCards: AdmitCard[];
   results: ExamResult[];
@@ -171,9 +171,8 @@ function initFallbackFile(): FallbackStore {
     }
   }
 
-  // Initial seed admin password: "Admin@Gurukul2026"
+  // Initial admin credentials: "Admin@Gurukul2026"
   const passwordHash = bcrypt.hashSync('Admin@Gurukul2026', 10);
-  const applicantHash = bcrypt.hashSync('Student@123', 10);
 
   const initialStore: FallbackStore = {
     users: [
@@ -183,127 +182,13 @@ function initFallbackFile(): FallbackStore {
         email: 'admin@thegurukulnilokheri.com',
         phone: '+919896328329',
         role: 'admin',
-        createdAt: new Date().toISOString(),
-      },
-      {
-        id: 'usr-student-demo',
-        name: 'Aarav Sharma',
-        email: 'aarav@example.com',
-        phone: '+919876543210',
-        role: 'applicant',
-        registrationNumber: 'GK26-10001',
+        passwordHash,
         createdAt: new Date().toISOString(),
       },
     ],
-    applications: [
-      {
-        id: 'app-demo-1',
-        registrationNumber: 'GK26-10001',
-        applicationNumber: 'GK26-10001',
-        rollNumber: undefined, // Roll number is strictly deferred per user instructions
-        userId: 'usr-student-demo',
-        classApplying: 'Class 6',
-        personalInfo: {
-          fullName: 'Aarav Sharma',
-          dob: '2014-07-15',
-          gender: 'Male',
-          category: 'General',
-          bloodGroup: 'B+',
-          aadhaarNumber: '4839-2049-1928',
-          nationality: 'Indian',
-          religion: 'Hindu',
-        },
-        parentInfo: {
-          fatherName: 'Dr. Rajesh Sharma',
-          fatherOccupation: 'Professor',
-          fatherPhone: '+919876543210',
-          motherName: 'Sunita Sharma',
-          motherOccupation: 'Teacher',
-          annualIncome: '8,50,000',
-        },
-        addressInfo: {
-          streetAddress: 'House No. 142, Model Town',
-          city: 'Karnal',
-          district: 'Karnal',
-          state: 'Haryana',
-          pincode: '132001',
-          whatsappNumber: '+919876543210',
-        },
-        academicInfo: {
-          applyingClass: 'Class 6',
-          mediumOfInstruction: 'English',
-          previousSchoolName: 'Tagore Bal Niketan',
-          previousBoard: 'CBSE',
-          previousClassMarksPercentage: '92%',
-          passingYear: '2025',
-        },
-        examCentrePref: {
-          preferredCenter1: 'The Gurukul Nilokheri Main Campus',
-          preferredCenter2: 'The Gurukul Jyotisar',
-        },
-        documents: {
-          photo: '/logo-gurukul.png',
-          signature: '/logo-gurukul.png',
-        },
-        status: 'approved',
-        paymentStatus: 'completed',
-        amountPaid: 1200,
-        transactionId: 'TXN_GK_DEMO_99812',
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      },
-    ],
-    admitCards: [
-      {
-        id: 'admit-demo-1',
-        applicationId: 'app-demo-1',
-        applicationNumber: 'GK-2026-1001',
-        rollNumber: '27060001',
-        candidateName: 'Aarav Sharma',
-        fatherName: 'Dr. Rajesh Sharma',
-        classApplying: 'Class 6',
-        examCentreName: 'The Gurukul Nilokheri Main Campus',
-        examCentreAddress: 'Nilokheri, Karnal, Haryana - 132117',
-        examDate: '06 December 2026',
-        reportingTime: '08:30 AM',
-        examDuration: '10:00 AM to 12:30 PM (2.5 Hours)',
-        roomNumber: 'Hall-A, Desk 14',
-        candidatePhotoUrl: '/logo-gurukul.png',
-        isReleased: true,
-        instructions: [
-          'Bring printed copy of this Admit Card along with valid Aadhaar Card.',
-          'Candidates must arrive at least 45 minutes prior to the examination time.',
-          'Electronic gadgets, smart watches, and calculators are strictly prohibited.',
-          'Blue/Black ballpoint pens only to be used for OMR / answer sheets.',
-        ],
-        createdAt: new Date().toISOString(),
-      },
-    ],
-    results: [
-      {
-        id: 'res-demo-1',
-        applicationId: 'app-demo-1',
-        applicationNumber: 'GK-2026-1001',
-        rollNumber: '27060001',
-        candidateName: 'Aarav Sharma',
-        classApplying: 'Class 6',
-        subjects: [
-          { subject: 'Mathematics', maxMarks: 50, marksObtained: 46 },
-          { subject: 'Science', maxMarks: 50, marksObtained: 44 },
-          { subject: 'English & Hindi', maxMarks: 50, marksObtained: 42 },
-          { subject: 'Sanskrit & General Knowledge', maxMarks: 50, marksObtained: 45 },
-        ],
-        totalMarks: 177,
-        maxTotalMarks: 200,
-        percentage: 88.5,
-        rank: 14,
-        qualifyingStatus: 'Qualified for Admission',
-        counselingDate: '10 January 2027 at 10:00 AM',
-        counselingVenue: 'Main Administrative Block, The Gurukul Nilokheri',
-        isPublished: true,
-        remarks: 'Excellent performance. Selected in First Merit List.',
-      },
-    ],
+    applications: [],
+    admitCards: [],
+    results: [],
     examCentres: DEFAULT_CENTRES,
     settings: DEFAULT_SETTINGS,
     notifications: [],
@@ -326,7 +211,7 @@ let initPromise: Promise<void> | null = null;
 
 export async function ensureDb(): Promise<mysql.Pool | null> {
   if (pool && !useFallbackStorage) return pool;
-  if (!initPromise) {
+  if (!initPromise || useFallbackStorage) {
     initPromise = initDatabase();
   }
   try {
