@@ -16,17 +16,39 @@ import {
 } from './types';
 import { getExamDetailsForGender } from './validations';
 
-// Default configuration from environment
-const DB_CONFIG = {
-  host: process.env.DB_HOST || 'localhost',
-  port: parseInt(process.env.DB_PORT || '3306', 10),
-  user: process.env.DB_USER || 'root',
-  password: process.env.DB_PASSWORD || '',
-  database: process.env.DB_NAME || 'gurukul_entrance',
-  waitForConnections: true,
-  connectionLimit: 10,
-  queueLimit: 0,
-};
+// Default configuration from environment (supports individual DB_* vars or DATABASE_URL)
+function parseDbConfig() {
+  const dbUrl = process.env.DATABASE_URL;
+  if (dbUrl) {
+    try {
+      const parsed = new URL(dbUrl);
+      return {
+        host: parsed.hostname || 'localhost',
+        port: parseInt(parsed.port || '3306', 10),
+        user: parsed.username || 'root',
+        password: decodeURIComponent(parsed.password || ''),
+        database: parsed.pathname.replace(/^\//, '') || 'gurukul_entrance',
+        waitForConnections: true,
+        connectionLimit: 10,
+        queueLimit: 0,
+      };
+    } catch (e) {
+      console.warn('Failed to parse DATABASE_URL, falling back to individual DB_* vars:', e);
+    }
+  }
+  return {
+    host: process.env.DB_HOST || 'localhost',
+    port: parseInt(process.env.DB_PORT || '3306', 10),
+    user: process.env.DB_USER || 'root',
+    password: process.env.DB_PASSWORD || '',
+    database: process.env.DB_NAME || 'gurukul_entrance',
+    waitForConnections: true,
+    connectionLimit: 10,
+    queueLimit: 0,
+  };
+}
+
+const DB_CONFIG = parseDbConfig();
 
 let pool: mysql.Pool | null = (globalThis as any).__gurukul_mysql_pool || null;
 let useFallbackStorage = false;
