@@ -36,7 +36,7 @@ interface TestUser {
   registrationNumber: string;
 }
 
-export type DueCategory =
+type DueCategory =
   | 'Administrative'
   | 'Academics'
   | 'Hostel & Dining'
@@ -44,7 +44,7 @@ export type DueCategory =
   | 'Labs & Practical'
   | 'Activities & Camp';
 
-export interface FeeDueItem {
+interface FeeDueItem {
   id: string;
   code: string;
   title: string;
@@ -56,7 +56,7 @@ export interface FeeDueItem {
 }
 
 // 20 Candidate Fee Dues for Gateway Sideflow Testing (All amounts strictly < ₹100)
-export const TEST_FEE_DUES: FeeDueItem[] = [
+const TEST_FEE_DUES: FeeDueItem[] = [
   {
     id: 'DUE-01',
     code: 'FEE-VRF-01',
