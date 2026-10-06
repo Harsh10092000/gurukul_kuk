@@ -3,20 +3,36 @@ import { checkFormStatus, getFormSchedule, updateFormSchedule } from '@/lib/form
 import { getCurrentUser } from '@/lib/auth';
 import { db } from '@/lib/db';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET() {
   try {
-    const status = checkFormStatus();
+    const settings = await db.getSettings();
     const config = getFormSchedule();
+
+    if (settings.registrationEndDate) {
+      const regEndIso = settings.registrationEndDate.length === 10
+        ? `${settings.registrationEndDate}T18:29:59.000Z`
+        : settings.registrationEndDate;
+      config.endDate = regEndIso;
+    }
+    if (settings.registrationStartDate) {
+      const regStartIso = settings.registrationStartDate.length === 10
+        ? `${settings.registrationStartDate}T00:00:00.000Z`
+        : settings.registrationStartDate;
+      config.startDate = regStartIso;
+    }
+
+    const status = checkFormStatus();
     return NextResponse.json({
-      isOpen: status.isOpen,
+      isOpen: settings.portalOpen !== false && status.isOpen,
       status: status.status,
       message: status.message,
-      startDate: status.startDate,
-      endDate: status.endDate,
+      startDate: config.startDate,
+      endDate: config.endDate,
       timezone: status.timezone,
       announcementNotice: status.announcementNotice,
       config,
-      // For backwards compatibility
       details: status,
     });
   } catch (error) {

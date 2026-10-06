@@ -3,6 +3,8 @@ import { db } from '@/lib/db';
 import { getCurrentUser } from '@/lib/auth';
 import { computeApplicationMetrics } from '@/lib/applicationMetrics';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET() {
   try {
     const user = await getCurrentUser();

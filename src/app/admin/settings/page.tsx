@@ -124,7 +124,7 @@ export default function AdminSettingsPage() {
   };
 
   const loadAcademicSettings = () => {
-    fetch('/api/admin/settings')
+    fetch('/api/admin/settings', { cache: 'no-store' })
       .then((res) => res.json())
       .then((data) => {
         if (data.settings) {

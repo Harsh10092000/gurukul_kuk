@@ -4,6 +4,8 @@ import { getCurrentUser } from '@/lib/auth';
 import { recordAuditLog } from '@/lib/audit';
 import { updateFormSchedule } from '@/lib/formSchedule';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET() {
   try {
     const user = await getCurrentUser();

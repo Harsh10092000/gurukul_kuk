@@ -74,17 +74,18 @@ interface FallbackStore {
 const DEFAULT_SETTINGS: SystemSettings = {
   portalOpen: true,
   resultsDeclared: false,
+  admitCardsReleased: false,
   academicSession: '2027-2028',
   applicationFee: 800,
   registrationStartDate: '2026-09-01',
-  registrationEndDate: '2027-01-31',
-  admitCardReleaseDate: '2027-03-01',
+  registrationEndDate: '2027-02-12',
+  admitCardReleaseDate: '2027-02-12',
   entranceExamDate: '2027-02-14',
   entranceExamTime: '9:30 AM (Boys) / 8:30 AM (Girls)',
   examVenueName: 'Aryakulam Nilokheri (Boys) / The Gurukul Nilokheri (Girls)',
   examVenueAddress: 'Nilokheri, Karnal, Haryana - 132117',
-  resultDeclarationDate: '2027-03-01',
-  counselingStartDate: '2027-03-10',
+  resultDeclarationDate: '2027-02-14',
+  counselingStartDate: '2027-04-15',
   helplinePhone: '+91 7027849858 / 59',
   helplineEmail: 'thegurukulnilokheri@gmail.com',
   activeStudyLocations: ['Gurukul Nilokheri', 'Gurukul Jyotisar', 'Aryakulam Nilokheri'],
@@ -387,11 +388,105 @@ export async function initDatabase(): Promise<void> {
 
     await pool.query(`
       CREATE TABLE IF NOT EXISTS system_settings (
-        setting_key VARCHAR(64) PRIMARY KEY,
-        setting_value JSON NOT NULL,
+        id INT PRIMARY KEY AUTO_INCREMENT,
+        portal_open TINYINT(1) DEFAULT 1,
+        results_declared TINYINT(1) DEFAULT 0,
+        admit_cards_released TINYINT(1) DEFAULT 0,
+        admit_cards_released_at VARCHAR(64) DEFAULT NULL,
+        academic_session VARCHAR(32) DEFAULT '2027-2028',
+        application_fee DECIMAL(10, 2) DEFAULT 800.00,
+        registration_start_date VARCHAR(32) DEFAULT '2026-09-01',
+        registration_end_date VARCHAR(32) DEFAULT '2027-02-12',
+        admit_card_release_date VARCHAR(32) DEFAULT '2027-02-12',
+        entrance_exam_date VARCHAR(32) DEFAULT '2027-02-14',
+        entrance_exam_time VARCHAR(64) DEFAULT '9:30 AM (Boys) / 8:30 AM (Girls)',
+        exam_venue_name VARCHAR(255) DEFAULT 'Aryakulam Nilokheri (Boys) / The Gurukul Nilokheri (Girls)',
+        exam_venue_address TEXT,
+        result_declaration_date VARCHAR(32) DEFAULT '2027-02-14',
+        counseling_start_date VARCHAR(32) DEFAULT '2027-04-15',
+        helpline_phone VARCHAR(64) DEFAULT '+91 7027849858 / 59',
+        helpline_email VARCHAR(128) DEFAULT 'thegurukulnilokheri@gmail.com',
+        active_study_locations JSON DEFAULT NULL,
         updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
       );
     `);
+
+    // Ensure all required columns exist in system_settings (migration for existing DBs)
+    try {
+      const [colRows]: any = await pool.query("SHOW COLUMNS FROM system_settings");
+      const colNames = Array.isArray(colRows) ? colRows.map((c: any) => c.Field) : [];
+
+      if (colNames.includes('setting_key')) {
+        await pool.query("DROP TABLE system_settings");
+        await pool.query(`
+          CREATE TABLE system_settings (
+            id INT PRIMARY KEY AUTO_INCREMENT,
+            portal_open TINYINT(1) DEFAULT 1,
+            results_declared TINYINT(1) DEFAULT 0,
+            admit_cards_released TINYINT(1) DEFAULT 0,
+            admit_cards_released_at VARCHAR(64) DEFAULT NULL,
+            academic_session VARCHAR(32) DEFAULT '2027-2028',
+            application_fee DECIMAL(10, 2) DEFAULT 800.00,
+            registration_start_date VARCHAR(32) DEFAULT '2026-09-01',
+            registration_end_date VARCHAR(32) DEFAULT '2027-02-12',
+            admit_card_release_date VARCHAR(32) DEFAULT '2027-02-12',
+            entrance_exam_date VARCHAR(32) DEFAULT '2027-02-14',
+            entrance_exam_time VARCHAR(64) DEFAULT '9:30 AM (Boys) / 8:30 AM (Girls)',
+            exam_venue_name VARCHAR(255) DEFAULT 'Aryakulam Nilokheri (Boys) / The Gurukul Nilokheri (Girls)',
+            exam_venue_address TEXT,
+            result_declaration_date VARCHAR(32) DEFAULT '2027-02-14',
+            counseling_start_date VARCHAR(32) DEFAULT '2027-04-15',
+            helpline_phone VARCHAR(64) DEFAULT '+91 7027849858 / 59',
+            helpline_email VARCHAR(128) DEFAULT 'thegurukulnilokheri@gmail.com',
+            active_study_locations JSON DEFAULT NULL,
+            updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+          )
+        `);
+      } else {
+        const columnsToAdd: { name: string; type: string }[] = [
+          { name: 'entrance_exam_time', type: "VARCHAR(64) DEFAULT '9:30 AM (Boys) / 8:30 AM (Girls)'" },
+          { name: 'exam_venue_name', type: "VARCHAR(255) DEFAULT 'Aryakulam Nilokheri (Boys) / The Gurukul Nilokheri (Girls)'" },
+          { name: 'exam_venue_address', type: "TEXT" },
+          { name: 'active_study_locations', type: "JSON DEFAULT NULL" },
+          { name: 'admit_cards_released', type: "TINYINT(1) DEFAULT 0" },
+          { name: 'admit_cards_released_at', type: "VARCHAR(64) DEFAULT NULL" },
+          { name: 'results_declared', type: "TINYINT(1) DEFAULT 0" },
+          { name: 'portal_open', type: "TINYINT(1) DEFAULT 1" },
+        ];
+        for (const col of columnsToAdd) {
+          if (!colNames.includes(col.name)) {
+            try {
+              await pool.query(`ALTER TABLE system_settings ADD COLUMN ${col.name} ${col.type}`);
+            } catch { }
+          }
+        }
+      }
+
+      const [settingsCount]: any = await pool.query("SELECT COUNT(*) as count FROM system_settings");
+      if (!settingsCount || !settingsCount[0] || settingsCount[0].count === 0) {
+        await pool.query(`
+          INSERT INTO system_settings (
+            portal_open, results_declared, admit_cards_released, academic_session, application_fee,
+            registration_start_date, registration_end_date, admit_card_release_date,
+            entrance_exam_date, entrance_exam_time, exam_venue_name, exam_venue_address,
+            result_declaration_date, counseling_start_date, helpline_phone, helpline_email,
+            active_study_locations, updated_at
+          ) VALUES (
+            1, 0, 0, '2027-2028', 800.00,
+            '2026-09-01', '2027-02-12', '2027-02-12',
+            '2027-02-14', '9:30 AM (Boys) / 8:30 AM (Girls)',
+            'Aryakulam Nilokheri (Boys) / The Gurukul Nilokheri (Girls)',
+            'Nilokheri, Karnal, Haryana - 132117',
+            '2027-02-14', '2027-04-15',
+            '+91 7027849858 / 59', 'thegurukulnilokheri@gmail.com',
+            '["Gurukul Nilokheri", "Gurukul Jyotisar", "Aryakulam Nilokheri"]',
+            NOW()
+          )
+        `);
+      }
+    } catch (migErr) {
+      console.warn('system_settings schema migration notice:', migErr);
+    }
 
     await pool.query(`
       CREATE TABLE IF NOT EXISTS admin_notifications (
@@ -2154,7 +2249,7 @@ export const db = {
     if (pool && !useFallbackStorage) {
       try {
         const [rows]: any = await pool.query('SELECT id FROM system_settings LIMIT 1');
-        const now = new Date().toISOString();
+        const now = toMySqlDatetime(new Date());
         const setClauses: string[] = ['updated_at = ?'];
         const values: any[] = [now];
 
@@ -2198,6 +2293,18 @@ export const db = {
           setClauses.push('entrance_exam_date = ?');
           values.push(settings.entranceExamDate);
         }
+        if (settings.entranceExamTime !== undefined) {
+          setClauses.push('entrance_exam_time = ?');
+          values.push(settings.entranceExamTime);
+        }
+        if (settings.examVenueName !== undefined) {
+          setClauses.push('exam_venue_name = ?');
+          values.push(settings.examVenueName);
+        }
+        if (settings.examVenueAddress !== undefined) {
+          setClauses.push('exam_venue_address = ?');
+          values.push(settings.examVenueAddress);
+        }
         if (settings.resultDeclarationDate !== undefined) {
           setClauses.push('result_declaration_date = ?');
           values.push(settings.resultDeclarationDate);
@@ -2214,27 +2321,42 @@ export const db = {
           setClauses.push('helpline_email = ?');
           values.push(settings.helplineEmail);
         }
+        if (settings.activeStudyLocations !== undefined) {
+          setClauses.push('active_study_locations = ?');
+          values.push(JSON.stringify(settings.activeStudyLocations));
+        }
 
         if (rows && rows.length > 0) {
           values.push(rows[0].id);
           await pool.query(`UPDATE system_settings SET ${setClauses.join(', ')} WHERE id = ?`, values);
         } else {
           await pool.query(
-            `INSERT INTO system_settings (portal_open, results_declared, academic_session, application_fee, registration_start_date, registration_end_date, admit_card_release_date, entrance_exam_date, result_declaration_date, counseling_start_date, helpline_phone, helpline_email)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            `INSERT INTO system_settings (
+              portal_open, results_declared, admit_cards_released, admit_cards_released_at,
+              academic_session, application_fee, registration_start_date, registration_end_date,
+              admit_card_release_date, entrance_exam_date, entrance_exam_time, exam_venue_name, exam_venue_address,
+              result_declaration_date, counseling_start_date, helpline_phone, helpline_email, active_study_locations, updated_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
             [
-              settings.portalOpen ? 1 : 0,
-              settings.resultsDeclared ? 1 : 0,
+              settings.portalOpen !== undefined ? (settings.portalOpen ? 1 : 0) : 1,
+              settings.resultsDeclared !== undefined ? (settings.resultsDeclared ? 1 : 0) : 0,
+              settings.admitCardsReleased !== undefined ? (settings.admitCardsReleased ? 1 : 0) : 0,
+              settings.admitCardsReleasedAt || null,
               settings.academicSession || '2027-2028',
               settings.applicationFee || 800,
               settings.registrationStartDate || '2026-09-01',
-              settings.registrationEndDate || '2027-01-31',
-              settings.admitCardReleaseDate || '2027-03-01',
+              settings.registrationEndDate || '2027-02-12',
+              settings.admitCardReleaseDate || '2027-02-12',
               settings.entranceExamDate || '2027-02-14',
-              settings.resultDeclarationDate || '2027-03-01',
-              settings.counselingStartDate || '2027-03-10',
+              settings.entranceExamTime || '9:30 AM (Boys) / 8:30 AM (Girls)',
+              settings.examVenueName || 'Aryakulam Nilokheri (Boys) / The Gurukul Nilokheri (Girls)',
+              settings.examVenueAddress || 'Nilokheri, Karnal, Haryana - 132117',
+              settings.resultDeclarationDate || '2027-02-14',
+              settings.counselingStartDate || '2027-04-15',
               settings.helplinePhone || '+91 7027849858 / 59',
               settings.helplineEmail || 'thegurukulnilokheri@gmail.com',
+              settings.activeStudyLocations ? JSON.stringify(settings.activeStudyLocations) : JSON.stringify(['Gurukul Nilokheri', 'Gurukul Jyotisar', 'Aryakulam Nilokheri']),
+              now,
             ]
           );
         }

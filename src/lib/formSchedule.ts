@@ -1,4 +1,4 @@
-﻿import fs from 'fs';
+import fs from 'fs';
 import path from 'path';
 import { recordAuditLog } from './audit';
 
@@ -17,7 +17,7 @@ const SCHEDULE_FILE = path.join(process.cwd(), 'data', 'form_schedule.json');
 
 const DEFAULT_SCHEDULE: FormScheduleConfig = {
   startDate: '2026-09-01T00:00:00.000Z',
-  endDate: '2026-10-31T23:59:59.000Z',
+  endDate: '2027-02-12T18:29:59.000Z',
   statusOverride: 'auto',
   timezone: 'Asia/Kolkata (IST)',
   announcementNotice: 'Online Application for Entrance Examination Session 2027-28 is active for Classes 5th, 6th, 7th, 8th, 9th, 11th & NDA Wing.',

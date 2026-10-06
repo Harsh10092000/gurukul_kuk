@@ -3,6 +3,8 @@ import { db } from '@/lib/db';
 import { getCurrentUser } from '@/lib/auth';
 import { getExamDetailsForGender } from '@/lib/validations';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET() {
   try {
     const settings = await db.getSettings();

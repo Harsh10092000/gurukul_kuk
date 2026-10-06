@@ -10,7 +10,7 @@ export default function AdminDashboard() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch('/api/admin/stats')
+    fetch('/api/admin/stats', { cache: 'no-store' })
       .then((res) => res.json())
       .then((data) => {
         if (data.stats) setStats(data.stats);

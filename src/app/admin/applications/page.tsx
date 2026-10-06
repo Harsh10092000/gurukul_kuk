@@ -45,7 +45,7 @@ export default function AdminApplicationsPage() {
   const [showBulkModal, setShowBulkModal] = useState(false);
 
   const fetchApplications = () => {
-    fetch('/api/applications')
+    fetch('/api/applications', { cache: 'no-store' })
       .then((res) => res.json())
       .then((data) => {
         if (data.applications) setApplications(data.applications);
@@ -67,7 +67,7 @@ export default function AdminApplicationsPage() {
   };
 
   const fetchSettings = () => {
-    fetch('/api/settings')
+    fetch('/api/settings', { cache: 'no-store' })
       .then((res) => res.json())
       .then((data) => {
         if (data.settings) {
