@@ -124,6 +124,19 @@ export function toMySqlDatetime(date: Date | string = new Date()): string {
   return d.toISOString().slice(0, 19).replace('T', ' ');
 }
 
+export function safeJsonParse<T = any>(val: any, fallback: any = {}): T {
+  if (val === null || val === undefined || val === '') return fallback as T;
+  if (typeof val === 'object') return val as T;
+  if (typeof val === 'string') {
+    try {
+      return JSON.parse(val) as T;
+    } catch {
+      return fallback as T;
+    }
+  }
+  return fallback as T;
+}
+
 function initFallbackFile(): FallbackStore {
   if (!fs.existsSync(DATA_DIR)) {
     fs.mkdirSync(DATA_DIR, { recursive: true });
@@ -1028,47 +1041,86 @@ export const db = {
         };
       });
     }
-    const [rows]: any = await pool.query(`
-      SELECT a.*, u.name as user_name, u.email as user_email, u.phone as user_phone
-      FROM applications a
-      LEFT JOIN users u ON a.user_id = u.id
-      WHERE a.status != 'draft'
-      ORDER BY a.created_at DESC
-    `);
-    return rows.map((r: any) => {
-      const parsedPersonal = typeof r.personal_info === 'string' ? JSON.parse(r.personal_info) : (r.personal_info || {});
-      const resolvedName = (parsedPersonal.fullName && parsedPersonal.fullName !== 'Temp Delete Test' && parsedPersonal.fullName.trim() !== '')
-        ? parsedPersonal.fullName
-        : (r.user_name || 'Applicant');
-      parsedPersonal.fullName = resolvedName;
-      if (!parsedPersonal.candidateEmail) parsedPersonal.candidateEmail = r.user_email || '';
-      if (!parsedPersonal.candidateMobile) parsedPersonal.candidateMobile = r.user_phone || '';
+    try {
+      const [rows]: any = await pool.query(`
+        SELECT a.*, u.name as user_name, u.email as user_email, u.phone as user_phone
+        FROM applications a
+        LEFT JOIN users u ON a.user_id = u.id
+        WHERE a.status IS NULL OR a.status != 'draft'
+        ORDER BY a.created_at DESC
+      `);
+      return rows.map((r: any) => {
+        const parsedPersonal = safeJsonParse(r.personal_info, {});
+        const resolvedName = (parsedPersonal.fullName && parsedPersonal.fullName !== 'Temp Delete Test' && parsedPersonal.fullName.trim() !== '')
+          ? parsedPersonal.fullName
+          : (r.user_name || 'Applicant');
+        parsedPersonal.fullName = resolvedName;
+        if (!parsedPersonal.candidateEmail) parsedPersonal.candidateEmail = r.user_email || '';
+        if (!parsedPersonal.candidateMobile) parsedPersonal.candidateMobile = r.user_phone || '';
 
-      const parsedParent = typeof r.parent_info === 'string' ? JSON.parse(r.parent_info) : (r.parent_info || {});
-      if (!parsedParent.fatherPhone) parsedParent.fatherPhone = parsedPersonal.candidateMobile || r.user_phone || '';
+        const parsedParent = safeJsonParse(r.parent_info, {});
+        if (!parsedParent.fatherPhone) parsedParent.fatherPhone = parsedPersonal.candidateMobile || r.user_phone || '';
 
-      return {
-        id: r.id,
-        registrationNumber: r.registration_number || r.application_number,
-        applicationNumber: r.application_number || r.registration_number,
-        rollNumber: r.roll_number || undefined,
-        userId: r.user_id,
-        classApplying: r.class_applying,
-        personalInfo: parsedPersonal,
-        parentInfo: parsedParent,
-        addressInfo: typeof r.address_info === 'string' ? JSON.parse(r.address_info) : r.address_info,
-        academicInfo: typeof r.academic_info === 'string' ? JSON.parse(r.academic_info) : r.academic_info,
-        examCentrePref: typeof r.exam_centre_pref === 'string' ? JSON.parse(r.exam_centre_pref) : r.exam_centre_pref,
-        documents: typeof r.documents === 'string' ? JSON.parse(r.documents) : r.documents,
-        status: r.status,
-        remarks: r.remarks,
-        paymentStatus: r.payment_status,
-        amountPaid: parseFloat(r.amount_paid || 0),
-        transactionId: r.transaction_id,
-        createdAt: r.created_at,
-        updatedAt: r.updated_at,
-      };
-    });
+        const centrePref = safeJsonParse(r.exam_centre_pref, { firstPreference: 'Gurukul Nilokheri' });
+
+        return {
+          id: r.id,
+          registrationNumber: r.registration_number || r.application_number,
+          applicationNumber: r.application_number || r.registration_number,
+          rollNumber: r.roll_number || undefined,
+          userId: r.user_id,
+          classApplying: r.class_applying || 'Class 6',
+          personalInfo: parsedPersonal,
+          parentInfo: parsedParent,
+          addressInfo: safeJsonParse(r.address_info, {}),
+          academicInfo: safeJsonParse(r.academic_info, {}),
+          examCentrePref: centrePref,
+          studyLocationPref: centrePref,
+          documents: safeJsonParse(r.documents, {}),
+          status: r.status || 'submitted',
+          remarks: r.remarks,
+          paymentStatus: r.payment_status || 'completed',
+          amountPaid: parseFloat(r.amount_paid || 0),
+          transactionId: r.transaction_id,
+          createdAt: r.created_at ? (r.created_at instanceof Date ? r.created_at.toISOString() : String(r.created_at)) : new Date().toISOString(),
+          updatedAt: r.updated_at ? (r.updated_at instanceof Date ? r.updated_at.toISOString() : String(r.updated_at)) : new Date().toISOString(),
+        };
+      });
+    } catch (e) {
+      console.error('MySQL getApplications query failed:', e);
+      try {
+        const [rawRows]: any = await pool.query('SELECT * FROM applications');
+        return rawRows.map((r: any) => {
+          const parsedPersonal = safeJsonParse(r.personal_info, {});
+          const centrePref = safeJsonParse(r.exam_centre_pref, { firstPreference: 'Gurukul Nilokheri' });
+          return {
+            id: r.id,
+            registrationNumber: r.registration_number || r.application_number,
+            applicationNumber: r.application_number || r.registration_number,
+            rollNumber: r.roll_number || undefined,
+            userId: r.user_id,
+            classApplying: r.class_applying || 'Class 6',
+            personalInfo: parsedPersonal,
+            parentInfo: safeJsonParse(r.parent_info, {}),
+            addressInfo: safeJsonParse(r.address_info, {}),
+            academicInfo: safeJsonParse(r.academic_info, {}),
+            examCentrePref: centrePref,
+            studyLocationPref: centrePref,
+            documents: safeJsonParse(r.documents, {}),
+            status: r.status || 'submitted',
+            remarks: r.remarks,
+            paymentStatus: r.payment_status || 'completed',
+            amountPaid: parseFloat(r.amount_paid || 0),
+            transactionId: r.transaction_id,
+            createdAt: r.created_at ? (r.created_at instanceof Date ? r.created_at.toISOString() : String(r.created_at)) : new Date().toISOString(),
+            updatedAt: r.updated_at ? (r.updated_at instanceof Date ? r.updated_at.toISOString() : String(r.updated_at)) : new Date().toISOString(),
+          };
+        });
+      } catch (innerErr) {
+        console.error('MySQL getApplications fallback failed:', innerErr);
+        return [];
+      }
+    }
   },
 
   async getApplicationById(id: string): Promise<Application | null> {
@@ -1092,21 +1144,21 @@ export const db = {
       applicationNumber: r.application_number || r.registration_number,
       rollNumber: r.roll_number || undefined,
       userId: r.user_id,
-      classApplying: r.class_applying,
-      personalInfo: typeof r.personal_info === 'string' ? JSON.parse(r.personal_info) : r.personal_info,
-      parentInfo: typeof r.parent_info === 'string' ? JSON.parse(r.parent_info) : r.parent_info,
-      addressInfo: typeof r.address_info === 'string' ? JSON.parse(r.address_info) : r.address_info,
-      academicInfo: typeof r.academic_info === 'string' ? JSON.parse(r.academic_info) : r.academic_info,
-      examCentrePref: typeof r.exam_centre_pref === 'string' ? JSON.parse(r.exam_centre_pref) : r.exam_centre_pref,
-      studyLocationPref: typeof r.exam_centre_pref === 'string' ? JSON.parse(r.exam_centre_pref) : (r.exam_centre_pref || { firstPreference: 'Gurukul Nilokheri' }),
-      documents: typeof r.documents === 'string' ? JSON.parse(r.documents) : r.documents,
-      status: r.status,
+      classApplying: r.class_applying || 'Class 6',
+      personalInfo: safeJsonParse(r.personal_info, {}),
+      parentInfo: safeJsonParse(r.parent_info, {}),
+      addressInfo: safeJsonParse(r.address_info, {}),
+      academicInfo: safeJsonParse(r.academic_info, {}),
+      examCentrePref: safeJsonParse(r.exam_centre_pref, { firstPreference: 'Gurukul Nilokheri' }),
+      studyLocationPref: safeJsonParse(r.exam_centre_pref, { firstPreference: 'Gurukul Nilokheri' }),
+      documents: safeJsonParse(r.documents, {}),
+      status: r.status || 'submitted',
       remarks: r.remarks,
       paymentStatus: r.payment_status,
       amountPaid: parseFloat(r.amount_paid || 0),
       transactionId: r.transaction_id,
-      createdAt: r.created_at,
-      updatedAt: r.updated_at,
+      createdAt: r.created_at ? (r.created_at instanceof Date ? r.created_at.toISOString() : String(r.created_at)) : new Date().toISOString(),
+      updatedAt: r.updated_at ? (r.updated_at instanceof Date ? r.updated_at.toISOString() : String(r.updated_at)) : new Date().toISOString(),
     };
   },
 
@@ -1375,7 +1427,7 @@ export const db = {
       try {
         const [rows]: any = await pool.query('SELECT data FROM temp_applications WHERE session_id = ? LIMIT 1', [sessionId]);
         if (rows && rows.length > 0) {
-          return typeof rows[0].data === 'string' ? JSON.parse(rows[0].data) : rows[0].data;
+          return safeJsonParse(rows[0].data, null);
         }
         return null;
       } catch (e) {
@@ -1530,7 +1582,7 @@ export const db = {
 
       if (existingRows.length > 0) {
         const r = existingRows[0];
-        const existingPersonal = typeof r.personal_info === 'string' ? JSON.parse(r.personal_info) : (r.personal_info || {});
+        const existingPersonal = safeJsonParse(r.personal_info, {});
         const mergedPersonal = {
           ...existingPersonal,
           ...(draft.personalInfo || {}),
@@ -1541,11 +1593,11 @@ export const db = {
         if (!mergedPersonal.candidateEmail) mergedPersonal.candidateEmail = user?.email || '';
         if (!mergedPersonal.candidateMobile) mergedPersonal.candidateMobile = user?.phone || '';
 
-        const existingParent = typeof r.parent_info === 'string' ? JSON.parse(r.parent_info) : (r.parent_info || {});
-        const existingAddress = typeof r.address_info === 'string' ? JSON.parse(r.address_info) : (r.address_info || {});
-        const existingAcademic = typeof r.academic_info === 'string' ? JSON.parse(r.academic_info) : (r.academic_info || {});
-        const existingCentre = typeof r.exam_centre_pref === 'string' ? JSON.parse(r.exam_centre_pref) : (r.exam_centre_pref || {});
-        const existingDocs = typeof r.documents === 'string' ? JSON.parse(r.documents) : (r.documents || {});
+        const existingParent = safeJsonParse(r.parent_info, {});
+        const existingAddress = safeJsonParse(r.address_info, {});
+        const existingAcademic = safeJsonParse(r.academic_info, {});
+        const existingCentre = safeJsonParse(r.exam_centre_pref, {});
+        const existingDocs = safeJsonParse(r.documents, {});
 
         const updatedApp: Application = {
           id: r.id,
@@ -1584,7 +1636,7 @@ export const db = {
             JSON.stringify(updatedApp.academicInfo),
             JSON.stringify(updatedApp.examCentrePref),
             JSON.stringify(updatedApp.documents || {}),
-            now,
+            toMySqlDatetime(),
             r.id,
           ]
         );
@@ -1760,7 +1812,7 @@ export const db = {
 
     await pool.query(
       'UPDATE applications SET status = ?, remarks = ?, updated_at = ? WHERE id = ?',
-      [status, remarks || null, now, id]
+      [status, remarks || null, toMySqlDatetime(), id]
     );
 
     if (status === 'rejected') {
@@ -1824,7 +1876,7 @@ export const db = {
           JSON.stringify(updated.personalInfo),
           JSON.stringify(updated.academicInfo),
           JSON.stringify(updated.documents || {}),
-          now,
+          toMySqlDatetime(),
           existing.id,
           existing.applicationNumber || existing.id,
           existing.registrationNumber || existing.id,
@@ -1893,7 +1945,7 @@ export const db = {
       roomNumber: r.room_number,
       candidatePhotoUrl: r.candidate_photo_url,
       isReleased: Boolean(r.is_released),
-      instructions: typeof r.instructions === 'string' ? JSON.parse(r.instructions) : r.instructions,
+      instructions: safeJsonParse(r.instructions, []),
       createdAt: r.created_at,
     }));
   },
@@ -1923,7 +1975,7 @@ export const db = {
           roomNumber: r.room_number,
           candidatePhotoUrl: r.candidate_photo_url,
           isReleased: Boolean(r.is_released),
-          instructions: typeof r.instructions === 'string' ? JSON.parse(r.instructions) : r.instructions,
+          instructions: safeJsonParse(r.instructions, []),
           createdAt: r.created_at,
         };
       }
@@ -2036,7 +2088,7 @@ export const db = {
       rollNumber: r.roll_number,
       candidateName: r.candidate_name,
       classApplying: r.class_applying,
-      subjects: typeof r.subjects === 'string' ? JSON.parse(r.subjects) : r.subjects,
+      subjects: safeJsonParse(r.subjects, []),
       totalMarks: parseFloat(r.total_marks),
       maxTotalMarks: parseFloat(r.max_total_marks),
       percentage: parseFloat(r.percentage),
@@ -2111,7 +2163,7 @@ export const db = {
         candidateName: r.candidate_name,
         dob: r.dob,
         classApplying: r.class_applying,
-        subjects: typeof r.subjects === 'string' ? JSON.parse(r.subjects) : (r.subjects || []),
+        subjects: safeJsonParse(r.subjects, []),
         totalMarks: parseFloat(r.total_marks) || 0,
         maxTotalMarks: parseFloat(r.max_total_marks) || 0,
         percentage: parseFloat(r.percentage) || 0,
@@ -2215,11 +2267,18 @@ export const db = {
         const [rows]: any = await pool.query('SELECT * FROM system_settings LIMIT 1');
         if (rows && rows.length > 0) {
           const r = rows[0];
+          let releasedAt: string | undefined = undefined;
+          if (r.admit_cards_released_at) {
+            try {
+              const d = new Date(r.admit_cards_released_at);
+              if (!isNaN(d.getTime())) releasedAt = d.toISOString();
+            } catch {}
+          }
           return {
             portalOpen: Boolean(r.portal_open),
             resultsDeclared: Boolean(r.results_declared),
             admitCardsReleased: Boolean(r.admit_cards_released),
-            admitCardsReleasedAt: r.admit_cards_released_at ? new Date(r.admit_cards_released_at).toISOString() : undefined,
+            admitCardsReleasedAt: releasedAt,
             academicSession: r.academic_session || DEFAULT_SETTINGS.academicSession,
             applicationFee: parseFloat(r.application_fee || DEFAULT_SETTINGS.applicationFee),
             registrationStartDate: r.registration_start_date || DEFAULT_SETTINGS.registrationStartDate,
@@ -2233,7 +2292,7 @@ export const db = {
             counselingStartDate: r.counseling_start_date || DEFAULT_SETTINGS.counselingStartDate,
             helplinePhone: r.helpline_phone || DEFAULT_SETTINGS.helplinePhone,
             helplineEmail: r.helpline_email || DEFAULT_SETTINGS.helplineEmail,
-            activeStudyLocations: r.active_study_locations ? (typeof r.active_study_locations === 'string' ? JSON.parse(r.active_study_locations) : r.active_study_locations) : DEFAULT_SETTINGS.activeStudyLocations,
+            activeStudyLocations: safeJsonParse(r.active_study_locations, DEFAULT_SETTINGS.activeStudyLocations),
           };
         }
       } catch (e) {
@@ -2525,7 +2584,7 @@ export const db = {
         entityType: r.entity_type || undefined,
         link: r.link || undefined,
         isRead: Boolean(r.is_read),
-        metadata: r.metadata ? (typeof r.metadata === 'string' ? JSON.parse(r.metadata) : r.metadata) : undefined,
+        metadata: r.metadata ? safeJsonParse(r.metadata, undefined) : undefined,
         createdAt: r.created_at ? new Date(r.created_at).toISOString() : new Date().toISOString(),
       }));
     } catch (e) {
@@ -2827,7 +2886,7 @@ export const db = {
       try {
         await pool.query(
           'UPDATE contact_enquiries SET status = ?, admin_remarks = ?, updated_at = ? WHERE id = ?',
-          [status, remarks || null, now, id]
+          [status, remarks || null, toMySqlDatetime(), id]
         );
         return await this.getContactEnquiryById(id);
       } catch (e) {
@@ -2923,8 +2982,8 @@ export const db = {
             customerId: r.customer_id,
             applicationId: r.application_id,
             registrationNumber: r.registration_number,
-            applicationPayload: typeof r.application_payload === 'string' ? JSON.parse(r.application_payload) : r.application_payload,
-            paymentResponse: typeof r.payment_response === 'string' ? JSON.parse(r.payment_response) : r.payment_response,
+            applicationPayload: safeJsonParse(r.application_payload, null),
+            paymentResponse: safeJsonParse(r.payment_response, null),
             createdAt: r.created_at ? new Date(r.created_at).toISOString() : new Date().toISOString(),
             updatedAt: r.updated_at ? new Date(r.updated_at).toISOString() : new Date().toISOString(),
           };

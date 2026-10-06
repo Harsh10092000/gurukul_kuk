@@ -15,14 +15,20 @@ export async function GET() {
       return NextResponse.json({ error: 'Unauthorized: Admin access required' }, { status: 403 });
     }
 
-    const applications = await db.getApplications();
-    const settings = await db.getSettings();
+    const applications = await db.getApplications().catch((err) => {
+      console.error('Failed to get applications in /api/admin/stats:', err);
+      return [];
+    });
+    const settings = await db.getSettings().catch((err) => {
+      console.error('Failed to get settings in /api/admin/stats:', err);
+      return null;
+    });
 
     // Authoritative Single Source of Truth Metrics
     const metrics = computeApplicationMetrics(applications);
 
     // Active candidates in portal (excluding rejected dossiers)
-    const activeApplications = applications.filter((a) => a.status !== 'rejected');
+    const activeApplications = (applications || []).filter((a) => a.status !== 'rejected');
 
     // Class-wise breakdown (across active candidates)
     const classCounts: Record<string, number> = {};
@@ -57,8 +63,11 @@ export async function GET() {
       recentApplications: activeApplications.slice(0, 8),
       settings,
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error in stats route:', error);
-    return NextResponse.json({ error: 'Failed to compute statistics' }, { status: 500 });
+    return NextResponse.json({ 
+      error: 'Failed to compute statistics',
+      details: error?.message || String(error)
+    }, { status: 500 });
   }
 }
