@@ -93,6 +93,14 @@ const DEFAULT_CENTRES: ExamCentre[] = [
   },
 ];
 
+export function toMySqlDatetime(date: Date | string = new Date()): string {
+  const d = date instanceof Date ? date : new Date(date);
+  if (isNaN(d.getTime())) {
+    return new Date().toISOString().slice(0, 19).replace('T', ' ');
+  }
+  return d.toISOString().slice(0, 19).replace('T', ' ');
+}
+
 function initFallbackFile(): FallbackStore {
   if (!fs.existsSync(DATA_DIR)) {
     fs.mkdirSync(DATA_DIR, { recursive: true });
@@ -850,7 +858,7 @@ export const db = {
     if (pool && !useFallbackStorage) {
       await pool.query(
         'INSERT INTO users (id, name, email, phone, password_hash, role, registration_number, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
-        [id, user.name, user.email, user.phone, user.passwordHash, user.role, registrationNumber || null, createdAt]
+        [id, user.name, user.email, user.phone, user.passwordHash, user.role, registrationNumber || null, toMySqlDatetime(createdAt)]
       );
       return newUser;
     }
@@ -1335,7 +1343,7 @@ export const db = {
             app.paymentStatus,
             newApp.amountPaid,
             app.transactionId || null,
-            now,
+            toMySqlDatetime(),
             existingAppRows[0].id,
           ]
         );
@@ -1365,8 +1373,8 @@ export const db = {
           app.paymentStatus,
           newApp.amountPaid,
           app.transactionId || null,
-          now,
-          now,
+          toMySqlDatetime(),
+          toMySqlDatetime(),
         ]
       );
       return newApp;
@@ -1519,8 +1527,8 @@ export const db = {
           'pending',
           0,
           null,
-          now,
-          now,
+          toMySqlDatetime(),
+          toMySqlDatetime(),
         ]
       );
       return newDraft;
@@ -2418,7 +2426,7 @@ export const db = {
             newNotification.entityType || null,
             newNotification.link || null,
             newNotification.metadata ? JSON.stringify(newNotification.metadata) : null,
-            now,
+            toMySqlDatetime(),
           ]
         );
 
@@ -2605,8 +2613,8 @@ export const db = {
             newEnq.message,
             newEnq.applicationNumber || null,
             newEnq.source,
-            now,
-            now,
+            toMySqlDatetime(),
+            toMySqlDatetime(),
           ]
         );
       } catch (e) {
@@ -2724,8 +2732,8 @@ export const db = {
             newRecord.registrationNumber || null,
             newRecord.applicationPayload ? JSON.stringify(newRecord.applicationPayload) : null,
             newRecord.paymentResponse ? JSON.stringify(newRecord.paymentResponse) : null,
-            now,
-            now,
+            toMySqlDatetime(),
+            toMySqlDatetime(),
           ]
         );
       } catch (e) {
@@ -2788,7 +2796,7 @@ export const db = {
     if (pool && !useFallbackStorage) {
       try {
         const setClauses: string[] = ['updated_at = ?'];
-        const values: any[] = [now];
+        const values: any[] = [toMySqlDatetime()];
 
         if (updates.status !== undefined) {
           setClauses.push('status = ?');
