@@ -240,22 +240,31 @@ export async function ensureDb(): Promise<mysql.Pool | null> {
  */
 export async function initDatabase(): Promise<void> {
   try {
-    // 1. First attempt to connect to MySQL server
-    const connection = await mysql.createConnection({
-      host: DB_CONFIG.host,
-      port: DB_CONFIG.port,
-      user: DB_CONFIG.user,
-      password: DB_CONFIG.password,
-    });
-
-    // Create database if it does not exist
-    await connection.query(`CREATE DATABASE IF NOT EXISTS \`${DB_CONFIG.database}\`;`);
-    await connection.end();
-
-    // Create connection pool if not already existing
-    const currentPool: mysql.Pool = (globalThis as any).__gurukul_mysql_pool || mysql.createPool(DB_CONFIG);
-    (globalThis as any).__gurukul_mysql_pool = currentPool;
-    pool = currentPool;
+    let currentPool: mysql.Pool;
+    try {
+      currentPool = (globalThis as any).__gurukul_mysql_pool || mysql.createPool(DB_CONFIG);
+      // Validate direct connection to configured database
+      await currentPool.query('SELECT 1');
+      (globalThis as any).__gurukul_mysql_pool = currentPool;
+      pool = currentPool;
+    } catch (directConnErr) {
+      // If direct connection failed (e.g. fresh local installation where DB does not exist yet)
+      try {
+        const connection = await mysql.createConnection({
+          host: DB_CONFIG.host,
+          port: DB_CONFIG.port,
+          user: DB_CONFIG.user,
+          password: DB_CONFIG.password,
+        });
+        await connection.query(`CREATE DATABASE IF NOT EXISTS \`${DB_CONFIG.database}\`;`);
+        await connection.end();
+        currentPool = mysql.createPool(DB_CONFIG);
+        (globalThis as any).__gurukul_mysql_pool = currentPool;
+        pool = currentPool;
+      } catch {
+        throw directConnErr;
+      }
+    }
 
     // Create tables
     await pool.query(`
@@ -875,7 +884,7 @@ export const db = {
     if (useFallbackStorage || !pool) {
       const store = initFallbackFile();
       const officialApps = store.applications.filter(
-        a => a.paymentStatus === 'completed' && a.status !== 'draft'
+        a => a.status !== 'draft'
       );
       return officialApps.map(a => {
         const user = store.users.find(u => u.id === a.userId);
@@ -906,7 +915,7 @@ export const db = {
       SELECT a.*, u.name as user_name, u.email as user_email, u.phone as user_phone
       FROM applications a
       LEFT JOIN users u ON a.user_id = u.id
-      WHERE a.payment_status = 'completed' AND a.status != 'draft'
+      WHERE a.status != 'draft'
       ORDER BY a.created_at DESC
     `);
     return rows.map((r: any) => {
