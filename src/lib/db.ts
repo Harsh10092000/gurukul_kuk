@@ -28,7 +28,7 @@ const DB_CONFIG = {
   queueLimit: 0,
 };
 
-let pool: mysql.Pool | null = null;
+let pool: mysql.Pool | null = (globalThis as any).__gurukul_mysql_pool || null;
 let useFallbackStorage = false;
 
 // Local fallback store file path
@@ -200,6 +200,10 @@ function initFallbackFile(): FallbackStore {
 }
 
 function saveFallbackStore(store: FallbackStore) {
+  // Guard: If MySQL is active and connected, NEVER write to local JSON file
+  if (pool && !useFallbackStorage) {
+    return;
+  }
   try {
     fs.writeFileSync(STORE_FILE, JSON.stringify(store, null, 2), 'utf-8');
   } catch (e) {
@@ -207,12 +211,13 @@ function saveFallbackStore(store: FallbackStore) {
   }
 }
 
-let initPromise: Promise<void> | null = null;
+let initPromise: Promise<void> | null = (globalThis as any).__gurukul_mysql_init_promise || null;
 
 export async function ensureDb(): Promise<mysql.Pool | null> {
   if (pool && !useFallbackStorage) return pool;
   if (!initPromise || useFallbackStorage) {
     initPromise = initDatabase();
+    (globalThis as any).__gurukul_mysql_init_promise = initPromise;
   }
   try {
     await initPromise;
@@ -239,8 +244,10 @@ export async function initDatabase(): Promise<void> {
     await connection.query(`CREATE DATABASE IF NOT EXISTS \`${DB_CONFIG.database}\`;`);
     await connection.end();
 
-    // Create connection pool
-    pool = mysql.createPool(DB_CONFIG);
+    // Create connection pool if not already existing
+    const currentPool: mysql.Pool = (globalThis as any).__gurukul_mysql_pool || mysql.createPool(DB_CONFIG);
+    (globalThis as any).__gurukul_mysql_pool = currentPool;
+    pool = currentPool;
 
     // Create tables
     await pool.query(`
@@ -394,6 +401,14 @@ export async function initDatabase(): Promise<void> {
         application_payload JSON,
         payment_response JSON,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+      );
+    `);
+
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS temp_applications (
+        session_id VARCHAR(128) PRIMARY KEY,
+        data JSON NOT NULL,
         updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
       );
     `);
@@ -713,19 +728,19 @@ export const db = {
   },
 
   async getAllUsers(): Promise<User[]> {
-    if (useFallbackStorage || !pool) {
-      const store = initFallbackFile();
-      return store.users || [];
+    if (pool && !useFallbackStorage) {
+      try {
+        const [rows]: any = await pool.query(
+          'SELECT id, name, email, phone, role, registration_number as registrationNumber, created_at as createdAt FROM users'
+        );
+        return rows;
+      } catch (e) {
+        console.error('MySQL getAllUsers error:', e);
+        return [];
+      }
     }
-    try {
-      const [rows]: any = await pool.query(
-        'SELECT id, name, email, phone, role, registration_number as registrationNumber, created_at as createdAt FROM users'
-      );
-      return rows;
-    } catch {
-      const store = initFallbackFile();
-      return store.users || [];
-    }
+    const store = initFallbackFile();
+    return store.users || [];
   },
 
   async updateUserPassword(emailOrPhone: string, newPasswordHash: string): Promise<boolean> {
@@ -748,13 +763,7 @@ export const db = {
   },
 
   async updateUser(id: string, updates: Partial<User>): Promise<boolean> {
-    const store = initFallbackFile();
-    const idx = store.users.findIndex((u) => u.id === id);
-    if (idx !== -1) {
-      store.users[idx] = { ...store.users[idx], ...updates };
-      saveFallbackStore(store);
-    }
-
+    await ensureDb();
     if (pool && !useFallbackStorage) {
       try {
         if ('registrationNumber' in updates) {
@@ -763,32 +772,42 @@ export const db = {
         if (updates.name) {
           await pool.query('UPDATE users SET name = ? WHERE id = ?', [updates.name, id]);
         }
+        return true;
       } catch (e) {
         console.warn('MySQL updateUser error:', e);
+        return false;
       }
     }
-    return true;
+
+    const store = initFallbackFile();
+    const idx = store.users.findIndex((u) => u.id === id);
+    if (idx !== -1) {
+      store.users[idx] = { ...store.users[idx], ...updates };
+      saveFallbackStore(store);
+      return true;
+    }
+    return false;
   },
 
   async deleteUser(id: string): Promise<boolean> {
-    if (useFallbackStorage || !pool) {
-      const store = initFallbackFile();
-      const initialCount = store.users.length;
-      store.users = store.users.filter((u) => u.id !== id && u.registrationNumber !== id && u.email !== id && u.phone !== id);
-      if (store.users.length !== initialCount) {
-        saveFallbackStore(store);
-        return true;
+    if (pool && !useFallbackStorage) {
+      try {
+        const [res]: any = await pool.query('DELETE FROM users WHERE id = ? OR registration_number = ? OR email = ?', [id, id, id]);
+        return res.affectedRows > 0;
+      } catch (e) {
+        console.error('MySQL deleteUser error:', e);
+        return false;
       }
-      return false;
     }
 
-    try {
-      const [res]: any = await pool.query('DELETE FROM users WHERE id = ? OR registration_number = ? OR email = ?', [id, id, id]);
-      return res.affectedRows > 0;
-    } catch (e) {
-      console.error('MySQL deleteUser error:', e);
-      return false;
+    const store = initFallbackFile();
+    const initialCount = store.users.length;
+    store.users = store.users.filter((u) => u.id !== id && u.registrationNumber !== id && u.email !== id && u.phone !== id);
+    if (store.users.length !== initialCount) {
+      saveFallbackStore(store);
+      return true;
     }
+    return false;
   },
 
   async createUser(user: Omit<User, 'id' | 'createdAt' | 'registrationNumber'> & { passwordHash: string; registrationNumber?: string }): Promise<User> {
@@ -796,7 +815,6 @@ export const db = {
     const id = 'usr-' + Date.now() + '-' + Math.random().toString(36).substring(2, 7);
     const createdAt = new Date().toISOString();
 
-    const store = initFallbackFile();
     // Enforce Unique Email Address per candidate
     if (user.email) {
       const cleanEmail = user.email.trim().toLowerCase();
@@ -829,16 +847,17 @@ export const db = {
       createdAt,
     };
 
-    if (useFallbackStorage || !pool) {
-      store.users.push(newUser);
-      saveFallbackStore(store);
+    if (pool && !useFallbackStorage) {
+      await pool.query(
+        'INSERT INTO users (id, name, email, phone, password_hash, role, registration_number, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+        [id, user.name, user.email, user.phone, user.passwordHash, user.role, registrationNumber || null, createdAt]
+      );
       return newUser;
     }
 
-    await pool.query(
-      'INSERT INTO users (id, name, email, phone, password_hash, role, registration_number, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
-      [id, user.name, user.email, user.phone, user.passwordHash, user.role, registrationNumber || null, createdAt]
-    );
+    const store = initFallbackFile();
+    store.users.push(newUser);
+    saveFallbackStore(store);
     return newUser;
   },
 
@@ -959,39 +978,48 @@ export const db = {
 
   async getApplicationByUserId(userId: string): Promise<Application | null> {
     await ensureDb();
-    if (useFallbackStorage || !pool) {
-      const store = initFallbackFile();
-      let a = store.applications.find((app) => app.userId === userId);
-      const user = store.users.find(u => u.id === userId || u.email === userId || u.registrationNumber === userId);
-      if (!a && user) {
-        const userEmail = user.email ? user.email.toLowerCase() : '';
-        const userPhone = user.phone ? user.phone.replace(/\D/g, '').slice(-10) : '';
-        a = store.applications.find(app =>
-          app.userId === user.id ||
-          (userEmail && app.personalInfo?.candidateEmail?.toLowerCase() === userEmail) ||
-          (user.registrationNumber && (app.registrationNumber === user.registrationNumber || app.applicationNumber === user.registrationNumber)) ||
-          (userPhone && (app.personalInfo?.candidateMobile?.replace(/\D/g, '').slice(-10) === userPhone || app.parentInfo?.fatherPhone?.replace(/\D/g, '').slice(-10) === userPhone))
+    if (pool && !useFallbackStorage) {
+      try {
+        const [rows]: any = await pool.query(
+          'SELECT id FROM applications WHERE user_id = ? OR application_number = ? OR registration_number = ? ORDER BY created_at DESC LIMIT 1',
+          [userId, userId, userId]
         );
+        if (!rows.length) return null;
+        return this.getApplicationById(rows[0].id);
+      } catch (e) {
+        console.error('MySQL getApplicationByUserId error:', e);
+        return null;
       }
-      if (!a) return null;
-      const resolvedName = (a.personalInfo?.fullName && a.personalInfo.fullName !== 'Temp Delete Test' && a.personalInfo.fullName.trim() !== '')
-        ? a.personalInfo.fullName
-        : (user?.name || 'Applicant');
-      return {
-        ...a,
-        registrationNumber: a.registrationNumber || a.applicationNumber,
-        applicationNumber: a.applicationNumber || a.registrationNumber,
-        personalInfo: {
-          ...a.personalInfo,
-          fullName: resolvedName,
-          candidateEmail: a.personalInfo?.candidateEmail || user?.email || '',
-          candidateMobile: a.personalInfo?.candidateMobile || user?.phone || '',
-        },
-      };
     }
-    const [rows]: any = await pool.query('SELECT * FROM applications WHERE user_id = ? ORDER BY created_at DESC LIMIT 1', [userId]);
-    if (!rows.length) return null;
-    return this.getApplicationById(rows[0].id);
+
+    const store = initFallbackFile();
+    let a = store.applications.find((app) => app.userId === userId);
+    const user = store.users.find(u => u.id === userId || u.email === userId || u.registrationNumber === userId);
+    if (!a && user) {
+      const userEmail = user.email ? user.email.toLowerCase() : '';
+      const userPhone = user.phone ? user.phone.replace(/\D/g, '').slice(-10) : '';
+      a = store.applications.find(app =>
+        app.userId === user.id ||
+        (userEmail && app.personalInfo?.candidateEmail?.toLowerCase() === userEmail) ||
+        (user.registrationNumber && (app.registrationNumber === user.registrationNumber || app.applicationNumber === user.registrationNumber)) ||
+        (userPhone && (app.personalInfo?.candidateMobile?.replace(/\D/g, '').slice(-10) === userPhone || app.parentInfo?.fatherPhone?.replace(/\D/g, '').slice(-10) === userPhone))
+      );
+    }
+    if (!a) return null;
+    const resolvedName = (a.personalInfo?.fullName && a.personalInfo.fullName !== 'Temp Delete Test' && a.personalInfo.fullName.trim() !== '')
+      ? a.personalInfo.fullName
+      : (user?.name || 'Applicant');
+    return {
+      ...a,
+      registrationNumber: a.registrationNumber || a.applicationNumber,
+      applicationNumber: a.applicationNumber || a.registrationNumber,
+      personalInfo: {
+        ...a.personalInfo,
+        fullName: resolvedName,
+        candidateEmail: a.personalInfo?.candidateEmail || user?.email || '',
+        candidateMobile: a.personalInfo?.candidateMobile || user?.phone || '',
+      },
+    };
   },
 
   async findApplicationByAadhaar(aadhaarNumber: string): Promise<Application | null> {
@@ -1028,6 +1056,7 @@ export const db = {
         return null;
       } catch (e) {
         console.warn('MySQL findApplicationByEmail error:', e);
+        return null;
       }
     }
     const store = initFallbackFile();
@@ -1180,6 +1209,21 @@ export const db = {
   },
 
   async saveTempApplication(sessionId: string, data: any): Promise<void> {
+    await ensureDb();
+    if (pool && !useFallbackStorage) {
+      try {
+        await pool.query(
+          `INSERT INTO temp_applications (session_id, data, updated_at) 
+           VALUES (?, ?, NOW()) 
+           ON DUPLICATE KEY UPDATE data = VALUES(data), updated_at = NOW()`,
+          [sessionId, JSON.stringify(data)]
+        );
+        return;
+      } catch (e) {
+        console.warn('MySQL saveTempApplication error:', e);
+      }
+    }
+
     const store = initFallbackFile();
     if (!store.tempApplications) store.tempApplications = {};
     store.tempApplications[sessionId] = {
@@ -1192,12 +1236,35 @@ export const db = {
   },
 
   async getTempApplication(sessionId: string): Promise<any | null> {
+    await ensureDb();
+    if (pool && !useFallbackStorage) {
+      try {
+        const [rows]: any = await pool.query('SELECT data FROM temp_applications WHERE session_id = ? LIMIT 1', [sessionId]);
+        if (rows && rows.length > 0) {
+          return typeof rows[0].data === 'string' ? JSON.parse(rows[0].data) : rows[0].data;
+        }
+        return null;
+      } catch (e) {
+        console.warn('MySQL getTempApplication error:', e);
+      }
+    }
+
     const store = initFallbackFile();
     if (!store.tempApplications) return null;
     return store.tempApplications[sessionId] || null;
   },
 
   async deleteTempApplication(sessionId: string): Promise<void> {
+    await ensureDb();
+    if (pool && !useFallbackStorage) {
+      try {
+        await pool.query('DELETE FROM temp_applications WHERE session_id = ?', [sessionId]);
+      } catch (e) {
+        console.warn('MySQL deleteTempApplication error:', e);
+      }
+      return;
+    }
+
     const store = initFallbackFile();
     if (store.tempApplications && store.tempApplications[sessionId]) {
       delete store.tempApplications[sessionId];
@@ -1207,18 +1274,20 @@ export const db = {
 
   async createApplication(app: Omit<Application, 'id' | 'registrationNumber' | 'applicationNumber' | 'createdAt' | 'updatedAt'> & { registrationNumber?: string }): Promise<Application> {
     await ensureDb();
-    const store = initFallbackFile();
-    const user = store.users.find(u => u.id === app.userId);
     const gender = (app.personalInfo?.gender || 'Male') as 'Male' | 'Female';
-    const regNumber = app.registrationNumber || user?.registrationNumber || await this.getNextRegistrationNumber(gender);
     const id = 'app-' + Date.now();
     const now = new Date().toISOString();
+    const studyLocation = app.studyLocationPref || app.examCentrePref || { firstPreference: 'Gurukul Nilokheri' };
 
+    let user: User | null = null;
+    if (app.userId) {
+      user = (await this.getUserById(app.userId)) || (await this.findUserByIdentifier(app.userId));
+    }
+
+    const regNumber = app.registrationNumber || user?.registrationNumber || await this.getNextRegistrationNumber(gender);
     const candidateName = (app.personalInfo?.fullName && app.personalInfo.fullName !== 'Temp Delete Test' && app.personalInfo.fullName.trim() !== '')
       ? app.personalInfo.fullName
       : (user?.name || 'Applicant');
-
-    const studyLocation = app.studyLocationPref || app.examCentrePref || { firstPreference: gender === 'Female' ? 'Gurukul Nilokheri' : 'Gurukul Nilokheri' };
 
     const newApp: Application = {
       ...app,
@@ -1239,89 +1308,227 @@ export const db = {
       updatedAt: now,
     };
 
-    if (useFallbackStorage || !pool) {
-      if (user && !user.registrationNumber) {
-        user.registrationNumber = regNumber;
-      }
-      const existingDraftIdx = store.applications.findIndex(a => a.userId === app.userId);
-      if (existingDraftIdx !== -1) {
-        store.applications[existingDraftIdx] = newApp;
-      } else {
-        store.applications.push(newApp);
-      }
-      saveFallbackStore(store);
-      return newApp;
-    }
+    if (pool && !useFallbackStorage) {
+      // Persist registration number to user record in MySQL if not already set
+      await pool.query('UPDATE users SET registration_number = ? WHERE id = ? AND registration_number IS NULL', [regNumber, app.userId]);
 
-    // Persist registration number to user record in MySQL if not already set
-    await pool.query('UPDATE users SET registration_number = ? WHERE id = ? AND registration_number IS NULL', [regNumber, app.userId]);
+      const [existingAppRows]: any = await pool.query('SELECT id FROM applications WHERE user_id = ?', [app.userId]);
+      if (existingAppRows.length > 0) {
+        await pool.query(
+          `UPDATE applications SET
+            application_number = ?, class_applying = ?, personal_info = ?, parent_info = ?,
+            address_info = ?, academic_info = ?, exam_centre_pref = ?, documents = ?,
+            status = ?, remarks = ?, payment_status = ?, amount_paid = ?, transaction_id = ?,
+            updated_at = ?
+           WHERE id = ?`,
+          [
+            regNumber,
+            app.classApplying,
+            JSON.stringify(newApp.personalInfo),
+            JSON.stringify(app.parentInfo),
+            JSON.stringify(app.addressInfo),
+            JSON.stringify(app.academicInfo),
+            JSON.stringify(newApp.examCentrePref),
+            JSON.stringify(app.documents || {}),
+            app.status,
+            app.remarks || null,
+            app.paymentStatus,
+            newApp.amountPaid,
+            app.transactionId || null,
+            now,
+            existingAppRows[0].id,
+          ]
+        );
+        return { ...newApp, id: existingAppRows[0].id };
+      }
 
-    const [existingAppRows]: any = await pool.query('SELECT id FROM applications WHERE user_id = ?', [app.userId]);
-    if (existingAppRows.length > 0) {
       await pool.query(
-        `UPDATE applications SET
-          application_number = ?, class_applying = ?, personal_info = ?, parent_info = ?,
-          address_info = ?, academic_info = ?, exam_centre_pref = ?, documents = ?,
-          status = ?, remarks = ?, payment_status = ?, amount_paid = ?, transaction_id = ?,
-          updated_at = ?
-         WHERE id = ?`,
+        `INSERT INTO applications (
+          id, application_number, user_id, class_applying, 
+          personal_info, parent_info, address_info, academic_info, 
+          exam_centre_pref, documents, status, remarks, 
+          payment_status, amount_paid, transaction_id, created_at, updated_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
+          id,
           regNumber,
+          app.userId,
           app.classApplying,
-          JSON.stringify(app.personalInfo),
+          JSON.stringify(newApp.personalInfo),
           JSON.stringify(app.parentInfo),
           JSON.stringify(app.addressInfo),
           JSON.stringify(app.academicInfo),
-          JSON.stringify(app.examCentrePref),
+          JSON.stringify(newApp.examCentrePref),
           JSON.stringify(app.documents || {}),
           app.status,
           app.remarks || null,
           app.paymentStatus,
-          app.amountPaid || 0,
+          newApp.amountPaid,
           app.transactionId || null,
           now,
-          existingAppRows[0].id,
+          now,
         ]
       );
-      return { ...newApp, id: existingAppRows[0].id };
+      return newApp;
     }
 
-    await pool.query(
-      `INSERT INTO applications (
-        id, application_number, user_id, class_applying, 
-        personal_info, parent_info, address_info, academic_info, 
-        exam_centre_pref, documents, status, remarks, 
-        payment_status, amount_paid, transaction_id, created_at, updated_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [
-        id,
-        regNumber,
-        app.userId,
-        app.classApplying,
-        JSON.stringify(app.personalInfo),
-        JSON.stringify(app.parentInfo),
-        JSON.stringify(app.addressInfo),
-        JSON.stringify(app.academicInfo),
-        JSON.stringify(app.examCentrePref),
-        JSON.stringify(app.documents || {}),
-        app.status,
-        app.remarks || null,
-        app.paymentStatus,
-        app.amountPaid || 0,
-        app.transactionId || null,
-        now,
-        now,
-      ]
-    );
-
+    const store = initFallbackFile();
+    if (user && !user.registrationNumber) {
+      user.registrationNumber = regNumber;
+    }
+    const existingDraftIdx = store.applications.findIndex(a => a.userId === app.userId);
+    if (existingDraftIdx !== -1) {
+      store.applications[existingDraftIdx] = newApp;
+    } else {
+      store.applications.push(newApp);
+    }
+    saveFallbackStore(store);
     return newApp;
   },
 
   async saveDraftApplication(draft: Partial<Application> & { userId: string }): Promise<Application> {
+    await ensureDb();
+    const now = new Date().toISOString();
+
+    if (pool && !useFallbackStorage) {
+      const user = (await this.getUserById(draft.userId)) || (await this.findUserByIdentifier(draft.userId));
+      const [existingRows]: any = await pool.query('SELECT * FROM applications WHERE user_id = ? LIMIT 1', [draft.userId]);
+
+      if (existingRows.length > 0) {
+        const r = existingRows[0];
+        const existingPersonal = typeof r.personal_info === 'string' ? JSON.parse(r.personal_info) : (r.personal_info || {});
+        const mergedPersonal = {
+          ...existingPersonal,
+          ...(draft.personalInfo || {}),
+        };
+        if (!mergedPersonal.fullName || mergedPersonal.fullName === 'Temp Delete Test' || mergedPersonal.fullName.trim() === '') {
+          mergedPersonal.fullName = user?.name || existingPersonal.fullName || 'Applicant';
+        }
+        if (!mergedPersonal.candidateEmail) mergedPersonal.candidateEmail = user?.email || '';
+        if (!mergedPersonal.candidateMobile) mergedPersonal.candidateMobile = user?.phone || '';
+
+        const existingParent = typeof r.parent_info === 'string' ? JSON.parse(r.parent_info) : (r.parent_info || {});
+        const existingAddress = typeof r.address_info === 'string' ? JSON.parse(r.address_info) : (r.address_info || {});
+        const existingAcademic = typeof r.academic_info === 'string' ? JSON.parse(r.academic_info) : (r.academic_info || {});
+        const existingCentre = typeof r.exam_centre_pref === 'string' ? JSON.parse(r.exam_centre_pref) : (r.exam_centre_pref || {});
+        const existingDocs = typeof r.documents === 'string' ? JSON.parse(r.documents) : (r.documents || {});
+
+        const updatedApp: Application = {
+          id: r.id,
+          userId: r.user_id,
+          registrationNumber: r.registration_number || r.application_number,
+          applicationNumber: r.application_number || r.registration_number,
+          rollNumber: r.roll_number || undefined,
+          classApplying: draft.classApplying || r.class_applying,
+          personalInfo: mergedPersonal,
+          parentInfo: draft.parentInfo ? { ...existingParent, ...draft.parentInfo } : existingParent,
+          addressInfo: draft.addressInfo ? { ...existingAddress, ...draft.addressInfo } : existingAddress,
+          academicInfo: draft.academicInfo ? { ...existingAcademic, ...draft.academicInfo } : existingAcademic,
+          examCentrePref: draft.examCentrePref ? { ...existingCentre, ...draft.examCentrePref } : existingCentre,
+          studyLocationPref: (draft.studyLocationPref || draft.examCentrePref || existingCentre || { firstPreference: 'Gurukul Nilokheri' }) as any,
+          documents: draft.documents ? { ...existingDocs, ...draft.documents } : existingDocs,
+          status: (r.status === 'submitted' || r.status === 'approved') ? r.status : 'draft',
+          currentStep: draft.currentStep || 1,
+          paymentStatus: r.payment_status || 'pending',
+          amountPaid: parseFloat(r.amount_paid || 0),
+          transactionId: r.transaction_id || undefined,
+          createdAt: r.created_at,
+          updatedAt: now,
+        };
+
+        await pool.query(
+          `UPDATE applications SET
+            class_applying = ?, personal_info = ?, parent_info = ?,
+            address_info = ?, academic_info = ?, exam_centre_pref = ?,
+            documents = ?, updated_at = ?
+           WHERE id = ?`,
+          [
+            updatedApp.classApplying,
+            JSON.stringify(updatedApp.personalInfo),
+            JSON.stringify(updatedApp.parentInfo),
+            JSON.stringify(updatedApp.addressInfo),
+            JSON.stringify(updatedApp.academicInfo),
+            JSON.stringify(updatedApp.examCentrePref),
+            JSON.stringify(updatedApp.documents || {}),
+            now,
+            r.id,
+          ]
+        );
+        return updatedApp;
+      }
+
+      // No existing draft in MySQL: insert new draft
+      const id = 'app-draft-' + Date.now();
+      const [countRows]: any = await pool.query('SELECT COUNT(*) as count FROM applications');
+      const tempNumber = `DRAFT-${(countRows[0]?.count || 0) + 10001}`;
+      const newDraftPersonal = {
+        fullName: user?.name || '',
+        candidateEmail: user?.email || '',
+        candidateMobile: user?.phone || '',
+        whatsappNumber: user?.phone || '',
+        ...(draft.personalInfo || {}),
+      };
+      if (!newDraftPersonal.fullName || newDraftPersonal.fullName === 'Temp Delete Test' || newDraftPersonal.fullName.trim() === '') {
+        newDraftPersonal.fullName = user?.name || 'Applicant';
+      }
+
+      const newDraft: Application = {
+        id,
+        registrationNumber: tempNumber,
+        applicationNumber: tempNumber,
+        userId: draft.userId,
+        classApplying: draft.classApplying || 'Class 6',
+        personalInfo: newDraftPersonal as any,
+        parentInfo: {
+          fatherPhone: draft.parentInfo?.fatherPhone || '',
+          ...(draft.parentInfo || {}),
+        } as any,
+        addressInfo: draft.addressInfo || {} as any,
+        academicInfo: draft.academicInfo || {} as any,
+        examCentrePref: draft.examCentrePref || {} as any,
+        studyLocationPref: (draft.studyLocationPref || draft.examCentrePref || { firstPreference: 'Gurukul Nilokheri' }) as any,
+        documents: draft.documents || {},
+        status: 'draft',
+        currentStep: draft.currentStep || 1,
+        paymentStatus: 'pending',
+        amountPaid: 0,
+        createdAt: now,
+        updatedAt: now,
+      };
+
+      await pool.query(
+        `INSERT INTO applications (
+          id, application_number, user_id, class_applying, 
+          personal_info, parent_info, address_info, academic_info, 
+          exam_centre_pref, documents, status, remarks, 
+          payment_status, amount_paid, transaction_id, created_at, updated_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [
+          id,
+          tempNumber,
+          draft.userId,
+          newDraft.classApplying,
+          JSON.stringify(newDraft.personalInfo),
+          JSON.stringify(newDraft.parentInfo),
+          JSON.stringify(newDraft.addressInfo),
+          JSON.stringify(newDraft.academicInfo),
+          JSON.stringify(newDraft.examCentrePref),
+          JSON.stringify(newDraft.documents || {}),
+          'draft',
+          null,
+          'pending',
+          0,
+          null,
+          now,
+          now,
+        ]
+      );
+      return newDraft;
+    }
+
     const store = initFallbackFile();
     const user = store.users.find(u => u.id === draft.userId);
     const existingIndex = store.applications.findIndex(a => a.userId === draft.userId);
-    const now = new Date().toISOString();
 
     if (existingIndex !== -1) {
       const existing = store.applications[existingIndex];
@@ -1350,32 +1557,6 @@ export const db = {
 
       store.applications[existingIndex] = updated;
       saveFallbackStore(store);
-
-      if (pool && !useFallbackStorage) {
-        try {
-          await pool.query(
-            `UPDATE applications SET
-              class_applying = ?, personal_info = ?, parent_info = ?,
-              address_info = ?, academic_info = ?, exam_centre_pref = ?,
-              documents = ?, updated_at = ?
-             WHERE user_id = ? AND status = 'draft'`,
-            [
-              updated.classApplying,
-              JSON.stringify(updated.personalInfo),
-              JSON.stringify(updated.parentInfo),
-              JSON.stringify(updated.addressInfo),
-              JSON.stringify(updated.academicInfo),
-              JSON.stringify(updated.examCentrePref),
-              JSON.stringify(updated.documents || {}),
-              now,
-              draft.userId,
-            ]
-          );
-        } catch (err) {
-          console.warn('Draft save MySQL update error (fallback used):', err);
-        }
-      }
-
       return updated;
     }
 
@@ -1419,41 +1600,6 @@ export const db = {
 
     store.applications.push(newDraft);
     saveFallbackStore(store);
-
-    if (pool && !useFallbackStorage) {
-      try {
-        await pool.query(
-          `INSERT INTO applications (
-            id, application_number, user_id, class_applying, 
-            personal_info, parent_info, address_info, academic_info, 
-            exam_centre_pref, documents, status, remarks, 
-            payment_status, amount_paid, transaction_id, created_at, updated_at
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-          [
-            id,
-            tempNumber,
-            draft.userId,
-            newDraft.classApplying,
-            JSON.stringify(newDraft.personalInfo),
-            JSON.stringify(newDraft.parentInfo),
-            JSON.stringify(newDraft.addressInfo),
-            JSON.stringify(newDraft.academicInfo),
-            JSON.stringify(newDraft.examCentrePref),
-            JSON.stringify(newDraft.documents),
-            'draft',
-            null,
-            'pending',
-            0,
-            null,
-            now,
-            now,
-          ]
-        );
-      } catch (err) {
-        console.warn('Draft save MySQL error (fallback used):', err);
-      }
-    }
-
     return newDraft;
   },
 
@@ -1563,31 +1709,31 @@ export const db = {
   },
 
   async deleteApplication(id: string): Promise<boolean> {
-    if (useFallbackStorage || !pool) {
-      const store = initFallbackFile();
-      const initialCount = store.applications.length;
-      store.applications = store.applications.filter(
-        (a) => a.id !== id && a.applicationNumber !== id && a.registrationNumber !== id
-      );
-      // Also cleanup any linked admit card
-      store.admitCards = store.admitCards.filter(
-        (ac) => ac.applicationId !== id && ac.applicationNumber !== id
-      );
-      if (store.applications.length !== initialCount) {
-        saveFallbackStore(store);
-        return true;
+    if (pool && !useFallbackStorage) {
+      try {
+        await pool.query('DELETE FROM admit_cards WHERE application_id = ? OR application_number = ?', [id, id]);
+        const [res]: any = await pool.query('DELETE FROM applications WHERE id = ? OR application_number = ? OR registration_number = ?', [id, id, id]);
+        return res.affectedRows > 0;
+      } catch (e) {
+        console.error('MySQL deleteApplication error:', e);
+        return false;
       }
-      return false;
     }
 
-    try {
-      await pool.query('DELETE FROM admit_cards WHERE application_id = ?', [id]);
-      const [res]: any = await pool.query('DELETE FROM applications WHERE id = ? OR application_number = ?', [id, id]);
-      return res.affectedRows > 0;
-    } catch (e) {
-      console.error('MySQL deleteApplication error:', e);
-      return false;
+    const store = initFallbackFile();
+    const initialCount = store.applications.length;
+    store.applications = store.applications.filter(
+      (a) => a.id !== id && a.applicationNumber !== id && a.registrationNumber !== id
+    );
+    // Also cleanup any linked admit card
+    store.admitCards = store.admitCards.filter(
+      (ac) => ac.applicationId !== id && ac.applicationNumber !== id
+    );
+    if (store.applications.length !== initialCount) {
+      saveFallbackStore(store);
+      return true;
     }
+    return false;
   },
 
   // Admit Cards
@@ -1912,31 +2058,152 @@ export const db = {
   },
 
   async areResultsDeclared(): Promise<boolean> {
-    // Uses the admin-controlled resultsDeclared flag in settings.
-    // Merely having published result records does NOT expose them to candidates.
-    // Admin must explicitly toggle Settings > Declare Results = ON.
-    if (useFallbackStorage || !pool) {
-      const store = initFallbackFile();
-      return store.settings?.resultsDeclared === true;
+    if (pool && !useFallbackStorage) {
+      try {
+        const [rows]: any = await pool.query(
+          "SELECT results_declared FROM system_settings LIMIT 1"
+        );
+        return Boolean(rows[0]?.results_declared);
+      } catch (e) {
+        console.warn('MySQL areResultsDeclared error:', e);
+        return false;
+      }
     }
-    try {
-      const [rows]: any = await pool.query(
-        "SELECT setting_value FROM system_settings WHERE setting_key = 'resultsDeclared' LIMIT 1"
-      );
-      return rows[0]?.setting_value === 'true' || rows[0]?.setting_value === true;
-    } catch {
-      const store = initFallbackFile();
-      return store.settings?.resultsDeclared === true;
-    }
+    const store = initFallbackFile();
+    return store.settings?.resultsDeclared === true;
   },
 
   // Settings & Exam Centres
   async getSettings(): Promise<SystemSettings> {
+    await ensureDb();
+    if (pool && !useFallbackStorage) {
+      try {
+        const [rows]: any = await pool.query('SELECT * FROM system_settings LIMIT 1');
+        if (rows && rows.length > 0) {
+          const r = rows[0];
+          return {
+            portalOpen: Boolean(r.portal_open),
+            resultsDeclared: Boolean(r.results_declared),
+            admitCardsReleased: Boolean(r.admit_cards_released),
+            admitCardsReleasedAt: r.admit_cards_released_at ? new Date(r.admit_cards_released_at).toISOString() : undefined,
+            academicSession: r.academic_session || DEFAULT_SETTINGS.academicSession,
+            applicationFee: parseFloat(r.application_fee || DEFAULT_SETTINGS.applicationFee),
+            registrationStartDate: r.registration_start_date || DEFAULT_SETTINGS.registrationStartDate,
+            registrationEndDate: r.registration_end_date || DEFAULT_SETTINGS.registrationEndDate,
+            admitCardReleaseDate: r.admit_card_release_date || DEFAULT_SETTINGS.admitCardReleaseDate,
+            entranceExamDate: r.entrance_exam_date || DEFAULT_SETTINGS.entranceExamDate,
+            entranceExamTime: r.entrance_exam_time || DEFAULT_SETTINGS.entranceExamTime,
+            examVenueName: r.exam_venue_name || DEFAULT_SETTINGS.examVenueName,
+            examVenueAddress: r.exam_venue_address || DEFAULT_SETTINGS.examVenueAddress,
+            resultDeclarationDate: r.result_declaration_date || DEFAULT_SETTINGS.resultDeclarationDate,
+            counselingStartDate: r.counseling_start_date || DEFAULT_SETTINGS.counselingStartDate,
+            helplinePhone: r.helpline_phone || DEFAULT_SETTINGS.helplinePhone,
+            helplineEmail: r.helpline_email || DEFAULT_SETTINGS.helplineEmail,
+            activeStudyLocations: r.active_study_locations ? (typeof r.active_study_locations === 'string' ? JSON.parse(r.active_study_locations) : r.active_study_locations) : DEFAULT_SETTINGS.activeStudyLocations,
+          };
+        }
+      } catch (e) {
+        console.warn('MySQL getSettings error:', e);
+      }
+    }
     const store = initFallbackFile();
     return store.settings || DEFAULT_SETTINGS;
   },
 
   async updateSettings(settings: Partial<SystemSettings>): Promise<SystemSettings> {
+    await ensureDb();
+    if (pool && !useFallbackStorage) {
+      try {
+        const [rows]: any = await pool.query('SELECT id FROM system_settings LIMIT 1');
+        const now = new Date().toISOString();
+        const setClauses: string[] = ['updated_at = ?'];
+        const values: any[] = [now];
+
+        if (settings.portalOpen !== undefined) {
+          setClauses.push('portal_open = ?');
+          values.push(settings.portalOpen ? 1 : 0);
+        }
+        if (settings.resultsDeclared !== undefined) {
+          setClauses.push('results_declared = ?');
+          values.push(settings.resultsDeclared ? 1 : 0);
+        }
+        if (settings.admitCardsReleased !== undefined) {
+          setClauses.push('admit_cards_released = ?');
+          values.push(settings.admitCardsReleased ? 1 : 0);
+        }
+        if (settings.admitCardsReleasedAt !== undefined) {
+          setClauses.push('admit_cards_released_at = ?');
+          values.push(settings.admitCardsReleasedAt);
+        }
+        if (settings.academicSession !== undefined) {
+          setClauses.push('academic_session = ?');
+          values.push(settings.academicSession);
+        }
+        if (settings.applicationFee !== undefined) {
+          setClauses.push('application_fee = ?');
+          values.push(settings.applicationFee);
+        }
+        if (settings.registrationStartDate !== undefined) {
+          setClauses.push('registration_start_date = ?');
+          values.push(settings.registrationStartDate);
+        }
+        if (settings.registrationEndDate !== undefined) {
+          setClauses.push('registration_end_date = ?');
+          values.push(settings.registrationEndDate);
+        }
+        if (settings.admitCardReleaseDate !== undefined) {
+          setClauses.push('admit_card_release_date = ?');
+          values.push(settings.admitCardReleaseDate);
+        }
+        if (settings.entranceExamDate !== undefined) {
+          setClauses.push('entrance_exam_date = ?');
+          values.push(settings.entranceExamDate);
+        }
+        if (settings.resultDeclarationDate !== undefined) {
+          setClauses.push('result_declaration_date = ?');
+          values.push(settings.resultDeclarationDate);
+        }
+        if (settings.counselingStartDate !== undefined) {
+          setClauses.push('counseling_start_date = ?');
+          values.push(settings.counselingStartDate);
+        }
+        if (settings.helplinePhone !== undefined) {
+          setClauses.push('helpline_phone = ?');
+          values.push(settings.helplinePhone);
+        }
+        if (settings.helplineEmail !== undefined) {
+          setClauses.push('helpline_email = ?');
+          values.push(settings.helplineEmail);
+        }
+
+        if (rows && rows.length > 0) {
+          values.push(rows[0].id);
+          await pool.query(`UPDATE system_settings SET ${setClauses.join(', ')} WHERE id = ?`, values);
+        } else {
+          await pool.query(
+            `INSERT INTO system_settings (portal_open, results_declared, academic_session, application_fee, registration_start_date, registration_end_date, admit_card_release_date, entrance_exam_date, result_declaration_date, counseling_start_date, helpline_phone, helpline_email)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            [
+              settings.portalOpen ? 1 : 0,
+              settings.resultsDeclared ? 1 : 0,
+              settings.academicSession || '2027-2028',
+              settings.applicationFee || 800,
+              settings.registrationStartDate || '2026-09-01',
+              settings.registrationEndDate || '2027-01-31',
+              settings.admitCardReleaseDate || '2027-03-01',
+              settings.entranceExamDate || '2027-02-14',
+              settings.resultDeclarationDate || '2027-03-01',
+              settings.counselingStartDate || '2027-03-10',
+              settings.helplinePhone || '+91 7027849858 / 59',
+              settings.helplineEmail || 'thegurukulnilokheri@gmail.com',
+            ]
+          );
+        }
+        return await this.getSettings();
+      } catch (e) {
+        console.warn('MySQL updateSettings error:', e);
+      }
+    }
     const store = initFallbackFile();
     store.settings = { ...store.settings, ...settings };
     saveFallbackStore(store);
@@ -1944,6 +2211,7 @@ export const db = {
   },
 
   async getCentres(): Promise<ExamCentre[]> {
+    await ensureDb();
     if (pool && !useFallbackStorage) {
       try {
         const [rows] = await pool.query('SELECT * FROM exam_centres ORDER BY code ASC');
@@ -1974,6 +2242,7 @@ export const db = {
   },
 
   async addCentre(data: Omit<ExamCentre, 'id'> & { id?: string }): Promise<ExamCentre> {
+    await ensureDb();
     const id = data.id || `center-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`;
     const newCentre: ExamCentre = {
       id,
@@ -1987,11 +2256,6 @@ export const db = {
       contactPhone: (data.contactPhone || '+91-1744-259114').trim(),
     };
 
-    const store = initFallbackFile();
-    if (!store.examCentres) store.examCentres = [...DEFAULT_CENTRES];
-    store.examCentres.push(newCentre);
-    saveFallbackStore(store);
-
     if (pool && !useFallbackStorage) {
       try {
         await pool.query(
@@ -2003,12 +2267,40 @@ export const db = {
       } catch (e) {
         console.warn('MySQL addCentre error:', e);
       }
+      return newCentre;
     }
 
+    const store = initFallbackFile();
+    if (!store.examCentres) store.examCentres = [...DEFAULT_CENTRES];
+    store.examCentres.push(newCentre);
+    saveFallbackStore(store);
     return newCentre;
   },
 
   async updateCentre(id: string, updates: Partial<ExamCentre>): Promise<ExamCentre | null> {
+    await ensureDb();
+    if (pool && !useFallbackStorage) {
+      const existing = await this.getCentreById(id);
+      if (!existing) return null;
+      const updated: ExamCentre = {
+        ...existing,
+        ...updates,
+        capacity: updates.capacity !== undefined ? Number(updates.capacity) : existing.capacity,
+      };
+      try {
+        await pool.query(
+          `UPDATE exam_centres SET
+            code = ?, name = ?, city = ?, state = ?, capacity = ?,
+            address = ?, contact_person = ?, contact_phone = ?
+           WHERE id = ?`,
+          [updated.code, updated.name, updated.city, updated.state, updated.capacity, updated.address, updated.contactPerson, updated.contactPhone, id]
+        );
+      } catch (e) {
+        console.warn('MySQL updateCentre error:', e);
+      }
+      return updated;
+    }
+
     const store = initFallbackFile();
     if (!store.examCentres) store.examCentres = [...DEFAULT_CENTRES];
     const idx = store.examCentres.findIndex((c) => c.id === id || c.code === id);
@@ -2022,40 +2314,27 @@ export const db = {
     };
     store.examCentres[idx] = updated;
     saveFallbackStore(store);
-
-    if (pool && !useFallbackStorage) {
-      try {
-        await pool.query(
-          `UPDATE exam_centres SET
-            code = ?, name = ?, city = ?, state = ?, capacity = ?,
-            address = ?, contact_person = ?, contact_phone = ?
-           WHERE id = ?`,
-          [updated.code, updated.name, updated.city, updated.state, updated.capacity, updated.address, updated.contactPerson, updated.contactPhone, updated.id]
-        );
-      } catch (e) {
-        console.warn('MySQL updateCentre error:', e);
-      }
-    }
-
     return updated;
   },
 
   async deleteCentre(id: string): Promise<boolean> {
+    await ensureDb();
+    if (pool && !useFallbackStorage) {
+      try {
+        const [res]: any = await pool.query('DELETE FROM exam_centres WHERE id = ? OR code = ?', [id, id]);
+        return res.affectedRows > 0;
+      } catch (e) {
+        console.warn('MySQL deleteCentre error:', e);
+        return false;
+      }
+    }
+
     const store = initFallbackFile();
     if (!store.examCentres) store.examCentres = [...DEFAULT_CENTRES];
     const initialLen = store.examCentres.length;
     store.examCentres = store.examCentres.filter((c) => c.id !== id && c.code !== id);
     if (store.examCentres.length === initialLen) return false;
     saveFallbackStore(store);
-
-    if (pool && !useFallbackStorage) {
-      try {
-        await pool.query('DELETE FROM exam_centres WHERE id = ? OR code = ?', [id, id]);
-      } catch (e) {
-        console.warn('MySQL deleteCentre error:', e);
-      }
-    }
-
     return true;
   },
 
@@ -2115,6 +2394,7 @@ export const db = {
   },
 
   async createAdminNotification(data: Omit<AdminNotification, 'id' | 'isRead' | 'createdAt'>): Promise<AdminNotification> {
+    await ensureDb();
     const id = `notif-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`;
     const now = new Date().toISOString();
     const newNotification: AdminNotification = {
@@ -2123,15 +2403,6 @@ export const db = {
       isRead: false,
       createdAt: now,
     };
-
-    const store = initFallbackFile();
-    if (!store.notifications) store.notifications = [];
-    store.notifications.unshift(newNotification);
-    // Strict max 100 notifications FIFO queue limit (delete oldest when incoming exceeds 100)
-    if (store.notifications.length > 100) {
-      store.notifications = store.notifications.slice(0, 100);
-    }
-    saveFallbackStore(store);
 
     if (pool && !useFallbackStorage) {
       try {
@@ -2162,47 +2433,60 @@ export const db = {
       } catch (e) {
         console.warn('MySQL createAdminNotification error:', e);
       }
+      return newNotification;
     }
 
+    const store = initFallbackFile();
+    if (!store.notifications) store.notifications = [];
+    store.notifications.unshift(newNotification);
+    if (store.notifications.length > 100) {
+      store.notifications = store.notifications.slice(0, 100);
+    }
+    saveFallbackStore(store);
     return newNotification;
   },
 
   async markAdminNotificationAsRead(id: string): Promise<boolean> {
+    await ensureDb();
+    if (pool && !useFallbackStorage) {
+      try {
+        await pool.query('UPDATE admin_notifications SET is_read = TRUE WHERE id = ?', [id]);
+        return true;
+      } catch (e) {
+        console.warn('MySQL markAdminNotificationAsRead error:', e);
+        return false;
+      }
+    }
+
     const store = initFallbackFile();
     if (!store.notifications) store.notifications = [];
     const notif = store.notifications.find((n) => n.id === id);
     if (notif) {
       notif.isRead = true;
       saveFallbackStore(store);
+      return true;
     }
-
-    if (pool && !useFallbackStorage) {
-      try {
-        await pool.query('UPDATE admin_notifications SET is_read = TRUE WHERE id = ?', [id]);
-      } catch (e) {
-        console.warn('MySQL markAdminNotificationAsRead error:', e);
-      }
-    }
-
-    return true;
+    return false;
   },
 
   async markAllAdminNotificationsAsRead(): Promise<boolean> {
+    await ensureDb();
+    if (pool && !useFallbackStorage) {
+      try {
+        await pool.query('UPDATE admin_notifications SET is_read = TRUE');
+        return true;
+      } catch (e) {
+        console.warn('MySQL markAllAdminNotificationsAsRead error:', e);
+        return false;
+      }
+    }
+
     const store = initFallbackFile();
     if (!store.notifications) store.notifications = [];
     store.notifications.forEach((n) => {
       n.isRead = true;
     });
     saveFallbackStore(store);
-
-    if (pool && !useFallbackStorage) {
-      try {
-        await pool.query('UPDATE admin_notifications SET is_read = TRUE');
-      } catch (e) {
-        console.warn('MySQL markAllAdminNotificationsAsRead error:', e);
-      }
-    }
-
     return true;
   },
 
@@ -2210,54 +2494,45 @@ export const db = {
   // --- Contact Enquiries ---
   // ==========================================
   async getContactEnquiries(status?: string): Promise<ContactEnquiry[]> {
-    if (useFallbackStorage || !pool) {
-      const store = initFallbackFile();
-      let enqs = store.enquiries || [];
-      if (status && status !== 'all') {
-        enqs = enqs.filter((e) => e.status === status);
+    if (pool && !useFallbackStorage) {
+      try {
+        let query = 'SELECT * FROM contact_enquiries';
+        const params: any[] = [];
+        if (status && status !== 'all') {
+          query += ' WHERE status = ?';
+          params.push(status);
+        }
+        query += ' ORDER BY created_at DESC';
+        const [rows] = await pool.query<mysql.RowDataPacket[]>(query, params);
+        return rows.map((r) => ({
+          id: r.id,
+          name: r.name,
+          email: r.email,
+          phone: r.phone,
+          subject: r.subject,
+          message: r.message,
+          applicationNumber: r.application_number || undefined,
+          source: (r.source as any) || 'public_contact',
+          status: (r.status as any) || 'new',
+          adminRemarks: r.admin_remarks || undefined,
+          createdAt: r.created_at ? new Date(r.created_at).toISOString() : new Date().toISOString(),
+          updatedAt: r.updated_at ? new Date(r.updated_at).toISOString() : new Date().toISOString(),
+        }));
+      } catch (e) {
+        console.warn('MySQL getContactEnquiries error, falling back:', e);
       }
-      return [...enqs].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
     }
 
-    try {
-      let query = 'SELECT * FROM contact_enquiries';
-      const params: any[] = [];
-      if (status && status !== 'all') {
-        query += ' WHERE status = ?';
-        params.push(status);
-      }
-      query += ' ORDER BY created_at DESC';
-      const [rows] = await pool.query<mysql.RowDataPacket[]>(query, params);
-      return rows.map((r) => ({
-        id: r.id,
-        name: r.name,
-        email: r.email,
-        phone: r.phone,
-        subject: r.subject,
-        message: r.message,
-        applicationNumber: r.application_number || undefined,
-        source: (r.source as any) || 'public_contact',
-        status: (r.status as any) || 'new',
-        adminRemarks: r.admin_remarks || undefined,
-        createdAt: r.created_at ? new Date(r.created_at).toISOString() : new Date().toISOString(),
-        updatedAt: r.updated_at ? new Date(r.updated_at).toISOString() : new Date().toISOString(),
-      }));
-    } catch (e) {
-      console.warn('MySQL getContactEnquiries error, falling back:', e);
-      const store = initFallbackFile();
-      let enqs = store.enquiries || [];
-      if (status && status !== 'all') {
-        enqs = enqs.filter((e) => e.status === status);
-      }
-      return [...enqs].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    const store = initFallbackFile();
+    let enqs = store.enquiries || [];
+    if (status && status !== 'all') {
+      enqs = enqs.filter((e) => e.status === status);
     }
+    return [...enqs].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
   },
 
   async getContactEnquiryById(id: string): Promise<ContactEnquiry | null> {
-    const store = initFallbackFile();
-    const enq = (store.enquiries || []).find((e) => e.id === id);
-    if (enq) return enq;
-
+    await ensureDb();
     if (pool && !useFallbackStorage) {
       try {
         const [rows] = await pool.query<mysql.RowDataPacket[]>('SELECT * FROM contact_enquiries WHERE id = ?', [id]);
@@ -2278,11 +2553,16 @@ export const db = {
             updatedAt: r.updated_at ? new Date(r.updated_at).toISOString() : new Date().toISOString(),
           };
         }
+        return null;
       } catch (e) {
         console.warn('MySQL getContactEnquiryById error:', e);
+        return null;
       }
     }
-    return null;
+
+    const store = initFallbackFile();
+    const enq = (store.enquiries || []).find((e) => e.id === id);
+    return enq || null;
   },
 
   async createContactEnquiry(data: {
@@ -2294,6 +2574,7 @@ export const db = {
     applicationNumber?: string;
     source?: 'public_contact' | 'candidate_grievance';
   }): Promise<ContactEnquiry> {
+    await ensureDb();
     const id = `enq-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`;
     const now = new Date().toISOString();
     const newEnq: ContactEnquiry = {
@@ -2309,11 +2590,6 @@ export const db = {
       createdAt: now,
       updatedAt: now,
     };
-
-    const store = initFallbackFile();
-    if (!store.enquiries) store.enquiries = [];
-    store.enquiries.unshift(newEnq);
-    saveFallbackStore(store);
 
     if (pool && !useFallbackStorage) {
       try {
@@ -2336,9 +2612,32 @@ export const db = {
       } catch (e) {
         console.warn('MySQL createContactEnquiry error:', e);
       }
+
+      await db.createAdminNotification({
+        type: 'CONTACT_ENQUIRY',
+        title: `New Enquiry: ${newEnq.name}`,
+        message: `${newEnq.name} (${newEnq.email}) submitted an enquiry: "${newEnq.subject}". Mobile: ${newEnq.phone}`,
+        entityId: newEnq.id,
+        entityType: 'enquiry',
+        link: `/admin/enquiries?id=${newEnq.id}`,
+        metadata: {
+          enquiryId: newEnq.id,
+          name: newEnq.name,
+          email: newEnq.email,
+          phone: newEnq.phone,
+          subject: newEnq.subject,
+          applicationNumber: newEnq.applicationNumber,
+        },
+      });
+
+      return newEnq;
     }
 
-    // Automatically generate Admin Notification for new enquiry
+    const store = initFallbackFile();
+    if (!store.enquiries) store.enquiries = [];
+    store.enquiries.unshift(newEnq);
+    saveFallbackStore(store);
+
     await db.createAdminNotification({
       type: 'CONTACT_ENQUIRY',
       title: `New Enquiry: ${newEnq.name}`,
@@ -2360,7 +2659,22 @@ export const db = {
   },
 
   async updateContactEnquiryStatus(id: string, status: ContactEnquiryStatus, remarks?: string): Promise<ContactEnquiry | null> {
+    await ensureDb();
     const now = new Date().toISOString();
+
+    if (pool && !useFallbackStorage) {
+      try {
+        await pool.query(
+          'UPDATE contact_enquiries SET status = ?, admin_remarks = ?, updated_at = ? WHERE id = ?',
+          [status, remarks || null, now, id]
+        );
+        return await this.getContactEnquiryById(id);
+      } catch (e) {
+        console.warn('MySQL updateContactEnquiryStatus error:', e);
+        return null;
+      }
+    }
+
     const store = initFallbackFile();
     if (!store.enquiries) store.enquiries = [];
     const idx = store.enquiries.findIndex((e) => e.id === id);
@@ -2371,25 +2685,11 @@ export const db = {
     store.enquiries[idx].updatedAt = now;
     const updated = store.enquiries[idx];
     saveFallbackStore(store);
-
-    if (pool && !useFallbackStorage) {
-      try {
-        await pool.query(
-          'UPDATE contact_enquiries SET status = ?, admin_remarks = ?, updated_at = ? WHERE id = ?',
-          [status, remarks || null, now, id]
-        );
-      } catch (e) {
-        console.warn('MySQL updateContactEnquiryStatus error:', e);
-      }
-    }
-
     return updated;
   },
 
   async createPaymentOrderRecord(record: Omit<PaymentOrderRecord, 'id' | 'createdAt' | 'updatedAt'>): Promise<PaymentOrderRecord> {
     await ensureDb();
-    const store = initFallbackFile();
-    if (!store.paymentOrders) store.paymentOrders = [];
     const id = 'pord-' + Date.now() + '-' + Math.random().toString(36).substring(2, 7);
     const now = new Date().toISOString();
 
@@ -2403,7 +2703,6 @@ export const db = {
       updatedAt: now,
     };
 
-    // 1. Persist to MySQL if available (Direct DB transaction)
     if (pool && !useFallbackStorage) {
       try {
         await pool.query(
@@ -2432,9 +2731,11 @@ export const db = {
       } catch (e) {
         console.warn('MySQL createPaymentOrderRecord error:', e);
       }
+      return newRecord;
     }
 
-    // 2. Persist to JSON fallback file
+    const store = initFallbackFile();
+    if (!store.paymentOrders) store.paymentOrders = [];
     store.paymentOrders.push(newRecord);
     saveFallbackStore(store);
 
@@ -2445,10 +2746,9 @@ export const db = {
     await ensureDb();
     if (!orderId) return null;
 
-    // 1. Direct MySQL Query (No in-memory caching to guarantee live DB accuracy)
     if (pool && !useFallbackStorage) {
       try {
-        const [rows]: any = await pool.query('SELECT * FROM payment_orders WHERE order_id = ?', [orderId]);
+        const [rows]: any = await pool.query('SELECT * FROM payment_orders WHERE order_id = ? LIMIT 1', [orderId]);
         if (rows && rows.length > 0) {
           const r = rows[0];
           const rec: PaymentOrderRecord = {
@@ -2469,12 +2769,13 @@ export const db = {
           };
           return rec;
         }
+        return null;
       } catch (e) {
         console.warn('MySQL getPaymentOrderByOrderId error:', e);
+        return null;
       }
     }
 
-    // 2. Fallback file check
     const store = initFallbackFile();
     if (!store.paymentOrders) return null;
     return store.paymentOrders.find(p => p.orderId === orderId) || null;
@@ -2483,20 +2784,6 @@ export const db = {
   async updatePaymentOrderRecord(orderId: string, updates: Partial<PaymentOrderRecord>): Promise<PaymentOrderRecord | null> {
     await ensureDb();
     const now = new Date().toISOString();
-    const store = initFallbackFile();
-    if (!store.paymentOrders) store.paymentOrders = [];
-    const idx = store.paymentOrders.findIndex(p => p.orderId === orderId);
-
-    let updatedRecord: PaymentOrderRecord | null = null;
-    if (idx !== -1) {
-      store.paymentOrders[idx] = {
-        ...store.paymentOrders[idx],
-        ...updates,
-        updatedAt: now,
-      };
-      updatedRecord = store.paymentOrders[idx];
-      saveFallbackStore(store);
-    }
 
     if (pool && !useFallbackStorage) {
       try {
@@ -2522,12 +2809,29 @@ export const db = {
 
         values.push(orderId);
         await pool.query(`UPDATE payment_orders SET ${setClauses.join(', ')} WHERE order_id = ?`, values);
+        return await this.getPaymentOrderByOrderId(orderId);
       } catch (e) {
         console.warn('MySQL updatePaymentOrderRecord error:', e);
+        return null;
       }
     }
 
-    return await this.getPaymentOrderByOrderId(orderId);
+    const store = initFallbackFile();
+    if (!store.paymentOrders) store.paymentOrders = [];
+    const idx = store.paymentOrders.findIndex(p => p.orderId === orderId);
+
+    let updatedRecord: PaymentOrderRecord | null = null;
+    if (idx !== -1) {
+      store.paymentOrders[idx] = {
+        ...store.paymentOrders[idx],
+        ...updates,
+        updatedAt: now,
+      };
+      updatedRecord = store.paymentOrders[idx];
+      saveFallbackStore(store);
+    }
+
+    return updatedRecord;
   },
 };
 

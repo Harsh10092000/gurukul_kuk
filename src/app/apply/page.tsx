@@ -73,6 +73,8 @@ export default function ApplyPage() {
     'Aryakulam Nilokheri',
   ]);
   const [instructionLang, setInstructionLang] = useState<'en' | 'hi'>('en');
+  const [pendingOrderId, setPendingOrderId] = useState<string | null>(null);
+  const [recoveringPayment, setRecoveringPayment] = useState(false);
 
   // Password Visibility States
   const [showPassword, setShowPassword] = useState(false);
@@ -272,8 +274,13 @@ export default function ApplyPage() {
       }
 
       if (paymentStatus === 'pending') {
+        const orderId = params.get('orderId');
+        const msg = params.get('msg');
         setStep(6);
         setDeclarationAgreed(true);
+        if (orderId) {
+          setPendingOrderId(orderId);
+        }
         setError(msg || `Your payment (Order: ${orderId || ''}) is pending confirmation. You can review your particulars below and retry submitting anytime.`);
         try {
           window.history.replaceState({}, '', window.location.pathname);
@@ -777,6 +784,87 @@ export default function ApplyPage() {
     }
   };
 
+  const handleRecoverPayment = async () => {
+    if (!pendingOrderId) return;
+    setRecoveringPayment(true);
+    setError('');
+    try {
+      const payload = {
+        classApplying: formData.applyingClass,
+        stream: formData.stream || undefined,
+        personalInfo: {
+          fullName: formData.fullName,
+          dob: formData.dob,
+          gender: formData.gender,
+          category: formData.category,
+          aadhaarNumber: formData.aadhaarNumber,
+          panNumber: formData.panNumber || undefined,
+          apaarId: formData.apaarId || undefined,
+          familyId: formData.familyId || undefined,
+          previousSchoolName: formData.previousSchoolName,
+          previousBoard: formData.previousBoard,
+          otherBoard: formData.otherBoard || undefined,
+          nationality: formData.nationality,
+          religion: formData.religion,
+          whatsappNumber: formData.whatsappNumber,
+          candidateEmail: formData.candidateEmail,
+          candidateMobile: formData.candidateMobile,
+        },
+        parentInfo: {
+          fatherName: formData.fatherName,
+          fatherOccupation: formData.fatherOccupationOption === 'Other' ? formData.fatherOccupationOther : formData.fatherOccupationOption,
+          fatherPhone: formData.fatherPhone,
+          motherName: formData.motherName,
+          motherOccupation: formData.motherOccupationOption === 'Other' ? formData.motherOccupationOther : formData.motherOccupationOption,
+          annualIncome: formData.annualIncome,
+          guardianName: formData.guardianName || undefined,
+          guardianRelation: formData.guardianRelation || undefined,
+        },
+        addressInfo: {
+          streetAddress: formData.streetAddress,
+          city: formData.city,
+          district: formData.district,
+          state: formData.state,
+          pincode: formData.pincode,
+        },
+        studyLocationPref: {
+          firstPreference: formData.firstPreference,
+          secondPreference: formData.secondPreference || undefined,
+        },
+        documents: {
+          passportPhoto: formData.photo,
+          candidateSignature: formData.signature,
+          parentSignature: formData.parentSignature,
+          aadhaarCard: formData.aadhaarCard,
+        },
+        password: formData.password || undefined,
+      };
+
+      const res = await fetch('/api/payment/hdfc/complete-pending', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          orderId: pendingOrderId,
+          formData: payload,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || 'Failed to complete registration for this order.');
+      }
+
+      try {
+        localStorage.removeItem('gurukul_application_draft');
+        sessionStorage.removeItem('gurukul_reg_info');
+      } catch {}
+      window.location.href = data.redirectUrl || `/payment/thank-you?orderId=${encodeURIComponent(pendingOrderId)}&regNo=${encodeURIComponent(data.registrationNumber)}`;
+    } catch (err: any) {
+      setError(err?.message || 'Verification failed. If your payment was deducted, please contact admissions helpdesk.');
+    } finally {
+      setRecoveringPayment(false);
+    }
+  };
+
   const steps = [
     { num: 1, label: 'Instructions & Campus' },
     { num: 2, label: 'Candidate' },
@@ -889,9 +977,42 @@ export default function ApplyPage() {
 
       {/* Error Banner */}
       {error && (
-        <div className="mb-4 p-3 rounded-lg bg-rose-50 border border-rose-200 text-rose-700 text-xs font-medium flex items-center gap-2">
-          <AlertCircle className="w-4 h-4 flex-shrink-0" />
-          <span>{error}</span>
+        <div className="mb-4 p-4 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-sm font-medium">
+          <div className="flex items-center gap-2 mb-1">
+            <AlertCircle className="w-5 h-5 flex-shrink-0 text-rose-600" />
+            <span className="font-semibold text-rose-900">Notice</span>
+          </div>
+          <p className="text-xs text-rose-700 leading-relaxed ml-7">{error}</p>
+
+          {pendingOrderId && (
+            <div className="mt-3 ml-7 pt-3 border-t border-rose-200/60 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div>
+                <p className="text-xs text-slate-700 font-semibold">
+                  Already paid ₹800 on HDFC SmartGateway for Order ID: <span className="font-mono text-portal-navy bg-slate-100 px-1.5 py-0.5 rounded">{pendingOrderId}</span>?
+                </p>
+                <p className="text-[11px] text-slate-500 mt-0.5">
+                  Your details are preserved. Click to verify payment with the bank and issue your Admit Card immediately.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={handleRecoverPayment}
+                disabled={recoveringPayment}
+                className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white rounded-lg text-xs font-bold shadow-xs transition-colors flex items-center justify-center gap-1.5 whitespace-nowrap cursor-pointer disabled:opacity-60"
+              >
+                {recoveringPayment ? (
+                  <>
+                    <span className="animate-spin inline-block w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full" />
+                    <span>Verifying with Bank...</span>
+                  </>
+                ) : (
+                  <>
+                    <span>⚡ Verify & Complete Registration</span>
+                  </>
+                )}
+              </button>
+            </div>
+          )}
         </div>
       )}
 
