@@ -72,6 +72,13 @@ function PaymentGatewayInner() {
 
         if (data.order.status === 'CHARGED') {
           // Already paid
+          const isTest = searchParams.get('testFlow') === 'true' || orderId.startsWith('TEST');
+          if (isTest) {
+            window.location.replace(
+              `/payment?step=thankyou&orderId=${encodeURIComponent(orderId)}&amount=${encodeURIComponent(String(data.order.amount))}&status=success`
+            );
+            return;
+          }
           window.location.replace('/dashboard?registered=true');
           return;
         }
@@ -83,7 +90,7 @@ function PaymentGatewayInner() {
         setError('Failed to connect to payment gateway service. Please check your connection.');
         setLoading(false);
       });
-  }, [orderId]);
+  }, [orderId, searchParams]);
 
   // Expiration countdown
   useEffect(() => {
@@ -108,15 +115,22 @@ function PaymentGatewayInner() {
     setStatusMessage('Initiating bank authorization with HDFC SmartGateway...');
 
     setTimeout(() => {
-      setStatusMessage(`Authorizing ₹800.00 via ${method}...`);
+      const displayAmount = (order?.amount || 800).toFixed(2);
+      setStatusMessage(`Authorizing ₹${displayAmount} via ${method}...`);
       setTimeout(() => {
         setPaymentStep('approved');
-        setStatusMessage('Payment Confirmed! Generating permanent registration & admit card...');
+        const isTest = searchParams.get('testFlow') === 'true' || orderId.startsWith('TEST');
+        setStatusMessage(
+          isTest
+            ? 'Test Payment Authorized! Returning to portal...'
+            : 'Payment Confirmed! Generating permanent registration & admit card...'
+        );
 
         setTimeout(() => {
           setPaymentStep('redirecting');
           // Submit directly to return endpoint
-          window.location.href = `/api/payment/hdfc/return?order_id=${encodeURIComponent(orderId)}&dummy=true`;
+          const returnTarget = isTest ? '/api/payment/test/return' : '/api/payment/hdfc/return';
+          window.location.href = `${returnTarget}?order_id=${encodeURIComponent(orderId)}&dummy=true`;
         }, 1200);
       }, 1400);
     }, 1000);
@@ -133,6 +147,11 @@ function PaymentGatewayInner() {
       });
     } catch {
       // Proceed even if cancel endpoint call fails
+    }
+    const isTest = searchParams.get('testFlow') === 'true' || orderId.startsWith('TEST');
+    if (isTest) {
+      router.push('/payment?step=pay&status=cancelled');
+      return;
     }
     // Return candidate back to step 6 with preserved form state
     router.push('/apply?cancelled=true');
@@ -278,7 +297,7 @@ function PaymentGatewayInner() {
                 </div>
                 <div className="flex justify-between">
                   <span>Transaction Amount:</span>
-                  <span className="font-bold text-emerald-700">₹800.00</span>
+                  <span className="font-bold text-emerald-700">₹{(order?.amount || 800).toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between">
                   <span>Session Security:</span>

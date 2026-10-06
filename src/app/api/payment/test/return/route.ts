@@ -47,6 +47,8 @@ async function handleTestReturn(request: Request) {
   const paymentOrder = await db.getPaymentOrderByOrderId(orderId);
   const urlObj = new URL(request.url);
   const isDummy = urlObj.searchParams.get('dummy') === 'true';
+  const dueId = urlObj.searchParams.get('dueId') || paymentOrder?.applicationPayload?.dueId || '';
+  const dueTitle = paymentOrder?.applicationPayload?.dueTitle || '';
 
   let statusResponse: any = null;
 
@@ -112,7 +114,7 @@ async function handleTestReturn(request: Request) {
     });
 
     return NextResponse.redirect(
-      `${baseUrl}/payment?step=thankyou&orderId=${encodeURIComponent(orderId)}&txnId=${encodeURIComponent(txnId)}&amount=${encodeURIComponent(String(amountVal))}&status=success`,
+      `${baseUrl}/payment?step=thankyou&orderId=${encodeURIComponent(orderId)}&txnId=${encodeURIComponent(txnId)}&amount=${encodeURIComponent(String(amountVal))}&dueId=${encodeURIComponent(dueId)}&dueTitle=${encodeURIComponent(dueTitle)}&status=success`,
       303
     );
   }

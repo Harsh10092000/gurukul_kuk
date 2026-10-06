@@ -16,17 +16,20 @@ export async function POST(request: Request) {
     const userEmail = body.email || 'test@gurukul.com';
     const userPhone = body.phone || '9876543210';
     const regNo = body.registrationNumber || 'TEST-GUR-999';
-    // Fixed ₹1 for payment testing sideflow
-    const requestedAmount = 1;
+    // Dynamic fee due amount for payment testing sideflow (strictly < 100)
+    const rawAmount = typeof body.amount === 'number' ? body.amount : parseFloat(body.amount);
+    const requestedAmount = !isNaN(rawAmount) && rawAmount > 0 && rawAmount < 100 ? rawAmount : 1;
+    const dueId = typeof body.dueId === 'string' ? body.dueId.trim() : '';
+    const dueTitle = typeof body.dueTitle === 'string' ? body.dueTitle.trim() : 'Candidate Fee Due';
 
     // Generate unique test order ID
     const orderId = generateHdfcOrderId('TEST');
 
-    // Build return URL targeting our dedicated test return handler
+    // Build return URL targeting our dedicated test return handler with due reference
     const baseUrl = getPublicBaseUrl(request);
-    const returnUrl = `${baseUrl}/api/payment/test/return`;
+    const returnUrl = `${baseUrl}/api/payment/test/return?dueId=${encodeURIComponent(dueId)}`;
 
-    // Create session on HDFC SmartGateway with ₹1 amount
+    // Create session on HDFC SmartGateway with requested due amount
     let session: any = null;
     let gatewayError = null;
 
@@ -37,12 +40,15 @@ export async function POST(request: Request) {
         customerEmail: userEmail,
         customerPhone: userPhone,
         returnUrl,
-        amount: 1,
-        description: `Gurukul Kurukshetra Test Payment - ${userName}`,
+        amount: requestedAmount,
+        description: `Gurukul Due: ${dueTitle} - ${userName}`,
         metadata: {
           testMode: 'true',
           candidateName: userName,
           registrationNumber: regNo,
+          dueId,
+          dueTitle,
+          amount: String(requestedAmount),
         },
       });
     } catch (err: any) {
@@ -53,7 +59,7 @@ export async function POST(request: Request) {
     // Persist payment order record
     await db.createPaymentOrderRecord({
       orderId,
-      amount: 1,
+      amount: requestedAmount,
       currency: 'INR',
       status: 'PENDING',
       customerEmail: userEmail,
@@ -64,6 +70,8 @@ export async function POST(request: Request) {
         candidateName: userName,
         registrationNumber: regNo,
         classApplying: 'Class 6 (Test)',
+        dueId,
+        dueTitle,
         personalInfo: {
           fullName: userName,
           candidateEmail: userEmail,
