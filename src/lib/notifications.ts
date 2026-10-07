@@ -24,6 +24,7 @@ const SMTP_PASS = (process.env.SMTP_PASS || process.env.CPASS || '').replace(/\s
 const FROM_EMAIL = (process.env.FROM_EMAIL || `"THE GURUKUL NILOKHERI" <${SMTP_USER}>`).trim();
 
 export const ADMIN_NOTIFICATION_EMAIL = process.env.ADMIN_ALERT_EMAIL || 'anshu.calinfo@gmail.com';
+export const SITE_URL = (process.env.NEXT_PUBLIC_APP_URL || process.env.NEXT_PUBLIC_SITE_URL || process.env.APP_URL || 'https://thegurukuladmission.com').trim().replace(/\/$/, '');
 
 function cleanVal(v: any, fallback = 'N/A'): string {
   if (v === undefined || v === null) return fallback;
@@ -254,7 +255,7 @@ export async function sendNotification(payload: NotificationPayload) {
                 <tr><td>Registration Time</td><td>${cleanVal(data.registrationTime, new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' }))}</td></tr>
               </table>
               <p style="font-size: 12px; color: #64748b; margin-top: 20px; line-height: 1.5;">
-                You can view the uploaded documents, verify eligibility, and allot Roll Number in the <a href="http://localhost:3000/admin/dashboard" style="color: #2563eb; font-weight: 600;">Admin Management Portal</a>.
+                You can view the uploaded documents, verify eligibility, and allot Roll Number in the <a href="${SITE_URL}/admin/dashboard" style="color: #2563eb; font-weight: 600;">Admin Management Portal</a>.
               </p>
             </div>
             <div class="footer">
@@ -332,7 +333,7 @@ export async function sendNotification(payload: NotificationPayload) {
 
     case 'FORGOT_REGISTRATION_RECOVERY':
       subject = `The Gurukul Nilokheri - Your Registration Number: ${data.registrationNumber}`;
-      message = `Dear ${name || 'Candidate'}, as requested, your permanent Registration Number for The Gurukul Nilokheri Entrance Examination (Session 2027-28) is ${data.registrationNumber}. Please use this Registration Number and your password to sign in to the portal at http://localhost:3000/.`;
+      message = `Dear ${name || 'Candidate'}, as requested, your permanent Registration Number for The Gurukul Nilokheri Entrance Examination (Session 2027-28) is ${data.registrationNumber}. Please use this Registration Number and your password to sign in to the portal at ${SITE_URL}/.`;
       htmlContent = `
         <!DOCTYPE html>
         <html>
@@ -377,7 +378,7 @@ export async function sendNotification(payload: NotificationPayload) {
               </p>
 
               <div style="text-align: center; margin: 24px 0 10px 0;">
-                <a href="http://localhost:3000/" class="btn" style="color: #ffffff;">Sign In to Candidate Portal →</a>
+                <a href="${SITE_URL}/" class="btn" style="color: #ffffff;">Sign In to Candidate Portal →</a>
               </div>
             </div>
             <div class="footer">
@@ -468,7 +469,7 @@ export async function sendNotification(payload: NotificationPayload) {
           <div style="background: #ffffff; padding: 15px; border-left: 4px solid #eab308; margin: 15px 0; border-radius: 4px;">
             <strong>Officer Remarks:</strong> ${data.remarks || 'Please upload clear verification documents.'}
           </div>
-          <p>Please log in to your <a href="http://localhost:3000/login" style="color: #2563eb; font-weight: bold;">Candidate Dashboard</a> to upload the requested documents directly.</p>
+          <p>Please log in to your <a href="${SITE_URL}/login" style="color: #2563eb; font-weight: bold;">Candidate Dashboard</a> to upload the requested documents directly.</p>
         </div>
       `;
       break;
@@ -489,7 +490,7 @@ export async function sendNotification(payload: NotificationPayload) {
 
     case 'APPLICATION_REJECTED':
       subject = `Official Notice: Application Rejected / Disqualified - The Gurukul Nilokheri Entrance 2027-28 (${data.applicationNumber})`;
-      message = `Dear ${name}, this is an official notification that your entrance examination application (${data.applicationNumber}) has been REJECTED by the Admissions & Scrutiny Committee. Reason for Rejection: "${data.remarks || 'Documentation or eligibility criteria mismatch'}". As per guidelines, all previous details submitted under this dossier have been annulled. You may log in to the candidate portal at http://localhost:3000/login to refill a fresh Admission form or raise an official query before the application window closes.`;
+      message = `Dear ${name}, this is an official notification that your entrance examination application (${data.applicationNumber}) has been REJECTED by the Admissions & Scrutiny Committee. Reason for Rejection: "${data.remarks || 'Documentation or eligibility criteria mismatch'}". As per guidelines, all previous details submitted under this dossier have been annulled. You may log in to the candidate portal at ${SITE_URL}/login to refill a fresh Admission form or raise an official query before the application window closes.`;
       htmlContent = `
         <!DOCTYPE html>
         <html>
@@ -555,7 +556,7 @@ export async function sendNotification(payload: NotificationPayload) {
               </div>
 
               <div class="btn-row">
-                <a href="http://localhost:3000/login" class="btn-primary">Sign In to Candidate Portal →</a>
+                <a href="${SITE_URL}/login" class="btn-primary">Sign In to Candidate Portal →</a>
               </div>
             </div>
             <div class="footer">
@@ -612,7 +613,7 @@ export async function sendNotification(payload: NotificationPayload) {
                 The entrance examination result has been declared. You may visit the official admission portal to check your result status.
               </p>
               <div>
-                <a href="http://localhost:3000/result" class="btn">Check Result on Portal →</a>
+                <a href="${SITE_URL}/result" class="btn">Check Result on Portal →</a>
               </div>
             </div>
             <div class="footer">
