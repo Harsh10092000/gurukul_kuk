@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { db } from '@/lib/db';
+import { db, toMySqlDatetime } from '@/lib/db';
 import { hashPassword, signToken, getAuthCookieOptions } from '@/lib/auth';
 import { sendNotification, ADMIN_NOTIFICATION_EMAIL } from '@/lib/notifications';
 import { getExamDetailsForGender } from '@/lib/validations';
@@ -408,7 +408,7 @@ async function handleHdfcReturn(request: Request) {
         'Calculators, smart devices, watches, and mobile phones are strictly prohibited in the exam hall.',
         'Only Blue or Black ballpoint pens are permitted for marking answers.',
       ],
-      createdAt: new Date().toISOString(),
+      createdAt: toMySqlDatetime(new Date()),
     });
 
     // Clean up temporary session if needed

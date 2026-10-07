@@ -501,6 +501,17 @@ export async function initDatabase(): Promise<void> {
       console.warn('system_settings schema migration notice:', migErr);
     }
 
+    // Ensure roll_number column exists in applications
+    try {
+      const [appCols]: any = await pool.query("SHOW COLUMNS FROM applications");
+      const appColNames = Array.isArray(appCols) ? appCols.map((c: any) => c.Field) : [];
+      if (!appColNames.includes('roll_number')) {
+        await pool.query("ALTER TABLE applications ADD COLUMN roll_number VARCHAR(64) DEFAULT NULL AFTER application_number");
+      }
+    } catch (colErr) {
+      console.warn('applications roll_number migration notice:', colErr);
+    }
+
     await pool.query(`
       CREATE TABLE IF NOT EXISTS admin_notifications (
         id VARCHAR(64) PRIMARY KEY,
@@ -1502,13 +1513,14 @@ export const db = {
       if (existingAppRows.length > 0) {
         await pool.query(
           `UPDATE applications SET
-            application_number = ?, class_applying = ?, personal_info = ?, parent_info = ?,
+            application_number = ?, roll_number = COALESCE(?, roll_number), class_applying = ?, personal_info = ?, parent_info = ?,
             address_info = ?, academic_info = ?, exam_centre_pref = ?, documents = ?,
             status = ?, remarks = ?, payment_status = ?, amount_paid = ?, transaction_id = ?,
             updated_at = ?
            WHERE id = ?`,
           [
             regNumber,
+            newApp.rollNumber || null,
             app.classApplying,
             JSON.stringify(newApp.personalInfo),
             JSON.stringify(app.parentInfo),
@@ -1530,14 +1542,15 @@ export const db = {
 
       await pool.query(
         `INSERT INTO applications (
-          id, application_number, user_id, class_applying, 
+          id, application_number, roll_number, user_id, class_applying, 
           personal_info, parent_info, address_info, academic_info, 
           exam_centre_pref, documents, status, remarks, 
           payment_status, amount_paid, transaction_id, created_at, updated_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           id,
           regNumber,
+          newApp.rollNumber || null,
           app.userId,
           app.classApplying,
           JSON.stringify(newApp.personalInfo),
@@ -1867,12 +1880,13 @@ export const db = {
     try {
       await pool.query(
         `UPDATE applications SET
-          status = ?, remarks = ?, personal_info = ?, academic_info = ?,
+          status = ?, remarks = ?, roll_number = COALESCE(?, roll_number), personal_info = ?, academic_info = ?,
           documents = ?, updated_at = ?
          WHERE id = ? OR application_number = ? OR registration_number = ?`,
         [
           updated.status,
           updated.remarks || null,
+          updated.rollNumber || null,
           JSON.stringify(updated.personalInfo),
           JSON.stringify(updated.academicInfo),
           JSON.stringify(updated.documents || {}),
@@ -2039,37 +2053,143 @@ export const db = {
       return admitCard;
     }
 
-    await pool.query(
-      `INSERT INTO admit_cards (
-        id, application_id, application_number, roll_number, candidate_name, father_name, 
-        class_applying, exam_centre_name, exam_centre_address, exam_date, reporting_time, 
-        exam_duration, room_number, candidate_photo_url, is_released, instructions
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-      ON DUPLICATE KEY UPDATE 
-        roll_number = VALUES(roll_number), 
-        exam_centre_name = VALUES(exam_centre_name), 
-        is_released = VALUES(is_released)`,
-      [
-        admitCard.id,
-        admitCard.applicationId,
-        admitCard.applicationNumber,
-        admitCard.rollNumber,
-        admitCard.candidateName,
-        admitCard.fatherName,
-        admitCard.classApplying,
-        admitCard.examCentreName,
-        admitCard.examCentreAddress,
-        admitCard.examDate,
-        admitCard.reportingTime,
-        admitCard.examDuration,
-        admitCard.roomNumber,
-        admitCard.candidatePhotoUrl || null,
-        admitCard.isReleased,
-        JSON.stringify(admitCard.instructions),
-      ]
-    );
+    try {
+      // 1. Check if an admit card already exists for this application
+      const [existing]: any = await pool.query(
+        'SELECT id, roll_number FROM admit_cards WHERE application_id = ? OR application_number = ? LIMIT 1',
+        [admitCard.applicationId, admitCard.applicationNumber]
+      );
 
-    return admitCard;
+      if (existing && existing.length > 0) {
+        const existingId = existing[0].id;
+        const preservedRollNumber = existing[0].roll_number || admitCard.rollNumber;
+
+        await pool.query(
+          `UPDATE admit_cards SET 
+            roll_number = ?,
+            candidate_name = ?,
+            father_name = ?,
+            class_applying = ?,
+            exam_centre_name = ?,
+            exam_centre_address = ?,
+            exam_date = ?,
+            reporting_time = ?,
+            exam_duration = ?,
+            room_number = ?,
+            candidate_photo_url = ?,
+            is_released = ?,
+            instructions = ?
+          WHERE id = ?`,
+          [
+            preservedRollNumber,
+            admitCard.candidateName,
+            admitCard.fatherName,
+            admitCard.classApplying,
+            admitCard.examCentreName,
+            admitCard.examCentreAddress,
+            admitCard.examDate,
+            admitCard.reportingTime,
+            admitCard.examDuration,
+            admitCard.roomNumber,
+            admitCard.candidatePhotoUrl || null,
+            admitCard.isReleased ? 1 : 0,
+            JSON.stringify(admitCard.instructions),
+            existingId,
+          ]
+        );
+
+        // Sync roll_number to applications table
+        try {
+          await pool.query(
+            'UPDATE applications SET roll_number = ? WHERE (id = ? OR application_number = ?) AND (roll_number IS NULL OR roll_number = "")',
+            [preservedRollNumber, admitCard.applicationId, admitCard.applicationNumber]
+          );
+        } catch {}
+
+        return {
+          ...admitCard,
+          id: existingId,
+          rollNumber: preservedRollNumber,
+        };
+      }
+
+      // 2. If creating a new admit card, ensure roll number doesn't collide with another record
+      let finalRollNumber = admitCard.rollNumber;
+      let candidateGender = admitCard.gender;
+      if (!candidateGender && (admitCard.applicationNumber?.startsWith('NILG') || false)) {
+        candidateGender = 'female';
+      }
+
+      let rollCollision = true;
+      let attempts = 0;
+      while (rollCollision && attempts < 20) {
+        attempts++;
+        const [rollCheck]: any = await pool.query(
+          'SELECT id FROM admit_cards WHERE roll_number = ? LIMIT 1',
+          [finalRollNumber]
+        );
+        if (rollCheck && rollCheck.length > 0) {
+          finalRollNumber = await this.getNextRollNumber(admitCard.classApplying, candidateGender, admitCard.stream);
+          const [checkAgain]: any = await pool.query(
+            'SELECT id FROM admit_cards WHERE roll_number = ? LIMIT 1',
+            [finalRollNumber]
+          );
+          if (checkAgain && checkAgain.length > 0) {
+            const m = finalRollNumber.match(/^(\d+?)(\d{4})$/);
+            if (m) {
+              finalRollNumber = `${m[1]}${String(parseInt(m[2], 10) + attempts).padStart(4, '0')}`;
+            }
+          } else {
+            rollCollision = false;
+          }
+        } else {
+          rollCollision = false;
+        }
+      }
+
+      await pool.query(
+        `INSERT INTO admit_cards (
+          id, application_id, application_number, roll_number, candidate_name, father_name, 
+          class_applying, exam_centre_name, exam_centre_address, exam_date, reporting_time, 
+          exam_duration, room_number, candidate_photo_url, is_released, instructions, created_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [
+          admitCard.id,
+          admitCard.applicationId,
+          admitCard.applicationNumber,
+          finalRollNumber,
+          admitCard.candidateName,
+          admitCard.fatherName,
+          admitCard.classApplying,
+          admitCard.examCentreName,
+          admitCard.examCentreAddress,
+          admitCard.examDate,
+          admitCard.reportingTime,
+          admitCard.examDuration,
+          admitCard.roomNumber,
+          admitCard.candidatePhotoUrl || null,
+          admitCard.isReleased ? 1 : 0,
+          JSON.stringify(admitCard.instructions),
+          toMySqlDatetime(admitCard.createdAt || new Date()),
+        ]
+      );
+
+      // Sync roll_number to applications table
+      try {
+        await pool.query(
+          'UPDATE applications SET roll_number = ? WHERE (id = ? OR application_number = ?) AND (roll_number IS NULL OR roll_number = "")',
+          [finalRollNumber, admitCard.applicationId, admitCard.applicationNumber]
+        );
+      } catch {}
+
+      return {
+        ...admitCard,
+        rollNumber: finalRollNumber,
+      };
+    } catch (err: any) {
+      console.error('generateOrReleaseAdmitCard error:', err);
+      throw err;
+    }
   },
 
   // Results
@@ -2323,10 +2443,13 @@ export const db = {
         if (settings.admitCardsReleased !== undefined) {
           setClauses.push('admit_cards_released = ?');
           values.push(settings.admitCardsReleased ? 1 : 0);
+          try {
+            await pool.query('UPDATE admit_cards SET is_released = ?', [settings.admitCardsReleased ? 1 : 0]);
+          } catch {}
         }
         if (settings.admitCardsReleasedAt !== undefined) {
           setClauses.push('admit_cards_released_at = ?');
-          values.push(settings.admitCardsReleasedAt);
+          values.push(settings.admitCardsReleasedAt ? toMySqlDatetime(settings.admitCardsReleasedAt) : null);
         }
         if (settings.academicSession !== undefined) {
           setClauses.push('academic_session = ?');
@@ -2400,7 +2523,7 @@ export const db = {
               settings.portalOpen !== undefined ? (settings.portalOpen ? 1 : 0) : 1,
               settings.resultsDeclared !== undefined ? (settings.resultsDeclared ? 1 : 0) : 0,
               settings.admitCardsReleased !== undefined ? (settings.admitCardsReleased ? 1 : 0) : 0,
-              settings.admitCardsReleasedAt || null,
+              settings.admitCardsReleasedAt ? toMySqlDatetime(settings.admitCardsReleasedAt) : null,
               settings.academicSession || '2027-2028',
               settings.applicationFee || 800,
               settings.registrationStartDate || '2026-09-01',

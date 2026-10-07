@@ -1,8 +1,10 @@
 import { NextResponse } from 'next/server';
-import { db } from '@/lib/db';
+import { db, toMySqlDatetime } from '@/lib/db';
 import { getCurrentUser } from '@/lib/auth';
 import { sendNotification } from '@/lib/notifications';
 import { getExamDetailsForGender } from '@/lib/validations';
+
+export const dynamic = 'force-dynamic';
 
 export async function POST(request: Request) {
   try {
@@ -21,13 +23,22 @@ export async function POST(request: Request) {
       );
     }
 
-    const settings = await db.getSettings();
-    const releaseTime = new Date().toISOString();
+    const releaseTime = toMySqlDatetime(new Date());
 
-    const examCentreName = settings.examVenueName || 'THE GURUKUL JYOTISAR PEHOWA ROAD, KURUKSHETRA';
-    const examCentreAddress = settings.examVenueAddress || '136119, Haryana';
-    const examDate = settings.entranceExamDate || '21 March 2027';
-    const reportingTime = settings.entranceExamTime || '9:30 AM';
+    // 1. Fetch all existing admit cards to preserve already assigned roll numbers
+    const existingCards = await db.getAdmitCards();
+    const existingCardByApp = new Map<string, any>();
+    const usedRollNumbers = new Set<string>();
+
+    for (const card of existingCards) {
+      if (card.applicationId) existingCardByApp.set(card.applicationId, card);
+      if (card.applicationNumber) existingCardByApp.set(card.applicationNumber, card);
+      if (card.rollNumber) usedRollNumbers.add(card.rollNumber);
+    }
+
+    for (const app of paidApps) {
+      if (app.rollNumber) usedRollNumbers.add(app.rollNumber);
+    }
 
     // Sort candidates by class and registration number for clean, class-sequential roll numbers
     paidApps.sort((a, b) => {
@@ -43,33 +54,19 @@ export async function POST(request: Request) {
 
     let generatedCount = 0;
     const groupCounters: { [groupKey: string]: number } = {};
-    const usedRollNumbers = new Set<string>();
-
-    // Pass 1: Collect existing valid unique class & gender-based roll numbers to preserve valid allotments
-    for (const app of paidApps) {
-      const classCode = db.getClassCode(app.classApplying);
-      const isFemale =
-        (app.personalInfo?.gender || '').toLowerCase() === 'female' ||
-        (app.personalInfo?.gender || '').toLowerCase() === 'girl' ||
-        (app.registrationNumber || '').startsWith('NILG');
-      const groupKey = `${classCode}_${isFemale ? 'female' : 'male'}`;
-      const rollPrefix = `27${classCode}`;
-      const roll = app.rollNumber;
-      if (roll && new RegExp(`^${rollPrefix}(\\d{4,})$`).test(roll)) {
-        const seq = parseInt(roll.slice(rollPrefix.length), 10);
-        const isValidForGender = isFemale ? seq >= 5001 : (seq >= 1 && seq <= 5000);
-        if (!isNaN(seq) && isValidForGender && !usedRollNumbers.has(roll)) {
-          usedRollNumbers.add(roll);
-          if (!groupCounters[groupKey] || seq > groupCounters[groupKey]) {
-            groupCounters[groupKey] = seq;
-          }
+    for (const roll of Array.from(usedRollNumbers)) {
+      const m = roll.match(/^27(\d{2})(\d{4,})$/);
+      if (m) {
+        const classCode = m[1];
+        const seq = parseInt(m[2], 10);
+        const isFemale = seq >= 5001;
+        const groupKey = `${classCode}_${isFemale ? 'female' : 'male'}`;
+        if (!groupCounters[groupKey] || seq > groupCounters[groupKey]) {
+          groupCounters[groupKey] = seq;
         }
       }
     }
 
-    // Pass 2: Assign unique sequential roll numbers per class and gender/centre
-    // Boys: 27{class}0001 - 5000 (capacity 5000, Exam Centre: Aryakulam Nilokheri)
-    // Girls: 27{class}5001 - 10000 (capacity 5000, Exam Centre: The Gurukul Nilokheri)
     for (const app of paidApps) {
       const classCode = db.getClassCode(app.classApplying);
       const isFemale =
@@ -83,27 +80,14 @@ export async function POST(request: Request) {
         groupCounters[groupKey] = minBase;
       }
 
+      const existingCard = existingCardByApp.get(app.id) || existingCardByApp.get(app.registrationNumber || app.applicationNumber || '');
+
       let rollNumber: string;
-      if (
-        app.rollNumber &&
-        new RegExp(`^${rollPrefix}(\\d{4,})$`).test(app.rollNumber)
-      ) {
-        const existingSeq = parseInt(app.rollNumber.slice(rollPrefix.length), 10);
-        const isValidForGender = isFemale ? existingSeq >= 5001 : (existingSeq >= 1 && existingSeq <= 5000);
-        if (isValidForGender && !usedRollNumbers.has(app.rollNumber)) {
-          rollNumber = app.rollNumber;
-          usedRollNumbers.add(rollNumber);
-        } else if (isValidForGender) {
-          rollNumber = app.rollNumber;
-        } else {
-          let nextSeq = groupCounters[groupKey] + 1;
-          while (usedRollNumbers.has(`${rollPrefix}${String(nextSeq).padStart(4, '0')}`)) {
-            nextSeq++;
-          }
-          groupCounters[groupKey] = nextSeq;
-          rollNumber = `${rollPrefix}${String(nextSeq).padStart(4, '0')}`;
-          usedRollNumbers.add(rollNumber);
-        }
+      if (existingCard?.rollNumber) {
+        rollNumber = existingCard.rollNumber;
+      } else if (app.rollNumber && !usedRollNumbers.has(app.rollNumber)) {
+        rollNumber = app.rollNumber;
+        usedRollNumbers.add(rollNumber);
       } else {
         let nextSeq = groupCounters[groupKey] + 1;
         while (usedRollNumbers.has(`${rollPrefix}${String(nextSeq).padStart(4, '0')}`)) {
@@ -126,12 +110,12 @@ export async function POST(request: Request) {
       );
 
       await db.generateOrReleaseAdmitCard({
-        id: 'admit-' + app.id,
+        id: existingCard?.id || ('admit-' + app.id),
         applicationId: app.id,
         applicationNumber: app.registrationNumber || app.applicationNumber,
         rollNumber,
-        candidateName: app.personalInfo.fullName,
-        fatherName: app.parentInfo.fatherName,
+        candidateName: app.personalInfo?.fullName || 'Applicant',
+        fatherName: app.parentInfo?.fatherName || '',
         classApplying: app.classApplying,
         stream: app.stream,
         examCentreName: examDetails.examCentreName,
@@ -182,10 +166,10 @@ export async function POST(request: Request) {
       releasedAt: releaseTime,
       message: `Successfully generated and published Admit Cards for ${generatedCount} candidates.`,
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Bulk admit card generation error:', error);
     return NextResponse.json(
-      { error: 'An error occurred while generating bulk admit cards.' },
+      { error: error?.message || 'An error occurred while generating bulk admit cards.' },
       { status: 500 }
     );
   }

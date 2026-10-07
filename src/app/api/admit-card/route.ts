@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { db } from '@/lib/db';
+import { db, toMySqlDatetime } from '@/lib/db';
 import { getCurrentUser } from '@/lib/auth';
 import { sendNotification } from '@/lib/notifications';
 
@@ -210,7 +210,7 @@ export async function POST(request: Request) {
         'A coloured print out of admit card.',
         'Please bring Valid ID proof or ADHAAR Card on the day of examination.',
       ],
-      createdAt: new Date().toISOString(),
+      createdAt: toMySqlDatetime(new Date()),
     });
 
     // Note: Per policy, no emails are dispatched to candidates when admit cards are declared/issued.

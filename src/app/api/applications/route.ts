@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { db } from '@/lib/db';
+import { db, toMySqlDatetime } from '@/lib/db';
 import { getCurrentUser } from '@/lib/auth';
 import { sendNotification, ADMIN_NOTIFICATION_EMAIL } from '@/lib/notifications';
 import { computeApplicationMetrics } from '@/lib/applicationMetrics';
@@ -285,7 +285,7 @@ export async function POST(request: Request) {
         'Calculators, smart devices, watches, and mobile phones are strictly prohibited in the exam hall.',
         'Only Blue or Black ballpoint pens are permitted for marking answers.',
       ],
-      createdAt: new Date().toISOString(),
+      createdAt: toMySqlDatetime(new Date()),
     });
 
     // Fetch user record to include permanent registrationNumber in confirmation

@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { db } from '@/lib/db';
+import { db, toMySqlDatetime } from '@/lib/db';
 import { getCurrentUser } from '@/lib/auth';
 import { getExamDetailsForGender } from '@/lib/validations';
 
@@ -30,20 +30,26 @@ export async function POST(request: Request) {
     }
 
     const release = body.admitCardsReleased;
-    const now = new Date().toISOString();
+    const now = toMySqlDatetime(new Date());
 
     if (release) {
-      // If releasing, ensure roll numbers and admit cards are generated for all paid applicants
+      // 1. Fetch all existing admit cards to preserve already assigned roll numbers
+      const existingCards = await db.getAdmitCards();
+      const existingCardByApp = new Map<string, any>();
+      const usedRollNumbers = new Set<string>();
+
+      for (const card of existingCards) {
+        if (card.applicationId) existingCardByApp.set(card.applicationId, card);
+        if (card.applicationNumber) existingCardByApp.set(card.applicationNumber, card);
+        if (card.rollNumber) usedRollNumbers.add(card.rollNumber);
+      }
+
       const allApplications = await db.getApplications();
       const paidApps = allApplications.filter((a) => a.paymentStatus === 'completed');
-      const settings = await db.getSettings();
-      const examDate = settings.entranceExamDate || '06 December 2026';
-      const centres = await db.getCentres();
-      const primaryCentre = centres[0] || {
-        name: 'The Gurukul Nilokheri Main Campus',
-        address: 'Nilokheri, Karnal, Haryana - 132117',
-        capacity: 3000,
-      };
+
+      for (const app of paidApps) {
+        if (app.rollNumber) usedRollNumbers.add(app.rollNumber);
+      }
 
       paidApps.sort((a, b) => {
         const classA = db.getClassCode(a.classApplying);
@@ -57,33 +63,19 @@ export async function POST(request: Request) {
       });
 
       const groupCounters: { [groupKey: string]: number } = {};
-      const usedRollNumbers = new Set<string>();
-
-      // Pass 1: Collect existing valid unique class & gender-based roll numbers
-      for (const app of paidApps) {
-        const classCode = db.getClassCode(app.classApplying);
-        const isFemale =
-          (app.personalInfo?.gender || '').toLowerCase() === 'female' ||
-          (app.personalInfo?.gender || '').toLowerCase() === 'girl' ||
-          (app.registrationNumber || '').startsWith('NILG');
-        const groupKey = `${classCode}_${isFemale ? 'female' : 'male'}`;
-        const rollPrefix = `27${classCode}`;
-        const roll = app.rollNumber;
-        if (roll && new RegExp(`^${rollPrefix}(\\d{4,})$`).test(roll)) {
-          const seq = parseInt(roll.slice(rollPrefix.length), 10);
-          const isValidForGender = isFemale ? seq >= 5001 : (seq >= 1 && seq <= 5000);
-          if (!isNaN(seq) && isValidForGender && !usedRollNumbers.has(roll)) {
-            usedRollNumbers.add(roll);
-            if (!groupCounters[groupKey] || seq > groupCounters[groupKey]) {
-              groupCounters[groupKey] = seq;
-            }
+      for (const roll of Array.from(usedRollNumbers)) {
+        const m = roll.match(/^27(\d{2})(\d{4,})$/);
+        if (m) {
+          const classCode = m[1];
+          const seq = parseInt(m[2], 10);
+          const isFemale = seq >= 5001;
+          const groupKey = `${classCode}_${isFemale ? 'female' : 'male'}`;
+          if (!groupCounters[groupKey] || seq > groupCounters[groupKey]) {
+            groupCounters[groupKey] = seq;
           }
         }
       }
 
-      // Pass 2: Assign unique sequential roll numbers per class and gender/centre
-      // Boys: 27{class}0001 - 5000 (capacity 5000, Exam Centre: Aryakulam Nilokheri)
-      // Girls: 27{class}5001 - 10000 (capacity 5000, Exam Centre: The Gurukul Nilokheri)
       for (const app of paidApps) {
         const classCode = db.getClassCode(app.classApplying);
         const isFemale =
@@ -97,27 +89,15 @@ export async function POST(request: Request) {
           groupCounters[groupKey] = minBase;
         }
 
+        const existingCard = existingCardByApp.get(app.id) || existingCardByApp.get(app.registrationNumber || app.applicationNumber || '');
+
         let rollNumber: string;
-        if (
-          app.rollNumber &&
-          new RegExp(`^${rollPrefix}(\\d{4,})$`).test(app.rollNumber)
-        ) {
-          const existingSeq = parseInt(app.rollNumber.slice(rollPrefix.length), 10);
-          const isValidForGender = isFemale ? existingSeq >= 5001 : (existingSeq >= 1 && existingSeq <= 5000);
-          if (isValidForGender && !usedRollNumbers.has(app.rollNumber)) {
-            rollNumber = app.rollNumber;
-            usedRollNumbers.add(rollNumber);
-          } else if (isValidForGender) {
-            rollNumber = app.rollNumber;
-          } else {
-            let nextSeq = groupCounters[groupKey] + 1;
-            while (usedRollNumbers.has(`${rollPrefix}${String(nextSeq).padStart(4, '0')}`)) {
-              nextSeq++;
-            }
-            groupCounters[groupKey] = nextSeq;
-            rollNumber = `${rollPrefix}${String(nextSeq).padStart(4, '0')}`;
-            usedRollNumbers.add(rollNumber);
-          }
+        if (existingCard?.rollNumber) {
+          // Keep existing candidate roll number
+          rollNumber = existingCard.rollNumber;
+        } else if (app.rollNumber && !usedRollNumbers.has(app.rollNumber)) {
+          rollNumber = app.rollNumber;
+          usedRollNumbers.add(rollNumber);
         } else {
           let nextSeq = groupCounters[groupKey] + 1;
           while (usedRollNumbers.has(`${rollPrefix}${String(nextSeq).padStart(4, '0')}`)) {
@@ -140,12 +120,12 @@ export async function POST(request: Request) {
         );
 
         await db.generateOrReleaseAdmitCard({
-          id: 'admit-' + app.id,
+          id: existingCard?.id || ('admit-' + app.id),
           applicationId: app.id,
           applicationNumber: app.registrationNumber || app.applicationNumber,
           rollNumber,
-          candidateName: app.personalInfo.fullName,
-          fatherName: app.parentInfo.fatherName,
+          candidateName: app.personalInfo?.fullName || 'Applicant',
+          fatherName: app.parentInfo?.fatherName || '',
           classApplying: app.classApplying,
           stream: app.stream,
           examCentreName: examDetails.examCentreName,

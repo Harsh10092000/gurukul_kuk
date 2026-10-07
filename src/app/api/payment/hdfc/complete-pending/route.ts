@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { db } from '@/lib/db';
+import { db, toMySqlDatetime } from '@/lib/db';
 import { hashPassword, signToken, getAuthCookieOptions } from '@/lib/auth';
 import { sendNotification, ADMIN_NOTIFICATION_EMAIL } from '@/lib/notifications';
 import { getExamDetailsForGender } from '@/lib/validations';
@@ -178,7 +178,7 @@ export async function POST(request: Request) {
       candidatePhotoUrl: documents?.passportPhoto || undefined,
       isReleased: true,
       instructions,
-      createdAt: new Date().toISOString(),
+      createdAt: toMySqlDatetime(new Date()),
     });
 
     // Update payment order in MySQL

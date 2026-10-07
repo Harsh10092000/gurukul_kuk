@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { db } from '@/lib/db';
+import { db, toMySqlDatetime, safeJsonParse } from '@/lib/db';
 import { hashPassword } from '@/lib/auth';
 import { sendNotification } from '@/lib/notifications';
 import { getExamDetailsForGender } from '@/lib/validations';
@@ -150,7 +150,7 @@ export async function POST(request: Request) {
               'Calculators, smart devices, watches, and mobile phones are strictly prohibited in the exam hall.',
               'Only Blue or Black ballpoint pens are permitted for marking answers.',
             ],
-            createdAt: new Date().toISOString(),
+            createdAt: toMySqlDatetime(new Date()),
           });
 
           if (authUserId && authUserId.startsWith('temp_')) {
