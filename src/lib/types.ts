@@ -233,6 +233,34 @@ export interface SystemSettings {
   helplinePhone: string;
   helplineEmail: string;
   activeStudyLocations?: string[];
+  // Form Schedule & Milestone Controls
+  statusOverride?: 'auto' | 'open' | 'closed' | 'extended';
+  timezone?: string;
+  announcementNotice?: string;
+  reopenedCount?: number;
+  lastUpdated?: string;
+  updatedBy?: string;
+}
+
+export interface FormScheduleConfig {
+  startDate: string; // ISO or YYYY-MM-DDTHH:mm
+  endDate: string;   // ISO or YYYY-MM-DDTHH:mm
+  statusOverride: 'auto' | 'open' | 'closed' | 'extended';
+  timezone: string;  // e.g. 'Asia/Kolkata (IST)'
+  announcementNotice: string;
+  reopenedCount: number;
+  lastUpdated: string;
+  updatedBy: string;
+}
+
+export interface FormStatusResult {
+  isOpen: boolean;
+  status: 'OPEN' | 'CLOSED' | 'UPCOMING' | 'EXTENDED';
+  startDate: string;
+  endDate: string;
+  timezone: string;
+  message: string;
+  announcementNotice: string;
 }
 
 export type AdminNotificationType =

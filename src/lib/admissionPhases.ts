@@ -1,4 +1,4 @@
-﻿export interface AdmissionPhaseInfo {
+export interface AdmissionPhaseInfo {
   phaseId: 'REGISTRATION_UPCOMING' | 'REGISTRATION_ACTIVE' | 'REGISTRATION_EXTENDED' | 'REGISTRATION_CLOSED' | 'ADMIT_CARD_RELEASED' | 'EXAMINATION_PERIOD' | 'RESULTS_DECLARED' | 'COUNSELING_ACTIVE';
   portalOpen: boolean;
   banner: {
@@ -261,6 +261,11 @@ export function resolveAdmissionPhase(input: PhaseDatesInput): AdmissionPhaseInf
         },
       };
       break;
+  }
+
+  // Custom announcement notice override configured in database
+  if (input.customNotice && input.customNotice.trim()) {
+    banner.message = input.customNotice.trim();
   }
 
   // Generate Stage Cards with dynamic status

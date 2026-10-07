@@ -47,7 +47,7 @@ export default function RegisterPage() {
 
   // Check schedule on load
   React.useEffect(() => {
-    fetch('/api/schedule')
+    fetch('/api/schedule', { cache: 'no-store' })
       .then((r) => r.json())
       .then((data) => {
         if (data.details) {

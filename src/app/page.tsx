@@ -76,17 +76,28 @@ export default function ExamPortalGateway() {
   useEffect(() => {
     generateCaptcha();
 
-    fetch('/api/schedule')
+    fetch('/api/schedule', { cache: 'no-store' })
       .then((res) => res.json())
       .then((data) => {
-        if (data.status) {
+        if (data.details) {
+          setSchedule(data.details);
+        } else if (data.status && typeof data.status === 'object') {
           setSchedule(data.status);
+        } else if (data.isOpen !== undefined) {
+          setSchedule({
+            isOpen: Boolean(data.isOpen),
+            status: data.status || 'OPEN',
+            message: data.message || '',
+            startDate: data.startDate,
+            endDate: data.endDate,
+            announcementNotice: data.announcementNotice,
+          });
         }
         setScheduleLoaded(true);
       })
       .catch(() => setScheduleLoaded(true));
 
-    fetch('/api/settings')
+    fetch('/api/settings', { cache: 'no-store' })
       .then((res) => res.json())
       .then((data) => {
         if (data.settings) setPortalSettings(data.settings);
@@ -171,7 +182,8 @@ export default function ExamPortalGateway() {
     academicSession: portalSettings?.academicSession,
     admitCardsReleased: portalSettings?.admitCardsReleased,
     resultsDeclared: portalSettings?.resultsDeclared,
-    statusOverride: schedule?.status === 'EXTENDED' ? 'extended' : undefined,
+    statusOverride: portalSettings?.statusOverride || (schedule?.status === 'EXTENDED' ? 'extended' : (schedule?.status === 'CLOSED' ? 'closed' : undefined)),
+    customNotice: portalSettings?.announcementNotice || schedule?.announcementNotice,
   });
 
   return (

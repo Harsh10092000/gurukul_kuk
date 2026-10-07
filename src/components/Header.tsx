@@ -90,27 +90,31 @@ export default function Header() {
       </div>
 
       {/* Main Brand Bar */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-8 py-3 flex justify-between items-center">
-        <Link href={brandRedirectHref} className="flex items-center gap-3.5 group">
-          <div className="w-12 h-12 sm:w-14 sm:h-14 flex-shrink-0 flex items-center justify-center">
+      <div className="max-w-7xl mx-auto px-4 sm:px-8 py-2 sm:py-2.5 flex justify-between items-center">
+        <Link href={brandRedirectHref} className="flex items-center gap-3 group">
+          <div className="w-12 h-12 sm:w-13 sm:h-13 flex-shrink-0 flex items-center justify-center">
             <Image
               src="/logo-gurukul.png"
               alt="The Gurukul Nilokheri Emblem"
-              width={56}
-              height={56}
+              width={52}
+              height={52}
               priority
               className="brand-logo-img object-contain"
             />
           </div>
           <div>
-            <div className="text-lg sm:text-xl md:text-2xl font-black text-portal-navy tracking-tight leading-none">
+            <div className="text-base sm:text-lg md:text-xl font-black text-portal-navy tracking-tight leading-tight">
               THE GURUKUL NILOKHERI
             </div>
-            <p className="text-xs text-amber-700 font-semibold tracking-wide mt-1">
-              मा प्रगाम पथो वयम् • Modernity with Traditions
+            <p className="text-[11px] sm:text-xs font-semibold text-slate-700 tracking-tight leading-tight mt-0.5">
+              <span className="text-portal-navy">Gurukul Nilokheri for Girls</span>
+              <span className="text-slate-300 mx-1.5">•</span>
+              <span className="text-slate-700">Aryakulam Nilokheri &amp; Gurukul Jyotisar for Boys</span>
             </p>
-            <p className="text-[11px] text-slate-500 hidden sm:block mt-0.5">
-              Entrance Examination &amp; Admission Portal
+            <p className="text-[10px] sm:text-[11px] text-amber-700 font-medium tracking-wide leading-tight mt-0.5">
+              <span>मा प्रगाम पथो वयम् • Modernity with Traditions</span>
+              <span className="text-slate-300 hidden md:inline mx-1.5">|</span>
+              <span className="text-slate-500 hidden md:inline">Entrance Examination &amp; Admission Portal</span>
             </p>
           </div>
         </Link>

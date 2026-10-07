@@ -1,75 +1,57 @@
-import fs from 'fs';
-import path from 'path';
+import { db } from './db';
 import { recordAuditLog } from './audit';
+import { FormScheduleConfig, FormStatusResult } from './types';
 
-export interface FormScheduleConfig {
-  startDate: string; // ISO or YYYY-MM-DDTHH:mm
-  endDate: string;   // ISO or YYYY-MM-DDTHH:mm
-  statusOverride: 'auto' | 'open' | 'closed' | 'extended';
-  timezone: string;  // e.g. 'Asia/Kolkata (IST)'
-  announcementNotice: string;
-  reopenedCount: number;
-  lastUpdated: string;
-  updatedBy: string;
-}
-
-const SCHEDULE_FILE = path.join(process.cwd(), 'data', 'form_schedule.json');
+export type { FormScheduleConfig, FormStatusResult };
 
 const DEFAULT_SCHEDULE: FormScheduleConfig = {
   startDate: '2026-09-01T00:00:00.000Z',
   endDate: '2027-02-12T18:29:59.000Z',
   statusOverride: 'auto',
   timezone: 'Asia/Kolkata (IST)',
-  announcementNotice: 'Online Application for Entrance Examination Session 2027-28 is active for Classes 5th, 6th, 7th, 8th, 9th, 11th & NDA Wing.',
+  announcementNotice: '',
   reopenedCount: 0,
   lastUpdated: new Date().toISOString(),
   updatedBy: 'system',
 };
 
-export function getFormSchedule(): FormScheduleConfig {
+/**
+ * Reads form schedule exclusively from the DATABASE (MySQL system_settings / form_schedules).
+ */
+export async function getFormSchedule(): Promise<FormScheduleConfig> {
   try {
-    const dir = path.dirname(SCHEDULE_FILE);
-    if (!fs.existsSync(dir)) {
-      fs.mkdirSync(dir, { recursive: true });
-    }
-    if (fs.existsSync(SCHEDULE_FILE)) {
-      const data = fs.readFileSync(SCHEDULE_FILE, 'utf-8');
-      return { ...DEFAULT_SCHEDULE, ...JSON.parse(data) };
-    }
+    return await db.getFormSchedule();
   } catch (err) {
-    console.error('Error reading form schedule:', err);
+    console.error('Error reading form schedule from database:', err);
+    return DEFAULT_SCHEDULE;
   }
-  return DEFAULT_SCHEDULE;
-}
-
-export function saveFormSchedule(config: FormScheduleConfig) {
-  try {
-    const dir = path.dirname(SCHEDULE_FILE);
-    if (!fs.existsSync(dir)) {
-      fs.mkdirSync(dir, { recursive: true });
-    }
-    fs.writeFileSync(SCHEDULE_FILE, JSON.stringify(config, null, 2), 'utf-8');
-  } catch (err) {
-    console.error('Error writing form schedule:', err);
-  }
-}
-
-export interface FormStatusResult {
-  isOpen: boolean;
-  status: 'OPEN' | 'CLOSED' | 'UPCOMING' | 'EXTENDED';
-  startDate: string;
-  endDate: string;
-  timezone: string;
-  message: string;
-  announcementNotice: string;
 }
 
 /**
- * Calculates current portal availability based on administrative schedule and time.
- * Evaluated strictly in configured timezone (IST).
+ * Synchronous fallback returns default schedule without touching disk files
  */
-export function checkFormStatus(): FormStatusResult {
-  const schedule = getFormSchedule();
+export function getFormScheduleSync(): FormScheduleConfig {
+  return DEFAULT_SCHEDULE;
+}
+
+/**
+ * Persists form schedule directly into database
+ */
+export function saveFormSchedule(config: FormScheduleConfig) {
+  try {
+    db.updateFormSchedule(config).catch((err) => {
+      console.error('Error writing form schedule to database:', err);
+    });
+  } catch (err) {
+    console.error('Error in saveFormSchedule:', err);
+  }
+}
+
+/**
+ * Evaluates portal availability given a schedule config.
+ * Follows configured timezone (IST).
+ */
+export function evaluateFormStatus(schedule: FormScheduleConfig): FormStatusResult {
   const now = new Date();
   const start = new Date(schedule.startDate);
   let end = new Date(schedule.endDate);
@@ -93,12 +75,12 @@ export function checkFormStatus(): FormStatusResult {
       endDate: schedule.endDate,
       timezone: schedule.timezone,
       message: 'Online Entrance Examination applications are currently closed by administration.',
-      announcementNotice: 'Online Application for Entrance Examination Session 2027-28 is currently closed.',
+      announcementNotice: schedule.announcementNotice || 'Online Application for Entrance Examination Session 2027-28 is currently closed.',
     };
   }
 
-  // If the deadline has passed in IST, the portal is CLOSED unless statusOverride is 'extended'
-  if (now > end && schedule.statusOverride !== 'extended') {
+  // If the deadline has passed in IST, the portal is CLOSED unless statusOverride is 'extended' or 'open'
+  if (now > end && schedule.statusOverride !== 'extended' && schedule.statusOverride !== 'open') {
     return {
       isOpen: false,
       status: 'CLOSED',
@@ -106,7 +88,19 @@ export function checkFormStatus(): FormStatusResult {
       endDate: schedule.endDate,
       timezone: schedule.timezone,
       message: `Online applications closed on ${formattedEnd} (${schedule.timezone}).`,
-      announcementNotice: `Online Application for Entrance Examination Session 2027-28 closed on ${formattedEnd}. Verification of submitted dossiers and roll number allotment in progress.`,
+      announcementNotice: schedule.announcementNotice || `Online Application for Entrance Examination Session 2027-28 closed on ${formattedEnd}. Verification of submitted dossiers and roll number allotment in progress.`,
+    };
+  }
+
+  if (schedule.statusOverride === 'open') {
+    return {
+      isOpen: true,
+      status: 'OPEN',
+      startDate: schedule.startDate,
+      endDate: schedule.endDate,
+      timezone: schedule.timezone,
+      message: `Online applications are open until ${formattedEnd} (${schedule.timezone}).`,
+      announcementNotice: schedule.announcementNotice || `Notice: Online Application for Entrance Examination Session 2027-28 is active. Last date: ${formattedEnd}.`,
     };
   }
 
@@ -118,7 +112,7 @@ export function checkFormStatus(): FormStatusResult {
       endDate: schedule.endDate,
       timezone: schedule.timezone,
       message: `Admission form has been extended until ${formattedEnd} (${schedule.timezone}).`,
-      announcementNotice: `Notice: Online Application for Entrance Examination Session 2027-28 has been extended up to ${formattedEnd}.`,
+      announcementNotice: schedule.announcementNotice || `Notice: Online Application for Entrance Examination Session 2027-28 has been extended up to ${formattedEnd}.`,
     };
   }
 
@@ -131,7 +125,7 @@ export function checkFormStatus(): FormStatusResult {
       endDate: schedule.endDate,
       timezone: schedule.timezone,
       message: `Online applications will commence on ${formattedStart} (${schedule.timezone}).`,
-      announcementNotice: `Online applications will commence on ${formattedStart}.`,
+      announcementNotice: schedule.announcementNotice || `Online applications will commence on ${formattedStart}.`,
     };
   }
 
@@ -142,28 +136,36 @@ export function checkFormStatus(): FormStatusResult {
     endDate: schedule.endDate,
     timezone: schedule.timezone,
     message: `Online applications are currently active until ${formattedEnd} (${schedule.timezone}).`,
-    announcementNotice: `Online Application for Entrance Examination Session 2027-28 is active. Last date: ${formattedEnd}.`,
+    announcementNotice: schedule.announcementNotice || `Online Application for Entrance Examination Session 2027-28 is active. Last date: ${formattedEnd}.`,
   };
 }
 
 /**
- * Administrative action to update schedule or reopen portal.
- * Guaranteed to NEVER delete, reset, or affect existing applications.
+ * Calculates current portal availability based on administrative schedule and time stored in DATABASE.
+ */
+export async function checkFormStatus(customConfig?: Partial<FormScheduleConfig>): Promise<FormStatusResult> {
+  const schedule = await getFormSchedule();
+  const effective = { ...schedule, ...(customConfig || {}) };
+  return evaluateFormStatus(effective);
+}
+
+/**
+ * Synchronous check form status (for sync call sites if any)
+ */
+export function checkFormStatusSync(config?: FormScheduleConfig): FormStatusResult {
+  const schedule = config || getFormScheduleSync();
+  return evaluateFormStatus(schedule);
+}
+
+/**
+ * Administrative action to update schedule or reopen portal directly in the DATABASE.
  */
 export async function updateFormSchedule(
   newConfig: Partial<FormScheduleConfig>,
   adminUser: { id: string; name: string; role: string }
 ): Promise<FormScheduleConfig> {
-  const current = getFormSchedule();
-  const updated: FormScheduleConfig = {
-    ...current,
-    ...newConfig,
-    reopenedCount: newConfig.statusOverride === 'extended' ? current.reopenedCount + 1 : current.reopenedCount,
-    lastUpdated: new Date().toISOString(),
-    updatedBy: `${adminUser.name} (${adminUser.id})`,
-  };
-
-  saveFormSchedule(updated);
+  const current = await getFormSchedule();
+  const updated = await db.updateFormSchedule(newConfig, adminUser);
 
   // Record action in immutable audit trail
   await recordAuditLog({
@@ -180,4 +182,3 @@ export async function updateFormSchedule(
 
   return updated;
 }
-

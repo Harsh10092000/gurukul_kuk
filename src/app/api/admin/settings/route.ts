@@ -35,7 +35,7 @@ export async function POST(req: Request) {
     const currentSettings = await db.getSettings();
     const updatedSettings = await db.updateSettings(body);
 
-    if (body.registrationStartDate || body.registrationEndDate) {
+    if (body.registrationStartDate || body.registrationEndDate || body.statusOverride !== undefined) {
       try {
         const endDateParsed = body.registrationEndDate
           ? (body.registrationEndDate.length === 10
@@ -53,6 +53,9 @@ export async function POST(req: Request) {
           {
             ...(startDateParsed ? { startDate: startDateParsed } : {}),
             ...(endDateParsed ? { endDate: endDateParsed } : {}),
+            ...(body.statusOverride !== undefined ? { statusOverride: body.statusOverride } : {}),
+            ...(body.announcementNotice !== undefined ? { announcementNotice: body.announcementNotice } : {}),
+            ...(body.timezone !== undefined ? { timezone: body.timezone } : {}),
           },
           { id: user.userId, name: user.name, role: user.role }
         );

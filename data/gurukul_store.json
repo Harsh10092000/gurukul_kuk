@@ -57,7 +57,14 @@
       "Gurukul Nilokheri",
       "Gurukul Jyotisar",
       "Aryakulam Nilokheri"
-    ]
+    ],
+    "admitCardsReleased": false,
+    "statusOverride": "auto",
+    "timezone": "Asia/Kolkata (IST)",
+    "announcementNotice": "",
+    "reopenedCount": 0,
+    "lastUpdated": "2026-10-07T15:19:26.667Z",
+    "updatedBy": "system"
   },
   "notifications": [],
   "enquiries": [],

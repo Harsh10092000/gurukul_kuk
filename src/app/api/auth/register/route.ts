@@ -7,7 +7,7 @@ import { recordAuditLog } from '@/lib/audit';
 export async function POST(request: Request) {
   try {
     // 1. Form Schedule Availability Check
-    const formStatus = checkFormStatus();
+    const formStatus = await checkFormStatus();
     if (!formStatus.isOpen) {
       return NextResponse.json(
         { 

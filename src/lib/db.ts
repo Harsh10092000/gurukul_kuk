@@ -9,6 +9,7 @@ import {
   ExamResult, 
   ExamCentre, 
   SystemSettings,
+  FormScheduleConfig,
   AdminNotification,
   ContactEnquiry,
   ContactEnquiryStatus,
@@ -89,6 +90,12 @@ const DEFAULT_SETTINGS: SystemSettings = {
   helplinePhone: '+91 7027849858 / 59',
   helplineEmail: 'thegurukulnilokheri@gmail.com',
   activeStudyLocations: ['Gurukul Nilokheri', 'Gurukul Jyotisar', 'Aryakulam Nilokheri'],
+  statusOverride: 'auto',
+  timezone: 'Asia/Kolkata (IST)',
+  announcementNotice: '',
+  reopenedCount: 0,
+  lastUpdated: new Date().toISOString(),
+  updatedBy: 'system',
 };
 
 const DEFAULT_CENTRES: ExamCentre[] = [
@@ -167,29 +174,12 @@ function initFallbackFile(): FallbackStore {
         parsed.settings = { ...DEFAULT_SETTINGS };
         changed = true;
       } else {
-        if (parsed.settings.applicationFee !== 800) {
-          parsed.settings.applicationFee = 800;
-          changed = true;
-        }
-        if (parsed.settings.entranceExamDate !== '2027-02-14') {
-          parsed.settings.entranceExamDate = '2027-02-14';
-          changed = true;
-        }
-        if (parsed.settings.entranceExamTime !== '9:30 AM (Boys) / 8:30 AM (Girls)') {
-          parsed.settings.entranceExamTime = '9:30 AM (Boys) / 8:30 AM (Girls)';
-          changed = true;
-        }
-        if (parsed.settings.helplinePhone !== '+91 7027849858 / 59') {
-          parsed.settings.helplinePhone = '+91 7027849858 / 59';
-          changed = true;
-        }
-        if (parsed.settings.examVenueName !== 'Aryakulam Nilokheri (Boys) / The Gurukul Nilokheri (Girls)') {
-          parsed.settings.examVenueName = 'Aryakulam Nilokheri (Boys) / The Gurukul Nilokheri (Girls)';
-          changed = true;
-        }
-        if (parsed.settings.examVenueAddress !== 'Nilokheri, Karnal, Haryana - 132117') {
-          parsed.settings.examVenueAddress = 'Nilokheri, Karnal, Haryana - 132117';
-          changed = true;
+        // Ensure defaults for missing keys only, never overwrite admin-configured database values!
+        for (const [key, val] of Object.entries(DEFAULT_SETTINGS)) {
+          if ((parsed.settings as any)[key] === undefined) {
+            (parsed.settings as any)[key] = val;
+            changed = true;
+          }
         }
       }
 
@@ -465,6 +455,12 @@ export async function initDatabase(): Promise<void> {
           { name: 'admit_cards_released_at', type: "VARCHAR(64) DEFAULT NULL" },
           { name: 'results_declared', type: "TINYINT(1) DEFAULT 0" },
           { name: 'portal_open', type: "TINYINT(1) DEFAULT 1" },
+          { name: 'status_override', type: "VARCHAR(32) DEFAULT 'auto'" },
+          { name: 'timezone', type: "VARCHAR(64) DEFAULT 'Asia/Kolkata (IST)'" },
+          { name: 'announcement_notice', type: "TEXT DEFAULT NULL" },
+          { name: 'reopened_count', type: "INT DEFAULT 0" },
+          { name: 'schedule_last_updated', type: "VARCHAR(64) DEFAULT NULL" },
+          { name: 'schedule_updated_by', type: "VARCHAR(128) DEFAULT NULL" },
         ];
         for (const col of columnsToAdd) {
           if (!colNames.includes(col.name)) {
@@ -474,6 +470,20 @@ export async function initDatabase(): Promise<void> {
           }
         }
       }
+
+      await pool.query(`
+        CREATE TABLE IF NOT EXISTS form_schedules (
+          id INT PRIMARY KEY AUTO_INCREMENT,
+          start_date VARCHAR(64) NOT NULL,
+          end_date VARCHAR(64) NOT NULL,
+          status_override VARCHAR(32) DEFAULT 'auto',
+          timezone VARCHAR(64) DEFAULT 'Asia/Kolkata (IST)',
+          announcement_notice TEXT,
+          reopened_count INT DEFAULT 0,
+          last_updated VARCHAR(64),
+          updated_by VARCHAR(128)
+        );
+      `);
 
       const [settingsCount]: any = await pool.query("SELECT COUNT(*) as count FROM system_settings");
       if (!settingsCount || !settingsCount[0] || settingsCount[0].count === 0) {
@@ -2413,6 +2423,12 @@ export const db = {
             helplinePhone: r.helpline_phone || DEFAULT_SETTINGS.helplinePhone,
             helplineEmail: r.helpline_email || DEFAULT_SETTINGS.helplineEmail,
             activeStudyLocations: safeJsonParse(r.active_study_locations, DEFAULT_SETTINGS.activeStudyLocations),
+            statusOverride: (r.status_override as any) || DEFAULT_SETTINGS.statusOverride || 'auto',
+            timezone: r.timezone || DEFAULT_SETTINGS.timezone || 'Asia/Kolkata (IST)',
+            announcementNotice: r.announcement_notice !== null && r.announcement_notice !== undefined ? r.announcement_notice : (DEFAULT_SETTINGS.announcementNotice || ''),
+            reopenedCount: parseInt(r.reopened_count || '0', 10),
+            lastUpdated: r.schedule_last_updated || DEFAULT_SETTINGS.lastUpdated,
+            updatedBy: r.schedule_updated_by || DEFAULT_SETTINGS.updatedBy,
           };
         }
       } catch (e) {
@@ -2507,6 +2523,30 @@ export const db = {
           setClauses.push('active_study_locations = ?');
           values.push(JSON.stringify(settings.activeStudyLocations));
         }
+        if (settings.statusOverride !== undefined) {
+          setClauses.push('status_override = ?');
+          values.push(settings.statusOverride);
+        }
+        if (settings.timezone !== undefined) {
+          setClauses.push('timezone = ?');
+          values.push(settings.timezone);
+        }
+        if (settings.announcementNotice !== undefined) {
+          setClauses.push('announcement_notice = ?');
+          values.push(settings.announcementNotice);
+        }
+        if (settings.reopenedCount !== undefined) {
+          setClauses.push('reopened_count = ?');
+          values.push(settings.reopenedCount);
+        }
+        if (settings.lastUpdated !== undefined) {
+          setClauses.push('schedule_last_updated = ?');
+          values.push(settings.lastUpdated);
+        }
+        if (settings.updatedBy !== undefined) {
+          setClauses.push('schedule_updated_by = ?');
+          values.push(settings.updatedBy);
+        }
 
         if (rows && rows.length > 0) {
           values.push(rows[0].id);
@@ -2517,8 +2557,9 @@ export const db = {
               portal_open, results_declared, admit_cards_released, admit_cards_released_at,
               academic_session, application_fee, registration_start_date, registration_end_date,
               admit_card_release_date, entrance_exam_date, entrance_exam_time, exam_venue_name, exam_venue_address,
-              result_declaration_date, counseling_start_date, helpline_phone, helpline_email, active_study_locations, updated_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+              result_declaration_date, counseling_start_date, helpline_phone, helpline_email, active_study_locations,
+              status_override, timezone, announcement_notice, reopened_count, schedule_last_updated, schedule_updated_by, updated_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
             [
               settings.portalOpen !== undefined ? (settings.portalOpen ? 1 : 0) : 1,
               settings.resultsDeclared !== undefined ? (settings.resultsDeclared ? 1 : 0) : 0,
@@ -2538,11 +2579,60 @@ export const db = {
               settings.helplinePhone || '+91 7027849858 / 59',
               settings.helplineEmail || 'thegurukulnilokheri@gmail.com',
               settings.activeStudyLocations ? JSON.stringify(settings.activeStudyLocations) : JSON.stringify(['Gurukul Nilokheri', 'Gurukul Jyotisar', 'Aryakulam Nilokheri']),
+              settings.statusOverride || 'auto',
+              settings.timezone || 'Asia/Kolkata (IST)',
+              settings.announcementNotice || '',
+              settings.reopenedCount || 0,
+              settings.lastUpdated || new Date().toISOString(),
+              settings.updatedBy || 'system',
               now,
             ]
           );
         }
-        return await this.getSettings();
+
+        // Keep MySQL form_schedules synchronized with system_settings
+        try {
+          const [fsRows]: any = await pool.query('SELECT id FROM form_schedules LIMIT 1');
+          const currentSettings = await this.getSettings();
+          const regStart = currentSettings.registrationStartDate || '2026-09-01';
+          const regEnd = currentSettings.registrationEndDate || '2027-02-12';
+          const regStartIso = regStart.length === 10 ? `${regStart}T00:00:00.000Z` : regStart;
+          const regEndIso = regEnd.length === 10 ? `${regEnd}T18:29:59.000Z` : regEnd;
+
+          if (fsRows && fsRows.length > 0) {
+            await pool.query(
+              'UPDATE form_schedules SET start_date = ?, end_date = ?, status_override = ?, timezone = ?, announcement_notice = ?, reopened_count = ?, last_updated = ?, updated_by = ? WHERE id = ?',
+              [
+                regStartIso,
+                regEndIso,
+                currentSettings.statusOverride || 'auto',
+                currentSettings.timezone || 'Asia/Kolkata (IST)',
+                currentSettings.announcementNotice || '',
+                currentSettings.reopenedCount || 0,
+                currentSettings.lastUpdated || new Date().toISOString(),
+                currentSettings.updatedBy || 'system',
+                fsRows[0].id
+              ]
+            );
+          } else {
+            await pool.query(
+              'INSERT INTO form_schedules (id, start_date, end_date, status_override, timezone, announcement_notice, reopened_count, last_updated, updated_by) VALUES (1, ?, ?, ?, ?, ?, ?, ?, ?)',
+              [
+                regStartIso,
+                regEndIso,
+                currentSettings.statusOverride || 'auto',
+                currentSettings.timezone || 'Asia/Kolkata (IST)',
+                currentSettings.announcementNotice || '',
+                currentSettings.reopenedCount || 0,
+                currentSettings.lastUpdated || new Date().toISOString(),
+                currentSettings.updatedBy || 'system'
+              ]
+            );
+          }
+        } catch {}
+
+        const latest = await this.getSettings();
+        return latest;
       } catch (e) {
         console.warn('MySQL updateSettings error:', e);
       }
@@ -2550,7 +2640,67 @@ export const db = {
     const store = initFallbackFile();
     store.settings = { ...store.settings, ...settings };
     saveFallbackStore(store);
+
     return store.settings;
+  },
+
+  async getFormSchedule(): Promise<FormScheduleConfig> {
+    const s = await this.getSettings();
+    const regStartIso = s.registrationStartDate.length === 10 ? `${s.registrationStartDate}T00:00:00.000Z` : s.registrationStartDate;
+    const regEndIso = s.registrationEndDate.length === 10 ? `${s.registrationEndDate}T18:29:59.000Z` : s.registrationEndDate;
+    return {
+      startDate: regStartIso,
+      endDate: regEndIso,
+      statusOverride: s.statusOverride || 'auto',
+      timezone: s.timezone || 'Asia/Kolkata (IST)',
+      announcementNotice: s.announcementNotice || '',
+      reopenedCount: s.reopenedCount || 0,
+      lastUpdated: s.lastUpdated || new Date().toISOString(),
+      updatedBy: s.updatedBy || 'system',
+    };
+  },
+
+  async updateFormSchedule(
+    config: Partial<FormScheduleConfig>,
+    adminUser?: { id: string; name: string; role: string }
+  ): Promise<FormScheduleConfig> {
+    const current = await this.getFormSchedule();
+    const updated: FormScheduleConfig = {
+      ...current,
+      ...config,
+      reopenedCount: config.statusOverride === 'extended' ? current.reopenedCount + 1 : current.reopenedCount,
+      lastUpdated: new Date().toISOString(),
+      updatedBy: adminUser ? `${adminUser.name} (${adminUser.id})` : (current.updatedBy || 'system'),
+    };
+
+    const toISTDateString = (isoOrDateStr: string): string => {
+      try {
+        const d = new Date(isoOrDateStr);
+        if (!isNaN(d.getTime())) {
+          return new Intl.DateTimeFormat('en-CA', {
+            timeZone: 'Asia/Kolkata',
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit',
+          }).format(d);
+        }
+      } catch { }
+      return isoOrDateStr.slice(0, 10);
+    };
+
+    await this.updateSettings({
+      registrationStartDate: toISTDateString(updated.startDate),
+      registrationEndDate: toISTDateString(updated.endDate),
+      statusOverride: updated.statusOverride,
+      announcementNotice: updated.announcementNotice,
+      timezone: updated.timezone,
+      reopenedCount: updated.reopenedCount,
+      lastUpdated: updated.lastUpdated,
+      updatedBy: updated.updatedBy,
+      portalOpen: updated.statusOverride !== 'closed',
+    });
+
+    return updated;
   },
 
   async getCentres(): Promise<ExamCentre[]> {

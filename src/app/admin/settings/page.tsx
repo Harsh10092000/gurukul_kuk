@@ -108,14 +108,14 @@ export default function AdminSettingsPage() {
   };
 
   const loadSchedule = () => {
-    fetch('/api/schedule')
+    fetch('/api/schedule', { cache: 'no-store' })
       .then((res) => res.json())
       .then((data) => {
         if (data.config) {
           setScheduleConfig({
             ...data.config,
             startDate: formatToISTDateTimeLocal(data.config.startDate, '2026-09-01T00:00'),
-            endDate: formatToISTDateTimeLocal(data.config.endDate, '2026-09-30T23:59'),
+            endDate: formatToISTDateTimeLocal(data.config.endDate, '2027-02-12T23:59'),
           });
         }
         if (data.status) setFormStatus(data.status);
@@ -132,6 +132,13 @@ export default function AdminSettingsPage() {
             ...prev,
             ...data.settings,
           }));
+          if (data.settings.statusOverride) {
+            setScheduleConfig((prev) => ({
+              ...prev,
+              statusOverride: data.settings.statusOverride,
+              announcementNotice: data.settings.announcementNotice !== undefined ? data.settings.announcementNotice : prev.announcementNotice,
+            }));
+          }
           setResultsDeclared(typeof data.settings.resultsDeclared === 'boolean' ? data.settings.resultsDeclared : false);
           setAdmitCardsReleased(typeof data.settings.admitCardsReleased === 'boolean' ? data.settings.admitCardsReleased : false);
         } else {
@@ -173,7 +180,7 @@ export default function AdminSettingsPage() {
         endDate: formatToISTDateTimeLocal(data.config.endDate, scheduleConfig.endDate),
       });
       setFormStatus(data.status);
-      showToast('Form schedule & portal controls updated successfully.', 'success');
+      showToast('Form schedule & portal controls updated in database successfully.', 'success');
       loadAcademicSettings();
     } catch {
       showToast('Network error while saving schedule.', 'error');
@@ -205,7 +212,7 @@ export default function AdminSettingsPage() {
       registrationEndDate: newDateOnlyStr,
     }));
 
-    showToast(`End date extended by ${daysToAdd} days to ${dateFormatted}. Click Save below to commit.`, 'info');
+    showToast(`End date extended by ${daysToAdd} days to ${dateFormatted}. Click Save below to commit to database.`, 'info');
   };
 
   const handleSaveAcademicDates = async (e: React.FormEvent) => {
@@ -216,7 +223,11 @@ export default function AdminSettingsPage() {
       const res = await fetch('/api/admin/settings', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(academicSettings),
+        body: JSON.stringify({
+          ...academicSettings,
+          statusOverride: scheduleConfig.statusOverride,
+          announcementNotice: scheduleConfig.announcementNotice,
+        }),
       });
       const data = await res.json();
 
@@ -226,7 +237,7 @@ export default function AdminSettingsPage() {
       }
 
       setAcademicSettings(data.settings);
-      showToast('Academic milestone dates updated successfully.', 'success');
+      showToast('Academic milestone dates updated in database successfully.', 'success');
       loadSchedule();
       loadAcademicSettings();
     } catch {

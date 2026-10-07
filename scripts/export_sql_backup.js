@@ -3,7 +3,6 @@ const path = require('path');
 
 const storePath = path.join(__dirname, '..', 'data', 'gurukul_store.json');
 const auditPath = path.join(__dirname, '..', 'data', 'audit_logs.json');
-const schedulePath = path.join(__dirname, '..', 'data', 'form_schedule.json');
 const outputPath = path.join(__dirname, '..', 'gurukul_backup.sql');
 const outputCopyPath = path.join(__dirname, '..', 'backup.sql');
 
@@ -20,7 +19,19 @@ function escapeSql(val) {
 function generateBackup() {
   const store = fs.existsSync(storePath) ? JSON.parse(fs.readFileSync(storePath, 'utf-8')) : {};
   const auditLogs = fs.existsSync(auditPath) ? JSON.parse(fs.readFileSync(auditPath, 'utf-8')) : [];
-  const schedule = fs.existsSync(schedulePath) ? JSON.parse(fs.readFileSync(schedulePath, 'utf-8')) : {};
+  const s = store.settings || {};
+  const regStartIso = s.registrationStartDate ? (s.registrationStartDate.length === 10 ? `${s.registrationStartDate}T00:00:00.000Z` : s.registrationStartDate) : '2026-09-01T00:00:00.000Z';
+  const regEndIso = s.registrationEndDate ? (s.registrationEndDate.length === 10 ? `${s.registrationEndDate}T18:29:59.000Z` : s.registrationEndDate) : '2027-02-12T18:29:59.000Z';
+  const schedule = {
+    startDate: regStartIso,
+    endDate: regEndIso,
+    statusOverride: s.statusOverride || 'auto',
+    timezone: s.timezone || 'Asia/Kolkata (IST)',
+    announcementNotice: s.announcementNotice || '',
+    reopenedCount: s.reopenedCount || 0,
+    lastUpdated: s.lastUpdated || new Date().toISOString(),
+    updatedBy: s.updatedBy || 'system',
+  };
 
   const lines = [];
 
@@ -65,7 +76,6 @@ function generateBackup() {
   lines.push(') ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;');
   lines.push('');
 
-  const s = store.settings || {};
   lines.push(`INSERT INTO \`system_settings\` (\`id\`, \`portal_open\`, \`academic_session\`, \`application_fee\`, \`registration_start_date\`, \`registration_end_date\`, \`admit_card_release_date\`, \`entrance_exam_date\`, \`result_declaration_date\`, \`counseling_start_date\`, \`helpline_phone\`, \`helpline_email\`, \`results_declared\`, \`admit_cards_released\`, \`admit_cards_released_at\`) VALUES (1, ${escapeSql(s.portalOpen)}, ${escapeSql(s.academicSession || '2026-2027')}, ${escapeSql(s.applicationFee || 800)}, ${escapeSql(s.registrationStartDate || '2026-09-01')}, ${escapeSql(s.registrationEndDate || '2026-09-30')}, ${escapeSql(s.admitCardReleaseDate || '2026-11-20')}, ${escapeSql(s.entranceExamDate || '2026-12-10')}, ${escapeSql(s.resultDeclarationDate || '2026-12-25')}, ${escapeSql(s.counselingStartDate || '2027-01-10')}, ${escapeSql(s.helplinePhone)}, ${escapeSql(s.helplineEmail)}, ${escapeSql(s.resultsDeclared)}, ${escapeSql(s.admitCardsReleased)}, ${escapeSql(s.admitCardsReleasedAt)});`);
   lines.push('');
 

@@ -199,7 +199,7 @@ export async function sendNotification(payload: NotificationPayload) {
 
     case 'ADMIN_NEW_REGISTRATION_ALERT':
       subject = `New Member Registered & Fee Paid: ${data.fullName} (${data.registrationNumber})`;
-      message = `New candidate registration alert: ${data.fullName} has registered for ${data.classApplying} with Registration ID ${data.registrationNumber}. Fee of Rs. ${data.amountPaid || 800} received (Txn: ${data.transactionId}). Candidate Email: ${data.candidateEmail}, Mobile: ${data.candidateMobile}, Father: ${data.fatherName} (${data.fatherPhone}).`;
+      message = `New candidate registration alert: ${data.fullName} has registered for ${data.classApplying} with Registration ID ${data.registrationNumber}. Fee of Rs. ${data.amountPaid || 800} received (Txn: ${data.transactionId}). Father: ${data.fatherName}.`;
       htmlContent = `
         <!DOCTYPE html>
         <html>
@@ -239,10 +239,7 @@ export async function sendNotification(payload: NotificationPayload) {
                 <tr><td>Receipt Number</td><td>${cleanVal(data.receiptNumber)}</td></tr>
                 <tr><td>Candidate Name</td><td>${cleanVal(data.fullName || name)}</td></tr>
                 <tr><td>Class Applying</td><td>${cleanVal(data.classApplying)}</td></tr>
-                <tr><td>Candidate Email</td><td><a href="mailto:${cleanVal(data.candidateEmail, '')}">${cleanVal(data.candidateEmail)}</a></td></tr>
-                <tr><td>Candidate Mobile</td><td>${cleanVal(data.candidateMobile)}</td></tr>
                 <tr><td>Father's Name</td><td>${cleanVal(data.fatherName)}</td></tr>
-                <tr><td>Father's Mobile</td><td>${cleanVal(data.fatherPhone)}</td></tr>
                 <tr><td>Mother's Name</td><td>${cleanVal(data.motherName)}</td></tr>
                 <tr><td>Date of Birth</td><td>${cleanVal(data.dob)}</td></tr>
                 <tr><td>Gender & Category</td><td>${cleanVal(data.gender)} / ${cleanVal(data.category)}</td></tr>
