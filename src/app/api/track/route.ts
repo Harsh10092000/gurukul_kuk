@@ -99,6 +99,16 @@ export async function GET(request: Request) {
     const isAdmitCardReleased = settings.admitCardsReleased === true;
     const isResultsDeclared = settings.resultsDeclared === true;
 
+    // Check if entrance exam date has passed
+    let isExamDatePassed = false;
+    if (settings.entranceExamDate) {
+      const examDateObj = new Date(settings.entranceExamDate);
+      examDateObj.setHours(23, 59, 59, 999);
+      if (!isNaN(examDateObj.getTime()) && Date.now() > examDateObj.getTime()) {
+        isExamDatePassed = true;
+      }
+    }
+
     // Mask phone for public display
     const rawMobile = matchingApp.personalInfo?.candidateMobile || matchingApp.parentInfo?.fatherPhone || '';
     const maskedMobile = rawMobile.length >= 10
@@ -116,10 +126,12 @@ export async function GET(request: Request) {
       {
         id: 'registration_fee',
         title: 'Online Registration & Fee',
-        subtitle: matchingApp.paymentStatus === 'paid' ? '₹800 Entrance Fee Received' : 'Payment Pending',
-        status: matchingApp.paymentStatus === 'paid' ? 'completed' : 'pending',
+        subtitle: matchingApp.paymentStatus === 'paid' || matchingApp.paymentStatus === 'completed'
+          ? '₹800 Entrance Fee Received'
+          : 'Payment Pending',
+        status: matchingApp.paymentStatus === 'paid' || matchingApp.paymentStatus === 'completed' ? 'completed' : 'pending',
         date: formatDateString(matchingApp.createdAt, '01 Sep 2026'),
-        details: matchingApp.paymentStatus === 'paid'
+        details: matchingApp.paymentStatus === 'paid' || matchingApp.paymentStatus === 'completed'
           ? `Paid via Online Gateway (Ref: ${matchingApp.transactionId || 'TXN-CONFIRMED'})`
           : 'Entrance examination registration fee of ₹800 is pending.',
       },
@@ -129,49 +141,34 @@ export async function GET(request: Request) {
         subtitle: 'Candidate dossier & certificates',
         status: 'completed',
         date: formatDateString(matchingApp.createdAt, '01 Sep 2026'),
-        details: 'Dossier successfully submitted with candidate photograph, student signature, and Aadhaar card.',
+        details: 'Dossier successfully submitted with candidate photograph, student signature, and details.',
       },
       {
-        id: 'scrutiny',
-        title: 'Document Scrutiny & Verification',
-        subtitle: matchingApp.status === 'approved'
-          ? 'Verified & Approved'
-          : matchingApp.status === 'correction_needed'
-            ? 'Correction Required'
-            : matchingApp.status === 'rejected'
-              ? 'Application Rejected'
-              : 'Under Administrative Scrutiny',
-        status: matchingApp.status === 'approved'
-          ? 'completed'
-          : matchingApp.status === 'correction_needed'
-            ? 'action_needed'
-            : matchingApp.status === 'rejected'
-              ? 'rejected'
-              : 'in_progress',
-        details: matchingApp.remarks || (
-          matchingApp.status === 'approved'
-            ? 'Candidate credentials, eligibility, and category verified by Gurukul Admission Cell.'
-            : 'Dossier is undergoing scrutiny by Admission Officers.'
-        ),
+        id: 'registration_confirmation',
+        title: 'Registration & Payment Confirmation',
+        subtitle: 'Registered with Payment Confirmed',
+        status: 'completed',
+        date: formatDateString(matchingApp.createdAt, '01 Sep 2026'),
+        details: 'Candidate registration is confirmed with verified fee payment. Eligible for entrance examination.',
       },
       {
         id: 'admit_card',
         title: 'Roll Number & Hall Ticket',
         subtitle: isAdmitCardReleased && (matchingApp.rollNumber || admitCard?.rollNumber)
-          ? `Roll No: ${matchingApp.rollNumber || admitCard?.rollNumber} (Available)`
+          ? `Admit Card is Released (Roll No: ${matchingApp.rollNumber || admitCard?.rollNumber})`
           : `Scheduled for ${formatDateString(settings.admitCardReleaseDate, '20 Nov 2026')}`,
         status: isAdmitCardReleased && (matchingApp.rollNumber || admitCard?.rollNumber)
           ? 'completed'
           : 'scheduled',
         details: isAdmitCardReleased
           ? 'Hall Ticket / Admit Card is officially released and ready to download.'
-          : 'Roll numbers are allotted post scrutiny. Admit cards will be available on the scheduled release date.',
+          : 'Admit cards will be available on the scheduled release date.',
       },
       {
         id: 'examination',
         title: 'Written Entrance Examination',
         subtitle: formatDateString(settings.entranceExamDate, '10 December 2026'),
-        status: 'scheduled',
+        status: isExamDatePassed ? 'completed' : 'scheduled',
         details: admitCard?.examCentreName
           ? `Venue: ${admitCard.examCentreName} (${admitCard.reportingTime || '08:30 AM'})`
           : `Exam scheduled on ${formatDateString(settings.entranceExamDate, '10 Dec 2026')} across designated Gurukul centers.`,
@@ -180,12 +177,16 @@ export async function GET(request: Request) {
         id: 'result',
         title: 'Entrance Examination Result',
         subtitle: isResultsDeclared
-          ? (examResult?.qualifyingStatus || 'Result Declared')
-          : `Scheduled for ${formatDateString(settings.resultDeclarationDate, '25 Dec 2026')}`,
+          ? (examResult?.qualifyingStatus || 'Result Has Been Declared')
+          : (isExamDatePassed
+            ? 'Results Yet to Be Declared'
+            : `Scheduled for ${formatDateString(settings.resultDeclarationDate, '25 Dec 2026')}`),
         status: isResultsDeclared ? 'completed' : 'scheduled',
         details: isResultsDeclared && examResult
           ? (examResult.remarks ? `Status: ${examResult.qualifyingStatus} - ${examResult.remarks}` : `Status: ${examResult.qualifyingStatus}`)
-          : 'Result will be published post examination evaluation.',
+          : (isExamDatePassed
+            ? 'Entrance examination concluded. Results are yet to be declared.'
+            : 'Result will be published post examination evaluation.'),
       },
     ];
 
@@ -200,6 +201,7 @@ export async function GET(request: Request) {
       transactionId: matchingApp.transactionId || null,
       remarks: matchingApp.remarks || null,
       createdAt: matchingApp.createdAt,
+      isExamDatePassed,
       personalInfo: {
         fullName: matchingApp.personalInfo?.fullName || 'Candidate',
         fatherName: matchingApp.parentInfo?.fatherName || 'Parent / Guardian',
@@ -230,7 +232,7 @@ export async function GET(request: Request) {
         remarks: examResult.remarks,
         resultUrl: `/result?rollNo=${encodeURIComponent(matchingApp.rollNumber || '')}`,
       } : {
-        declared: false,
+        declared: isResultsDeclared,
         scheduledDate: formatDateString(settings.resultDeclarationDate, '25 December 2026'),
       },
       milestones,

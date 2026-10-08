@@ -17,7 +17,7 @@ export default function ContactPage() {
     email: '',
     phone: '',
     applicationNumber: '',
-    subject: 'Admission Process & Eligibility',
+    subject: '',
     message: '',
   });
 
@@ -46,6 +46,11 @@ export default function ContactPage() {
       return;
     }
 
+    if (!formData.subject.trim() || formData.subject.trim().length < 3) {
+      setErrorMsg('Please enter an enquiry subject (minimum 3 characters).');
+      return;
+    }
+
     if (!formData.message.trim() || formData.message.trim().length < 10) {
       setErrorMsg('Please describe your enquiry in detail (minimum 10 characters).');
       return;
@@ -61,7 +66,7 @@ export default function ContactPage() {
           email: formData.email.trim().toLowerCase(),
           phone: cleanPhone,
           applicationNumber: formData.applicationNumber.trim() || undefined,
-          subject: formData.subject,
+          subject: formData.subject.trim(),
           message: formData.message.trim(),
         }),
       });
@@ -74,7 +79,7 @@ export default function ContactPage() {
           email: '',
           phone: '',
           applicationNumber: '',
-          subject: 'Admission Process & Eligibility',
+          subject: '',
           message: '',
         });
       } else {
@@ -171,7 +176,7 @@ export default function ContactPage() {
                 Registered Candidates
               </h4>
               <p className="text-slate-600 leading-normal">
-                Already submitted an entrance application? You can track scrutiny status or retrieve your registration number directly.
+                Already submitted an entrance application? You can track your application status or retrieve your registration number directly.
               </p>
               <div className="flex flex-wrap gap-2 pt-1">
                 <Link
@@ -303,20 +308,14 @@ export default function ContactPage() {
                   <label className="form-label">
                     Enquiry Subject <span className="text-rose-500">*</span>
                   </label>
-                  <select
+                  <input
+                    type="text"
+                    required
                     value={formData.subject}
                     onChange={(e) => setFormData({ ...formData, subject: e.target.value })}
+                    placeholder="Enter your enquiry subject..."
                     className="form-input-field"
-                  >
-                    <option value="Admission Process & Eligibility">Admission Process &amp; Eligibility</option>
-                    <option value="Document Verification Query">Document Verification Query</option>
-                    <option value="Entrance Syllabus & Examination Pattern">Entrance Syllabus &amp; Examination Pattern</option>
-                    <option value="Exam Centre Allotment & Hall Ticket">Exam Centre Allotment &amp; Hall Ticket</option>
-                    <option value="Application Fee Payment & Verification">Application Fee Payment &amp; Verification</option>
-                    <option value="Hostel & Residential Facilities">Hostel &amp; Residential Facilities</option>
-                    <option value="NDA Wing Specialized Training">NDA Wing Specialized Training</option>
-                    <option value="Other General Enquiry">Other General Enquiry</option>
-                  </select>
+                  />
                 </div>
 
                 <div>

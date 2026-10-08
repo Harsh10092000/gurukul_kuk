@@ -405,8 +405,7 @@ export default function ApplicationVerificationPage({ params }: { params: { id: 
               {[
                 { key: 'photo', title: '1. Candidate Photograph', defaultHeight: 'h-40' },
                 { key: 'signature', title: '2. Candidate Signature', defaultHeight: 'h-20' },
-                { key: 'parentSignature', title: '3. Parent Signature', defaultHeight: 'h-20' },
-                { key: 'aadhaarCard', title: '4. Aadhaar / ID Proof', defaultHeight: 'h-32' },
+                { key: 'aadhaarCard', title: '3. Aadhaar / ID Proof', defaultHeight: 'h-32' },
               ].map((docItem) => {
                 const docUrl = (application.documents as any)?.[docItem.key];
                 const isPdf = docUrl && (docUrl.startsWith('data:application/pdf') || docUrl.toLowerCase().endsWith('.pdf'));

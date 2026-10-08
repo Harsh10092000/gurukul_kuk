@@ -225,7 +225,7 @@ export async function POST(request: Request) {
     }
 
     // 9. File Content, Size (<=2MB), MIME & Magic Bytes Validation
-    for (const docKey of ['photo', 'signature', 'parentSignature', 'aadhaarCard']) {
+    for (const docKey of ['photo', 'signature', 'aadhaarCard']) {
       const fileVal = validateUploadedFile(documents[docKey], docKey);
       if (!fileVal.isValid) {
         return NextResponse.json({ error: fileVal.error }, { status: 400 });
@@ -255,7 +255,7 @@ export async function POST(request: Request) {
       studyLocationPref: finalStudyPref,
       examCentrePref: finalStudyPref,
       documents: documents || {},
-      status: 'submitted',
+      status: 'approved',
       paymentStatus: 'completed',
       amountPaid: amountPaid || 800,
       transactionId: transactionId || 'TXN_GUR_' + Math.random().toString(36).substring(2, 9).toUpperCase(),

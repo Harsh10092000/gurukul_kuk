@@ -1,12 +1,22 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Download, Loader2, RefreshCw } from 'lucide-react';
+import { Download, FileSpreadsheet, FolderArchive, Loader2, RefreshCw } from 'lucide-react';
 
 export default function AdminReportsPage() {
   const [stats, setStats] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [downloading, setDownloading] = useState(false);
+
+  // Class Summary Excel State (with Date Range)
+  const [summaryStartDate, setSummaryStartDate] = useState('');
+  const [summaryEndDate, setSummaryEndDate] = useState('');
+  const [downloadingSummary, setDownloadingSummary] = useState(false);
+
+  // Bulk Documents ZIP Download State (with Class & Stream selection)
+  const [docClass, setDocClass] = useState('all');
+  const [docStream, setDocStream] = useState('all');
+  const [downloadingDocs, setDownloadingDocs] = useState(false);
 
   const fetchStats = () => {
     setLoading(true);
@@ -44,6 +54,59 @@ export default function AdminReportsPage() {
     }
   };
 
+  const handleDownloadClassSummary = async () => {
+    setDownloadingSummary(true);
+    try {
+      const params = new URLSearchParams();
+      if (summaryStartDate) params.set('startDate', summaryStartDate);
+      if (summaryEndDate) params.set('endDate', summaryEndDate);
+      params.set('format', 'xlsx');
+
+      const res = await fetch(`/api/admin/reports/class-summary?${params.toString()}`);
+      if (!res.ok) throw new Error('Failed to generate summary');
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `The_Gurukul_Class_Summary_${summaryStartDate || 'All'}_to_${summaryEndDate || 'Latest'}.xlsx`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+    } catch (err) {
+      console.error('Error downloading class summary:', err);
+      alert('Could not download class summary report. Please try again.');
+    } finally {
+      setDownloadingSummary(false);
+    }
+  };
+
+  const handleDownloadBulkDocs = async () => {
+    setDownloadingDocs(true);
+    try {
+      const params = new URLSearchParams();
+      params.set('class', docClass);
+      params.set('stream', docStream);
+
+      const res = await fetch(`/api/admin/documents/bulk-download?${params.toString()}`);
+      if (!res.ok) throw new Error('Failed to download documents');
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `Gurukul_Candidate_Docs_${docClass.replace(/\s+/g, '_')}_${docStream.replace(/\s+/g, '_')}_${Date.now()}.zip`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+    } catch (err) {
+      console.error('Error downloading bulk documents:', err);
+      alert('Could not download candidate documents. Please try again.');
+    } finally {
+      setDownloadingDocs(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="py-20 text-center space-y-3">
@@ -75,6 +138,170 @@ export default function AdminReportsPage() {
         </button>
       </div>
 
+      {/* Reports & Bulk Download Centre */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Card 1: Class & Stream Summary Excel with Date Range */}
+        <div className="portal-card p-5 sm:p-6 space-y-4 border-t-4 border-t-emerald-600">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <div className="flex items-center gap-2">
+                <FileSpreadsheet className="w-5 h-5 text-emerald-600" />
+                <h3 className="font-bold text-slate-900 text-sm sm:text-base">
+                  Class &amp; Section Summary Report (Excel)
+                </h3>
+              </div>
+              <p className="text-xs text-slate-500 mt-1 leading-relaxed">
+                Download candidate breakdown by Class &amp; Stream (Registered, Approved, Withdrawn, and Total) formatted for official administration.
+              </p>
+            </div>
+            <span className="portal-badge-emerald text-[10px] shrink-0 font-mono font-bold">.XLSX</span>
+          </div>
+
+          <div className="bg-slate-50 border border-slate-200 rounded-lg p-3 space-y-2">
+            <span className="text-[11px] font-bold text-slate-700 block uppercase tracking-wide">
+              Select Registration Date Range:
+            </span>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label className="text-[10px] font-semibold text-slate-500 block mb-1">From Date</label>
+                <input
+                  type="date"
+                  value={summaryStartDate}
+                  onChange={(e) => setSummaryStartDate(e.target.value)}
+                  className="form-input-field text-xs py-1.5 bg-white"
+                />
+              </div>
+              <div>
+                <label className="text-[10px] font-semibold text-slate-500 block mb-1">To Date</label>
+                <input
+                  type="date"
+                  value={summaryEndDate}
+                  onChange={(e) => setSummaryEndDate(e.target.value)}
+                  className="form-input-field text-xs py-1.5 bg-white"
+                />
+              </div>
+            </div>
+          </div>
+
+          <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-slate-100">
+            <div className="flex items-center gap-2 text-xs">
+              {(summaryStartDate || summaryEndDate) ? (
+                <button
+                  type="button"
+                  onClick={() => { setSummaryStartDate(''); setSummaryEndDate(''); }}
+                  className="text-rose-600 hover:text-rose-700 font-medium text-[11px] underline"
+                >
+                  Clear Date Filter
+                </button>
+              ) : (
+                <span className="text-slate-400 text-[11px]">Filter: All Time Registrations</span>
+              )}
+            </div>
+            <button
+              type="button"
+              onClick={handleDownloadClassSummary}
+              disabled={downloadingSummary}
+              className="btn-primary text-xs py-2 px-4 flex items-center gap-2 font-bold shadow-sm"
+            >
+              {downloadingSummary ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin text-amber-300" />
+                  <span>Generating Excel...</span>
+                </>
+              ) : (
+                <>
+                  <Download className="w-4 h-4" />
+                  <span>Download Summary Excel (.xlsx)</span>
+                </>
+              )}
+            </button>
+          </div>
+        </div>
+
+        {/* Card 2: Bulk Candidate Documents Download (.ZIP) */}
+        <div className="portal-card p-5 sm:p-6 space-y-4 border-t-4 border-t-portal-navy">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <div className="flex items-center gap-2">
+                <FolderArchive className="w-5 h-5 text-portal-navy" />
+                <h3 className="font-bold text-slate-900 text-sm sm:text-base">
+                  Bulk Candidate Documents Archive (.ZIP)
+                </h3>
+              </div>
+              <p className="text-xs text-slate-500 mt-1 leading-relaxed">
+                Download Candidate Photograph, Signature, Aadhaar Card, and verified Dossier Profile files packaged per Class &amp; Stream.
+              </p>
+            </div>
+            <span className="portal-badge-navy text-[10px] shrink-0 font-mono font-bold">.ZIP</span>
+          </div>
+
+          <div className="bg-slate-50 border border-slate-200 rounded-lg p-3 space-y-2">
+            <span className="text-[11px] font-bold text-slate-700 block uppercase tracking-wide">
+              Filter by Class &amp; Stream:
+            </span>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label className="text-[10px] font-semibold text-slate-500 block mb-1">Applying Class</label>
+                <select
+                  value={docClass}
+                  onChange={(e) => setDocClass(e.target.value)}
+                  className="form-input-field text-xs py-1.5 bg-white"
+                >
+                  <option value="all">All Classes</option>
+                  <option value="Class 5">Class 5</option>
+                  <option value="Class 6">Class 6</option>
+                  <option value="Class 7">Class 7</option>
+                  <option value="Class 8">Class 8</option>
+                  <option value="Class 9">Class 9</option>
+                  <option value="Class 11">Class 11</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="text-[10px] font-semibold text-slate-500 block mb-1">
+                  Stream / Section {docClass === 'Class 11' && <span className="text-rose-500 font-bold">*</span>}
+                </label>
+                <select
+                  value={docStream}
+                  onChange={(e) => setDocStream(e.target.value)}
+                  disabled={docClass !== 'Class 11' && docClass !== 'all'}
+                  className="form-input-field text-xs py-1.5 bg-white disabled:bg-slate-100 disabled:text-slate-400"
+                >
+                  <option value="all">All Streams</option>
+                  <option value="Non-Medical">Non-Medical (PCM)</option>
+                  <option value="Medical">Medical (PCB)</option>
+                  <option value="Commerce">Commerce</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-slate-100">
+            <span className="text-[11px] text-slate-500">
+              Includes Photo, Signature &amp; Aadhaar Card
+            </span>
+            <button
+              type="button"
+              onClick={handleDownloadBulkDocs}
+              disabled={downloadingDocs}
+              className="btn-accent text-xs py-2 px-4 flex items-center gap-2 font-bold shadow-sm"
+            >
+              {downloadingDocs ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin text-slate-900" />
+                  <span>Compressing Archive...</span>
+                </>
+              ) : (
+                <>
+                  <Download className="w-4 h-4" />
+                  <span>Download Bulk Documents (.zip)</span>
+                </>
+              )}
+            </button>
+          </div>
+        </div>
+      </div>
+
       {/* Export Action Card */}
       <div className="portal-card p-5 sm:p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-l-4 border-l-portal-navy">
         <div className="space-y-1 max-w-xl">
@@ -89,7 +316,7 @@ export default function AdminReportsPage() {
           type="button"
           onClick={handleDownload}
           disabled={downloading}
-          className="btn-primary text-xs sm:text-sm py-2.5 px-5 flex items-center justify-center gap-2 shrink-0 disabled:opacity-75"
+          className="btn-secondary text-xs sm:text-sm py-2.5 px-5 flex items-center justify-center gap-2 shrink-0 disabled:opacity-75"
         >
           {downloading ? (
             <>
@@ -99,7 +326,7 @@ export default function AdminReportsPage() {
           ) : (
             <>
               <Download className="w-4 h-4" />
-              <span>Download Master Register (CSV / Excel)</span>
+              <span>Download Full Master Register (CSV)</span>
             </>
           )}
         </button>

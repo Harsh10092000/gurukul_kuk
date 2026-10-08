@@ -111,7 +111,7 @@ export async function POST(request: Request) {
             studyLocationPref,
             examCentrePref: studyLocationPref,
             documents: documents || {},
-            status: 'submitted',
+            status: 'approved',
             paymentStatus: 'completed',
             amountPaid: 800,
             transactionId: statusResponse.txn_id || orderId,

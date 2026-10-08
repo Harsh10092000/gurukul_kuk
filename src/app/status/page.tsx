@@ -27,6 +27,7 @@ interface ApplicationTrackerData {
   transactionId: string | null;
   remarks: string | null;
   createdAt: string;
+  isExamDatePassed?: boolean;
   personalInfo: {
     fullName: string;
     fatherName: string;
@@ -56,6 +57,7 @@ interface ApplicationTrackerData {
     percentage?: number;
     rank?: number;
     qualifyingStatus?: string;
+    remarks?: string;
     scorecardUrl?: string;
     scheduledDate?: string;
   };
@@ -147,109 +149,99 @@ export default function StatusPage() {
   };
 
   const getStatusDetails = (app: ApplicationTrackerData) => {
+    // 4. Result Declared
+    if (app.result?.declared) {
+      return {
+        badge: 'Result Declared',
+        badgeStyle: 'bg-emerald-50 text-emerald-800 border-emerald-200',
+        badgeDot: 'bg-emerald-600',
+        cardStyle: 'bg-emerald-50/70 border-emerald-200',
+        icon: Award,
+        iconBg: 'bg-emerald-100 text-emerald-700',
+        title: 'Result Has Been Declared',
+        description: app.result.qualifyingStatus
+          ? `Entrance examination result has been declared. Result Status: ${app.result.qualifyingStatus}${app.result.remarks ? ` (${app.result.remarks})` : ''}.`
+          : 'Entrance examination results have been officially declared.',
+        nextStep: 'Check your scorecard and merit ranking via the candidate portal.',
+      };
+    }
+
+    // 3. Exam date passed and result not declared
+    const examDatePassed = Boolean(
+      app.isExamDatePassed ||
+      (app.admitCard?.examDate && !isNaN(new Date(app.admitCard.examDate).getTime()) && Date.now() > new Date(app.admitCard.examDate).getTime())
+    );
+
+    if (examDatePassed && !app.result?.declared) {
+      return {
+        badge: 'Results Yet to Be Declared',
+        badgeStyle: 'bg-amber-50 text-amber-900 border-amber-300',
+        badgeDot: 'bg-amber-600',
+        cardStyle: 'bg-amber-50/80 border-amber-300',
+        icon: Clock,
+        iconBg: 'bg-amber-100 text-amber-700',
+        title: 'Results Yet to Be Declared',
+        description: 'The written entrance examination has concluded. Evaluation is in progress and results are yet to be declared.',
+        nextStep: 'Official results will be announced soon. Please check this portal regularly for updates.',
+      };
+    }
+
+    // 2. Admit card released
     if (app.admitCard?.available) {
       return {
-        badge: 'Admit Card Ready',
+        badge: 'Admit Card Released',
         badgeStyle: 'bg-indigo-50 text-indigo-800 border-indigo-200',
         badgeDot: 'bg-indigo-600',
         cardStyle: 'bg-indigo-50/70 border-indigo-200',
         icon: Download,
         iconBg: 'bg-indigo-100 text-indigo-700',
-        title: 'Entrance Admit Card Released',
+        title: 'Admit Card is Released',
         description: 'Your Entrance Examination Roll Number has been allotted and the official Admit Card / Hall Ticket is ready to download.',
         nextStep: 'Download and print your coloured Admit Card and carry it along with an original Photo ID to the exam centre.',
       };
     }
-    switch (app.status) {
-      case 'approved':
-        return {
-          badge: 'Verified & Approved',
-          badgeStyle: 'bg-emerald-50 text-emerald-800 border-emerald-200',
-          badgeDot: 'bg-emerald-600',
-          cardStyle: 'bg-emerald-50/70 border-emerald-200',
-          icon: CheckCircle2,
-          iconBg: 'bg-emerald-100 text-emerald-700',
-          title: 'Application Verified & Approved',
-          description: 'Your candidate dossier, eligibility criteria, and submitted documents have been successfully verified and approved by the Gurukul Admission Cell.',
-          nextStep: 'Roll number generation and Admit Card release will follow as per the admission schedule.',
-        };
-      case 'correction_needed':
-        return {
-          badge: 'Correction Required',
-          badgeStyle: 'bg-amber-50 text-amber-900 border-amber-300',
-          badgeDot: 'bg-amber-600',
-          cardStyle: 'bg-amber-50/80 border-amber-300',
-          icon: AlertTriangle,
-          iconBg: 'bg-amber-100 text-amber-700',
-          title: 'Action Required: Discrepancy Flagged',
-          description: app.remarks || 'The scrutiny team has identified discrepancies in your application details or uploaded certificates. Please log in to your portal to rectify the issues.',
-          nextStep: 'Log in to the Candidate Portal to update your required documents or information.',
-        };
-      case 'rejected':
-        return {
-          badge: 'Application Rejected',
-          badgeStyle: 'bg-rose-50 text-rose-800 border-rose-200',
-          badgeDot: 'bg-rose-600',
-          cardStyle: 'bg-rose-50/70 border-rose-200',
-          icon: AlertCircle,
-          iconBg: 'bg-rose-100 text-rose-700',
-          title: 'Application Not Approved',
-          description: app.remarks || 'Your application does not fulfill the admission criteria for Session 2027-28.',
-          nextStep: 'Contact The Gurukul Admission Helpdesk (+91 7027849858 / 59) for further inquiries.',
-        };
-      case 'submitted':
-      case 'under_review':
-      default:
-        return {
-          badge: 'Under Scrutiny',
-          badgeStyle: 'bg-blue-50 text-blue-900 border-blue-200',
-          badgeDot: 'bg-blue-600',
-          cardStyle: 'bg-blue-50/70 border-blue-200',
-          icon: Clock,
-          iconBg: 'bg-blue-100 text-blue-700',
-          title: 'Under Administrative Scrutiny',
-          description: 'Your admission form has been received with confirmed fee payment. Candidate dossier, photograph, and documents are currently undergoing verification by the Admission Scrutiny Committee.',
-          nextStep: 'No action required from candidate at this time. Admit card and roll number will be issued once scrutiny is complete.',
-        };
-    }
-  };
 
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case 'approved':
-        return {
-          label: 'Verified & Approved',
-          style: 'bg-emerald-50 text-emerald-800 border-emerald-200',
-          dot: 'bg-emerald-600',
-        };
-      case 'correction_needed':
-        return {
-          label: 'Correction Required',
-          style: 'bg-amber-50 text-amber-900 border-amber-300',
-          dot: 'bg-amber-600',
-        };
-      case 'rejected':
-        return {
-          label: 'Application Rejected',
-          style: 'bg-rose-50 text-rose-800 border-rose-200',
-          dot: 'bg-rose-600',
-        };
-      case 'admit_card_ready':
-      case 'admitted':
-        return {
-          label: 'Admit Card Ready',
-          style: 'bg-blue-50 text-blue-800 border-blue-200',
-          dot: 'bg-blue-600',
-        };
-      case 'submitted':
-      case 'under_review':
-      default:
-        return {
-          label: 'Under Scrutiny',
-          style: 'bg-slate-100 text-slate-800 border-slate-300',
-          dot: 'bg-portal-navy',
-        };
+    // Specific administrative exceptions
+    if (app.status === 'correction_needed') {
+      return {
+        badge: 'Correction Required',
+        badgeStyle: 'bg-amber-50 text-amber-900 border-amber-300',
+        badgeDot: 'bg-amber-600',
+        cardStyle: 'bg-amber-50/80 border-amber-300',
+        icon: AlertTriangle,
+        iconBg: 'bg-amber-100 text-amber-700',
+        title: 'Action Required: Information Update',
+        description: app.remarks || 'Additional information or documents are needed for your application. Please log in to your portal.',
+        nextStep: 'Log in to the Candidate Portal to update your required documents or information.',
+      };
     }
+
+    if (app.status === 'rejected') {
+      return {
+        badge: 'Application Rejected',
+        badgeStyle: 'bg-rose-50 text-rose-800 border-rose-200',
+        badgeDot: 'bg-rose-600',
+        cardStyle: 'bg-rose-50/70 border-rose-200',
+        icon: AlertCircle,
+        iconBg: 'bg-rose-100 text-rose-700',
+        title: 'Application Not Approved',
+        description: app.remarks || 'Your application does not fulfill the admission criteria for Session 2027-28.',
+        nextStep: 'Contact The Gurukul Admission Helpdesk (+91 7027849858 / 59) for further inquiries.',
+      };
+    }
+
+    // 1. Registered with payment confirmed (default state)
+    return {
+      badge: 'Payment Confirmed',
+      badgeStyle: 'bg-emerald-50 text-emerald-800 border-emerald-200',
+      badgeDot: 'bg-emerald-600',
+      cardStyle: 'bg-emerald-50/70 border-emerald-200',
+      icon: CheckCircle2,
+      iconBg: 'bg-emerald-100 text-emerald-700',
+      title: 'You are Registered with Payment Confirmed',
+      description: 'Your admission form has been received with confirmed fee payment. Candidate dossier and submitted details are successfully recorded.',
+      nextStep: 'No action required from candidate at this time. Admit card and roll number will be issued once released as per the schedule.',
+    };
   };
 
   const statusInfo = application ? getStatusDetails(application) : null;
@@ -515,7 +507,7 @@ export default function StatusPage() {
                     }`}>
                     <div className="flex items-center gap-1.5 font-bold">
                       <AlertTriangle className="w-4 h-4 text-amber-600" />
-                      <span>Scrutiny Observation:</span>
+                      <span>Official Note:</span>
                     </div>
                     <p className="leading-relaxed pl-5 font-medium">{application.remarks}</p>
                   </div>

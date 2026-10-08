@@ -318,13 +318,13 @@ export default function AdmitCardView({ admitCard }: AdmitCardViewProps) {
                   </div>
                 </div>
 
-                {/* Respective Institute separate for boys and girls */}
+                {/* Exam Centre separate for boys and girls */}
                 <div className="grid grid-cols-12">
                   <div className="col-span-5 sm:col-span-4 p-1.5 print:py-0.5 print:px-1.5 font-bold border-r border-black bg-slate-50/70">
-                    Respective Institute
+                    Exam Centre
                   </div>
                   <div className="col-span-7 sm:col-span-8 p-1.5 print:py-0.5 print:px-1.5 font-bold uppercase text-slate-900">
-                    {instituteName}
+                    {venueName || instituteName}
                   </div>
                 </div>
 

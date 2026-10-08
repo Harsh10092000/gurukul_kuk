@@ -306,19 +306,13 @@ export default function LoginPage() {
                 </button>
               </form>
 
-              <div className="pt-4 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs">
+              <div className="pt-4 border-t border-slate-100 flex items-center justify-center text-xs">
                 <p className="text-slate-600">
                   New applicant?{' '}
                   <Link href="/register" className="font-semibold text-portal-navy hover:underline">
                     New Registration
                   </Link>
                 </p>
-                <Link
-                  href="/admin/login"
-                  className="text-slate-500 hover:text-slate-800 font-medium transition"
-                >
-                  Staff / Admin Sign In
-                </Link>
               </div>
             </div>
           </div>

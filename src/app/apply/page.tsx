@@ -9,7 +9,8 @@ import {
   Trash2,
   Upload,
   Eye,
-  EyeOff
+  EyeOff,
+  ShieldCheck,
 } from 'lucide-react';
 import { INDIAN_STATES_AND_DISTRICTS } from '@/lib/indianLocations';
 import {
@@ -75,6 +76,7 @@ export default function ApplyPage() {
   const [instructionLang, setInstructionLang] = useState<'en' | 'hi'>('en');
   const [pendingOrderId, setPendingOrderId] = useState<string | null>(null);
   const [recoveringPayment, setRecoveringPayment] = useState(false);
+  const [verifyingPayment, setVerifyingPayment] = useState(false);
 
   // Password Visibility States
   const [showPassword, setShowPassword] = useState(false);
@@ -659,7 +661,7 @@ export default function ApplyPage() {
     if (step === 5) {
       const docsVal = validateAllFourDocuments(formData);
       if (!docsVal.isValid) {
-        setError(docsVal.error || 'All 4 documents are mandatory.');
+        setError(docsVal.error || 'All 3 documents are mandatory.');
         return;
       }
       setStep(6);
@@ -757,7 +759,7 @@ export default function ApplyPage() {
         }));
       } catch { }
 
-      const res = await fetch('/api/payment/hdfc/initiate', {
+      const res = await fetch('/api/payment/initiate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
@@ -771,8 +773,89 @@ export default function ApplyPage() {
         return;
       }
 
+      // Case A: Razorpay Gateway Checkout Modal
+      if (data.gateway === 'razorpay') {
+        const loadScript = (): Promise<boolean> => {
+          return new Promise((resolve) => {
+            if (typeof window === 'undefined') return resolve(false);
+            if ((window as any).Razorpay) return resolve(true);
+            const script = document.createElement('script');
+            script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+            script.async = true;
+            script.onload = () => resolve(true);
+            script.onerror = () => resolve(false);
+            document.body.appendChild(script);
+          });
+        };
+
+        const loaded = await loadScript();
+        if (!loaded) {
+          setError('Failed to load secure payment gateway. Please check your internet connection.');
+          setLoading(false);
+          return;
+        }
+
+        const options = {
+          key: data.keyId,
+          amount: data.amount,
+          currency: data.currency || 'INR',
+          name: 'The Gurukul',
+          description: data.description || 'Entrance Examination Fee 2027-28',
+          image: '/logo-gurukul.png',
+          order_id: data.orderId,
+          remember_customer: false,
+          prefill: {
+            name: data.candidateName,
+            contact: data.candidatePhone || '',
+          },
+          theme: {
+            color: '#8b0000',
+          },
+          handler: async function (response: any) {
+            setLoading(true);
+            setVerifyingPayment(true);
+            try {
+              const verifyRes = await fetch('/api/payment/razorpay/verify', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(response),
+              });
+              const verifyData = await verifyRes.json();
+              if (verifyData.success && verifyData.redirectUrl) {
+                try {
+                  localStorage.removeItem('gurukul_application_draft');
+                  sessionStorage.removeItem('gurukul_reg_info');
+                } catch { }
+                window.location.href = verifyData.redirectUrl;
+              } else {
+                setVerifyingPayment(false);
+                setError(verifyData.error || 'Payment verification failed. Please contact admission helpline.');
+                setLoading(false);
+              }
+            } catch {
+              setVerifyingPayment(false);
+              setError('Failed to confirm transaction. If money was deducted, please contact admissions helpdesk with your Order ID: ' + data.orderId);
+              setLoading(false);
+            }
+          },
+          modal: {
+            ondismiss: function () {
+              setLoading(false);
+            },
+          },
+        };
+
+        const rzp = new (window as any).Razorpay(options);
+        rzp.on('payment.failed', function (resp: any) {
+          setError(resp?.error?.description || 'Payment was unsuccessful. Please try again.');
+          setLoading(false);
+        });
+        rzp.open();
+        return;
+      }
+
+      // Case B: HDFC Hosted Page Redirect
       if (data.paymentUrl) {
-        // Redirect directly to HDFC Hosted Payment Page
         window.location.href = data.paymentUrl;
       } else {
         setError('Payment gateway returned an invalid session. Please try again.');
@@ -988,7 +1071,7 @@ export default function ApplyPage() {
             <div className="mt-3 ml-7 pt-3 border-t border-rose-200/60 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div>
                 <p className="text-xs text-slate-700 font-semibold">
-                  Already paid ₹800 on HDFC SmartGateway for Order ID: <span className="font-mono text-portal-navy bg-slate-100 px-1.5 py-0.5 rounded">{pendingOrderId}</span>?
+                  Already paid ₹800 on {process.env.NEXT_PUBLIC_ACTIVE_PAYMENT_GATEWAY === 'hdfc' ? 'HDFC SmartGateway' : 'Razorpay'} for Order ID: <span className="font-mono text-portal-navy bg-slate-100 px-1.5 py-0.5 rounded">{pendingOrderId}</span>?
                 </p>
                 <p className="text-[11px] text-slate-500 mt-0.5">
                   Your details are preserved. Click to verify payment with the bank and issue your Admit Card immediately.
@@ -2087,11 +2170,11 @@ export default function ApplyPage() {
             <div className="border-b border-slate-200 pb-3">
               <h2 className="text-base font-bold text-slate-900">Step 5: Upload Documents</h2>
               <p className="text-xs text-slate-500">
-                Upload clear scans or photographs (JPG, PNG, or PDF, max 2 MB each). All 4 documents are required.
+                Upload clear scans or photographs (JPG, PNG, or PDF, max 2 MB each). All 3 documents are required.
               </p>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               {/* Document 1: Photo */}
               <div className="p-4 border border-slate-200 rounded-lg bg-slate-50 space-y-3 overflow-hidden">
                 <div className="flex justify-between items-center">
@@ -2146,37 +2229,10 @@ export default function ApplyPage() {
                 )}
               </div>
 
-              {/* Document 3: Parent Signature */}
+              {/* Document 3: Aadhaar Card */}
               <div className="p-4 border border-slate-200 rounded-lg bg-slate-50 space-y-3 overflow-hidden">
                 <div className="flex justify-between items-center">
-                  <span className="text-xs font-semibold text-slate-800">3. Parent / Guardian Signature <span className="text-rose-500">*</span></span>
-                  {formData.parentSignature && <span className="text-[10px] font-semibold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded shrink-0">Uploaded</span>}
-                </div>
-                {formData.parentSignature ? (
-                  <div className="flex items-center gap-3 min-w-0">
-                    <img src={formData.parentSignature} alt="Parent Signature" className="w-24 h-12 object-contain bg-white rounded border border-slate-200 shrink-0" />
-                    <div className="flex-1 min-w-0 text-xs">
-                      <span className="font-medium text-slate-800 block truncate" title={formData.parentSignatureName}>{formData.parentSignatureName}</span>
-                      <label className="text-portal-navy hover:underline font-semibold cursor-pointer inline-block mt-1">
-                        Change Signature
-                        <input type="file" accept="image/jpeg,image/png" className="hidden" onChange={(e) => handleFileUpload(e, 'parentSignature', 'parentSignatureName')} />
-                      </label>
-                    </div>
-                  </div>
-                ) : (
-                  <label className="w-full py-5 border border-dashed border-slate-300 bg-white hover:bg-slate-50 rounded-lg cursor-pointer flex flex-col items-center justify-center gap-1 transition">
-                    <Upload className="w-5 h-5 text-slate-400" />
-                    <span className="text-xs font-semibold text-slate-700">Select Parent Signature</span>
-                    <span className="text-[10px] text-slate-400">JPG or PNG (max 2 MB)</span>
-                    <input type="file" accept="image/jpeg,image/png" className="hidden" onChange={(e) => handleFileUpload(e, 'parentSignature', 'parentSignatureName')} />
-                  </label>
-                )}
-              </div>
-
-              {/* Document 4: Aadhaar Card */}
-              <div className="p-4 border border-slate-200 rounded-lg bg-slate-50 space-y-3 overflow-hidden">
-                <div className="flex justify-between items-center">
-                  <span className="text-xs font-semibold text-slate-800">4. Aadhaar / ID Document <span className="text-rose-500">*</span></span>
+                  <span className="text-xs font-semibold text-slate-800">3. Aadhaar / ID Document <span className="text-rose-500">*</span></span>
                   {formData.aadhaarCard && <span className="text-[10px] font-semibold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded shrink-0">Uploaded</span>}
                 </div>
                 {formData.aadhaarCard ? (
@@ -2318,7 +2374,11 @@ export default function ApplyPage() {
               className={`btn-primary text-xs px-6 py-2.5 font-bold ${!declarationAgreed || loading ? 'opacity-50 cursor-not-allowed' : ''
                 }`}
             >
-              {loading ? 'Connecting to HDFC Payment Gateway...' : 'Pay ₹800 & Submit Application'}
+              {loading
+                ? (process.env.NEXT_PUBLIC_ACTIVE_PAYMENT_GATEWAY === 'hdfc'
+                  ? 'Connecting to HDFC Payment Gateway...'
+                  : 'Redirecting to Razorpay...')
+                : 'Pay ₹800 & Submit Application'}
             </button>
           )}
         </div>
@@ -2349,6 +2409,33 @@ export default function ApplyPage() {
                 {cancelLoading ? 'Canceling...' : 'Discard'}
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Full-Screen Payment Finalizing Overlay */}
+      {verifyingPayment && (
+        <div className="fixed inset-0 z-[9999] bg-slate-900/85 backdrop-blur-md flex flex-col items-center justify-center p-4">
+          <div className="bg-white rounded-2xl p-8 max-w-md w-full shadow-2xl text-center border border-slate-100 flex flex-col items-center animate-in fade-in zoom-in-95 duration-200">
+            <div className="relative mb-5">
+              <div className="w-16 h-16 rounded-full border-4 border-emerald-100 border-t-emerald-600 animate-spin"></div>
+              <div className="absolute inset-0 flex items-center justify-center">
+                <ShieldCheck className="w-8 h-8 text-emerald-600" />
+              </div>
+            </div>
+            <h3 className="text-xl font-bold text-slate-900 mb-1">Payment Received Successfully!</h3>
+            <span className="text-xs font-semibold text-emerald-800 bg-emerald-50 border border-emerald-200 px-3 py-1 rounded-full mb-3 inline-block">
+              Finalizing Institutional Registration...
+            </span>
+            <p className="text-xs text-slate-600 leading-relaxed max-w-sm mb-4">
+              We are issuing your permanent <strong>Registration ID</strong> and generating your <strong>Entrance Admit Card</strong>.
+            </p>
+            <div className="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden">
+              <div className="bg-emerald-600 h-full rounded-full animate-pulse w-3/4"></div>
+            </div>
+            <p className="text-[11px] text-slate-400 mt-3">
+              Please do not refresh or navigate back. Redirecting to your confirmation receipt...
+            </p>
           </div>
         </div>
       )}

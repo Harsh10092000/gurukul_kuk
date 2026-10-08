@@ -319,7 +319,7 @@ export default function RegisterPage() {
           <div className="p-4 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-600 text-left space-y-1.5">
             <p className="font-semibold text-slate-800">For Already Registered Candidates:</p>
             <ul className="list-disc pl-4 space-y-1 text-slate-600 text-[11px]">
-              <li>Sign in to your Candidate Portal to check scrutiny status or download your submitted form.</li>
+              <li>Sign in to your Candidate Portal to check application status or download your submitted form.</li>
               <li>Track verification and roll number allotment using your Registration ID.</li>
             </ul>
           </div>

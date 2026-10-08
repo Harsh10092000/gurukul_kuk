@@ -48,7 +48,7 @@ export default function AdminDashboard() {
             download
             className="btn-secondary text-xs px-3 py-1.5"
           >
-            Export CSV
+            Export Master CSV
           </a>
           <Link
             href="/admin/applications"
@@ -59,45 +59,45 @@ export default function AdminDashboard() {
         </div>
       </div>
 
-      {/* 3 KPI Cards */}
+      {/* 3 KPI Cards: Total, Boys, Girls */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        {/* Total Applications */}
+        {/* Total Applicants */}
         <div className="portal-card p-5 space-y-1.5 border-l-4 border-l-portal-navy">
           <div className="flex items-center justify-between">
-            <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">Total Applications</span>
+            <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">Total Applicants</span>
             <span className="portal-badge-navy text-[10px]">Session 2027</span>
           </div>
           <div className="text-2xl sm:text-3xl font-bold text-slate-900 font-mono">
             {stats?.totalApplications || 0}
           </div>
           <p className="text-[11px] text-slate-500">
-            Confirmed candidate dossiers
+            Total registered candidates
           </p>
         </div>
 
-        {/* Approved Dossiers */}
-        <div className="portal-card p-5 space-y-1.5 border-l-4 border-l-emerald-600">
+        {/* Boys Applicants */}
+        <div className="portal-card p-5 space-y-1.5 border-l-4 border-l-blue-600">
           <div className="flex items-center justify-between">
-            <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">Verified &amp; Approved</span>
-            <span className="portal-badge-emerald text-[10px]">Eligible</span>
+            <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">Boys Applicants</span>
+            <span className="portal-badge-navy text-[10px]">Aryakulam / Jyotisar</span>
           </div>
-          <div className="text-2xl sm:text-3xl font-bold text-emerald-800 font-mono">
-            {stats?.approved || 0}
+          <div className="text-2xl sm:text-3xl font-bold text-blue-900 font-mono">
+            {stats?.boysCount ?? 0}
           </div>
-          <p className="text-[11px] text-emerald-700 font-medium">Eligible for Admit Card release</p>
+          <p className="text-[11px] text-blue-700 font-medium">Boys registered candidates</p>
         </div>
 
-        {/* Under Review / Correction */}
-        <div className="portal-card p-5 space-y-1.5 border-l-4 border-l-amber-500">
+        {/* Girls Applicants */}
+        <div className="portal-card p-5 space-y-1.5 border-l-4 border-l-rose-500">
           <div className="flex items-center justify-between">
-            <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">Awaiting Scrutiny</span>
-            <span className="portal-badge-gold text-[10px]">Action Req</span>
+            <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">Girls Applicants</span>
+            <span className="portal-badge-gold text-[10px]">Nilokheri Campus</span>
           </div>
-          <div className="text-2xl sm:text-3xl font-bold text-amber-800 font-mono">
-            {(stats?.underReview || 0) + (stats?.correctionNeeded || 0)}
+          <div className="text-2xl sm:text-3xl font-bold text-rose-800 font-mono">
+            {stats?.girlsCount ?? 0}
           </div>
-          <p className="text-[11px] text-amber-700 font-medium">
-            {stats?.correctionNeeded || 0} marked for re-upload
+          <p className="text-[11px] text-rose-700 font-medium">
+            Girls registered candidates
           </p>
         </div>
       </div>
@@ -167,7 +167,7 @@ export default function AdminDashboard() {
       <div className="portal-card p-6 space-y-4">
         <div className="flex justify-between items-center border-b border-slate-100 pb-3">
           <h3 className="font-bold text-slate-900 text-sm">
-            Recent Applications Awaiting Verification
+            Recent Candidate Applications
           </h3>
           <Link
             href="/admin/applications"
@@ -179,8 +179,8 @@ export default function AdminDashboard() {
 
         {recentApps.length === 0 ? (
           <div className="py-8 text-center text-xs text-slate-500 bg-slate-50 rounded-lg">
-            <p className="font-semibold text-slate-700">All Submissions Processed</p>
-            <p className="text-[11px] text-slate-400 mt-0.5">No candidate applications currently awaiting review.</p>
+            <p className="font-semibold text-slate-700">No Applications Yet</p>
+            <p className="text-[11px] text-slate-400 mt-0.5">No candidate applications currently found.</p>
           </div>
         ) : (
           <div className="overflow-x-auto">
@@ -237,14 +237,14 @@ export default function AdminDashboard() {
                       <td className="py-3 px-3.5">
                         <span
                           className={`text-[10px] font-semibold px-2 py-0.5 rounded uppercase ${
-                            app.status === 'approved'
+                            app.status === 'approved' || app.status === 'submitted'
                               ? 'portal-badge-emerald'
                               : app.status === 'correction_needed'
                               ? 'bg-rose-50 text-rose-700 border border-rose-200'
                               : 'portal-badge-gold'
                           }`}
                         >
-                          {app.status.replace('_', ' ')}
+                          {app.status === 'submitted' ? 'APPROVED' : app.status.replace('_', ' ')}
                         </span>
                       </td>
                       <td className="py-3 px-3.5 text-right">

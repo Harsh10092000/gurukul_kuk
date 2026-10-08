@@ -259,7 +259,7 @@ export default function ApplicantDashboard() {
       { num: 3, title: 'Parent Particulars', desc: 'Father & Mother details, mobile & income' },
       { num: 4, title: 'Address & Contact', desc: 'Permanent street address, State, District & PIN' },
       { num: 5, title: 'Campus Preference', desc: '1st and 2nd preferred study locations' },
-      { num: 6, title: 'Upload Documents', desc: 'Photo, signature, parent signature & Aadhaar' },
+      { num: 6, title: 'Upload Documents', desc: 'Candidate photo, candidate signature & Aadhaar' },
       { num: 7, title: 'Review & Payment', desc: 'Review particulars & complete ₹800 fee payment' },
     ];
     const progressPct = Math.min(Math.round((completedStep / 7) * 100), 100);

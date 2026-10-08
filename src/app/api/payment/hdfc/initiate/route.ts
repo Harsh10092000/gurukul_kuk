@@ -159,7 +159,7 @@ export async function POST(request: Request) {
     }
 
     // 11. File Content, Size (<=2MB), and Magic Byte Validation
-    for (const docKey of ['photo', 'signature', 'parentSignature', 'aadhaarCard']) {
+    for (const docKey of ['photo', 'signature', 'aadhaarCard']) {
       const fileVal = validateUploadedFile(documents[docKey], docKey);
       if (!fileVal.isValid) {
         return NextResponse.json({ error: fileVal.error }, { status: 400 });

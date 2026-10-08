@@ -367,7 +367,7 @@ async function handleHdfcReturn(request: Request) {
       studyLocationPref: studyLocationPref,
       examCentrePref: studyLocationPref,
       documents: documents || {},
-      status: 'submitted',
+      status: 'approved',
       paymentStatus: 'completed',
       amountPaid: 800,
       transactionId: txnId,

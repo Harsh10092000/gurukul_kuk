@@ -277,29 +277,13 @@ export default function AdmissionFormView({
 
             <div className="w-full">
               <span className="text-[7.5px] font-bold text-slate-700 block uppercase text-center">Candidate Signature</span>
-              <div className="w-full h-9 border border-black bg-white flex items-center justify-center p-0.5">
+              <div className="w-full h-10 border border-black bg-white flex items-center justify-center p-0.5">
                 {application.documents?.signature ? (
                   /* eslint-disable-next-line @next/next/no-img-element */
                   <img
                     src={application.documents.signature}
                     alt="Candidate Sign"
-                    className="max-h-8 w-auto object-contain"
-                  />
-                ) : (
-                  <span className="text-[7px] text-slate-400">Specimen Signature</span>
-                )}
-              </div>
-            </div>
-
-            <div className="w-full">
-              <span className="text-[7.5px] font-bold text-slate-700 block uppercase text-center">Parent Signature</span>
-              <div className="w-full h-9 border border-black bg-white flex items-center justify-center p-0.5">
-                {application.documents?.parentSignature ? (
-                  /* eslint-disable-next-line @next/next/no-img-element */
-                  <img
-                    src={application.documents.parentSignature}
-                    alt="Parent Sign"
-                    className="max-h-8 w-auto object-contain"
+                    className="max-h-9 w-auto object-contain"
                   />
                 ) : (
                   <span className="text-[7px] text-slate-400">Specimen Signature</span>
@@ -309,11 +293,11 @@ export default function AdmissionFormView({
           </div>
         </div>
 
-        {/* 4. Official Document Scrutiny & Verification Checklist (4 Registration Documents) */}
+        {/* 4. Official Document Verification Checklist (3 Registration Documents) */}
         <div className="border border-black">
           <div className="bg-slate-200 border-b border-black px-2 py-1 font-black text-[10px] uppercase tracking-wide flex justify-between items-center">
-            <span>5. Office Document Verification &amp; Scrutiny Checklist</span>
-            <span className="text-[8.5px] font-bold text-slate-700">4 Registration Documents • To be verified by Scrutiny Officer</span>
+            <span>5. Office Document Verification Checklist</span>
+            <span className="text-[8.5px] font-bold text-slate-700">3 Registration Documents • Verification Record</span>
           </div>
 
           <table className="w-full text-[9.5px] border-collapse">
@@ -340,12 +324,6 @@ export default function AdmissionFormView({
               </tr>
               <tr className="h-9">
                 <td className="p-1.5 border-r border-black text-center font-mono font-bold">3</td>
-                <td className="p-1.5 border-r border-black font-semibold">Parent / Guardian Signature</td>
-                <td className="p-1.5 border-r border-black text-center"></td>
-                <td className="p-1.5"></td>
-              </tr>
-              <tr className="h-9">
-                <td className="p-1.5 border-r border-black text-center font-mono font-bold">4</td>
                 <td className="p-1.5 border-r border-black font-semibold">Candidate Aadhaar Card / Valid Photo ID Proof</td>
                 <td className="p-1.5 border-r border-black text-center"></td>
                 <td className="p-1.5"></td>

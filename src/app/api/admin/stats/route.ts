@@ -44,8 +44,20 @@ export async function GET() {
       stateCounts[state] = (stateCounts[state] || 0) + 1;
     });
 
-    // Status-aware query for Recent Applications Awaiting Verification
-    // (excludes drafts and rejected candidates; only includes submitted, under_review, correction_needed)
+    // Gender breakdown (Boys vs Girls)
+    let boysCount = 0;
+    let girlsCount = 0;
+    activeApplications.forEach((a) => {
+      const gender = (a.personalInfo?.gender || '').toLowerCase();
+      const appNo = (a.applicationNumber || '').toUpperCase();
+      if (gender === 'female' || gender === 'girl' || appNo.startsWith('NILG')) {
+        girlsCount++;
+      } else {
+        boysCount++;
+      }
+    });
+
+    // Recent applications
     const recentAwaitingVerification = activeApplications
       .filter((a) => a.status === 'submitted' || a.status === 'under_review' || a.status === 'correction_needed')
       .slice(0, 8);
@@ -53,8 +65,11 @@ export async function GET() {
     return NextResponse.json({
       stats: {
         ...metrics,
-        totalApplications: metrics.active, // Active candidates count (reconciled with Applications desk)
-        totalDossiers: metrics.total,      // Total historical dossiers including rejected
+        totalApplications: activeApplications.length,
+        totalApplicants: activeApplications.length,
+        boysCount,
+        girlsCount,
+        totalDossiers: metrics.total,
         totalCentres: 1,
         classCounts,
         stateCounts,

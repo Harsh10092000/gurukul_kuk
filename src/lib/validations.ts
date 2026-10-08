@@ -541,7 +541,6 @@ export function validateAllFourDocuments(documents: any): {
   const required = [
     { key: 'photo', label: 'Candidate Photograph' },
     { key: 'signature', label: 'Candidate Signature' },
-    { key: 'parentSignature', label: 'Parent / Guardian Signature' },
     { key: 'aadhaarCard', label: 'Aadhaar / ID Proof' },
   ];
 
@@ -560,7 +559,7 @@ export function validateAllFourDocuments(documents: any): {
     return {
       isValid: false,
       missingFields,
-      error: `All 4 documents are mandatory before payment. Missing: ${missingLabels.join(', ')}.`,
+      error: `All 3 documents (Candidate Photo, Candidate Signature, Aadhaar) are mandatory before payment. Missing: ${missingLabels.join(', ')}.`,
     };
   }
 
