@@ -504,7 +504,7 @@ export default function AdminApplicationsPage() {
                         </div>
                       </td>
                       <td className="py-3.5 px-4 text-slate-700 max-w-[160px] truncate text-xs font-medium">
-                        {app.studyLocation?.firstPreference || app.examCentrePref?.preferredCenter1 || 'Gurukul Nilokheri'}
+                        {app.studyLocation?.firstPreference || app.studyLocationPref?.firstPreference || app.examCentrePref?.firstPreference || (app.personalInfo?.gender === 'Female' ? 'Gurukul Nilokheri' : 'Aryakulam Nilokheri')}
                       </td>
                       <td className="py-3.5 px-4">
                         <span className="text-emerald-700 font-bold flex items-center gap-1.5 font-mono">

@@ -196,8 +196,8 @@ export async function GET(request: Request) {
         maskedAadhaar,
       },
       preferences: {
-        studyLocation: matchingApp.studyLocationPref?.firstPreference || 'The Gurukul Nilokheri',
-        examCentre: matchingApp.examCentrePref?.firstPreference || 'The Gurukul Nilokheri Main Campus',
+        studyLocation: matchingApp.studyLocationPref?.firstPreference || matchingApp.studyLocation?.firstPreference || (matchingApp.personalInfo?.gender === 'Female' ? 'The Gurukul Nilokheri' : 'Aryakulam Nilokheri'),
+        examCentre: matchingApp.examCentrePref?.firstPreference || matchingApp.studyLocation?.firstPreference || (matchingApp.personalInfo?.gender === 'Female' ? 'The Gurukul Nilokheri Main Campus' : 'Aryakulam Nilokheri Campus'),
       },
       admitCard: isAdmitCardReleased && (matchingApp.rollNumber || admitCard?.rollNumber) ? {
         available: true,

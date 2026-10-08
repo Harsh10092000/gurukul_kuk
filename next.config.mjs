@@ -5,7 +5,7 @@ const nextConfig = {
     domains: ['gurukulkurukshetra.com'],
   },
   experimental: {
-    serverComponentsExternalPackages: ['expresscheckout-nodejs'],
+    serverComponentsExternalPackages: ['expresscheckout-nodejs', 'mysql2', 'bcryptjs'],
   },
 };
 

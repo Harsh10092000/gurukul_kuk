@@ -703,7 +703,7 @@ export default function ApplicantDashboard() {
               <div className="data-cell sm:col-span-2">
                 <span className="text-slate-500 block text-[10px] font-semibold uppercase tracking-wider">Campus Preferences</span>
                 <span className="font-medium text-slate-900 mt-0.5 block">
-                  1st: <strong>{application.studyLocation?.firstPreference || 'Gurukul Nilokheri'}</strong> • 2nd: {application.studyLocation?.secondPreference || 'None'}
+                  1st: <strong>{application.studyLocation?.firstPreference || application.studyLocationPref?.firstPreference || application.examCentrePref?.firstPreference || (application.personalInfo?.gender === 'Female' ? 'Gurukul Nilokheri' : 'Aryakulam Nilokheri')}</strong> • 2nd: {application.studyLocation?.secondPreference || application.studyLocationPref?.secondPreference || application.examCentrePref?.secondPreference || 'None'}
                 </span>
               </div>
               <div className="data-cell">

@@ -1082,7 +1082,16 @@ export const db = {
         const parsedParent = safeJsonParse(r.parent_info, {});
         if (!parsedParent.fatherPhone) parsedParent.fatherPhone = parsedPersonal.candidateMobile || r.user_phone || '';
 
-        const centrePref = safeJsonParse(r.exam_centre_pref, { firstPreference: 'Gurukul Nilokheri' });
+        const candidateGender = (parsedPersonal.gender || 'Male') as 'Male' | 'Female';
+        const defaultFirstPref = candidateGender === 'Female' ? 'Gurukul Nilokheri' : 'Aryakulam Nilokheri';
+        const defaultSecondPref = candidateGender === 'Female' ? 'None' : 'Gurukul Jyotisar';
+        const parsedPref = safeJsonParse(r.exam_centre_pref, null);
+        const centrePref = parsedPref && (parsedPref.firstPreference || parsedPref.studyLocation)
+          ? {
+              firstPreference: parsedPref.firstPreference || parsedPref.studyLocation || defaultFirstPref,
+              secondPreference: parsedPref.secondPreference || defaultSecondPref,
+            }
+          : { firstPreference: defaultFirstPref, secondPreference: defaultSecondPref };
 
         return {
           id: r.id,
@@ -1097,6 +1106,7 @@ export const db = {
           academicInfo: safeJsonParse(r.academic_info, {}),
           examCentrePref: centrePref,
           studyLocationPref: centrePref,
+          studyLocation: centrePref,
           documents: safeJsonParse(r.documents, {}),
           status: r.status || 'submitted',
           remarks: r.remarks,
@@ -1113,7 +1123,16 @@ export const db = {
         const [rawRows]: any = await pool.query('SELECT * FROM applications');
         return rawRows.map((r: any) => {
           const parsedPersonal = safeJsonParse(r.personal_info, {});
-          const centrePref = safeJsonParse(r.exam_centre_pref, { firstPreference: 'Gurukul Nilokheri' });
+          const candidateGender = (parsedPersonal.gender || 'Male') as 'Male' | 'Female';
+          const defaultFirstPref = candidateGender === 'Female' ? 'Gurukul Nilokheri' : 'Aryakulam Nilokheri';
+          const defaultSecondPref = candidateGender === 'Female' ? 'None' : 'Gurukul Jyotisar';
+          const parsedPref = safeJsonParse(r.exam_centre_pref, null);
+          const centrePref = parsedPref && (parsedPref.firstPreference || parsedPref.studyLocation)
+            ? {
+                firstPreference: parsedPref.firstPreference || parsedPref.studyLocation || defaultFirstPref,
+                secondPreference: parsedPref.secondPreference || defaultSecondPref,
+              }
+            : { firstPreference: defaultFirstPref, secondPreference: defaultSecondPref };
           return {
             id: r.id,
             registrationNumber: r.registration_number || r.application_number,
@@ -1127,6 +1146,7 @@ export const db = {
             academicInfo: safeJsonParse(r.academic_info, {}),
             examCentrePref: centrePref,
             studyLocationPref: centrePref,
+            studyLocation: centrePref,
             documents: safeJsonParse(r.documents, {}),
             status: r.status || 'submitted',
             remarks: r.remarks,
@@ -1150,15 +1170,35 @@ export const db = {
       const store = initFallbackFile();
       const a = store.applications.find((app) => app.id === id || app.applicationNumber === id || app.registrationNumber === id);
       if (!a) return null;
+      const parsedPersonal = a.personalInfo || {};
+      const candidateGender = (parsedPersonal.gender || 'Male') as 'Male' | 'Female';
+      const defaultFirstPref = candidateGender === 'Female' ? 'Gurukul Nilokheri' : 'Aryakulam Nilokheri';
+      const defaultSecondPref = candidateGender === 'Female' ? 'None' : 'Gurukul Jyotisar';
+      const centrePref = a.studyLocation || a.studyLocationPref || a.examCentrePref || { firstPreference: defaultFirstPref, secondPreference: defaultSecondPref };
       return {
         ...a,
         registrationNumber: a.registrationNumber || a.applicationNumber,
         applicationNumber: a.applicationNumber || a.registrationNumber,
+        studyLocation: centrePref,
+        studyLocationPref: centrePref,
+        examCentrePref: centrePref,
       };
     }
     const [rows]: any = await pool.query('SELECT * FROM applications WHERE id = ? OR application_number = ? OR registration_number = ? LIMIT 1', [id, id, id]);
     if (!rows.length) return null;
     const r = rows[0];
+    const parsedPersonal = safeJsonParse(r.personal_info, {});
+    const candidateGender = (parsedPersonal.gender || 'Male') as 'Male' | 'Female';
+    const defaultFirstPref = candidateGender === 'Female' ? 'Gurukul Nilokheri' : 'Aryakulam Nilokheri';
+    const defaultSecondPref = candidateGender === 'Female' ? 'None' : 'Gurukul Jyotisar';
+    const parsedPref = safeJsonParse(r.exam_centre_pref, null);
+    const centrePref = parsedPref && (parsedPref.firstPreference || parsedPref.studyLocation)
+      ? {
+          firstPreference: parsedPref.firstPreference || parsedPref.studyLocation || defaultFirstPref,
+          secondPreference: parsedPref.secondPreference || defaultSecondPref,
+        }
+      : { firstPreference: defaultFirstPref, secondPreference: defaultSecondPref };
+
     return {
       id: r.id,
       registrationNumber: r.registration_number || r.application_number,
@@ -1166,12 +1206,13 @@ export const db = {
       rollNumber: r.roll_number || undefined,
       userId: r.user_id,
       classApplying: r.class_applying || 'Class 6',
-      personalInfo: safeJsonParse(r.personal_info, {}),
+      personalInfo: parsedPersonal,
       parentInfo: safeJsonParse(r.parent_info, {}),
       addressInfo: safeJsonParse(r.address_info, {}),
       academicInfo: safeJsonParse(r.academic_info, {}),
-      examCentrePref: safeJsonParse(r.exam_centre_pref, { firstPreference: 'Gurukul Nilokheri' }),
-      studyLocationPref: safeJsonParse(r.exam_centre_pref, { firstPreference: 'Gurukul Nilokheri' }),
+      examCentrePref: centrePref,
+      studyLocationPref: centrePref,
+      studyLocation: centrePref,
       documents: safeJsonParse(r.documents, {}),
       status: r.status || 'submitted',
       remarks: r.remarks,

@@ -246,11 +246,11 @@ export default function AdmissionFormView({
                 </div>
                 <div>
                   <span className="text-slate-600 block text-[8.5px]">1st Campus Preference:</span>
-                  <span className="font-bold text-black">{application.studyLocation?.firstPreference || 'Gurukul Nilokheri'}</span>
+                  <span className="font-bold text-black">{application.studyLocation?.firstPreference || application.studyLocationPref?.firstPreference || application.examCentrePref?.firstPreference || (application.personalInfo?.gender === 'Female' ? 'Gurukul Nilokheri' : 'Aryakulam Nilokheri')}</span>
                 </div>
                 <div>
                   <span className="text-slate-600 block text-[8.5px]">2nd Campus Preference:</span>
-                  <span className="font-medium text-slate-800">{application.studyLocation?.secondPreference || 'None'}</span>
+                  <span className="font-medium text-slate-800">{application.studyLocation?.secondPreference || application.studyLocationPref?.secondPreference || application.examCentrePref?.secondPreference || 'None'}</span>
                 </div>
               </div>
             </div>
