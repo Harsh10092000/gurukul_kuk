@@ -16,6 +16,8 @@ import {
   getExamDetailsForGender,
 } from '@/lib/validations';
 
+import { checkRateLimit, rateLimitResponse, getClientIp, RATE_LIMIT_CONFIGS } from '@/lib/rate-limit';
+
 export const dynamic = 'force-dynamic';
 
 export async function GET(request: Request) {
@@ -98,6 +100,19 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
+    const clientIp = getClientIp(request);
+    const ipCheck = checkRateLimit(
+      `app_submit_ip:${clientIp}`,
+      RATE_LIMIT_CONFIGS.APPLICATION_SUBMIT.limit,
+      RATE_LIMIT_CONFIGS.APPLICATION_SUBMIT.windowMs
+    );
+    if (!ipCheck.success) {
+      return rateLimitResponse(
+        ipCheck,
+        'Too many application submissions attempted from your network. Please wait a few minutes before trying again.'
+      );
+    }
+
     const user = await getCurrentUser();
     if (!user) {
       return NextResponse.json({ error: 'Authentication required' }, { status: 401 });

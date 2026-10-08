@@ -3,9 +3,22 @@ import { db } from '@/lib/db';
 import { hashPassword, signToken, getAuthCookieOptions } from '@/lib/auth';
 import { checkFormStatus } from '@/lib/formSchedule';
 import { recordAuditLog } from '@/lib/audit';
+import { checkRateLimit, rateLimitResponse, getClientIp, RATE_LIMIT_CONFIGS } from '@/lib/rate-limit';
 
 export async function POST(request: Request) {
   try {
+    const clientIp = getClientIp(request);
+    const ipCheck = checkRateLimit(
+      `register_ip:${clientIp}`,
+      RATE_LIMIT_CONFIGS.REGISTER.limit,
+      RATE_LIMIT_CONFIGS.REGISTER.windowMs
+    );
+    if (!ipCheck.success) {
+      return rateLimitResponse(
+        ipCheck,
+        'Too many account registrations attempted from your network. Please wait a few minutes before trying again.'
+      );
+    }
     // 1. Form Schedule Availability Check
     const formStatus = await checkFormStatus();
     if (!formStatus.isOpen) {

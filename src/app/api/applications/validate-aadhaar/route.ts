@@ -2,9 +2,19 @@ import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { getCurrentUser } from '@/lib/auth';
 import { validateAadhaar } from '@/lib/validations';
+import { checkRateLimit, rateLimitResponse, getClientIp } from '@/lib/rate-limit';
 
 export async function POST(req: Request) {
   try {
+    const clientIp = getClientIp(req);
+    const ipCheck = checkRateLimit(`val_aadhaar_ip:${clientIp}`, 20, 60 * 1000);
+    if (!ipCheck.success) {
+      return rateLimitResponse(
+        ipCheck,
+        'Too many Aadhaar validation requests. Please wait a moment before trying again.'
+      );
+    }
+
     const user = await getCurrentUser();
 
     const body = await req.json();

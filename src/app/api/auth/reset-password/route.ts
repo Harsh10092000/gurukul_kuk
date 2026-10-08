@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { hashPassword, comparePassword } from '@/lib/auth';
 import { recordAuditLog } from '@/lib/audit';
+import { checkRateLimit, rateLimitResponse, getClientIp, RATE_LIMIT_CONFIGS } from '@/lib/rate-limit';
 
 // Shared global in-memory OTP cache
 declare global {
@@ -13,6 +14,19 @@ global._gurukulOtps = otpStore;
 
 export async function POST(req: Request) {
   try {
+    const clientIp = getClientIp(req);
+    const ipCheck = checkRateLimit(
+      `reset_pwd_ip:${clientIp}`,
+      RATE_LIMIT_CONFIGS.RESET_PASSWORD.limit,
+      RATE_LIMIT_CONFIGS.RESET_PASSWORD.windowMs
+    );
+    if (!ipCheck.success) {
+      return rateLimitResponse(
+        ipCheck,
+        'Too many password reset attempts from this network. Please wait 15 minutes before trying again.'
+      );
+    }
+
     const body = await req.json();
     const { identifier, otp, newPassword } = body;
 

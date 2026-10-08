@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { sendNotification } from '@/lib/notifications';
 import { db } from '@/lib/db';
+import { checkRateLimit, rateLimitResponse, getClientIp, clearRateLimit, RATE_LIMIT_CONFIGS } from '@/lib/rate-limit';
 
 // Global in-memory OTP cache (key: identifier, value: { otp, expiresAt, verified })
 declare global {
@@ -37,6 +38,31 @@ export async function POST(req: Request) {
         return NextResponse.json(
           { error: 'Registration Number, Email, or Mobile Number is required to send OTP.' },
           { status: 400 }
+        );
+      }
+
+      const clientIp = getClientIp(req);
+      const ipCheck = checkRateLimit(
+        `otp_send_ip:${clientIp}`,
+        RATE_LIMIT_CONFIGS.OTP.limit,
+        RATE_LIMIT_CONFIGS.OTP.windowMs
+      );
+      if (!ipCheck.success) {
+        return rateLimitResponse(
+          ipCheck,
+          'Too many OTP requests from your network. Please wait a few minutes before trying again.'
+        );
+      }
+
+      const targetCheck = checkRateLimit(
+        `otp_send_target:${rawTarget.toLowerCase()}`,
+        RATE_LIMIT_CONFIGS.OTP.limit,
+        RATE_LIMIT_CONFIGS.OTP.windowMs
+      );
+      if (!targetCheck.success) {
+        return rateLimitResponse(
+          targetCheck,
+          'Too many OTP requests for this account or email. Please wait a few minutes before requesting another code.'
         );
       }
 
@@ -192,12 +218,28 @@ export async function POST(req: Request) {
         );
       }
 
+      const clientIp = getClientIp(req);
+      const verifyCheck = checkRateLimit(
+        `otp_verify:${clientIp}:${targetIdentifier}`,
+        5,
+        10 * 60 * 1000
+      );
+      if (!verifyCheck.success) {
+        return rateLimitResponse(
+          verifyCheck,
+          'Too many invalid verification attempts. Please wait a few minutes before trying again or request a new OTP.'
+        );
+      }
+
       if (stored.otp !== userOtp) {
         return NextResponse.json(
           { error: 'Incorrect verification code. Please check and re-enter.' },
           { status: 400 }
         );
       }
+
+      // Clear verify rate limit on success
+      clearRateLimit(`otp_verify:${clientIp}:${targetIdentifier}`);
 
       // Mark as verified
       stored.verified = true;

@@ -1,8 +1,22 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
+import { checkRateLimit, rateLimitResponse, getClientIp, RATE_LIMIT_CONFIGS } from '@/lib/rate-limit';
 
 export async function POST(request: Request) {
   try {
+    const clientIp = getClientIp(request);
+    const ipCheck = checkRateLimit(
+      `contact_ip:${clientIp}`,
+      RATE_LIMIT_CONFIGS.CONTACT.limit,
+      RATE_LIMIT_CONFIGS.CONTACT.windowMs
+    );
+    if (!ipCheck.success) {
+      return rateLimitResponse(
+        ipCheck,
+        'Too many contact enquiries submitted from your network. Please wait a few minutes before submitting again.'
+      );
+    }
+
     const body = await request.json();
     const { name, email, phone, subject, message, applicationNumber } = body;
 

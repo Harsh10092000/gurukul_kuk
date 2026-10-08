@@ -1,11 +1,25 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { formatDateString } from '@/lib/admissionPhases';
+import { checkRateLimit, rateLimitResponse, getClientIp, RATE_LIMIT_CONFIGS } from '@/lib/rate-limit';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET(request: Request) {
   try {
+    const clientIp = getClientIp(request);
+    const ipCheck = checkRateLimit(
+      `track_ip:${clientIp}`,
+      RATE_LIMIT_CONFIGS.TRACK.limit,
+      RATE_LIMIT_CONFIGS.TRACK.windowMs
+    );
+    if (!ipCheck.success) {
+      return rateLimitResponse(
+        ipCheck,
+        'Too many tracking lookups from your network. Please wait a moment before trying again.'
+      );
+    }
+
     const { searchParams } = new URL(request.url);
     const query = (searchParams.get('query') || searchParams.get('appNumber') || searchParams.get('regNo') || '').trim();
     const dob = (searchParams.get('dob') || '').trim();

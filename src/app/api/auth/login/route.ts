@@ -1,9 +1,23 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { comparePassword, hashPassword, signToken, getAuthCookieOptions } from '@/lib/auth';
+import { checkRateLimit, rateLimitResponse, getClientIp, clearRateLimit, RATE_LIMIT_CONFIGS } from '@/lib/rate-limit';
 
 export async function POST(request: Request) {
   try {
+    const clientIp = getClientIp(request);
+    const ipCheck = checkRateLimit(
+      `login_ip:${clientIp}`,
+      RATE_LIMIT_CONFIGS.LOGIN.limit,
+      RATE_LIMIT_CONFIGS.LOGIN.windowMs
+    );
+    if (!ipCheck.success) {
+      return rateLimitResponse(
+        ipCheck,
+        'Too many login attempts from this network. Please wait 15 minutes before trying again.'
+      );
+    }
+
     const body = await request.json();
     const identifier = (body.identifier || body.email || '').trim();
     const { password } = body;
@@ -90,6 +104,9 @@ export async function POST(request: Request) {
         regNo = app.registrationNumber || app.applicationNumber;
       }
     }
+
+    // Clear failed login rate limit counter on successful credentials
+    clearRateLimit(`login_ip:${clientIp}`);
 
     // Sign JWT
     const token = signToken({

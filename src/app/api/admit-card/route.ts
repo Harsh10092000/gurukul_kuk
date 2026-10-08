@@ -2,10 +2,28 @@ import { NextResponse } from 'next/server';
 import { db, toMySqlDatetime } from '@/lib/db';
 import { getCurrentUser } from '@/lib/auth';
 import { sendNotification } from '@/lib/notifications';
+import { checkRateLimit, rateLimitResponse, getClientIp, RATE_LIMIT_CONFIGS } from '@/lib/rate-limit';
 
 export async function GET(request: Request) {
   try {
     const user = await getCurrentUser();
+    
+    // Protect public (non-admin) queries from scraping / enumeration
+    if (!user || user.role !== 'admin') {
+      const clientIp = getClientIp(request);
+      const ipCheck = checkRateLimit(
+        `admit_card_ip:${clientIp}`,
+        RATE_LIMIT_CONFIGS.TRACK.limit,
+        RATE_LIMIT_CONFIGS.TRACK.windowMs
+      );
+      if (!ipCheck.success) {
+        return rateLimitResponse(
+          ipCheck,
+          'Too many admit card requests. Please wait a moment before trying again.'
+        );
+      }
+    }
+
     const { searchParams } = new URL(request.url);
     const appId = searchParams.get('appId') || searchParams.get('regNo');
     const rollNo = searchParams.get('rollNo');

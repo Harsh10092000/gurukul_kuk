@@ -1,6 +1,7 @@
-﻿import { NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { sendNotification } from '@/lib/notifications';
+import { checkRateLimit, rateLimitResponse, getClientIp, RATE_LIMIT_CONFIGS } from '@/lib/rate-limit';
 
 // Shared global in-memory OTP cache
 declare global {
@@ -26,6 +27,19 @@ function maskPhone(phone?: string) {
 
 export async function POST(req: Request) {
   try {
+    const clientIp = getClientIp(req);
+    const ipCheck = checkRateLimit(
+      `forgot_reg_ip:${clientIp}`,
+      RATE_LIMIT_CONFIGS.OTP.limit,
+      RATE_LIMIT_CONFIGS.OTP.windowMs
+    );
+    if (!ipCheck.success) {
+      return rateLimitResponse(
+        ipCheck,
+        'Too many recovery requests from your network. Please wait a few minutes before trying again.'
+      );
+    }
+
     const body = await req.json();
     const { action, identifier, otp } = body;
 
