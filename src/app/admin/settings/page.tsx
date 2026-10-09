@@ -908,8 +908,8 @@ export default function AdminSettingsPage() {
               title: 'The Gurukul Jyotisar',
               tag: 'Boys Only',
               tagColor: 'bg-blue-50 text-blue-700 border-blue-200',
-              streams: 'Commerce, Non Medical, Medical',
-              note: 'Located on Pehowa Road, Kurukshetra. Available for male candidates.',
+              streams: 'Non Medical Only',
+              note: 'Located on Pehowa Road, Kurukshetra. Available for male candidates (Class 11 offers Non Medical only).',
             },
             {
               id: 'Aryakulam Nilokheri',

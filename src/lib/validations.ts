@@ -249,7 +249,7 @@ export function validateDob(dob: string | undefined | null): ValidationResult {
 
 export const CAMPUS_STREAMS_MAP: Record<string, string[]> = {
   'Gurukul Nilokheri': ['Non Medical', 'Medical', 'Commerce', 'Humanities'],
-  'Gurukul Jyotisar': ['Non Medical', 'Medical', 'Commerce'],
+  'Gurukul Jyotisar': ['Non Medical'],
   'Aryakulam Nilokheri': ['Non Medical', 'Medical', 'Commerce'],
 };
 
@@ -257,6 +257,9 @@ export function getStreamsForCampus(campus?: string | null, gender?: string | nu
   const isFemale = (gender || '').trim().toLowerCase() === 'female';
   if (isFemale || campus === 'Gurukul Nilokheri') {
     return ['Non Medical', 'Medical', 'Commerce', 'Humanities'];
+  }
+  if (campus === 'Gurukul Jyotisar') {
+    return ['Non Medical'];
   }
   return ['Non Medical', 'Medical', 'Commerce'];
 }
@@ -267,6 +270,7 @@ export function getStreamsForCampus(campus?: string | null, gender?: string | nu
  * - Stream:
  *   - For Class 11 Girls: Non Medical, Medical, Commerce, Humanities
  *   - For Class 11 Boys: Non Medical, Medical, Commerce (Humanities is strictly for girls only)
+ *   - For Class 11 Jyotisar: Non Medical only
  *   - For Class 6, 7, 8, 9: Stream must NOT be selected
  */
 export function validateClassAndStream(
@@ -327,9 +331,18 @@ export function validateClassAndStream(
       };
     }
 
+    if (studyLocation === 'Gurukul Jyotisar' && cleanStream !== 'Non Medical') {
+      return {
+        isValid: false,
+        error: 'At The Gurukul Jyotisar, only Non Medical stream is available for Class 11. For Medical or Commerce, please select Aryakulam Nilokheri.',
+      };
+    }
+
     const allowedStreams = isFemale
       ? ['Non Medical', 'Medical', 'Commerce', 'Humanities']
-      : ['Non Medical', 'Medical', 'Commerce'];
+      : (studyLocation === 'Gurukul Jyotisar'
+          ? ['Non Medical']
+          : ['Non Medical', 'Medical', 'Commerce']);
 
     if (!allowedStreams.includes(cleanStream)) {
       return {

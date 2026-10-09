@@ -30,6 +30,11 @@ export const metadata: Metadata = {
     'Gurukul Admission Portal',
     'Gurukul Admit Card',
   ],
+  other: {
+    google: 'notranslate',
+    robots: 'notranslate',
+    'Content-Language': 'en, hi',
+  },
 };
 
 export default function RootLayout({
@@ -38,9 +43,13 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className={`${inter.variable} ${merriweather.variable} scroll-smooth`}>
+    <html lang="en" translate="no" className={`${inter.variable} ${merriweather.variable} scroll-smooth notranslate`}>
       <head>
         <link rel="icon" href="/favicon.ico" sizes="any" />
+        <meta name="google" content="notranslate" />
+        <meta name="googlebot" content="notranslate" />
+        <meta name="robots" content="notranslate" />
+        <meta http-equiv="Content-Language" content="en, hi" />
         <script
           dangerouslySetInnerHTML={{
             __html: `
@@ -69,7 +78,7 @@ export default function RootLayout({
           }}
         />
       </head>
-      <body className="font-sans text-slate-900 bg-slate-50 antialiased">
+      <body className="font-sans text-slate-900 bg-slate-50 antialiased notranslate" translate="no">
         <AppShell>{children}</AppShell>
       </body>
     </html>
