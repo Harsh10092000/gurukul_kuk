@@ -228,7 +228,7 @@ export async function POST(request: Request) {
       customerEmail: candidateEmail,
       customerPhone: cleanPhone,
       returnUrl,
-      description: `Gurukul Kurukshetra Entrance Fee - ${personalInfo.fullName}`,
+      description: `The Gurukul Entrance Fee - ${personalInfo.fullName}`,
       metadata: {
         candidateName: personalInfo.fullName,
         applyingClass: classApplying,

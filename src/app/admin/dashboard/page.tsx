@@ -79,7 +79,7 @@ export default function AdminDashboard() {
         <div className="portal-card p-5 space-y-1.5 border-l-4 border-l-blue-600">
           <div className="flex items-center justify-between">
             <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">Boys Applicants</span>
-            <span className="portal-badge-navy text-[10px]">Aryakulam / Jyotisar</span>
+            <span className="portal-badge-navy text-[10px]">Aryakulam / The Gurukul Jyotisar</span>
           </div>
           <div className="text-2xl sm:text-3xl font-bold text-blue-900 font-mono">
             {stats?.boysCount ?? 0}
@@ -91,7 +91,7 @@ export default function AdminDashboard() {
         <div className="portal-card p-5 space-y-1.5 border-l-4 border-l-rose-500">
           <div className="flex items-center justify-between">
             <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">Girls Applicants</span>
-            <span className="portal-badge-gold text-[10px]">Nilokheri Campus</span>
+            <span className="portal-badge-gold text-[10px]">The Gurukul Nilokheri</span>
           </div>
           <div className="text-2xl sm:text-3xl font-bold text-rose-800 font-mono">
             {stats?.girlsCount ?? 0}

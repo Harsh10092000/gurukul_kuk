@@ -25,7 +25,7 @@ export default function AdminLoginPage() {
           }
         }
       })
-      .catch(() => {});
+      .catch(() => { });
   }, [router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -48,7 +48,7 @@ export default function AdminLoginPage() {
       }
 
       if (data.user.role !== 'admin') {
-        setError('Access denied. This portal is restricted to authorized Gurukul staff only.');
+        setError('Access denied. This portal is restricted to authorized The Gurukul staff only.');
         setLoading(false);
         return;
       }
@@ -70,7 +70,7 @@ export default function AdminLoginPage() {
             <div className="flex items-center gap-3">
               <Image
                 src="/logo-gurukul.png"
-                alt="Gurukul Logo"
+                alt="The Gurukul Logo"
                 width={40}
                 height={40}
                 className="object-contain opacity-90"
@@ -130,7 +130,7 @@ export default function AdminLoginPage() {
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="admin@thegurukuladmission.com"
+                placeholder="Enter Admin Email...."
                 className="form-input-field"
               />
             </div>

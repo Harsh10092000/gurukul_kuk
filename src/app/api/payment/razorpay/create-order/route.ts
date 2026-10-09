@@ -65,7 +65,7 @@ export async function POST(request: Request) {
 
     // 4. Preferred Study Location Validation
     const systemSettings = await db.getSettings();
-    const studyPref = studyLocationPref || { firstPreference: 'Gurukul Nilokheri' };
+    const studyPref = studyLocationPref || { firstPreference: 'The Gurukul Nilokheri' };
     const locVal = validateStudyLocation(
       gender,
       studyPref.firstPreference,

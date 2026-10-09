@@ -19,6 +19,13 @@ import {
 import { Application, AdmitCard, ExamResult } from '@/lib/types';
 import ConfirmModal from '@/components/ConfirmModal';
 
+function formatLocationPref(loc?: string | null): string {
+  if (!loc) return '';
+  if (loc === 'Gurukul Jyotisar') return 'The Gurukul Jyotisar';
+  if (loc === 'Gurukul Nilokheri') return 'The Gurukul Nilokheri';
+  return loc;
+}
+
 export default function ApplicantDashboard() {
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [application, setApplication] = useState<Application | null>(null);
@@ -703,7 +710,7 @@ export default function ApplicantDashboard() {
               <div className="data-cell sm:col-span-2">
                 <span className="text-slate-500 block text-[10px] font-semibold uppercase tracking-wider">Campus Preferences</span>
                 <span className="font-medium text-slate-900 mt-0.5 block">
-                  1st: <strong>{application.studyLocation?.firstPreference || application.studyLocationPref?.firstPreference || application.examCentrePref?.firstPreference || (application.personalInfo?.gender === 'Female' ? 'Gurukul Nilokheri' : 'Aryakulam Nilokheri')}</strong> • 2nd: {application.studyLocation?.secondPreference || application.studyLocationPref?.secondPreference || application.examCentrePref?.secondPreference || 'None'}
+                  1st: <strong>{formatLocationPref(application.studyLocation?.firstPreference || application.studyLocationPref?.firstPreference || application.examCentrePref?.firstPreference) || (application.personalInfo?.gender === 'Female' ? 'The Gurukul Nilokheri' : 'Aryakulam Nilokheri')}</strong> • 2nd: {formatLocationPref(application.studyLocation?.secondPreference || application.studyLocationPref?.secondPreference || application.examCentrePref?.secondPreference) || 'None'}
                 </span>
               </div>
               <div className="data-cell">

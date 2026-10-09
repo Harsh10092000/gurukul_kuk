@@ -103,9 +103,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       <div className="md:hidden print:hidden bg-portal-navy text-white p-3 flex justify-between items-center z-40 border-b border-slate-800 flex-shrink-0">
         <Link href="/admin/dashboard" className="flex items-center gap-2">
           <div className="w-7 h-7 flex items-center justify-center">
-            <Image src="/logo-gurukul.png" alt="Logo" width={28} height={28} className="brand-logo-sm object-contain" />
+            <Image src="/logo-gurukul.png" alt="The Gurukul Logo" width={28} height={28} className="brand-logo-sm object-contain" />
           </div>
-          <span className="font-bold text-xs tracking-tight">ADMIN GURUKUL</span>
+          <span className="font-bold text-xs tracking-tight">THE GURUKUL ADMIN</span>
         </Link>
         <div className="flex items-center gap-2">
           <Link
@@ -156,7 +156,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             <div className="w-10 h-10 flex-shrink-0 flex items-center justify-center">
               <Image
                 src="/logo-gurukul.png"
-                alt="Gurukul Crest"
+                alt="The Gurukul Crest"
                 width={40}
                 height={40}
                 className="brand-logo-sm object-contain"
@@ -164,7 +164,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             </div>
             <div>
               <h2 className="font-bold text-sm tracking-tight text-white leading-snug">
-                ADMIN GURUKUL
+                THE GURUKUL ADMIN
               </h2>
               <span className="text-[10px] font-mono text-portal-gold font-medium block">
                 EXAMINATION DESK

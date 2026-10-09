@@ -114,7 +114,7 @@ function ResultContent() {
       <div className="min-h-[60vh] flex items-center justify-center font-sans">
         <div className="text-center space-y-3">
           <div className="w-10 h-10 border-3 border-portal-navy border-t-transparent rounded-full animate-spin mx-auto text-portal-navy" />
-          <p className="text-xs font-semibold text-slate-600">Connecting to Gurukul Examination Result Server...</p>
+          <p className="text-xs font-semibold text-slate-600">Connecting to The Gurukul Examination Result Server...</p>
         </div>
       </div>
     );

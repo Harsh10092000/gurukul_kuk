@@ -26,9 +26,11 @@ export async function GET() {
           portalOpen: settings.portalOpen,
           resultsDeclared: settings.resultsDeclared,
           admitCardsReleased: settings.admitCardsReleased === true,
-          admitCardsReleasedAt: settings.admitCardsReleasedAt || null,
-          activeStudyLocations: settings.activeStudyLocations || ['Gurukul Nilokheri', 'Gurukul Jyotisar', 'Aryakulam Nilokheri'],
-          statusOverride: settings.statusOverride || 'auto',
+          activeStudyLocations: (settings.activeStudyLocations || ['The Gurukul Nilokheri', 'The Gurukul Jyotisar', 'Aryakulam Nilokheri']).map((loc: string) => {
+            if (loc === 'Gurukul Jyotisar') return 'The Gurukul Jyotisar';
+            if (loc === 'Gurukul Nilokheri') return 'The Gurukul Nilokheri';
+            return loc;
+          }),
           timezone: settings.timezone || 'Asia/Kolkata (IST)',
           announcementNotice: settings.announcementNotice || '',
         },

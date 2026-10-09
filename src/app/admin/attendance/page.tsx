@@ -176,7 +176,7 @@ export default function AdminAttendancePage() {
   }, [selectedWing, officialCentre]);
 
   const currentSheetAddress = useMemo(() => {
-    if (selectedWing === 'boys') return 'Nigdu Road, Nilokheri, Karnal, Haryana - 132117';
+    if (selectedWing === 'boys') return 'Aryakulam School Campus, Ward No. 1, Aryakulam Road, Nilokheri, Karnal - 132117';
     if (selectedWing === 'girls') return 'Sidhpur Minor, Nigdu Road, Nilokheri, Karnal, Haryana - 132117';
     return officialVenueAddress;
   }, [selectedWing, officialVenueAddress]);

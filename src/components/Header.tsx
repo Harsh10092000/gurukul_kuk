@@ -90,37 +90,35 @@ export default function Header() {
       </div>
 
       {/* Main Brand Bar */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-8 py-2 sm:py-2.5 flex justify-between items-center">
-        <Link href={brandRedirectHref} className="flex items-center gap-3 group">
-          <div className="w-12 h-12 sm:w-13 sm:h-13 flex-shrink-0 flex items-center justify-center">
+      <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-2 sm:py-2.5 flex justify-between items-center gap-2 sm:gap-4">
+        <Link href={brandRedirectHref} className="flex items-center gap-2.5 sm:gap-3.5 group min-w-0">
+          <div className="w-11 h-11 sm:w-12 sm:h-12 md:w-13 md:h-13 flex-shrink-0 flex items-center justify-center">
             <Image
               src="/logo-gurukul.png"
-              alt="The Gurukul Nilokheri Emblem"
+              alt="The Gurukul Admission Portal Emblem"
               width={52}
               height={52}
               priority
-              className="brand-logo-img object-contain"
+              className="brand-logo-img object-contain w-full h-full"
             />
           </div>
-          <div>
-            <div className="text-base sm:text-lg md:text-xl font-black text-portal-navy tracking-tight leading-tight">
-              THE GURUKUL NILOKHERI
+          <div className="min-w-0">
+            <div className="text-sm sm:text-base md:text-lg lg:text-xl font-black text-portal-navy tracking-tight leading-tight uppercase">
+              THE GURUKUL ADMISSION PORTAL
             </div>
-            <p className="text-[11px] sm:text-xs font-semibold text-slate-700 tracking-tight leading-tight mt-0.5">
-              <span className="text-portal-navy">Gurukul Nilokheri for Girls</span>
-              <span className="text-slate-300 mx-1.5">•</span>
-              <span className="text-slate-700">Aryakulam Nilokheri &amp; Gurukul Jyotisar for Boys</span>
-            </p>
-            <p className="text-[10px] sm:text-[11px] text-amber-700 font-medium tracking-wide leading-tight mt-0.5">
+            <div className="text-[10px] xs:text-[11px] sm:text-xs font-semibold text-slate-700 tracking-tight leading-snug mt-0.5">
+              <span className="text-portal-navy inline-block">The Gurukul Nilokheri for Girls</span>
+              <span className="text-slate-400 mx-1 sm:mx-1.5 select-none">•</span>
+              <span className="text-slate-700 inline-block">Aryakulam Nilokheri &amp; The Gurukul Jyotisar for Boys</span>
+            </div>
+            <p className="hidden md:block text-[9.5px] sm:text-[10px] text-amber-700 font-medium tracking-wide leading-tight mt-0.5">
               <span>मा प्रगाम पथो वयम् • Modernity with Traditions</span>
-              <span className="text-slate-300 hidden md:inline mx-1.5">|</span>
-              <span className="text-slate-500 hidden md:inline">Entrance Examination &amp; Admission Portal</span>
             </p>
           </div>
         </Link>
 
         {/* Desktop Quick Nav & Auth Actions */}
-        <nav className="hidden lg:flex items-center gap-6 text-xs font-semibold text-slate-700">
+        <nav className="hidden lg:flex items-center gap-3.5 xl:gap-5 text-xs font-semibold text-slate-700 flex-shrink-0">
           {isAdminLogin && !currentUser ? (
             <div className="flex items-center gap-3">
               <span className="bg-amber-50 text-amber-900 border border-amber-200 text-xs font-semibold px-3 py-1 rounded-full">
@@ -135,44 +133,44 @@ export default function Header() {
             </div>
           ) : !isAdmin ? (
             <>
-              <Link href="/status" className="hover:text-portal-navy transition">
+              <Link href="/status" className="hover:text-portal-navy transition whitespace-nowrap">
                 Check Status
               </Link>
-              <Link href="/admit-card" className="hover:text-portal-navy transition">
+              <Link href="/admit-card" className="hover:text-portal-navy transition whitespace-nowrap">
                 Admit Card
               </Link>
               {(resultsDeclared || isAdmin) && (
-                <Link href="/result" className="hover:text-portal-navy transition">
+                <Link href="/result" className="hover:text-portal-navy transition whitespace-nowrap">
                   Results
                 </Link>
               )}
-              <Link href="/contact" className="hover:text-portal-navy transition">
+              <Link href="/contact" className="hover:text-portal-navy transition whitespace-nowrap">
                 Contact &amp; Helpdesk
               </Link>
             </>
           ) : (
-            <div className="flex items-center gap-4 text-xs font-semibold text-slate-700">
+            <div className="flex items-center gap-3 xl:gap-4 text-xs font-semibold text-slate-700">
               <Link 
                 href="/admin/dashboard" 
-                className={`hover:text-portal-navy transition ${pathname === '/admin/dashboard' ? 'text-portal-navy font-bold' : ''}`}
+                className={`hover:text-portal-navy transition whitespace-nowrap ${pathname === '/admin/dashboard' ? 'text-portal-navy font-bold' : ''}`}
               >
                 Dashboard
               </Link>
               <Link 
                 href="/admin/applications" 
-                className={`hover:text-portal-navy transition ${pathname.startsWith('/admin/applications') ? 'text-portal-navy font-bold' : ''}`}
+                className={`hover:text-portal-navy transition whitespace-nowrap ${pathname.startsWith('/admin/applications') ? 'text-portal-navy font-bold' : ''}`}
               >
                 Applications
               </Link>
               <Link 
                 href="/admin/enquiries" 
-                className={`hover:text-portal-navy transition ${pathname.startsWith('/admin/enquiries') ? 'text-portal-navy font-bold' : ''}`}
+                className={`hover:text-portal-navy transition whitespace-nowrap ${pathname.startsWith('/admin/enquiries') ? 'text-portal-navy font-bold' : ''}`}
               >
                 Enquiries
               </Link>
               <Link 
                 href="/admin/settings" 
-                className={`hover:text-portal-navy transition ${pathname.startsWith('/admin/settings') ? 'text-portal-navy font-bold' : ''}`}
+                className={`hover:text-portal-navy transition whitespace-nowrap ${pathname.startsWith('/admin/settings') ? 'text-portal-navy font-bold' : ''}`}
               >
                 Settings
               </Link>
@@ -180,17 +178,17 @@ export default function Header() {
           )}
 
           {currentUser && !currentUser.isTemporary ? (
-            <div className="flex items-center gap-3 pl-3 border-l border-slate-200">
+            <div className="flex items-center gap-2.5 xl:gap-3 pl-3 border-l border-slate-200">
               {currentUser?.role === 'admin' && <AdminNotificationBell />}
               <Link
                 href={currentUser?.role === 'admin' ? '/admin/dashboard' : '/dashboard'}
-                className="flex items-center gap-1.5 bg-slate-100 text-slate-800 border border-slate-200 px-3 py-1.5 rounded-lg text-xs font-semibold hover:bg-slate-200 transition"
+                className="flex items-center gap-1.5 bg-slate-100 text-slate-800 border border-slate-200 px-3 py-1.5 rounded-lg text-xs font-semibold hover:bg-slate-200 transition whitespace-nowrap"
               >
                 <span>{currentUser?.name || (currentUser?.role === 'admin' ? 'Admin' : 'Candidate')}</span>
               </Link>
               <button
                 onClick={handleLogout}
-                className="flex items-center gap-1 bg-rose-600 hover:bg-rose-700 text-white px-3 py-1.5 rounded-lg text-xs font-semibold transition"
+                className="flex items-center gap-1 bg-rose-600 hover:bg-rose-700 text-white px-3 py-1.5 rounded-lg text-xs font-semibold transition whitespace-nowrap"
                 title="Sign Out"
               >
                 <LogOut className="w-3.5 h-3.5" />
@@ -208,7 +206,7 @@ export default function Header() {
             <div className="flex items-center gap-2">
               <Link
                 href="/login"
-                className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold transition border ${
+                className={`px-3 xl:px-3.5 py-1.5 rounded-lg text-xs font-semibold transition border whitespace-nowrap ${
                   pathname === '/login'
                     ? 'border-portal-navy bg-slate-100 text-portal-navy'
                     : 'text-slate-700 hover:text-portal-navy border-slate-300 hover:border-slate-400'
@@ -218,7 +216,7 @@ export default function Header() {
               </Link>
               <Link
                 href="/register"
-                className="bg-portal-navy hover:bg-slate-900 text-white font-semibold px-4 py-1.5 rounded-lg text-xs shadow-xs transition"
+                className="bg-portal-navy hover:bg-slate-900 text-white font-semibold px-3.5 xl:px-4 py-1.5 rounded-lg text-xs shadow-xs transition whitespace-nowrap"
               >
                 New Registration
               </Link>

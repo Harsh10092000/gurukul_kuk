@@ -14,6 +14,13 @@ interface AdmissionFormProps {
   backLabel?: string;
 }
 
+function formatLocationPref(loc?: string | null): string {
+  if (!loc) return '';
+  if (loc === 'Gurukul Jyotisar') return 'The Gurukul Jyotisar';
+  if (loc === 'Gurukul Nilokheri') return 'The Gurukul Nilokheri';
+  return loc;
+}
+
 export default function AdmissionFormView({
   application,
   admitCard,
@@ -75,7 +82,7 @@ export default function AdmissionFormView({
           <div className="w-16 h-16 flex-shrink-0 flex items-center justify-center">
             <Image
               src="/logo-gurukul.png"
-              alt="Gurukul Crest"
+              alt="The Gurukul Crest"
               width={60}
               height={60}
               className="brand-logo-img object-contain"
@@ -102,7 +109,7 @@ export default function AdmissionFormView({
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src="/gurukul-patron.png"
-              alt="Gurukul Patron"
+              alt="The Gurukul Patron"
               className="max-h-16 sm:max-h-20 print:max-h-16 max-w-full object-contain rounded-full shadow-xs"
             />
           </div>
@@ -246,11 +253,11 @@ export default function AdmissionFormView({
                 </div>
                 <div>
                   <span className="text-slate-600 block text-[8.5px]">1st Campus Preference:</span>
-                  <span className="font-bold text-black">{application.studyLocation?.firstPreference || application.studyLocationPref?.firstPreference || application.examCentrePref?.firstPreference || (application.personalInfo?.gender === 'Female' ? 'Gurukul Nilokheri' : 'Aryakulam Nilokheri')}</span>
+                  <span className="font-bold text-black">{formatLocationPref(application.studyLocation?.firstPreference || application.studyLocationPref?.firstPreference || application.examCentrePref?.firstPreference) || (application.personalInfo?.gender === 'Female' ? 'The Gurukul Nilokheri' : 'Aryakulam Nilokheri')}</span>
                 </div>
                 <div>
                   <span className="text-slate-600 block text-[8.5px]">2nd Campus Preference:</span>
-                  <span className="font-medium text-slate-800">{application.studyLocation?.secondPreference || application.studyLocationPref?.secondPreference || application.examCentrePref?.secondPreference || 'None'}</span>
+                  <span className="font-medium text-slate-800">{formatLocationPref(application.studyLocation?.secondPreference || application.studyLocationPref?.secondPreference || application.examCentrePref?.secondPreference) || 'None'}</span>
                 </div>
               </div>
             </div>
@@ -408,7 +415,7 @@ export default function AdmissionFormView({
 
         {/* Confidentiality Footer */}
         <div className="text-[8px] text-center text-slate-600 border-t border-black pt-1">
-          CONFIDENTIAL OFFICE RECORD • GURUKUL EXAMINATION &amp; ADMISSION ADMINISTRATION • ARCHIVAL RETENTION: 5 YEARS
+          CONFIDENTIAL OFFICE RECORD • THE GURUKUL EXAMINATION &amp; ADMISSION ADMINISTRATION • ARCHIVAL RETENTION: 5 YEARS
         </div>
 
       </div>

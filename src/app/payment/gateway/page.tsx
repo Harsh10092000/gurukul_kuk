@@ -205,7 +205,7 @@ function PaymentGatewayInner() {
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src="/the-gurukul-nilokheri-logo.png"
-                alt="Gurukul Crest"
+                alt="The Gurukul Crest"
                 className="w-full h-full object-contain"
                 onError={(e) => {
                   (e.currentTarget as any).src = '/logo-gurukul.png';

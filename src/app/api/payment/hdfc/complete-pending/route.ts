@@ -115,7 +115,7 @@ export async function POST(request: Request) {
     }
 
     // Create official application record
-    const studyPref = studyLocationPref || { firstPreference: 'Gurukul Nilokheri' };
+    const studyPref = studyLocationPref || { firstPreference: 'The Gurukul Nilokheri' };
     const newApplication = await db.createApplication({
       userId: officialUser.id,
       registrationNumber: registrationId,

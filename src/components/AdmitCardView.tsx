@@ -55,7 +55,7 @@ export function printAdmitCard(sheetId: string = 'admit-card-print-sheet', title
     <html lang="en">
       <head>
         <meta charset="utf-8" />
-        <title>${title || 'Gurukul_Admit_Card'}</title>
+        <title>${title || 'The_Gurukul_Admit_Card'}</title>
         ${headElements}
         <style>
           @page {
@@ -160,46 +160,6 @@ export default function AdmitCardView({ admitCard }: AdmitCardViewProps) {
     return () => window.removeEventListener('keydown', onKeyDown);
   }, [admitCard]);
 
-  // Dynamic Venue, Exam Date, and Timing values tailored for Boys vs Girls
-  const details = getExamDetailsForGender(admitCard.gender, admitCard.rollNumber || admitCard.applicationNumber);
-  const isGirl =
-    (admitCard.gender || '').toLowerCase() === 'female' ||
-    (admitCard.gender || '').toLowerCase() === 'girl' ||
-    (admitCard.applicationNumber || '').startsWith('NILG') ||
-    (() => {
-      const m = (admitCard.rollNumber || '').trim().match(/^27(\d{2})(\d{4,})$/);
-      if (!m) return false;
-      const classCode = m[1];
-      const seq = parseInt(m[2], 10);
-      if (classCode === '11') {
-        return (seq >= 1001 && seq <= 2000) ||
-               (seq >= 3001 && seq <= 4000) ||
-               (seq >= 5001 && seq <= 6000) ||
-               (seq >= 7001 && seq <= 8000);
-      }
-      return seq >= 5001;
-    })();
-
-  const headerTitle = isGirl ? 'THE GURUKUL NILOKHERI' : 'THE GURUKUL';
-  const headerSubtitle = isGirl ? '(Girls)' : '(Aryakulam Nilokheri/ Gurukul Jyotisar)';
-
-  const instituteName = isGirl
-    ? 'The Gurukul Nilokheri (Girls Wing)'
-    : 'Aryakulam Nilokheri';
-
-  const examDate = (admitCard.examDate && !admitCard.examDate.includes('21 March') && !admitCard.examDate.includes('2027-03-21'))
-    ? admitCard.examDate
-    : details.examDate;
-  const examTime = (admitCard.reportingTime && admitCard.reportingTime !== '9:00 AM' && !admitCard.reportingTime.includes('/'))
-    ? admitCard.reportingTime
-    : details.reportingTime;
-  const venueName = (admitCard.examCentreName && !admitCard.examCentreName.toUpperCase().includes('JYOTISAR') && !admitCard.examCentreName.toUpperCase().includes('KURUKSHETRA') && !admitCard.examCentreName.includes('/'))
-    ? admitCard.examCentreName.toUpperCase()
-    : details.examCentreName.toUpperCase();
-  const venueAddress = (admitCard.examCentreAddress && !admitCard.examCentreAddress.includes('136119') && !admitCard.examCentreAddress.toLowerCase().includes('pehowa'))
-    ? admitCard.examCentreAddress
-    : details.examCentreAddress;
-
   return (
     <div className="w-full max-w-4xl mx-auto my-6 px-2 sm:px-4 font-sans text-slate-900 print:m-0 print:p-0 print:max-w-full">
       {/* Top Action Bar (Hidden when printing) */}
@@ -222,11 +182,59 @@ export default function AdmitCardView({ admitCard }: AdmitCardViewProps) {
         </div>
       </div>
 
-      {/* Printable Sheet (Standard A4 Official Layout matching PDF Template) */}
-      <div
-        id="admit-card-print-sheet"
-        className="bg-white border-2 border-black p-4 sm:p-7 print:p-2.5 print:border-2 print:border-black print-card text-black space-y-3 sm:space-y-3.5 print:space-y-1.5 leading-tight"
-      >
+      <AdmitCardSheet admitCard={admitCard} sheetId="admit-card-print-sheet" />
+    </div>
+  );
+}
+
+export function AdmitCardSheet({ admitCard, sheetId }: { admitCard: AdmitCard; sheetId?: string }) {
+  // Dynamic Venue, Exam Date, and Timing values tailored for Boys vs Girls
+  const details = getExamDetailsForGender(admitCard.gender, admitCard.rollNumber || admitCard.applicationNumber);
+  const isGirl =
+    (admitCard.gender || '').toLowerCase() === 'female' ||
+    (admitCard.gender || '').toLowerCase() === 'girl' ||
+    (admitCard.applicationNumber || '').startsWith('NILG') ||
+    (() => {
+      const m = (admitCard.rollNumber || '').trim().match(/^27(\d{2})(\d{4,})$/);
+      if (!m) return false;
+      const classCode = m[1];
+      const seq = parseInt(m[2], 10);
+      if (classCode === '11') {
+        return (seq >= 1001 && seq <= 2000) ||
+               (seq >= 3001 && seq <= 4000) ||
+               (seq >= 5001 && seq <= 6000) ||
+               (seq >= 7001 && seq <= 8000);
+      }
+      return seq >= 5001;
+    })();
+
+  const headerTitle = isGirl ? 'THE GURUKUL NILOKHERI' : 'THE GURUKUL';
+  const headerSubtitle = isGirl ? '(Girls)' : '(Aryakulam Nilokheri/ The Gurukul Jyotisar)';
+
+  const instituteName = isGirl
+    ? 'The Gurukul Nilokheri (Girls Wing)'
+    : 'Aryakulam Nilokheri';
+
+  const examDate = (admitCard.examDate && !admitCard.examDate.includes('21 March') && !admitCard.examDate.includes('2027-03-21'))
+    ? admitCard.examDate
+    : details.examDate;
+  const examTime = (admitCard.reportingTime && admitCard.reportingTime !== '9:00 AM' && !admitCard.reportingTime.includes('/'))
+    ? admitCard.reportingTime
+    : details.reportingTime;
+  const venueName = (admitCard.examCentreName && !admitCard.examCentreName.toUpperCase().includes('JYOTISAR') && !admitCard.examCentreName.toUpperCase().includes('KURUKSHETRA') && !admitCard.examCentreName.includes('/'))
+    ? admitCard.examCentreName.toUpperCase()
+    : details.examCentreName.toUpperCase();
+  const venueAddress = !isGirl
+    ? (details.examCentreAddress || 'Aryakulam School Campus, Ward No. 1, Aryakulam Road, Nilokheri, Karnal - 132117')
+    : (admitCard.examCentreAddress && !admitCard.examCentreAddress.includes('136119') && !admitCard.examCentreAddress.toLowerCase().includes('pehowa'))
+      ? admitCard.examCentreAddress
+      : details.examCentreAddress;
+
+  return (
+    <div
+      id={sheetId}
+      className="bg-white border-2 border-black p-4 sm:p-7 print:p-2.5 print:border-2 print:border-black print-card text-black space-y-3 sm:space-y-3.5 print:space-y-1.5 leading-tight w-full max-w-4xl mx-auto"
+    >
 
         {/* 1. Top Warning Box */}
         <div className="border border-black py-1 print:py-0.5 px-2 text-center">
@@ -249,7 +257,7 @@ export default function AdmitCardView({ admitCard }: AdmitCardViewProps) {
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src="/logo-gurukul.png"
-              alt="Gurukul Crest"
+              alt="The Gurukul Crest"
               className="max-h-20 sm:max-h-24 print:max-h-16 max-w-full object-contain"
             />
           </div>
@@ -268,9 +276,14 @@ export default function AdmitCardView({ admitCard }: AdmitCardViewProps) {
             <div className="mt-1.5 print:mt-1 inline-block border border-black bg-slate-50 text-black text-xs sm:text-sm print:text-xs font-black tracking-wider px-4 py-0.5 print:px-3 print:py-0.2 uppercase">
               ADMIT CARD : 2027-28
             </div>
-            <p className="text-[11px] sm:text-xs print:text-[10px] font-bold text-slate-900 mt-1.5 print:mt-0.5 leading-snug">
-              Venue for Entrance Test: <span className="uppercase">{venueName}</span>
-            </p>
+            <div className="mt-1.5 print:mt-0.5 text-[11px] sm:text-xs print:text-[10px] font-bold text-slate-900 leading-snug">
+              <div>Venue for Entrance Test: <span className="uppercase">{venueName}</span></div>
+              {venueAddress && (
+                <div className="text-[10px] sm:text-[10.5px] print:text-[9px] font-semibold text-slate-700 normal-case mt-0.5">
+                  ({venueAddress})
+                </div>
+              )}
+            </div>
           </div>
 
           {/* Right Section (Patron logo removed, kept empty to maintain symmetrical balance) */}
@@ -324,7 +337,12 @@ export default function AdmitCardView({ admitCard }: AdmitCardViewProps) {
                     Exam Centre
                   </div>
                   <div className="col-span-7 sm:col-span-8 p-1.5 print:py-0.5 print:px-1.5 font-bold uppercase text-slate-900">
-                    {venueName || instituteName}
+                    <div>{venueName || instituteName}</div>
+                    {venueAddress && (
+                      <div className="text-[10px] print:text-[9px] font-normal text-slate-600 normal-case mt-0.5">
+                        {venueAddress}
+                      </div>
+                    )}
                   </div>
                 </div>
 
@@ -454,8 +472,6 @@ export default function AdmitCardView({ admitCard }: AdmitCardViewProps) {
             {venueAddress}
           </p>
         </div>
-
       </div>
-    </div>
   );
 }

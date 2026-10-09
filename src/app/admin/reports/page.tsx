@@ -1,12 +1,17 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Download, FileSpreadsheet, FolderArchive, Loader2, RefreshCw } from 'lucide-react';
+import { Download, FileSpreadsheet, FolderArchive, Loader2, RefreshCw, Ticket, Printer, ExternalLink } from 'lucide-react';
 
 export default function AdminReportsPage() {
   const [stats, setStats] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [downloading, setDownloading] = useState(false);
+
+  // Bulk Admit Cards Download State (with Class & Stream selection)
+  const [admitClass, setAdmitClass] = useState('all');
+  const [admitStream, setAdmitStream] = useState('all');
+  const [downloadingAdmits, setDownloadingAdmits] = useState(false);
 
   // Class Summary Excel State (with Date Range)
   const [summaryStartDate, setSummaryStartDate] = useState('');
@@ -94,7 +99,7 @@ export default function AdminReportsPage() {
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `Gurukul_Candidate_Docs_${docClass.replace(/\s+/g, '_')}_${docStream.replace(/\s+/g, '_')}_${Date.now()}.zip`;
+      a.download = `The_Gurukul_Candidate_Docs_${docClass.replace(/\s+/g, '_')}_${docStream.replace(/\s+/g, '_')}_${Date.now()}.zip`;
       document.body.appendChild(a);
       a.click();
       window.URL.revokeObjectURL(url);
@@ -105,6 +110,44 @@ export default function AdminReportsPage() {
     } finally {
       setDownloadingDocs(false);
     }
+  };
+
+  const handleDownloadBulkAdmitCards = async () => {
+    setDownloadingAdmits(true);
+    try {
+      const params = new URLSearchParams();
+      params.set('class', admitClass);
+      params.set('stream', admitStream);
+
+      const res = await fetch(`/api/admin/admit-card/bulk-download?${params.toString()}`);
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => null);
+        throw new Error(errorData?.error || 'Failed to download bulk admit cards');
+      }
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      const cleanClass = admitClass.replace(/\s+/g, '_');
+      const cleanStream = admitStream !== 'all' ? `_${admitStream.replace(/\s+/g, '_')}` : '';
+      a.download = `The_Gurukul_Admit_Cards_${cleanClass}${cleanStream}_${Date.now()}.zip`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+    } catch (err: any) {
+      console.error('Error downloading bulk admit cards:', err);
+      alert(err?.message || 'Could not download bulk admit cards archive. Please try again.');
+    } finally {
+      setDownloadingAdmits(false);
+    }
+  };
+
+  const handleOpenPrintRoll = () => {
+    const params = new URLSearchParams();
+    params.set('class', admitClass);
+    params.set('stream', admitStream);
+    window.open(`/admin/reports/print-admit-cards?${params.toString()}`, '_blank');
   };
 
   if (loading) {
@@ -139,7 +182,123 @@ export default function AdminReportsPage() {
       </div>
 
       {/* Reports & Bulk Download Centre */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="space-y-6">
+        {/* Card: Bulk Admit Cards & Hall Tickets Download */}
+        <div id="bulk-admit-cards" className="portal-card p-5 sm:p-6 space-y-4 border-t-4 border-t-amber-500 scroll-mt-24 shadow-sm">
+          <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
+            <div>
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-lg bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-600">
+                  <Ticket className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-slate-900 text-sm sm:text-base">
+                    Bulk Admit Cards &amp; Hall Tickets (Class-Wise)
+                  </h3>
+                  <span className="text-[11px] text-amber-700 font-medium">
+                    Official Entrance Examination Roll (Session 2027-28)
+                  </span>
+                </div>
+              </div>
+              <p className="text-xs text-slate-500 mt-2 leading-relaxed max-w-3xl">
+                Download official, color-formatted Admit Cards packaged per Class &amp; Stream. Includes candidate photographs, allotted Roll Numbers, exam center allocations (Aryakulam Nilokheri for Boys, The Gurukul Nilokheri for Girls), timings, instructions, and master register Excel spreadsheet.
+              </p>
+            </div>
+            <div className="flex items-center gap-1.5 self-start sm:self-auto">
+              <span className="bg-amber-100 text-amber-800 text-[10px] px-2.5 py-1 rounded-full font-mono font-bold">
+                .ZIP ARCHIVE
+              </span>
+              <span className="bg-portal-navy/10 text-portal-navy text-[10px] px-2.5 py-1 rounded-full font-mono font-bold">
+                MULTI-PAGE PDF
+              </span>
+            </div>
+          </div>
+
+          <div className="bg-slate-50 border border-slate-200 rounded-lg p-3 sm:p-4 space-y-3">
+            <span className="text-[11px] font-bold text-slate-700 block uppercase tracking-wide">
+              Select Class &amp; Stream for Bulk Download:
+            </span>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+              <div>
+                <label className="text-[10px] font-semibold text-slate-500 block mb-1">Applying Class</label>
+                <select
+                  value={admitClass}
+                  onChange={(e) => setAdmitClass(e.target.value)}
+                  className="form-input-field text-xs py-1.5 bg-white font-medium"
+                >
+                  <option value="all">All Classes (Full Roll)</option>
+                  <option value="Class 5">Class 5</option>
+                  <option value="Class 6">Class 6</option>
+                  <option value="Class 7">Class 7</option>
+                  <option value="Class 8">Class 8</option>
+                  <option value="Class 9">Class 9</option>
+                  <option value="Class 11">Class 11</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="text-[10px] font-semibold text-slate-500 block mb-1">
+                  Stream / Section {admitClass === 'Class 11' && <span className="text-rose-500 font-bold">*</span>}
+                </label>
+                <select
+                  value={admitStream}
+                  onChange={(e) => setAdmitStream(e.target.value)}
+                  disabled={admitClass !== 'Class 11' && admitClass !== 'all'}
+                  className="form-input-field text-xs py-1.5 bg-white font-medium disabled:bg-slate-100 disabled:text-slate-400"
+                >
+                  <option value="all">All Streams</option>
+                  <option value="Non-Medical">Non-Medical (PCM)</option>
+                  <option value="Medical">Medical (PCB)</option>
+                  <option value="Commerce">Commerce</option>
+                  <option value="Humanities">Humanities (Girls Only)</option>
+                </select>
+              </div>
+
+              <div className="flex flex-col justify-end">
+                <span className="text-[10px] text-slate-400 mb-1">Format Details</span>
+                <div className="text-[11px] text-slate-600 bg-white border border-slate-200 rounded px-2.5 py-1.5 flex items-center gap-1.5">
+                  <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0"></span>
+                  <span className="truncate">Includes candidate photos + Excel manifest</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex flex-wrap items-center justify-between gap-3 pt-2 border-t border-slate-100">
+            <button
+              type="button"
+              onClick={handleOpenPrintRoll}
+              className="btn-secondary text-xs py-2 px-3.5 flex items-center gap-2 font-bold hover:bg-slate-200 transition"
+              title="Open full multi-page printable roll in a new tab"
+            >
+              <Printer className="w-3.5 h-3.5 text-slate-700" />
+              <span>Multi-Page PDF Print Roll</span>
+              <ExternalLink className="w-3 h-3 text-slate-400" />
+            </button>
+
+            <button
+              type="button"
+              onClick={handleDownloadBulkAdmitCards}
+              disabled={downloadingAdmits}
+              className="bg-portal-gold hover:bg-amber-500 text-slate-950 text-xs py-2 px-5 rounded-md flex items-center gap-2 font-bold shadow-sm transition disabled:opacity-50"
+            >
+              {downloadingAdmits ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin text-slate-950" />
+                  <span>Packaging Admit Cards ZIP...</span>
+                </>
+              ) : (
+                <>
+                  <Download className="w-4 h-4" />
+                  <span>Download Bulk Admit Cards (.zip)</span>
+                </>
+              )}
+            </button>
+          </div>
+        </div>
+
+        {/* Existing Reports Grid */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Card 1: Class & Stream Summary Excel with Date Range */}
         <div className="portal-card p-5 sm:p-6 space-y-4 border-t-4 border-t-emerald-600">
           <div className="flex items-start justify-between gap-3">
@@ -302,6 +461,7 @@ export default function AdminReportsPage() {
           </div>
         </div>
       </div>
+    </div>
 
       {/* Export Action Card */}
       <div className="portal-card p-5 sm:p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-l-4 border-l-portal-navy">

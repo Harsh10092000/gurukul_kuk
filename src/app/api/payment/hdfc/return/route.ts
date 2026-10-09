@@ -492,7 +492,7 @@ async function handleHdfcReturn(request: Request) {
           category: personalInfo.category || 'General',
           aadhaarNumber: personalInfo?.aadhaarNumber ? `XXXXXXXX${personalInfo.aadhaarNumber.slice(-4)}` : 'N/A',
           address: fullAddress,
-          studyLocation: studyLocationPref?.firstPreference || 'Gurukul Nilokheri',
+          studyLocation: studyLocationPref?.firstPreference || 'The Gurukul Nilokheri',
           previousSchool: prevSchool,
           previousMarks: prevMarks,
           amountPaid: 800,

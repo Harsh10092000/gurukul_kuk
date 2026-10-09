@@ -29,7 +29,6 @@ import {
 import ImageCropperModal from '@/components/ImageCropperModal';
 
 const FATHER_OCCUPATIONS = [
-  'Service',
   'Government Service',
   'Business / Self-Employed',
   'Agriculture / Farming',
@@ -42,7 +41,6 @@ const FATHER_OCCUPATIONS = [
 
 const MOTHER_OCCUPATIONS = [
   'Homemaker',
-  'Service',
   'Government Service',
   'Teaching / Academic',
   'Business / Self-Employed',
@@ -71,8 +69,8 @@ export default function ApplyPage() {
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [cancelLoading, setCancelLoading] = useState(false);
   const [activeLocations, setActiveLocations] = useState<string[]>([
-    'Gurukul Nilokheri',
-    'Gurukul Jyotisar',
+    'The Gurukul Nilokheri',
+    'The Gurukul Jyotisar',
     'Aryakulam Nilokheri',
   ]);
   const [instructionLang, setInstructionLang] = useState<'en' | 'hi'>('en');
@@ -145,7 +143,7 @@ export default function ApplyPage() {
     pincode: '',
 
     // Step 1: Preferred Study Location
-    firstPreference: 'Gurukul Jyotisar',
+    firstPreference: 'The Gurukul Jyotisar',
     secondPreference: 'Aryakulam Nilokheri',
 
     // Step 5: 4 Mandatory Documents
@@ -166,15 +164,15 @@ export default function ApplyPage() {
   const handleGenderSelect = (selectedGender: 'Male' | 'Female') => {
     setError('');
     const isFem = selectedGender === 'Female';
-    const validBoys = ['Aryakulam Nilokheri', 'Gurukul Jyotisar'].filter((l) =>
-      activeLocations.includes(l)
+    const validBoys = ['Aryakulam Nilokheri', 'The Gurukul Jyotisar'].filter((l) =>
+      activeLocations.some((al) => al === l || (l.includes('Jyotisar') && al.includes('Jyotisar')))
     );
-    const effectiveBoys = validBoys.length > 0 ? validBoys : ['Aryakulam Nilokheri', 'Gurukul Jyotisar'];
+    const effectiveBoys = validBoys.length > 0 ? validBoys : ['Aryakulam Nilokheri', 'The Gurukul Jyotisar'];
 
     setFormData((prev) => {
       const nextFirst = isFem
-        ? 'Gurukul Nilokheri'
-        : (effectiveBoys.includes(prev.firstPreference) && prev.firstPreference !== 'Gurukul Nilokheri'
+        ? 'The Gurukul Nilokheri'
+        : (effectiveBoys.includes(prev.firstPreference) && !prev.firstPreference.includes('Nilokheri')
           ? prev.firstPreference
           : effectiveBoys[0] || 'Aryakulam Nilokheri');
 
@@ -207,20 +205,20 @@ export default function ApplyPage() {
   useEffect(() => {
     const isFem = formData.gender === 'Female' || (formData.gender as string)?.toLowerCase() === 'female';
     if (isFem) {
-      if (formData.firstPreference !== 'Gurukul Nilokheri' || formData.secondPreference !== '') {
+      if (formData.firstPreference !== 'The Gurukul Nilokheri' || formData.secondPreference !== '') {
         setFormData((prev) => ({
           ...prev,
-          firstPreference: 'Gurukul Nilokheri',
+          firstPreference: 'The Gurukul Nilokheri',
           secondPreference: '',
           applyingClass: prev.applyingClass === 'Class 5' ? 'Class 6' : prev.applyingClass,
         }));
       }
     } else {
-      const validBoys = ['Aryakulam Nilokheri', 'Gurukul Jyotisar'].filter((l) =>
-        activeLocations.includes(l)
+      const validBoys = ['Aryakulam Nilokheri', 'The Gurukul Jyotisar'].filter((l) =>
+        activeLocations.some((al) => al === l || (l.includes('Jyotisar') && al.includes('Jyotisar')))
       );
-      const effectiveBoys = validBoys.length > 0 ? validBoys : ['Aryakulam Nilokheri', 'Gurukul Jyotisar'];
-      const currentFirst = effectiveBoys.includes(formData.firstPreference) && formData.firstPreference !== 'Gurukul Nilokheri'
+      const effectiveBoys = validBoys.length > 0 ? validBoys : ['Aryakulam Nilokheri', 'The Gurukul Jyotisar'];
+      const currentFirst = effectiveBoys.includes(formData.firstPreference) && !formData.firstPreference.includes('Nilokheri')
         ? formData.firstPreference
         : (effectiveBoys[0] || 'Aryakulam Nilokheri');
       const remainingBoys = effectiveBoys.filter((l) => l !== currentFirst);
@@ -328,7 +326,12 @@ export default function ApplyPage() {
       .then((res) => res.json())
       .then((data) => {
         if (data.settings?.activeStudyLocations && Array.isArray(data.settings.activeStudyLocations)) {
-          setActiveLocations(data.settings.activeStudyLocations);
+          const normalized = data.settings.activeStudyLocations.map((l: string) => {
+            if (l === 'Gurukul Jyotisar') return 'The Gurukul Jyotisar';
+            if (l === 'Gurukul Nilokheri') return 'The Gurukul Nilokheri';
+            return l;
+          });
+          setActiveLocations(normalized);
         }
       })
       .catch(() => { });
@@ -958,7 +961,7 @@ export default function ApplyPage() {
       try {
         localStorage.removeItem('gurukul_application_draft');
         sessionStorage.removeItem('gurukul_reg_info');
-      } catch {}
+      } catch { }
       window.location.href = data.redirectUrl || `/payment/thank-you?orderId=${encodeURIComponent(pendingOrderId)}&regNo=${encodeURIComponent(data.registrationNumber)}`;
     } catch (err: any) {
       setError(err?.message || 'Verification failed. If your payment was deducted, please contact admissions helpdesk.');
@@ -978,10 +981,10 @@ export default function ApplyPage() {
 
   const currentDistricts = INDIAN_STATES_AND_DISTRICTS[formData.state] || ['Other'];
 
-  const rawBoysActive = ['Aryakulam Nilokheri', 'Gurukul Jyotisar'].filter((l) =>
-    activeLocations.includes(l)
+  const rawBoysActive = ['Aryakulam Nilokheri', 'The Gurukul Jyotisar'].filter((l) =>
+    activeLocations.some((al) => al === l || (l.includes('Jyotisar') && al.includes('Jyotisar')))
   );
-  const boysActiveLocations = rawBoysActive.length > 0 ? rawBoysActive : ['Aryakulam Nilokheri', 'Gurukul Jyotisar'];
+  const boysActiveLocations = rawBoysActive.length > 0 ? rawBoysActive : ['Aryakulam Nilokheri', 'The Gurukul Jyotisar'];
 
   // SCREEN: Registration Confirmed Screen -> Redirect to Thank You page
   if (submittedApp) {
@@ -1010,7 +1013,7 @@ export default function ApplyPage() {
             Online Entrance Application
           </h1>
           <p className="text-xs text-slate-500">
-            Admissions for Gurukul Nilokheri, Gurukul Jyotisar, and Aryakulam Nilokheri
+            Admissions for The Gurukul Nilokheri, The Gurukul Jyotisar, and Aryakulam Nilokheri
           </p>
         </div>
 
@@ -1139,8 +1142,8 @@ export default function ApplyPage() {
                     </h2>
                     <p className="text-xs text-slate-300">
                       {instructionLang === 'hi'
-                        ? 'The Gurukul Nilokheri • Aryakulam Nilokheri • Gurukul Jyotisar'
-                        : 'The Gurukul Nilokheri • Aryakulam Nilokheri • Gurukul Jyotisar'}
+                        ? 'The Gurukul Nilokheri • Aryakulam Nilokheri • The Gurukul Jyotisar'
+                        : 'The Gurukul Nilokheri • Aryakulam Nilokheri • The Gurukul Jyotisar'}
                     </p>
                   </div>
 
@@ -1149,22 +1152,20 @@ export default function ApplyPage() {
                     <button
                       type="button"
                       onClick={() => setInstructionLang('en')}
-                      className={`px-3 py-1 rounded text-xs font-bold transition ${
-                        instructionLang === 'en'
+                      className={`px-3 py-1 rounded text-xs font-bold transition ${instructionLang === 'en'
                           ? 'bg-white text-portal-navy shadow-xs'
                           : 'text-white/80 hover:text-white'
-                      }`}
+                        }`}
                     >
                       English
                     </button>
                     <button
                       type="button"
                       onClick={() => setInstructionLang('hi')}
-                      className={`px-3 py-1 rounded text-xs font-bold transition ${
-                        instructionLang === 'hi'
+                      className={`px-3 py-1 rounded text-xs font-bold transition ${instructionLang === 'hi'
                           ? 'bg-white text-portal-navy shadow-xs'
                           : 'text-white/80 hover:text-white'
-                      }`}
+                        }`}
                     >
                       हिन्दी
                     </button>
@@ -1263,7 +1264,7 @@ export default function ApplyPage() {
                         <span>Counselling-Day Deposit</span>
                       </h3>
                       <div className="bg-amber-50 border border-amber-200 p-3 rounded-lg text-amber-950 font-medium">
-                        A deposit of <strong>₹25,000</strong> is to be deposited on the day of counselling for all three institutions.
+                        A non-refundable deposit of <strong>₹25,000</strong> is to be deposited on the day of counselling for all three institutions.
                       </div>
                     </div>
 
@@ -1355,10 +1356,10 @@ export default function ApplyPage() {
                             <tr className="hover:bg-slate-50">
                               <td className="p-2 font-bold text-purple-900 border-r border-slate-200 bg-purple-50/50">छात्राएँ</td>
                               <td className="p-2 border-r border-slate-200 font-medium">14 फरवरी 2027</td>
-                              <td className="p-2 border-r border-slate-200">गुरुकुल नीलोखेड़ी</td>
+                              <td className="p-2 border-r border-slate-200">The Gurukul Nilokheri</td>
                               <td className="p-2 border-r border-slate-200 font-semibold text-rose-700">प्रातः 8:30 बजे (रिपोर्ट 8:00 बजे)</td>
                               <td className="p-2 border-r border-slate-200 font-medium">15, 16 एवं 17 फरवरी 2027</td>
-                              <td className="p-2 border-r border-slate-200">गुरुकुल नीलोखेड़ी</td>
+                              <td className="p-2 border-r border-slate-200">The Gurukul Nilokheri</td>
                               <td className="p-2 font-medium">प्रातः 9:00 से 1:00 बजे</td>
                             </tr>
                             <tr className="hover:bg-slate-50">
@@ -1439,7 +1440,7 @@ export default function ApplyPage() {
                   <span className="text-rose-500">*</span>
                 </h3>
                 <p className="text-xs text-slate-500">
-                  Select candidate gender to view eligible Gurukul campuses and specific examination details as per the manual.
+                  Select candidate gender to view eligible The Gurukul &amp; Aryakulam campuses and specific examination details as per the manual.
                 </p>
               </div>
 
@@ -1452,18 +1453,16 @@ export default function ApplyPage() {
                   <button
                     type="button"
                     onClick={() => handleGenderSelect('Male')}
-                    className={`flex items-center gap-3 p-3 rounded-lg border text-left cursor-pointer transition select-none ${
-                      formData.gender === 'Male'
+                    className={`flex items-center gap-3 p-3 rounded-lg border text-left cursor-pointer transition select-none ${formData.gender === 'Male'
                         ? 'border-portal-navy bg-portal-navy/5 text-portal-navy font-bold shadow-xs ring-1 ring-portal-navy'
                         : 'border-slate-200 hover:bg-slate-50 text-slate-700 bg-white'
-                    }`}
+                      }`}
                   >
                     <div
-                      className={`w-4 h-4 rounded-full border flex items-center justify-center transition ${
-                        formData.gender === 'Male'
+                      className={`w-4 h-4 rounded-full border flex items-center justify-center transition ${formData.gender === 'Male'
                           ? 'border-portal-navy bg-white'
                           : 'border-slate-300 bg-white'
-                      }`}
+                        }`}
                     >
                       {formData.gender === 'Male' && (
                         <div className="w-2 h-2 rounded-full bg-portal-navy" />
@@ -1475,18 +1474,16 @@ export default function ApplyPage() {
                   <button
                     type="button"
                     onClick={() => handleGenderSelect('Female')}
-                    className={`flex items-center gap-3 p-3 rounded-lg border text-left cursor-pointer transition select-none ${
-                      formData.gender === 'Female'
+                    className={`flex items-center gap-3 p-3 rounded-lg border text-left cursor-pointer transition select-none ${formData.gender === 'Female'
                         ? 'border-portal-navy bg-portal-navy/5 text-portal-navy font-bold shadow-xs ring-1 ring-portal-navy'
                         : 'border-slate-200 hover:bg-slate-50 text-slate-700 bg-white'
-                    }`}
+                      }`}
                   >
                     <div
-                      className={`w-4 h-4 rounded-full border flex items-center justify-center transition ${
-                        formData.gender === 'Female'
+                      className={`w-4 h-4 rounded-full border flex items-center justify-center transition ${formData.gender === 'Female'
                           ? 'border-portal-navy bg-white'
                           : 'border-slate-300 bg-white'
-                      }`}
+                        }`}
                     >
                       {formData.gender === 'Female' && (
                         <div className="w-2 h-2 rounded-full bg-portal-navy" />

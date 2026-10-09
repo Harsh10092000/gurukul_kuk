@@ -51,7 +51,7 @@ export async function GET(req: Request) {
         classApplying: app.classApplying,
         stream: (app as any).stream || '',
         gender: isGirl ? 'Female' : 'Male',
-        categoryWing: isGirl ? 'Girls Wing (Aryakulam)' : 'Boys Wing (Gurukul)',
+        categoryWing: isGirl ? 'Girls Wing (Aryakulam)' : 'Boys Wing (The Gurukul)',
         photo: app.documents?.photo || '',
         signature: app.documents?.signature || '',
         centreName: officialVenueName,

@@ -19,14 +19,14 @@ export default function AdminFooter() {
               <div className="w-9 h-9 flex items-center justify-center">
                 <Image
                   src="/logo-gurukul.png"
-                  alt="Gurukul Logo"
+                  alt="The Gurukul Logo"
                   width={36}
                   height={36}
                   className="brand-logo-sm object-contain"
                 />
               </div>
               <div>
-                <h4 className="text-white font-bold text-sm tracking-tight">ADMIN GURUKUL DESK</h4>
+                <h4 className="text-white font-bold text-sm tracking-tight">THE GURUKUL ADMIN DESK</h4>
                 <p className="text-portal-gold font-serif text-[11px]">तमसो मा ज्योतिर्गमय • Session 2027-28</p>
               </div>
             </div>

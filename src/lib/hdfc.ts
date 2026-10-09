@@ -248,7 +248,7 @@ export async function createHdfcOrderSession(
     customer_id: options.customerId.replace(/[^a-zA-Z0-9_-]/g, '_').slice(0, 50),
     action: 'paymentPage',
     return_url: options.returnUrl,
-    description: options.description || 'Gurukul Entrance Examination Application Fee',
+    description: options.description || 'The Gurukul Entrance Examination Application Fee',
   };
 
   if (options.customerEmail) {

@@ -22,6 +22,13 @@ import {
 import { Application, AdmitCard } from '@/lib/types';
 import AdmitCardView from '@/components/AdmitCardView';
 
+function formatLocationPref(loc?: string | null): string {
+  if (!loc) return '';
+  if (loc === 'Gurukul Jyotisar') return 'The Gurukul Jyotisar';
+  if (loc === 'Gurukul Nilokheri') return 'The Gurukul Nilokheri';
+  return loc;
+}
+
 export default function ApplicationVerificationPage({ params }: { params: { id: string } }) {
   const router = useRouter();
   const [application, setApplication] = useState<Application | null>(null);
@@ -320,13 +327,13 @@ export default function ApplicationVerificationPage({ params }: { params: { id: 
               <div className="sm:col-span-2">
                 <span className="text-slate-500 block text-[11px]">1st Campus Preference</span>
                 <span className="font-semibold text-portal-navy">
-                  {application.studyLocation?.firstPreference || application.studyLocationPref?.firstPreference || application.examCentrePref?.firstPreference || (application.personalInfo?.gender === 'Female' ? 'Gurukul Nilokheri' : 'Aryakulam Nilokheri')}
+                  {formatLocationPref(application.studyLocation?.firstPreference || application.studyLocationPref?.firstPreference || application.examCentrePref?.firstPreference) || (application.personalInfo?.gender === 'Female' ? 'The Gurukul Nilokheri' : 'Aryakulam Nilokheri')}
                 </span>
               </div>
               <div>
                 <span className="text-slate-500 block text-[11px]">2nd Campus Preference</span>
                 <span className="text-slate-700 font-medium">
-                  {application.studyLocation?.secondPreference || application.studyLocationPref?.secondPreference || application.examCentrePref?.secondPreference || 'None'}
+                  {formatLocationPref(application.studyLocation?.secondPreference || application.studyLocationPref?.secondPreference || application.examCentrePref?.secondPreference) || 'None'}
                 </span>
               </div>
             </div>

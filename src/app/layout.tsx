@@ -15,20 +15,20 @@ const merriweather = Merriweather({
 });
 
 export const metadata: Metadata = {
-  title: 'The Gurukul Nilokheri - Entrance Examination & Admission Portal (2027-28)',
+  title: 'The Gurukul Admission Portal - Session 2027-28',
   description:
-    'Official Online Entrance Examination and Admission Portal for The Gurukul Nilokheri (with affiliated campuses Jyotisar & Aryakulam). Apply online for Classes 6th, 7th, 8th, 9th, and 11th with online ₹800 fee payment, immediate Admission form, and admit card download.',
+    'Official Online Entrance Examination and Admission Portal for The Gurukul Nilokheri (with affiliated campuses The Gurukul Jyotisar & Aryakulam Nilokheri). Apply online for Classes 6th, 7th, 8th, 9th, and 11th with online ₹800 fee payment, immediate Admission form, and admit card download.',
   icons: {
     icon: '/favicon.ico',
     apple: '/logo-gurukul.png',
   },
   keywords: [
-    'Gurukul Nilokheri',
-    'Gurukul Jyotisar',
+    'The Gurukul Nilokheri',
+    'The Gurukul Jyotisar',
     'Aryakulam Nilokheri',
-    'Gurukul Entrance Exam 2026',
-    'Gurukul Admission Portal',
-    'Gurukul Admit Card',
+    'The Gurukul Entrance Exam 2027',
+    'The Gurukul Admission Portal',
+    'The Gurukul Admit Card',
   ],
   other: {
     google: 'notranslate',

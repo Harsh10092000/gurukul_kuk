@@ -56,7 +56,7 @@ export default function Footer() {
             <div className="text-portal-gold font-medium">
               CBSE Affiliated Institutional Network
             </div>
-            <div>Nilokheri • Jyotisar • Aryakulam Campuses</div>
+            <div>The Gurukul Nilokheri • The Gurukul Jyotisar • Aryakulam Campuses</div>
           </div>
         </div>
 

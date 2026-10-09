@@ -248,17 +248,20 @@ export function validateDob(dob: string | undefined | null): ValidationResult {
 }
 
 export const CAMPUS_STREAMS_MAP: Record<string, string[]> = {
+  'The Gurukul Nilokheri': ['Non Medical', 'Medical', 'Commerce', 'Humanities'],
   'Gurukul Nilokheri': ['Non Medical', 'Medical', 'Commerce', 'Humanities'],
+  'The Gurukul Jyotisar': ['Non Medical'],
   'Gurukul Jyotisar': ['Non Medical'],
   'Aryakulam Nilokheri': ['Non Medical', 'Medical', 'Commerce'],
 };
 
 export function getStreamsForCampus(campus?: string | null, gender?: string | null): string[] {
   const isFemale = (gender || '').trim().toLowerCase() === 'female';
-  if (isFemale || campus === 'Gurukul Nilokheri') {
+  const c = (campus || '').trim().toLowerCase();
+  if (isFemale || (c.includes('nilokheri') && !c.includes('aryakulam'))) {
     return ['Non Medical', 'Medical', 'Commerce', 'Humanities'];
   }
-  if (campus === 'Gurukul Jyotisar') {
+  if (c.includes('jyotisar')) {
     return ['Non Medical'];
   }
   return ['Non Medical', 'Medical', 'Commerce'];
@@ -331,7 +334,8 @@ export function validateClassAndStream(
       };
     }
 
-    if (studyLocation === 'Gurukul Jyotisar' && cleanStream !== 'Non Medical') {
+    const isJyotisar = (studyLocation || '').toLowerCase().includes('jyotisar');
+    if (isJyotisar && cleanStream !== 'Non Medical') {
       return {
         isValid: false,
         error: 'At The Gurukul Jyotisar, only Non Medical stream is available for Class 11. For Medical or Commerce, please select Aryakulam Nilokheri.',
@@ -340,7 +344,7 @@ export function validateClassAndStream(
 
     const allowedStreams = isFemale
       ? ['Non Medical', 'Medical', 'Commerce', 'Humanities']
-      : (studyLocation === 'Gurukul Jyotisar'
+      : (isJyotisar
           ? ['Non Medical']
           : ['Non Medical', 'Medical', 'Commerce']);
 
@@ -365,25 +369,26 @@ export function validateClassAndStream(
 /**
  * Validate Preferred Study Location
  * BOYS:
- * 1. Gurukul Nilokheri
- * 2. Gurukul Jyotisar
- * 3. Aryakulam Nilokheri
+ * 1. The Gurukul Jyotisar
+ * 2. Aryakulam Nilokheri
  *
  * GIRLS:
- * 1. Gurukul Nilokheri
+ * 1. The Gurukul Nilokheri
  *
  * Preference rules:
  * - First Preference = REQUIRED
- * - Second Preference = OPTIONAL
- * - For GIRLS: First preference must be Gurukul Nilokheri; second preference not needed or Gurukul Nilokheri.
+ * - Second Preference = OPTIONAL (for boys)
+ * - For GIRLS: First preference must be The Gurukul Nilokheri.
  * - For BOYS: First preference required; Second preference optional. Second cannot be identical to First.
  */
 export const STUDY_LOCATIONS_BOYS = [
-  'Gurukul Jyotisar',
+  'The Gurukul Jyotisar',
   'Aryakulam Nilokheri',
+  'Gurukul Jyotisar',
 ] as const;
 
 export const STUDY_LOCATIONS_GIRLS = [
+  'The Gurukul Nilokheri',
   'Gurukul Nilokheri',
 ] as const;
 
@@ -401,8 +406,11 @@ export function validateStudyLocation(
   const second = secondPreference ? secondPreference.trim() : '';
   const isFemale = (gender || '').toLowerCase() === 'female';
 
+  const isFirstGirls = first.toLowerCase().includes('nilokheri') && !first.toLowerCase().includes('aryakulam');
+  const isSecondGirls = second.toLowerCase().includes('nilokheri') && !second.toLowerCase().includes('aryakulam');
+
   if (isFemale) {
-    if (first !== 'Gurukul Nilokheri') {
+    if (!isFirstGirls) {
       return {
         isValid: false,
         error: 'For female candidates, the available study location is The Gurukul Nilokheri.',
@@ -412,24 +420,27 @@ export function validateStudyLocation(
   }
 
   // Boys: The Gurukul Nilokheri is strictly not available for male candidates
-  if (first === 'Gurukul Nilokheri' || second === 'Gurukul Nilokheri') {
+  if (isFirstGirls || isSecondGirls) {
     return {
       isValid: false,
       error: 'The Gurukul Nilokheri campus is exclusively for female candidates. Male candidates can apply for The Gurukul Jyotisar or Aryakulam Nilokheri.',
     };
   }
 
-  const defaultBoysLocations = ['Gurukul Jyotisar', 'Aryakulam Nilokheri'];
+  const defaultBoysLocations = ['The Gurukul Jyotisar', 'Aryakulam Nilokheri'];
+  const normalize = (loc: string) => loc.replace(/^The\s+/i, '').trim();
+
   const validBoys = Array.isArray(activeLocations) && activeLocations.length > 0
-    ? defaultBoysLocations.filter((l) => activeLocations.includes(l))
+    ? defaultBoysLocations.filter((l) => activeLocations.some(al => normalize(al) === normalize(l)))
     : defaultBoysLocations;
 
   const effectiveBoys = validBoys.length > 0 ? validBoys : defaultBoysLocations;
 
-  if (!effectiveBoys.includes(first)) {
+  const firstNormalized = normalize(first);
+  if (!effectiveBoys.some(l => normalize(l) === firstNormalized)) {
     return {
       isValid: false,
-      error: `Invalid First Preferred Study Location. For male candidates, must be one of: ${effectiveBoys.join(', ')}.`,
+      error: `Invalid First Preferred Study Location. For male candidates, must be one of: The Gurukul Jyotisar, Aryakulam Nilokheri.`,
     };
   }
 
@@ -440,31 +451,21 @@ export function validateStudyLocation(
         error: 'Second Preferred Study Location is required. Boys candidates must select their 2nd preference institute.',
       };
     }
-    if (!effectiveBoys.includes(second)) {
+    const secondNormalized = normalize(second);
+    if (!effectiveBoys.some(l => normalize(l) === secondNormalized)) {
       return {
         isValid: false,
-        error: `Invalid Second Preferred Study Location. Must be one of: ${effectiveBoys.join(', ')}.`,
+        error: `Invalid Second Preferred Study Location. Must be one of: The Gurukul Jyotisar, Aryakulam Nilokheri.`,
       };
     }
-    if (first === second) {
+    if (firstNormalized === secondNormalized) {
       return {
         isValid: false,
         error: 'Second Preferred Study Location cannot be the same as First Preferred Study Location.',
       };
     }
   } else if (second && second.length > 0 && second !== 'None') {
-    if (!effectiveBoys.includes(second)) {
-      return {
-        isValid: false,
-        error: `Invalid Second Preferred Study Location. Must be one of: ${effectiveBoys.join(', ')}.`,
-      };
-    }
-    if (first === second) {
-      return {
-        isValid: false,
-        error: 'Second Preferred Study Location cannot be the same as First Preferred Study Location.',
-      };
-    }
+    // Only 1 campus active, second preference not needed
   }
 
   return { isValid: true };
@@ -666,7 +667,7 @@ export function getExamDetailsForGender(gender?: string, regNo?: string) {
       reportingTime: '9:30 AM',
       examDuration: '10:00 AM to 12:30 PM (2.5 Hours)',
       examCentreName: 'Aryakulam Nilokheri',
-      examCentreAddress: 'Nigdu Road, Nilokheri, Karnal, Haryana - 132117',
+      examCentreAddress: 'Aryakulam School Campus, Ward No. 1, Aryakulam Road, Nilokheri, Karnal - 132117',
     };
   }
 }

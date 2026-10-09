@@ -135,7 +135,7 @@ export default function LoginPage() {
                 <div className="w-12 h-12 flex-shrink-0 flex items-center justify-center">
                   <Image
                     src="/logo-gurukul.png"
-                    alt="Gurukul Emblem"
+                    alt="The Gurukul Emblem"
                     width={48}
                     height={48}
                     className="brand-logo-sm object-contain"

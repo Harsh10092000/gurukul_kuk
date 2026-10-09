@@ -171,7 +171,7 @@ export async function GET(request: Request) {
         status: isExamDatePassed ? 'completed' : 'scheduled',
         details: admitCard?.examCentreName
           ? `Venue: ${admitCard.examCentreName} (${admitCard.reportingTime || '08:30 AM'})`
-          : `Exam scheduled on ${formatDateString(settings.entranceExamDate, '10 Dec 2026')} across designated Gurukul centers.`,
+          : `Exam scheduled on ${formatDateString(settings.entranceExamDate, '10 Dec 2026')} across designated The Gurukul centers.`,
       },
       {
         id: 'result',

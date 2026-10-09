@@ -89,7 +89,7 @@ const DEFAULT_SETTINGS: SystemSettings = {
   counselingStartDate: '2027-04-15',
   helplinePhone: '+91 7027849858 / 59',
   helplineEmail: 'thegurukulnilokheri@gmail.com',
-  activeStudyLocations: ['Gurukul Nilokheri', 'Gurukul Jyotisar', 'Aryakulam Nilokheri'],
+  activeStudyLocations: ['The Gurukul Nilokheri', 'The Gurukul Jyotisar', 'Aryakulam Nilokheri'],
   statusOverride: 'auto',
   timezone: 'Asia/Kolkata (IST)',
   announcementNotice: '',
@@ -106,7 +106,7 @@ const DEFAULT_CENTRES: ExamCentre[] = [
     city: 'Nilokheri',
     state: 'Haryana',
     capacity: 3000,
-    address: 'Nigdu Road, Nilokheri, Karnal, Haryana - 132117',
+    address: 'Aryakulam School Campus, Ward No. 1, Aryakulam Road, Nilokheri, Karnal - 132117',
     contactPerson: 'Exam Superintendent',
     contactPhone: '+91 7027849858',
   },
@@ -186,7 +186,7 @@ function initFallbackFile(): FallbackStore {
       if (Array.isArray(parsed.admitCards)) {
         for (const ac of parsed.admitCards) {
           const det = getExamDetailsForGender(ac.gender, ac.rollNumber || ac.applicationNumber);
-          if (ac.examDate !== det.examDate || ac.reportingTime !== det.reportingTime || ac.examCentreName !== det.examCentreName) {
+          if (ac.examDate !== det.examDate || ac.reportingTime !== det.reportingTime || ac.examCentreName !== det.examCentreName || ac.examCentreAddress !== det.examCentreAddress) {
             ac.examDate = det.examDate;
             ac.reportingTime = det.reportingTime;
             ac.examCentreName = det.examCentreName;
@@ -502,7 +502,7 @@ export async function initDatabase(): Promise<void> {
             'Nilokheri, Karnal, Haryana - 132117',
             '2027-02-14', '2027-04-15',
             '+91 7027849858 / 59', 'thegurukulnilokheri@gmail.com',
-            '["Gurukul Nilokheri", "Gurukul Jyotisar", "Aryakulam Nilokheri"]',
+            '["The Gurukul Nilokheri", "The Gurukul Jyotisar", "Aryakulam Nilokheri"]',
             NOW()
           )
         `);
@@ -1086,8 +1086,8 @@ export const db = {
         if (!parsedParent.fatherPhone) parsedParent.fatherPhone = parsedPersonal.candidateMobile || r.user_phone || '';
 
         const candidateGender = (parsedPersonal.gender || 'Male') as 'Male' | 'Female';
-        const defaultFirstPref = candidateGender === 'Female' ? 'Gurukul Nilokheri' : 'Aryakulam Nilokheri';
-        const defaultSecondPref = candidateGender === 'Female' ? 'None' : 'Gurukul Jyotisar';
+        const defaultFirstPref = candidateGender === 'Female' ? 'The Gurukul Nilokheri' : 'Aryakulam Nilokheri';
+        const defaultSecondPref = candidateGender === 'Female' ? 'None' : 'The Gurukul Jyotisar';
         const parsedPref = safeJsonParse(r.exam_centre_pref, null);
         const centrePref = parsedPref && (parsedPref.firstPreference || parsedPref.studyLocation)
           ? {
@@ -1130,8 +1130,8 @@ export const db = {
         return rawRows.map((r: any) => {
           const parsedPersonal = safeJsonParse(r.personal_info, {});
           const candidateGender = (parsedPersonal.gender || 'Male') as 'Male' | 'Female';
-          const defaultFirstPref = candidateGender === 'Female' ? 'Gurukul Nilokheri' : 'Aryakulam Nilokheri';
-          const defaultSecondPref = candidateGender === 'Female' ? 'None' : 'Gurukul Jyotisar';
+          const defaultFirstPref = candidateGender === 'Female' ? 'The Gurukul Nilokheri' : 'Aryakulam Nilokheri';
+          const defaultSecondPref = candidateGender === 'Female' ? 'None' : 'The Gurukul Jyotisar';
           const parsedPref = safeJsonParse(r.exam_centre_pref, null);
           const centrePref = parsedPref && (parsedPref.firstPreference || parsedPref.studyLocation)
             ? {
@@ -1179,8 +1179,8 @@ export const db = {
       if (!a) return null;
       const parsedPersonal = a.personalInfo || {};
       const candidateGender = (parsedPersonal.gender || 'Male') as 'Male' | 'Female';
-      const defaultFirstPref = candidateGender === 'Female' ? 'Gurukul Nilokheri' : 'Aryakulam Nilokheri';
-      const defaultSecondPref = candidateGender === 'Female' ? 'None' : 'Gurukul Jyotisar';
+      const defaultFirstPref = candidateGender === 'Female' ? 'The Gurukul Nilokheri' : 'Aryakulam Nilokheri';
+      const defaultSecondPref = candidateGender === 'Female' ? 'None' : 'The Gurukul Jyotisar';
       const centrePref = a.studyLocation || a.studyLocationPref || a.examCentrePref || { firstPreference: defaultFirstPref, secondPreference: defaultSecondPref };
       return {
         ...a,
@@ -1196,8 +1196,8 @@ export const db = {
     const r = rows[0];
     const parsedPersonal = safeJsonParse(r.personal_info, {});
     const candidateGender = (parsedPersonal.gender || 'Male') as 'Male' | 'Female';
-    const defaultFirstPref = candidateGender === 'Female' ? 'Gurukul Nilokheri' : 'Aryakulam Nilokheri';
-    const defaultSecondPref = candidateGender === 'Female' ? 'None' : 'Gurukul Jyotisar';
+    const defaultFirstPref = candidateGender === 'Female' ? 'The Gurukul Nilokheri' : 'Aryakulam Nilokheri';
+    const defaultSecondPref = candidateGender === 'Female' ? 'None' : 'The Gurukul Jyotisar';
     const parsedPref = safeJsonParse(r.exam_centre_pref, null);
     const centrePref = parsedPref && (parsedPref.firstPreference || parsedPref.studyLocation)
       ? {
@@ -1533,7 +1533,7 @@ export const db = {
     const gender = (app.personalInfo?.gender || 'Male') as 'Male' | 'Female';
     const id = 'app-' + Date.now();
     const now = new Date().toISOString();
-    const studyLocation = app.studyLocationPref || app.examCentrePref || { firstPreference: 'Gurukul Nilokheri' };
+    const studyLocation = app.studyLocationPref || app.examCentrePref || { firstPreference: 'The Gurukul Nilokheri' };
 
     let user: User | null = null;
     if (app.userId) {
@@ -1683,7 +1683,7 @@ export const db = {
           addressInfo: draft.addressInfo ? { ...existingAddress, ...draft.addressInfo } : existingAddress,
           academicInfo: draft.academicInfo ? { ...existingAcademic, ...draft.academicInfo } : existingAcademic,
           examCentrePref: draft.examCentrePref ? { ...existingCentre, ...draft.examCentrePref } : existingCentre,
-          studyLocationPref: (draft.studyLocationPref || draft.examCentrePref || existingCentre || { firstPreference: 'Gurukul Nilokheri' }) as any,
+          studyLocationPref: (draft.studyLocationPref || draft.examCentrePref || existingCentre || { firstPreference: 'The Gurukul Nilokheri' }) as any,
           documents: draft.documents ? { ...existingDocs, ...draft.documents } : existingDocs,
           status: (r.status === 'submitted' || r.status === 'approved') ? r.status : 'draft',
           currentStep: draft.currentStep || 1,
@@ -1744,7 +1744,7 @@ export const db = {
         addressInfo: draft.addressInfo || {} as any,
         academicInfo: draft.academicInfo || {} as any,
         examCentrePref: draft.examCentrePref || {} as any,
-        studyLocationPref: (draft.studyLocationPref || draft.examCentrePref || { firstPreference: 'Gurukul Nilokheri' }) as any,
+        studyLocationPref: (draft.studyLocationPref || draft.examCentrePref || { firstPreference: 'The Gurukul Nilokheri' }) as any,
         documents: draft.documents || {},
         status: 'draft',
         currentStep: draft.currentStep || 1,
@@ -1846,7 +1846,7 @@ export const db = {
       addressInfo: draft.addressInfo || {} as any,
       academicInfo: draft.academicInfo || {} as any,
       examCentrePref: draft.examCentrePref || {} as any,
-      studyLocationPref: (draft.studyLocationPref || draft.examCentrePref || { firstPreference: 'Gurukul Nilokheri' }) as any,
+      studyLocationPref: (draft.studyLocationPref || draft.examCentrePref || { firstPreference: 'The Gurukul Nilokheri' }) as any,
       documents: draft.documents || {},
       status: 'draft',
       currentStep: draft.currentStep || 1,
@@ -2627,7 +2627,7 @@ export const db = {
               settings.counselingStartDate || '2027-04-15',
               settings.helplinePhone || '+91 7027849858 / 59',
               settings.helplineEmail || 'thegurukulnilokheri@gmail.com',
-              settings.activeStudyLocations ? JSON.stringify(settings.activeStudyLocations) : JSON.stringify(['Gurukul Nilokheri', 'Gurukul Jyotisar', 'Aryakulam Nilokheri']),
+              settings.activeStudyLocations ? JSON.stringify(settings.activeStudyLocations) : JSON.stringify(['The Gurukul Nilokheri', 'The Gurukul Jyotisar', 'Aryakulam Nilokheri']),
               settings.statusOverride || 'auto',
               settings.timezone || 'Asia/Kolkata (IST)',
               settings.announcementNotice || '',

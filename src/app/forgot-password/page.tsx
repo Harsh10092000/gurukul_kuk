@@ -217,7 +217,7 @@ export default function ForgotPasswordPage() {
           <div className="w-12 h-12 mx-auto flex items-center justify-center">
             <Image
               src="/logo-gurukul.png"
-              alt="Gurukul Logo"
+              alt="The Gurukul Logo"
               width={48}
               height={48}
               className="brand-logo-sm object-contain"

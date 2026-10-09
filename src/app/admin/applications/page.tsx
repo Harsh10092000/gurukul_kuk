@@ -19,6 +19,13 @@ import {
 } from 'lucide-react';
 import { Application } from '@/lib/types';
 
+function formatLocationPref(loc?: string | null): string {
+  if (!loc) return '';
+  if (loc === 'Gurukul Jyotisar') return 'The Gurukul Jyotisar';
+  if (loc === 'Gurukul Nilokheri') return 'The Gurukul Nilokheri';
+  return loc;
+}
+
 export default function AdminApplicationsPage() {
   const [applications, setApplications] = useState<Application[]>([]);
   const [metrics, setMetrics] = useState<any>(null);
@@ -549,7 +556,7 @@ export default function AdminApplicationsPage() {
                         </div>
                       </td>
                       <td className="py-3.5 px-4 text-slate-700 max-w-[160px] truncate text-xs font-medium">
-                        {app.studyLocation?.firstPreference || app.studyLocationPref?.firstPreference || app.examCentrePref?.firstPreference || (app.personalInfo?.gender === 'Female' ? 'Gurukul Nilokheri' : 'Aryakulam Nilokheri')}
+                        {formatLocationPref(app.studyLocation?.firstPreference || app.studyLocationPref?.firstPreference || app.examCentrePref?.firstPreference) || (app.personalInfo?.gender === 'Female' ? 'The Gurukul Nilokheri' : 'Aryakulam Nilokheri')}
                       </td>
                       <td className="py-3.5 px-4">
                         <span className="text-emerald-700 font-bold flex items-center gap-1.5 font-mono">

@@ -59,7 +59,7 @@ export default function AdminSettingsPage() {
     counselingStartDate: '2027-03-10',
     helplinePhone: '+91 7027849858 / 59',
     helplineEmail: 'thegurukulnilokheri@gmail.com',
-    activeStudyLocations: ['Gurukul Nilokheri', 'Gurukul Jyotisar', 'Aryakulam Nilokheri'],
+    activeStudyLocations: ['The Gurukul Nilokheri', 'The Gurukul Jyotisar', 'Aryakulam Nilokheri'],
   });
 
   const [locationsSaving, setLocationsSaving] = useState(false);
@@ -303,16 +303,18 @@ export default function AdminSettingsPage() {
   };
 
   const handleToggleLocation = (loc: string) => {
-    const current = academicSettings.activeStudyLocations || ['Gurukul Nilokheri', 'Gurukul Jyotisar', 'Aryakulam Nilokheri'];
+    const raw = academicSettings.activeStudyLocations || ['The Gurukul Nilokheri', 'The Gurukul Jyotisar', 'Aryakulam Nilokheri'];
+    const current = raw.map((l: string) => (l === 'Gurukul Jyotisar' ? 'The Gurukul Jyotisar' : l === 'Gurukul Nilokheri' ? 'The Gurukul Nilokheri' : l));
+    const normalizedLoc = loc === 'Gurukul Jyotisar' ? 'The Gurukul Jyotisar' : loc === 'Gurukul Nilokheri' ? 'The Gurukul Nilokheri' : loc;
     let updated: string[];
-    if (current.includes(loc)) {
+    if (current.includes(normalizedLoc)) {
       if (current.length === 1) {
         showToast('At least one campus/study location must remain enabled.', 'error');
         return;
       }
-      updated = current.filter((l) => l !== loc);
+      updated = current.filter((l) => l !== normalizedLoc && l !== loc);
     } else {
-      updated = [...current, loc];
+      updated = [...current.filter((l) => l !== loc), normalizedLoc];
     }
     setAcademicSettings((prev) => ({ ...prev, activeStudyLocations: updated }));
   };
@@ -896,7 +898,8 @@ export default function AdminSettingsPage() {
         <div className="space-y-3">
           {[
             {
-              id: 'Gurukul Nilokheri',
+              id: 'The Gurukul Nilokheri',
+              legacyId: 'Gurukul Nilokheri',
               title: 'The Gurukul Nilokheri',
               tag: 'Girls Wing Only',
               tagColor: 'bg-rose-50 text-rose-700 border-rose-200',
@@ -904,7 +907,8 @@ export default function AdminSettingsPage() {
               note: 'Sole campus offering Humanities stream. Dedicated campus exclusively for female candidates.',
             },
             {
-              id: 'Gurukul Jyotisar',
+              id: 'The Gurukul Jyotisar',
+              legacyId: 'Gurukul Jyotisar',
               title: 'The Gurukul Jyotisar',
               tag: 'Boys Only',
               tagColor: 'bg-blue-50 text-blue-700 border-blue-200',
@@ -913,6 +917,7 @@ export default function AdminSettingsPage() {
             },
             {
               id: 'Aryakulam Nilokheri',
+              legacyId: 'Aryakulam Nilokheri',
               title: 'Aryakulam Nilokheri',
               tag: 'Boys Only',
               tagColor: 'bg-amber-50 text-amber-700 border-amber-200',
@@ -920,7 +925,9 @@ export default function AdminSettingsPage() {
               note: 'CBSE Affiliated, Nilokheri (Karnal). Available for male candidates.',
             },
           ].map((campus) => {
-            const isChecked = (academicSettings.activeStudyLocations || ['Gurukul Nilokheri', 'Gurukul Jyotisar', 'Aryakulam Nilokheri']).includes(campus.id);
+            const isChecked = (academicSettings.activeStudyLocations || ['The Gurukul Nilokheri', 'The Gurukul Jyotisar', 'Aryakulam Nilokheri']).some(
+              (loc: string) => loc === campus.id || (campus.legacyId && loc === campus.legacyId)
+            );
             return (
               <div
                 key={campus.id}

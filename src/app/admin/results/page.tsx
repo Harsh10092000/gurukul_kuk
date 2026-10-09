@@ -157,7 +157,7 @@ export default function AdminResultsPage() {
 
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, 'Results');
-    XLSX.writeFile(workbook, 'Gurukul_Results_Upload_Template.xlsx');
+    XLSX.writeFile(workbook, 'The_Gurukul_Results_Upload_Template.xlsx');
   };
 
   const formatDob = (dobStr?: string) => {

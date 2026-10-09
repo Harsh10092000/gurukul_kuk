@@ -41,7 +41,7 @@ export async function POST(request: Request) {
         customerPhone: userPhone,
         returnUrl,
         amount: requestedAmount,
-        description: `Gurukul Due: ${dueTitle} - ${userName}`,
+        description: `The Gurukul Due: ${dueTitle} - ${userName}`,
         metadata: {
           testMode: 'true',
           candidateName: userName,

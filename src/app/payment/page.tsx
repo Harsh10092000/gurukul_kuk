@@ -143,7 +143,7 @@ const TEST_FEE_DUES: FeeDueItem[] = [
     title: 'Vedic Studies & Sanskrit Handbook',
     category: 'Academics',
     amount: 30,
-    description: 'Traditional Gurukul character building compendium & daily prayer handbook.',
+    description: 'Traditional The Gurukul character building compendium & daily prayer handbook.',
     academicTerm: 'Term 1 (2026-27)',
     dueDate: '05 Nov 2026',
   },
@@ -190,7 +190,7 @@ const TEST_FEE_DUES: FeeDueItem[] = [
   {
     id: 'DUE-14',
     code: 'FEE-GYM-14',
-    title: 'Gurukul Swimming Pool & Gym Due',
+    title: 'The Gurukul Swimming Pool & Gym Due',
     category: 'Sports & Gym',
     amount: 55,
     description: 'Certified swimming instructor sessions and indoor gymnasium equipment upkeep.',
@@ -577,7 +577,7 @@ function PaymentTestingPortalContent() {
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src="/the-gurukul-nilokheri-logo.png"
-                alt="Gurukul Crest"
+                alt="The Gurukul Crest"
                 className="w-full h-full object-contain"
                 onError={(e) => {
                   (e.currentTarget as any).src = '/logo-gurukul.png';
