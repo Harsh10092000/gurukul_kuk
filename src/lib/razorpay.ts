@@ -7,14 +7,14 @@ export const RAZORPAY_CONFIG = {
   get KEY_SECRET(): string {
     return process.env.RAZORPAY_KEY_SECRET || '';
   },
-  // The actual amount charged by Razorpay during checkout (₹1 while paying as requested)
+  // The actual amount charged by Razorpay during checkout (₹800 while paying)
   get CHECKOUT_AMOUNT_RUPEES(): number {
     const envVal = process.env.RAZORPAY_PAYMENT_AMOUNT;
     if (envVal) {
       const parsed = parseFloat(envVal);
       if (!isNaN(parsed) && parsed > 0) return parsed;
     }
-    return 1;
+    return 800;
   },
   get CHECKOUT_AMOUNT_PAISE(): number {
     return Math.round(this.CHECKOUT_AMOUNT_RUPEES * 100);

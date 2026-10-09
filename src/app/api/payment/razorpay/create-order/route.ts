@@ -172,9 +172,9 @@ export async function POST(request: Request) {
     const receiptId = `REC_${Date.now()}_${Math.floor(1000 + Math.random() * 9000)}`.slice(0, 40);
     const customerId = cleanPhone ? `cust_${cleanPhone}` : `cust_${Date.now()}`;
 
-    // Create official order on Razorpay with checkout amount (₹1 while paying as requested)
+    // Create official order on Razorpay with checkout amount (₹800)
     const rzpOrder = await createRazorpayOrder({
-      amount: RAZORPAY_CONFIG.CHECKOUT_AMOUNT_PAISE, // 100 paise = ₹1
+      amount: RAZORPAY_CONFIG.CHECKOUT_AMOUNT_PAISE, // 80000 paise = ₹800
       currency: RAZORPAY_CONFIG.CURRENCY,
       receipt: receiptId,
       notes: {
