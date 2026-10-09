@@ -9,7 +9,8 @@ import {
   Eye,
   EyeOff,
   CreditCard,
-  ArrowRight
+  ArrowRight,
+  Headphones
 } from 'lucide-react';
 import VisualCaptcha from '@/components/VisualCaptcha';
 import NotificationBar from '@/components/NotificationBar';
@@ -235,10 +236,10 @@ export default function ExamPortalGateway() {
         </div>
 
         {/* Dual-Pane Gateway Layout */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-stretch">
 
           {/* Left Column (7 Cols): Registered Candidate Sign In */}
-          <div className="lg:col-span-7 portal-card overflow-hidden">
+          <div className="lg:col-span-7 portal-card overflow-hidden flex flex-col">
             <div className="portal-card-navy px-6 py-4 flex justify-between items-center">
               <div>
                 <span className="portal-badge-gold text-[10px] mb-1 inline-block">Registered Candidates</span>
@@ -398,18 +399,18 @@ export default function ExamPortalGateway() {
           </div>
 
           {/* Right Column (5 Cols): New Candidate Registration & Quick Services */}
-          <div className="lg:col-span-5 space-y-6">
+          <div className="lg:col-span-5 flex flex-col justify-between gap-4">
 
             {/* Step 1: New Candidate Registration Card */}
             {!scheduleLoaded ? (
-              <div className="portal-card p-6 space-y-4 animate-pulse">
+              <div className="portal-card p-5 space-y-3 animate-pulse">
                 <div className="h-6 w-40 bg-slate-200 rounded" />
                 <div className="h-4 w-full bg-slate-100 rounded" />
                 <div className="h-10 w-full bg-slate-200 rounded-lg" />
               </div>
             ) : (
-              <div className="portal-card p-6 space-y-4 flex flex-col justify-between border-t-4 border-t-portal-gold">
-                <div className="space-y-3">
+              <div className="portal-card p-5 sm:p-6 space-y-3.5 flex flex-col justify-between border-t-4 border-t-portal-gold">
+                <div className="space-y-2.5">
                   <div className="flex justify-between items-center">
                     <span className="text-xs font-mono font-bold uppercase tracking-wider text-portal-navy">
                       Step 1: Registration
@@ -421,7 +422,7 @@ export default function ExamPortalGateway() {
                   </div>
 
                   <div>
-                    <h3 className="text-lg font-bold text-slate-900">
+                    <h3 className="text-base sm:text-lg font-bold text-slate-900">
                       {phaseInfo.registrationCard.title}
                     </h3>
                     <p className="text-xs text-slate-600 mt-1 leading-relaxed">
@@ -430,7 +431,7 @@ export default function ExamPortalGateway() {
                   </div>
                 </div>
 
-                <div className="pt-4 border-t border-slate-100">
+                <div className="pt-3 border-t border-slate-100">
                   <Link
                     href={phaseInfo.registrationCard.actionHref}
                     className="btn-primary w-full shadow-xs"
@@ -442,7 +443,7 @@ export default function ExamPortalGateway() {
             )}
 
             {/* Candidate Quick Services Cards */}
-            <div className="portal-card p-5 space-y-3">
+            <div className="portal-card p-4 sm:p-5 space-y-2.5">
               <h4 className="text-xs font-semibold uppercase tracking-wider text-slate-500 border-b border-slate-100 pb-2">
                 Candidate Quick Services
               </h4>
@@ -450,7 +451,7 @@ export default function ExamPortalGateway() {
               <div className="space-y-2">
                 <Link
                   href="/status"
-                  className="p-3 bg-slate-50 hover:bg-slate-100/80 rounded-lg border border-slate-200/80 transition flex items-center justify-between group"
+                  className="p-2.5 sm:p-3 bg-slate-50 hover:bg-slate-100/80 rounded-lg border border-slate-200/80 transition flex items-center justify-between group"
                 >
                   <div>
                     <h5 className="font-semibold text-xs text-slate-800 group-hover:text-portal-navy transition">
@@ -462,7 +463,7 @@ export default function ExamPortalGateway() {
 
                 <Link
                   href="/admit-card"
-                  className="p-3 bg-slate-50 hover:bg-slate-100/80 rounded-lg border border-slate-200/80 transition flex items-center justify-between group"
+                  className="p-2.5 sm:p-3 bg-slate-50 hover:bg-slate-100/80 rounded-lg border border-slate-200/80 transition flex items-center justify-between group"
                 >
                   <div>
                     <h5 className="font-semibold text-xs text-slate-800 group-hover:text-portal-navy transition">
@@ -475,7 +476,7 @@ export default function ExamPortalGateway() {
                 {portalSettings?.resultsDeclared && (
                   <Link
                     href="/result"
-                    className="p-3 bg-slate-50 hover:bg-slate-100/80 rounded-lg border border-slate-200/80 transition flex items-center justify-between group"
+                    className="p-2.5 sm:p-3 bg-slate-50 hover:bg-slate-100/80 rounded-lg border border-slate-200/80 transition flex items-center justify-between group"
                   >
                     <div>
                       <h5 className="font-semibold text-xs text-slate-800 group-hover:text-portal-navy transition">
@@ -488,17 +489,22 @@ export default function ExamPortalGateway() {
               </div>
             </div>
 
-            {/* Administrative Staff Access Strip */}
-            <div className="portal-card-navy p-4 rounded-xl flex items-center justify-between">
-              <div>
-                <h5 className="font-bold text-xs text-white">Administrative Portal</h5>
-                <p className="text-[11px] text-slate-300">The Gurukul Examination Board &amp; Officers</p>
+            {/* Admissions Helpline & Candidate Support Strip */}
+            <div className="portal-card-navy p-3.5 sm:p-4 rounded-xl flex items-center justify-between shadow-xs">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-lg bg-portal-gold/20 text-portal-gold flex items-center justify-center flex-shrink-0">
+                  <Headphones className="w-4 h-4" />
+                </div>
+                <div>
+                  <h5 className="font-bold text-xs text-white">Admissions &amp; Candidate Helpline</h5>
+                  <p className="text-[11px] text-slate-300">+91 7027849858 / 59 • Mon–Sat 9am–4pm</p>
+                </div>
               </div>
               <Link
-                href="/admin/login"
-                className="text-xs bg-white/10 hover:bg-white/20 text-portal-gold font-semibold px-3 py-1.5 rounded-lg transition border border-white/10"
+                href="/contact"
+                className="text-xs bg-white/10 hover:bg-white/20 text-portal-gold font-semibold px-3 py-1.5 rounded-lg transition border border-white/10 whitespace-nowrap"
               >
-                Staff Login
+                Helpdesk →
               </Link>
             </div>
 

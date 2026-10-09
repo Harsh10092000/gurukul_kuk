@@ -31,6 +31,7 @@ export async function POST(request: Request) {
 
     const cleanId = identifier.toLowerCase();
     const isAdminIdentifier =
+      cleanId === 'admin@thegurukuladmission.com' ||
       cleanId === 'admin@thegurukulnilokheri.com' ||
       cleanId === 'admin@gurukulnilokheri.com' ||
       cleanId === 'admin@gurukulkurukshetra.com' ||

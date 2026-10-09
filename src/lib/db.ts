@@ -713,6 +713,7 @@ export const db = {
     }
 
     const isAdminIdentifier =
+      trimmed === 'admin@thegurukuladmission.com' ||
       trimmed === 'admin@thegurukulnilokheri.com' ||
       trimmed === 'admin@gurukulnilokheri.com' ||
       trimmed === 'admin@gurukulkurukshetra.com' ||
@@ -753,6 +754,7 @@ export const db = {
     const cleanEmail = (email || '').trim().toLowerCase();
     if (!cleanEmail) return null;
     const isAdminIdentifier =
+      cleanEmail === 'admin@thegurukuladmission.com' ||
       cleanEmail === 'admin@thegurukulnilokheri.com' ||
       cleanEmail === 'admin@gurukulnilokheri.com' ||
       cleanEmail === 'admin@gurukulkurukshetra.com' ||

@@ -143,10 +143,6 @@ export default function Footer() {
           &copy; {new Date().getFullYear()} The Gurukul Nilokheri Examination &amp; Admission Board. All rights reserved.
         </div>
         <div className="flex items-center gap-4">
-          <Link href="/admin/login" className="hover:text-slate-400 transition">
-            Staff Portal
-          </Link>
-          <span>•</span>
           <Link href="/contact" className="hover:text-slate-400 transition">
             Support Desk
           </Link>

@@ -60,11 +60,6 @@ export default function AdminLoginPage() {
     }
   };
 
-  const fillDemoAdmin = () => {
-    setEmail('admin@thegurukulnilokheri.com');
-    setPassword('Admin@Gurukul2026');
-  };
-
   return (
     <div className="min-h-[85vh] flex items-center justify-center py-8 px-4 sm:px-6 lg:px-8 bg-gradient-to-br from-[#fff7ed] via-[#ffedd5] via-45% to-[#fed7aa] font-sans">
       <div className="w-full max-w-3xl flex rounded-2xl overflow-hidden shadow-elevated border border-amber-200/60 self-center">
@@ -135,7 +130,7 @@ export default function AdminLoginPage() {
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="admin@thegurukulnilokheri.com"
+                placeholder="admin@thegurukuladmission.com"
                 className="form-input-field"
               />
             </div>
@@ -163,19 +158,10 @@ export default function AdminLoginPage() {
             </button>
           </form>
 
-          <div className="pt-3 border-t border-slate-100 text-center space-y-2">
-            <button
-              type="button"
-              onClick={fillDemoAdmin}
-              className="text-xs text-portal-navy hover:underline font-medium"
-            >
-              Fill Demo Administrator Credentials
-            </button>
-            <div>
-              <Link href="/" className="text-xs text-slate-500 hover:text-slate-800 transition">
-                Return to Public Portal
-              </Link>
-            </div>
+          <div className="pt-3 border-t border-slate-100 text-center">
+            <Link href="/" className="text-xs text-slate-500 hover:text-slate-800 transition">
+              Return to Public Portal
+            </Link>
           </div>
         </div>
 

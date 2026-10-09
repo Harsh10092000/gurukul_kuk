@@ -19,14 +19,14 @@ export interface NotificationPayload {
   data: Record<string, string | number>;
 }
 
-const SMTP_USER = (process.env.SMTP_USER || process.env.CMAIL || 'anshu.calinfo@gmail.com').trim();
+const SMTP_USER = (process.env.SMTP_USER || process.env.CMAIL || 'info@thegurukuladmission.com').trim();
 const SMTP_PASS = (process.env.SMTP_PASS || process.env.CPASS || '').replace(/\s+/g, '');
-const SMTP_HOST = (process.env.SMTP_HOST || 'smtp.gmail.com').trim();
+const SMTP_HOST = (process.env.SMTP_HOST || 'smtp.hostinger.com').trim();
 const SMTP_PORT = parseInt(process.env.SMTP_PORT || '465', 10);
-const cleanFromEmail = (process.env.FROM_EMAIL || `"THE GURUKUL NILOKHERI" <${SMTP_USER}>`).trim().replace(/^"|"$/g, '');
-const FROM_EMAIL = cleanFromEmail.includes('<') ? cleanFromEmail : `"THE GURUKUL NILOKHERI" <${SMTP_USER}>`;
+const cleanFromEmail = (process.env.FROM_EMAIL || `"The Gurukul Admission Portal" <${SMTP_USER}>`).trim().replace(/^"|"$/g, '');
+const FROM_EMAIL = cleanFromEmail.includes('<') ? cleanFromEmail : `"The Gurukul Admission Portal" <${SMTP_USER}>`;
 
-export const ADMIN_NOTIFICATION_EMAIL = process.env.ADMIN_ALERT_EMAIL || 'anshu.calinfo@gmail.com';
+export const ADMIN_NOTIFICATION_EMAIL = process.env.ADMIN_ALERT_EMAIL || 'info@thegurukuladmission.com';
 export const SITE_URL = (process.env.NEXT_PUBLIC_APP_URL || process.env.NEXT_PUBLIC_SITE_URL || process.env.APP_URL || 'https://thegurukuladmission.com').trim().replace(/\/$/, '');
 
 function cleanVal(v: any, fallback = 'N/A'): string {
@@ -36,16 +36,18 @@ function cleanVal(v: any, fallback = 'N/A'): string {
   return s;
 }
 
+const isSecure = SMTP_PORT === 465;
 const transporter = nodemailer.createTransport({
   host: SMTP_HOST,
   port: SMTP_PORT,
-  secure: SMTP_PORT === 465,
+  secure: isSecure,
   auth: {
     user: SMTP_USER,
     pass: SMTP_PASS,
   },
   tls: {
     rejectUnauthorized: false,
+    minVersion: 'TLSv1.2',
   },
 });
 
@@ -58,77 +60,76 @@ export async function sendNotification(payload: NotificationPayload) {
   }
   console.log(`[Notification] Dispatching ${type} to ${cleanTo} (${name}) via Nodemailer`);
 
-  let subject = 'The Gurukul Nilokheri - Notification';
+  let subject = 'The Gurukul Admission Portal - Notification';
   let message = '';
   let htmlContent = '';
 
   switch (type) {
     case 'REGISTRATION_OTP':
-      subject = 'The Gurukul Nilokheri - Email Verification Code';
-      message = `The Gurukul Nilokheri - Entrance Examination (Session 2027-28)\n\n` +
+      subject = 'The Gurukul Admission Portal - Email Verification Code';
+      message = `The Gurukul Admission Portal - Entrance Examination (Session 2027-28)\n\n` +
         `Dear ${name || 'Candidate'},\n\n` +
-        `Your one-time verification code (OTP) for online admission registration is: ${data.otp}\n\n` +
-        `This code is valid for 10 minutes. Please enter this code on the registration page to proceed.\n` +
-        `For your security, please do not disclose this code to anyone.\n\n` +
+        `Your verification code for online admission registration is: ${data.otp}\n\n` +
+        `This code is valid for 10 minutes. Please enter this code on the registration page to verify your email.\n\n` +
         `If you did not initiate this request, please disregard this email or contact the Admission Helpdesk at +91 7027849858 / 59.\n\n` +
-        `The Gurukul Nilokheri (Haryana)\n` +
-        `CBSE Affiliated Institutional Network\n` +
+        `The Gurukul Admission Portal\n` +
         `Website: ${SITE_URL}`;
       htmlContent = `
-        <!DOCTYPE html>
-        <html>
+        <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+        <html xmlns="http://www.w3.org/1999/xhtml">
         <head>
-          <meta charset="utf-8">
-          <style>
-            body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #f8fafc; margin: 0; padding: 20px; color: #1e293b; }
-            .container { max-width: 580px; margin: 0 auto; background: #ffffff; border-radius: 16px; overflow: hidden; border: 1px solid #e2e8f0; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); }
-            .header { background: #0b192c; padding: 24px; text-align: center; border-bottom: 3px solid #f59e0b; }
-            .header h1 { color: #ffffff; margin: 0 0 4px 0; font-size: 22px; letter-spacing: 0.5px; font-weight: 800; }
-            .header p { color: #f59e0b; margin: 0; font-size: 12px; font-weight: bold; letter-spacing: 1px; }
-            .content { padding: 32px 28px; }
-            .greeting { font-size: 15px; font-weight: 600; color: #0f172a; margin-bottom: 12px; }
-            .text { font-size: 14px; line-height: 1.6; color: #475569; margin: 0 0 20px 0; }
-            .otp-box { background: #fffbeb; border: 2px dashed #f59e0b; border-radius: 12px; padding: 20px; text-align: center; margin: 24px 0; }
-            .otp-label { font-size: 11px; text-transform: uppercase; letter-spacing: 1.5px; font-weight: 800; color: #92400e; margin-bottom: 6px; }
-            .otp-code { font-family: 'Courier New', monospace; font-size: 38px; font-weight: 900; letter-spacing: 8px; color: #0b192c; margin: 6px 0; }
-            .otp-validity { font-size: 12px; color: #b45309; font-weight: 500; }
-            .footer { background: #f1f5f9; padding: 18px 24px; text-align: center; font-size: 11px; color: #64748b; border-top: 1px solid #e2e8f0; line-height: 1.5; }
-          </style>
+          <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+          <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+          <title>The Gurukul Admission Portal - Verification Code</title>
         </head>
-        <body>
-          <div class="container">
-            <div class="header">
-              <h1>THE GURUKUL NILOKHERI</h1>
-              <p>ENTRANCE EXAMINATION • SESSION 2027-28</p>
-            </div>
-            <div class="content">
-              <div class="greeting">Dear ${name || 'Candidate'},</div>
-              <p class="text">
-                Thank you for beginning your registration for The Gurukul. Please use the following One-Time Password (OTP) to verify your registration:
-              </p>
-              
-              <div class="otp-box">
-                <div class="otp-label">One-Time Verification Code</div>
-                <div class="otp-code">${data.otp}</div>
-                <div class="otp-validity">Valid for 10 minutes • Do not disclose to anyone</div>
-              </div>
-
-              <p class="text">
-                If you did not initiate this request, please disregard this email or contact the Admission Helpdesk at <strong>+91 7027849858 / 59</strong>.
-              </p>
-            </div>
-            <div class="footer">
-              The Gurukul Nilokheri (Haryana)<br>
-              CBSE Affiliated Institutional Network
-            </div>
-          </div>
+        <body style="margin: 0; padding: 0; background-color: #f1f5f9; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #1e293b;">
+          <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" style="background-color: #f1f5f9; padding: 24px 12px;">
+            <tr>
+              <td align="center">
+                <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" style="max-width: 560px; background-color: #ffffff; border-radius: 12px; border: 1px solid #cbd5e1; overflow: hidden;">
+                  <tr>
+                    <td style="background-color: #0b192c; padding: 22px 24px; text-align: center; border-bottom: 3px solid #f59e0b;">
+                      <h1 style="color: #ffffff; margin: 0 0 4px 0; font-size: 20px; font-weight: 800; letter-spacing: 0.5px;">THE GURUKUL ADMISSION PORTAL</h1>
+                      <p style="color: #f59e0b; margin: 0; font-size: 11px; font-weight: 700; letter-spacing: 1px;">ENTRANCE EXAMINATION • SESSION 2027-28</p>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td style="padding: 28px 24px;">
+                      <p style="font-size: 15px; font-weight: 600; color: #0f172a; margin: 0 0 12px 0;">Dear ${name || 'Candidate'},</p>
+                      <p style="font-size: 14px; line-height: 1.6; color: #334155; margin: 0 0 20px 0;">
+                        Thank you for beginning your registration on The Gurukul Admission Portal. Please enter the verification code below on the registration screen to confirm your email:
+                      </p>
+                      <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" style="margin: 20px 0; background-color: #fffbeb; border: 2px dashed #f59e0b; border-radius: 10px;">
+                        <tr>
+                          <td align="center" style="padding: 18px 16px;">
+                            <div style="font-size: 11px; text-transform: uppercase; letter-spacing: 1.5px; font-weight: 800; color: #92400e; margin-bottom: 6px;">One-Time Verification Code</div>
+                            <div style="font-family: 'Courier New', Courier, monospace; font-size: 34px; font-weight: 900; letter-spacing: 6px; color: #0b192c; margin: 6px 0;">${data.otp}</div>
+                            <div style="font-size: 12px; color: #b45309; font-weight: 500;">Valid for 10 minutes</div>
+                          </td>
+                        </tr>
+                      </table>
+                      <p style="font-size: 13px; line-height: 1.6; color: #64748b; margin: 0 0 16px 0;">
+                        If you did not initiate this request, you can safely disregard this email. For assistance, contact our Admission Helpdesk at <strong>+91 7027849858 / 59</strong>.
+                      </p>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td style="background-color: #f8fafc; padding: 16px 24px; text-align: center; font-size: 11px; color: #64748b; border-top: 1px solid #e2e8f0; line-height: 1.5;">
+                      The Gurukul Admission Portal<br />
+                      Admissions Helpdesk • ${SMTP_USER}
+                    </td>
+                  </tr>
+                </table>
+              </td>
+            </tr>
+          </table>
         </body>
         </html>
       `;
       break;
 
     case 'FEE_PAYMENT_RECEIPT':
-      subject = `Official Payment Receipt: The Gurukul Entrance Registration (${data.registrationNumber})`;
+      subject = `The Gurukul Admission Portal - Payment Receipt (${data.registrationNumber})`;
       message = `Dear ${name}, your application fee of Rs. ${data.amount || 800} for The Gurukul Entrance Examination (Session 2027-28) has been successfully received. Permanent Registration ID: ${data.registrationNumber}. Transaction ID: ${data.transactionId}. Please retain this receipt for candidate login and downloading your Admit Card with Registration ID: ${data.registrationNumber}.`;
       htmlContent = `
         <!DOCTYPE html>
@@ -160,9 +161,9 @@ export async function sendNotification(payload: NotificationPayload) {
         <body>
           <div class="container">
             <div class="header">
-              <h1>THE GURUKUL NILOKHERI</h1>
+              <h1>THE GURUKUL ADMISSION PORTAL</h1>
               <p>OFFICIAL ENTRANCE EXAMINATION FEE RECEIPT (2027-28)</p>
-              <div class="sub">CBSE Affiliated • Nilokheri, Haryana</div>
+              <div class="sub">CBSE Affiliated Institutional Network</div>
             </div>
             <div class="badge-box">
               ✓ FEE PAYMENT RECEIVED &amp; REGISTRATION NUMBER ASSIGNED
@@ -170,7 +171,7 @@ export async function sendNotification(payload: NotificationPayload) {
             <div class="content">
               <p style="font-size: 15px; font-weight: 600; color: #0f172a; margin-top: 0;">Dear ${name},</p>
               <p style="font-size: 13.5px; line-height: 1.6; color: #334155; margin-bottom: 16px;">
-                Thank you for applying to The Gurukul Nilokheri. Your online entrance examination application fee has been confirmed. Below is your official fee receipt and permanent registration details:
+                Thank you for applying through The Gurukul Admission Portal. Your online entrance examination application fee has been confirmed. Below is your official fee receipt and permanent registration details:
               </p>
               
               <div class="reg-box">
@@ -200,11 +201,11 @@ export async function sendNotification(payload: NotificationPayload) {
               </div>
 
               <p style="font-size: 12px; color: #64748b; line-height: 1.5; margin: 0;">
-                For queries regarding entrance examination, please contact the Admission Helpdesk at <strong>+91 7027849858 / 59</strong> or email <strong>thegurukulnilokheri@gmail.com</strong>.
+                For queries regarding entrance examination, please contact the Admission Helpdesk at <strong>+91 7027849858 / 59</strong> or email <strong>${SMTP_USER}</strong>.
               </p>
             </div>
             <div class="footer">
-              GURUKUL Institutional Network (Haryana)<br>
+              The Gurukul Admission Portal • Haryana<br>
               This is a computer-generated official receipt. No physical signature is required.
             </div>
           </div>
@@ -214,7 +215,7 @@ export async function sendNotification(payload: NotificationPayload) {
       break;
 
     case 'ADMIN_NEW_REGISTRATION_ALERT':
-      subject = `New Member Registered & Fee Paid: ${data.fullName} (${data.registrationNumber})`;
+      subject = `The Gurukul Admission Portal - New Registration: ${data.fullName} (${data.registrationNumber})`;
       message = `New candidate registration alert: ${data.fullName} has registered for ${data.classApplying} with Registration ID ${data.registrationNumber}. Fee of Rs. ${data.amountPaid || 800} received (Txn: ${data.transactionId}). Father: ${data.fatherName}.`;
       htmlContent = `
         <!DOCTYPE html>
@@ -239,7 +240,7 @@ export async function sendNotification(payload: NotificationPayload) {
         <body>
           <div class="container">
             <div class="header">
-              <h2>GURUKUL</h2>
+              <h2>THE GURUKUL ADMISSION PORTAL</h2>
               <p>ADMISSIONS & ENTRANCE EXAMINATION CELL - ADMIN ALERT</p>
             </div>
             <div class="alert-banner">
@@ -272,7 +273,7 @@ export async function sendNotification(payload: NotificationPayload) {
               </p>
             </div>
             <div class="footer">
-              Automated Administrative Notification • The Gurukul Nilokheri Portal System • Nilokheri, Haryana
+              Automated Administrative Notification • The Gurukul Admission Portal System
             </div>
           </div>
         </body>
@@ -281,7 +282,7 @@ export async function sendNotification(payload: NotificationPayload) {
       break;
 
     case 'REGISTRATION_CONFIRMATION':
-      subject = `The Gurukul Nilokheri - Fee Paid & Registration Confirmed: ${data.registrationNumber}`;
+      subject = `The Gurukul Admission Portal - Fee Paid & Registration Confirmed: ${data.registrationNumber}`;
       message = `Dear ${name}, congratulations! Fee payment of Rs. ${data.amount || 1200} received (Txn: ${data.transactionId || 'Confirmed'}). Your permanent Registration Number is ${data.registrationNumber}. Please keep this safe for accessing candidate services and your Admit Card.`;
       htmlContent = `
         <!DOCTYPE html>
@@ -308,7 +309,7 @@ export async function sendNotification(payload: NotificationPayload) {
         <body>
           <div class="container">
             <div class="header">
-              <h1>THE GURUKUL NILOKHERI</h1>
+              <h1>THE GURUKUL ADMISSION PORTAL</h1>
               <p>OFFICIAL E-RECEIPT & REGISTRATION CONFIRMATION (2027-28)</p>
             </div>
             <div class="content">
@@ -335,8 +336,8 @@ export async function sendNotification(payload: NotificationPayload) {
               </p>
             </div>
             <div class="footer">
-              The Gurukul Nilokheri, Haryana<br>
-              CBSE Affiliated • Admissions Portal: admissions.thegurukulnilokheri.com
+              The Gurukul Admission Portal • Haryana<br>
+              Admissions Helpdesk • ${SMTP_USER}
             </div>
           </div>
         </body>
@@ -345,8 +346,8 @@ export async function sendNotification(payload: NotificationPayload) {
       break;
 
     case 'FORGOT_REGISTRATION_RECOVERY':
-      subject = `The Gurukul Nilokheri - Your Registration Number: ${data.registrationNumber}`;
-      message = `Dear ${name || 'Candidate'}, as requested, your permanent Registration Number for The Gurukul Nilokheri Entrance Examination (Session 2027-28) is ${data.registrationNumber}. Please use this Registration Number and your password to sign in to the portal at ${SITE_URL}/.`;
+      subject = `The Gurukul Admission Portal - Your Registration Number: ${data.registrationNumber}`;
+      message = `Dear ${name || 'Candidate'}, as requested, your permanent Registration Number for The Gurukul Entrance Examination (Session 2027-28) is ${data.registrationNumber}. Please use this Registration Number and your password to sign in to the portal at ${SITE_URL}/.`;
       htmlContent = `
         <!DOCTYPE html>
         <html>
@@ -369,13 +370,13 @@ export async function sendNotification(payload: NotificationPayload) {
         <body>
           <div class="container">
             <div class="header">
-              <h1>THE GURUKUL NILOKHERI</h1>
+              <h1>THE GURUKUL ADMISSION PORTAL</h1>
               <p>ACCOUNT RECOVERY & REGISTRATION DETAILS (2027-28)</p>
             </div>
             <div class="content">
               <p style="font-size: 15px; font-weight: 600; color: #0f172a;">Dear ${name || 'Candidate'},</p>
               <p style="font-size: 14px; line-height: 1.6; color: #475569;">
-                You recently requested to retrieve your forgotten Registration Number for the <strong>The Gurukul Nilokheri Entrance Examination 2027-28</strong>.
+                You recently requested to retrieve your forgotten Registration Number from <strong>The Gurukul Admission Portal</strong>.
               </p>
               
               <div class="reg-box">
@@ -395,8 +396,8 @@ export async function sendNotification(payload: NotificationPayload) {
               </div>
             </div>
             <div class="footer">
-              The Gurukul Nilokheri, Haryana<br>
-              Helpline: +91 7027849858 / 59 • Email: thegurukulnilokheri@gmail.com
+              The Gurukul Admission Portal • Haryana<br>
+              Helpline: +91 7027849858 / 59 • Email: ${SMTP_USER}
             </div>
           </div>
         </body>
@@ -405,8 +406,8 @@ export async function sendNotification(payload: NotificationPayload) {
       break;
 
     case 'APPLICATION_SUBMITTED':
-      subject = 'The Gurukul Nilokheri – Application Submitted Successfully';
-      message = `Dear ${name || 'Candidate'},\n\nYour application for Entrance Examination 2027-28 has been successfully submitted.\n\nRegistration Number:\n${data.registrationNumber || data.applicationNumber}\n\nPlease keep this registration number safe for future reference.\n\nRegards,\nThe Gurukul Nilokheri\nAdmissions / Examination Department`;
+      subject = 'The Gurukul Admission Portal – Application Submitted Successfully';
+      message = `Dear ${name || 'Candidate'},\n\nYour application for Entrance Examination 2027-28 has been successfully submitted via The Gurukul Admission Portal.\n\nRegistration Number:\n${data.registrationNumber || data.applicationNumber}\n\nPlease keep this registration number safe for future reference.\n\nRegards,\nThe Gurukul Admission Portal\nAdmissions / Examination Department`;
       htmlContent = `
         <!DOCTYPE html>
         <html>
@@ -428,13 +429,13 @@ export async function sendNotification(payload: NotificationPayload) {
         <body>
           <div class="container">
             <div class="header">
-              <h1>THE GURUKUL NILOKHERI</h1>
+              <h1>THE GURUKUL ADMISSION PORTAL</h1>
               <p>ENTRANCE EXAMINATION (SESSION 2027-28)</p>
             </div>
             <div class="content">
               <p style="font-size: 15px; font-weight: 600; color: #0f172a; margin-top: 0;">Dear ${name || 'Candidate'},</p>
               <p style="font-size: 14px; line-height: 1.6; color: #334155;">
-                Your application for Entrance Examination 2027-28 has been successfully submitted.
+                Your application for Entrance Examination 2027-28 has been successfully submitted via The Gurukul Admission Portal.
               </p>
               
               <div class="reg-box">
@@ -451,13 +452,13 @@ export async function sendNotification(payload: NotificationPayload) {
 
               <div style="margin-top: 24px; padding-top: 16px; border-top: 1px solid #e2e8f0; font-size: 13px; color: #475569;">
                 Regards,<br>
-                <strong>The Gurukul Nilokheri</strong><br>
+                <strong>The Gurukul Admission Portal</strong><br>
                 Admissions / Examination Department
               </div>
             </div>
             <div class="footer">
-              The Gurukul Nilokheri, Haryana<br>
-              Helpline: +91 7027849858 / 59 • Email: thegurukulnilokheri@gmail.com
+              The Gurukul Admission Portal • Haryana<br>
+              Helpline: +91 7027849858 / 59 • Email: ${SMTP_USER}
             </div>
           </div>
         </body>
@@ -466,19 +467,19 @@ export async function sendNotification(payload: NotificationPayload) {
       break;
 
     case 'PAYMENT_SUCCESS':
-      subject = `The Gurukul Nilokheri - Payment Receipt (Txn: ${data.transactionId})`;
+      subject = `The Gurukul Admission Portal - Payment Receipt (Txn: ${data.transactionId})`;
       message = `Dear ${name}, entrance examination fee of Rs. ${data.amount} received (Txn: ${data.transactionId}). Your Registration No is ${data.registrationNumber}. Your application is confirmed.`;
       htmlContent = `<p>${message}</p>`;
       break;
 
     case 'CORRECTION_REQUIRED':
-      subject = `The Gurukul Nilokheri - Action Required: Documents / Details Demanded (${data.applicationNumber})`;
+      subject = `The Gurukul Admission Portal - Action Required: Documents / Details Demanded (${data.applicationNumber})`;
       message = `Dear ${name}, the Admissions & Scrutiny Committee has requested additional details/documents for your application ${data.applicationNumber}. Remarks: "${data.remarks}". Please log in to your candidate dashboard to upload the demanded documents or submit clarifications.`;
       htmlContent = `
         <div style="font-family: sans-serif; padding: 20px; color: #1e293b; background: #fffbeb; border: 1px solid #fef08a; border-radius: 12px;">
           <h2 style="color: #854d0e; margin-top: 0;">⚠️ Action Required: Documents / Details Demanded</h2>
           <p>Dear <strong>${name}</strong>,</p>
-          <p>The Admissions Committee at The Gurukul Nilokheri has reviewed your application (<strong>${data.applicationNumber}</strong>) and requested additional details or document revisions:</p>
+          <p>The Admissions Committee at The Gurukul Admission Portal has reviewed your application (<strong>${data.applicationNumber}</strong>) and requested additional details or document revisions:</p>
           <div style="background: #ffffff; padding: 15px; border-left: 4px solid #eab308; margin: 15px 0; border-radius: 4px;">
             <strong>Officer Remarks:</strong> ${data.remarks || 'Please upload clear verification documents.'}
           </div>
@@ -488,13 +489,13 @@ export async function sendNotification(payload: NotificationPayload) {
       break;
 
     case 'APPLICATION_APPROVED':
-      subject = `The Gurukul Nilokheri - Application Dossier Approved: ${data.applicationNumber}`;
-      message = `Dear ${name}, congratulations! Your application dossier (${data.applicationNumber}) for The Gurukul Nilokheri Entrance Examination (Session 2027-28) has been officially approved and verified by the Admissions Committee. You can log in to view entrance examination schedule updates and download your Admit Card once released.`;
+      subject = `The Gurukul Admission Portal - Application Dossier Approved: ${data.applicationNumber}`;
+      message = `Dear ${name}, congratulations! Your application dossier (${data.applicationNumber}) for The Gurukul Entrance Examination (Session 2027-28) has been officially approved and verified by the Admissions Committee. You can log in to view entrance examination schedule updates and download your Admit Card once released.`;
       htmlContent = `
         <div style="font-family: sans-serif; padding: 20px; color: #1e293b; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 12px;">
           <h2 style="color: #166534; margin-top: 0;">🎉 Application Dossier Approved & Verified!</h2>
           <p>Dear <strong>${name}</strong>,</p>
-          <p>Congratulations! Your entrance examination application (<strong>${data.applicationNumber}</strong>) has been verified and approved by the The Gurukul Nilokheri Admissions Committee.</p>
+          <p>Congratulations! Your entrance examination application (<strong>${data.applicationNumber}</strong>) has been verified and approved by the Admissions Committee on The Gurukul Admission Portal.</p>
           <p>Remarks: <em>${data.remarks || 'All submitted documents verified successfully.'}</em></p>
           <p>You can now log in to the portal to track your application status and download your Admit Card once released.</p>
         </div>
@@ -502,7 +503,7 @@ export async function sendNotification(payload: NotificationPayload) {
       break;
 
     case 'APPLICATION_REJECTED':
-      subject = `Official Notice: Application Rejected / Disqualified - The Gurukul Nilokheri Entrance 2027-28 (${data.applicationNumber})`;
+      subject = `The Gurukul Admission Portal - Application Status: ${data.applicationNumber}`;
       message = `Dear ${name}, this is an official notification that your entrance examination application (${data.applicationNumber}) has been REJECTED by the Admissions & Scrutiny Committee. Reason for Rejection: "${data.remarks || 'Documentation or eligibility criteria mismatch'}". As per guidelines, all previous details submitted under this dossier have been annulled. You may log in to the candidate portal at ${SITE_URL}/login to refill a fresh Admission form or raise an official query before the application window closes.`;
       htmlContent = `
         <!DOCTYPE html>
@@ -534,17 +535,17 @@ export async function sendNotification(payload: NotificationPayload) {
         <body>
           <div class="container">
             <div class="header">
-              <h1>THE GURUKUL NILOKHERI</h1>
+              <h1>THE GURUKUL ADMISSION PORTAL</h1>
               <p>ADMISSIONS & ENTRANCE EXAMINATION CELL (SESSION 2027-28)</p>
-              <div class="sub">CBSE Affiliated • Nilokheri, Haryana</div>
+              <div class="sub">CBSE Affiliated Institutional Network</div>
             </div>
             <div class="alert-banner">
-              ⚠️ OFFICIAL NOTICE: Admission FORM REJECTED / DISQUALIFIED
+              ⚠️ OFFICIAL NOTICE: APPLICATION FORM REJECTED
             </div>
             <div class="content">
               <p style="font-size: 15px; font-weight: 600; color: #0f172a; margin-top: 0;">Dear ${name || 'Candidate'},</p>
               <p style="font-size: 13px; line-height: 1.6; color: #475569;">
-                This is to officially inform you that following scrutiny by the Admissions & Examination Committee, your application dossier for the <strong>The Gurukul Nilokheri Entrance Examination (2027-28)</strong> has been <strong>REJECTED</strong>.
+                This is to officially inform you that following scrutiny by the Admissions & Examination Committee, your application dossier (${data.applicationNumber}) on <strong>The Gurukul Admission Portal</strong> has been <strong>REJECTED</strong>.
               </p>
 
               <table class="info-table">
@@ -573,8 +574,8 @@ export async function sendNotification(payload: NotificationPayload) {
               </div>
             </div>
             <div class="footer">
-              Examination Control Division • The Gurukul Nilokheri, Haryana - 132117<br>
-              Helpline: +91 7027849858 / 59 • Email: thegurukulnilokheri@gmail.com
+              The Gurukul Admission Portal • Haryana<br>
+              Helpline: +91 7027849858 / 59 • Email: ${SMTP_USER}
             </div>
           </div>
         </body>
@@ -592,7 +593,7 @@ export async function sendNotification(payload: NotificationPayload) {
       };
 
     case 'RESULT_DECLARED':
-      subject = 'The Gurukul Nilokheri - Entrance Examination Result Declared';
+      subject = 'The Gurukul Admission Portal - Entrance Examination Result Declared';
       message = 'Dear Candidate, The Entrance Examination Result has been declared. Please visit the official portal to check your result.';
       htmlContent = `
         <!DOCTYPE html>
@@ -616,7 +617,7 @@ export async function sendNotification(payload: NotificationPayload) {
         <body>
           <div class="container">
             <div class="header">
-              <h1>THE GURUKUL NILOKHERI</h1>
+              <h1>THE GURUKUL ADMISSION PORTAL</h1>
               <p>ENTRANCE EXAMINATION • SESSION 2027-28</p>
             </div>
             <div class="content">
@@ -630,8 +631,8 @@ export async function sendNotification(payload: NotificationPayload) {
               </div>
             </div>
             <div class="footer">
-              The Gurukul Nilokheri, Haryana<br>
-              Admissions &amp; Examination Cell • thegurukulnilokheri@gmail.com
+              The Gurukul Admission Portal • Haryana<br>
+              Admissions &amp; Examination Cell • ${SMTP_USER}
             </div>
           </div>
         </body>
@@ -643,18 +644,33 @@ export async function sendNotification(payload: NotificationPayload) {
   // If the recipient looks like an email address, send real email via Nodemailer
   if (to && to.includes('@')) {
     try {
+      let fromName = 'The Gurukul Admission Portal';
+      let fromAddress = SMTP_USER;
+      if (cleanFromEmail.includes('<') && cleanFromEmail.includes('>')) {
+        const match = cleanFromEmail.match(/^(?:["']?([^"']+)["']?\s*)?<([^>]+)>/);
+        if (match) {
+          fromName = match[1]?.trim() || 'The Gurukul Admission Portal';
+          fromAddress = match[2]?.trim() || SMTP_USER;
+        }
+      }
+      if (!fromName || fromName.toLowerCase().includes('nilokheri')) {
+        fromName = 'The Gurukul Admission Portal';
+      }
+      const fromObj = {
+        name: fromName,
+        address: fromAddress,
+      };
+
       const info = await transporter.sendMail({
-        from: FROM_EMAIL,
+        from: fromObj,
         replyTo: SMTP_USER,
         to,
         subject,
         text: message,
         html: htmlContent,
         headers: {
-          'X-Priority': '1',
-          'X-MSMail-Priority': 'High',
-          'Importance': 'High',
-          'X-Mailer': 'The Gurukul Nilokheri Notification Service',
+          'Auto-Submitted': 'auto-generated',
+          'X-Auto-Response-Suppress': 'OOF, AutoReply',
         },
       });
 
