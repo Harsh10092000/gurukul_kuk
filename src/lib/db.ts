@@ -359,6 +359,7 @@ export async function initDatabase(): Promise<void> {
       '  application_number VARCHAR(64) NOT NULL,' +
       '  roll_number VARCHAR(64) UNIQUE NOT NULL,' +
       '  candidate_name VARCHAR(255) NOT NULL,' +
+      '  dob VARCHAR(32) DEFAULT NULL,' +
       '  class_applying VARCHAR(64) NOT NULL,' +
       '  subjects JSON NOT NULL,' +
       '  total_marks DECIMAL(6, 2) NOT NULL,' +
@@ -369,7 +370,7 @@ export async function initDatabase(): Promise<void> {
       '  counseling_date VARCHAR(128),' +
       '  counseling_venue TEXT,' +
       '  is_published BOOLEAN DEFAULT FALSE,' +
-      '  remarks TEXT,' +
+      '  remarks MEDIUMTEXT,' +
       '  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,' +
       '  FOREIGN KEY (application_id) REFERENCES applications(id) ON DELETE CASCADE' +
       ');'
@@ -470,6 +471,39 @@ export async function initDatabase(): Promise<void> {
           }
         }
       }
+
+      // Ensure results table has dob column and MEDIUMTEXT remarks
+      try {
+        const [colRows]: any = await pool.query("SHOW COLUMNS FROM results");
+        const colNames = Array.isArray(colRows) ? colRows.map((c: any) => c.Field) : [];
+        if (!colNames.includes('dob')) {
+          await pool.query("ALTER TABLE results ADD COLUMN dob VARCHAR(32) DEFAULT NULL AFTER candidate_name");
+        }
+        await pool.query("ALTER TABLE results MODIFY COLUMN remarks MEDIUMTEXT");
+
+        // Backfill DOB from matching applications if available
+        await pool.query(`
+          UPDATE results r
+          JOIN applications a ON (r.application_id = a.id OR r.roll_number = a.roll_number OR r.application_number = a.registration_number)
+          SET r.dob = JSON_UNQUOTE(JSON_EXTRACT(a.personal_info, '$.dob'))
+          WHERE (r.dob IS NULL OR r.dob = '') AND JSON_EXTRACT(a.personal_info, '$.dob') IS NOT NULL
+        `);
+
+        // Backfill DOB for known demo records if currently null or empty
+        const knownDobs: Record<string, string> = {
+          '27060001': '15/07/2014',
+          '27060002': '10/05/2014',
+          '27060003': '08/08/2004',
+          '27110001': '08/08/2003',
+          '27060004': '20/08/2014',
+          '27060005': '15/01/2014',
+          '27060006': '03/11/2014',
+          '27060007': '19/04/2014',
+        };
+        for (const [roll, d] of Object.entries(knownDobs)) {
+          await pool.query('UPDATE results SET dob = ? WHERE roll_number = ? AND (dob IS NULL OR dob = "")', [d, roll]);
+        }
+      } catch { }
 
       await pool.query(`
         CREATE TABLE IF NOT EXISTS form_schedules (
@@ -723,7 +757,8 @@ export const db = {
       `SELECT u.*, COALESCE(u.registration_number, a.registration_number, a.application_number) as resolved_reg_no 
        FROM users u 
        LEFT JOIN applications a ON u.id = a.user_id 
-       WHERE LOWER(u.email) = ? 
+       WHERE u.id = ?
+          OR LOWER(u.email) = ? 
           OR LOWER(u.registration_number) = ? 
           OR REPLACE(LOWER(COALESCE(u.registration_number, '')), '-', '') = ?
           OR RIGHT(u.phone, 10) = ? 
@@ -733,7 +768,7 @@ export const db = {
           OR (? = 1 AND u.role = 'admin')
        ORDER BY (u.role = 'admin') DESC
        LIMIT 1`,
-      [trimmed, trimmed, cleanAlphaNum, cleanPhone, trimmed, cleanAlphaNum, trimmed, isAdminIdentifier ? 1 : 0]
+      [trimmed, trimmed, trimmed, cleanAlphaNum, cleanPhone, trimmed, cleanAlphaNum, trimmed, isAdminIdentifier ? 1 : 0]
     );
     if (!rows.length) return null;
     const r = rows[0];
@@ -913,13 +948,17 @@ export const db = {
     return store.users || [];
   },
 
-  async updateUserPassword(emailOrPhone: string, newPasswordHash: string): Promise<boolean> {
-    const user = (await this.findUserByIdentifier(emailOrPhone)) || (await this.findUserByPhone(emailOrPhone));
-    if (!user) return false;
+  async updateUserPassword(userIdOrIdentifier: string, newPasswordHash: string): Promise<boolean> {
+    await ensureDb();
+    const clean = (userIdOrIdentifier || '').trim();
+    if (!clean) return false;
+
+    const user = (await this.findUserByIdentifier(clean)) || (await this.findUserByPhone(clean));
 
     if (useFallbackStorage || !pool) {
       const store = initFallbackFile();
-      const idx = store.users.findIndex(u => u.id === user.id);
+      const targetId = user?.id || clean;
+      const idx = store.users.findIndex(u => u.id === targetId || (u.email && u.email.toLowerCase() === clean.toLowerCase()));
       if (idx !== -1) {
         (store.users[idx] as any).passwordHash = newPasswordHash;
         saveFallbackStore(store);
@@ -928,8 +967,20 @@ export const db = {
       return false;
     }
 
-    await pool.query('UPDATE users SET password_hash = ? WHERE id = ?', [newPasswordHash, user.id]);
-    return true;
+    try {
+      if (user) {
+        await pool.query('UPDATE users SET password_hash = ? WHERE id = ?', [newPasswordHash, user.id]);
+        return true;
+      }
+      const [res]: any = await pool.query(
+        'UPDATE users SET password_hash = ? WHERE id = ? OR LOWER(email) = LOWER(?)',
+        [newPasswordHash, clean, clean]
+      );
+      return res && res.affectedRows > 0;
+    } catch (e) {
+      console.error('MySQL updateUserPassword error:', e);
+      return false;
+    }
   },
 
   async updateUser(id: string, updates: Partial<User>): Promise<boolean> {
@@ -1327,41 +1378,52 @@ export const db = {
     await ensureDb();
     const isFemale = (gender || '').toLowerCase() === 'female';
     const prefix = isFemale ? 'NILG-' : 'NILB-';
-    const regex = new RegExp(`^${prefix}(\\d+)`, 'i');
-    let maxSeq = 0;
 
-    const checkReg = (val?: string | null) => {
-      if (!val) return;
-      const m = val.match(regex);
-      if (m && m[1]) {
-        const num = parseInt(m[1], 10);
-        if (!isNaN(num) && num > maxSeq) {
-          maxSeq = num;
-        }
-      }
+    // Helper to generate a random 5-digit number (10000 - 99999), e.g. NILB-12325 or NILG-48291
+    const generateRandomCandidate = () => {
+      const randomNum = Math.floor(10000 + Math.random() * 90000);
+      return `${prefix}${randomNum}`;
     };
 
     if (useFallbackStorage || !pool) {
       const store = initFallbackFile();
-      store.users.forEach(u => checkReg(u.registrationNumber));
-      store.applications.forEach(a => {
-        checkReg(a.registrationNumber);
-        checkReg(a.applicationNumber);
+      const existing = new Set<string>();
+      (store.users || []).forEach((u) => {
+        if (u.registrationNumber) existing.add(u.registrationNumber.trim().toUpperCase());
       });
-      const nextSeq = maxSeq + 1;
-      return `${prefix}${String(nextSeq).padStart(5, '0')}`;
+      (store.applications || []).forEach((a) => {
+        if (a.registrationNumber) existing.add(a.registrationNumber.trim().toUpperCase());
+        if (a.applicationNumber) existing.add(a.applicationNumber.trim().toUpperCase());
+      });
+
+      // Try up to 200 random candidates to guarantee uniqueness
+      for (let attempt = 0; attempt < 200; attempt++) {
+        const candidate = generateRandomCandidate();
+        if (!existing.has(candidate.toUpperCase())) {
+          return candidate;
+        }
+      }
+      return `${prefix}${Date.now().toString().slice(-5)}`;
     }
 
     try {
-      const [userRows]: any = await pool.query('SELECT registration_number FROM users WHERE registration_number LIKE ?', [`${prefix}%`]);
-      const [appRows]: any = await pool.query('SELECT application_number FROM applications WHERE application_number LIKE ?', [`${prefix}%`]);
-      userRows.forEach((r: any) => checkReg(r.registration_number));
-      appRows.forEach((r: any) => checkReg(r.application_number));
-      const nextSeq = maxSeq + 1;
-      return `${prefix}${String(nextSeq).padStart(5, '0')}`;
+      // Query database to ensure generated random registration number is globally unique
+      for (let attempt = 0; attempt < 100; attempt++) {
+        const candidate = generateRandomCandidate();
+        const [rows]: any = await pool.query(
+          `SELECT 1 FROM users WHERE registration_number = ? 
+           UNION 
+           SELECT 1 FROM applications WHERE registration_number = ? OR application_number = ? 
+           LIMIT 1`,
+          [candidate, candidate, candidate]
+        );
+        if (!rows || rows.length === 0) {
+          return candidate;
+        }
+      }
+      return `${prefix}${Date.now().toString().slice(-5)}`;
     } catch {
-      const nextSeq = maxSeq + 1;
-      return `${prefix}${String(nextSeq).padStart(5, '0')}`;
+      return generateRandomCandidate();
     }
   },
 
@@ -2266,6 +2328,7 @@ export const db = {
       applicationNumber: r.application_number,
       rollNumber: r.roll_number,
       candidateName: r.candidate_name,
+      dob: r.dob,
       classApplying: r.class_applying,
       subjects: safeJsonParse(r.subjects, []),
       totalMarks: parseFloat(r.total_marks),
@@ -2295,31 +2358,35 @@ export const db = {
 
     await pool.query(
       `INSERT INTO results (
-        id, application_id, application_number, roll_number, candidate_name, class_applying, 
+        id, application_id, application_number, roll_number, candidate_name, dob, class_applying, 
         subjects, total_marks, max_total_marks, percentage, \`rank\`, qualifying_status, 
         counseling_date, counseling_venue, is_published, remarks
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       ON DUPLICATE KEY UPDATE 
+        candidate_name = VALUES(candidate_name),
+        dob = VALUES(dob),
         total_marks = VALUES(total_marks), 
         percentage = VALUES(percentage), 
         \`rank\` = VALUES(\`rank\`), 
-        is_published = VALUES(is_published)`,
+        is_published = VALUES(is_published),
+        remarks = VALUES(remarks)`,
       [
         result.id,
         result.applicationId,
         result.applicationNumber,
         result.rollNumber,
         result.candidateName,
+        result.dob || null,
         result.classApplying,
-        JSON.stringify(result.subjects),
-        result.totalMarks,
-        result.maxTotalMarks,
-        result.percentage,
-        result.rank,
-        result.qualifyingStatus,
+        JSON.stringify(result.subjects || []),
+        result.totalMarks || 0,
+        result.maxTotalMarks || 100,
+        result.percentage || 0,
+        result.rank || 1,
+        result.qualifyingStatus || 'Qualified',
         result.counselingDate || null,
         result.counselingVenue || null,
-        result.isPublished,
+        result.isPublished ? 1 : 0,
         result.remarks || null,
       ]
     );

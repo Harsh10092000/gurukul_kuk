@@ -298,7 +298,7 @@ export default function ContactPage() {
                       type="text"
                       value={formData.applicationNumber}
                       onChange={(e) => setFormData({ ...formData, applicationNumber: e.target.value })}
-                      placeholder="e.g. NILB-00001"
+                      placeholder="e.g. NILB-12325"
                       className="form-input-field font-mono"
                     />
                   </div>

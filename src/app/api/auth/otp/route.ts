@@ -105,7 +105,22 @@ export async function POST(req: Request) {
 
         recipientPhone = ''; // Remove mobile verification from registration flow
       } 
-      // Case B: Account Recovery / Forgot Password / Verification
+      // Case B: Forgot Password
+      else if (actionType === 'forgot_password') {
+        const cleanEmail = rawTarget.toLowerCase().trim();
+        const foundUser = (await db.findUserByEmail(cleanEmail)) || (await db.findUserByIdentifier(cleanEmail));
+        if (!foundUser) {
+          return NextResponse.json(
+            { error: 'No registered candidate account found with this email address. Please verify your email or create a new registration.' },
+            { status: 404 }
+          );
+        }
+
+        recipientEmail = foundUser.email || cleanEmail;
+        recipientPhone = ''; // Strict email-only recovery
+        recipientName = foundUser.name || 'Candidate';
+      }
+      // Case C: General Account Recovery / Verification
       else {
         const foundUser = (await db.findUserByIdentifier(rawTarget)) || (await db.findUserByPhone(rawTarget));
         if (!foundUser) {

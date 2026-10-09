@@ -469,9 +469,9 @@ export default function ApplicantDashboard() {
       current: isAdmitCardReleased && !isResultDeclared,
     },
     {
-      label: 'Result & Selection',
-      sublabel: result?.qualifyingStatus
-        ? result.qualifyingStatus
+      label: 'Result & Remarks',
+      sublabel: result?.remarks
+        ? result.remarks
         : isResultDeclared
         ? 'Result Declared'
         : 'Evaluation Pending',

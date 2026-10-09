@@ -70,15 +70,15 @@ export function validateName(name: string | undefined | null, fieldLabel: string
  * - Meaningful text (letters, spaces, common punctuation: ., / & - ( ))
  * - Rejects numeric sequences / digit junk like 'Services2131' or '243423423423423434'
  */
-export function validateOccupation(occupation: string | undefined | null, fieldLabel: string): ValidationResult {
-  if (!occupation || typeof occupation !== 'string') {
-    return { isValid: true }; // Optional or handled by mandatory check
+export function validateOccupation(occupation: string | undefined | null, fieldLabel: string, isRequired: boolean = true): ValidationResult {
+  if (!occupation || typeof occupation !== 'string' || occupation.trim().length === 0) {
+    if (isRequired) {
+      return { isValid: false, error: `${fieldLabel} is required. Please select or specify an occupation.` };
+    }
+    return { isValid: true };
   }
 
   const trimmed = occupation.trim();
-  if (trimmed.length === 0) {
-    return { isValid: true };
-  }
 
   if (trimmed.length < 2) {
     return { isValid: false, error: `${fieldLabel} must be at least 2 characters long.` };
@@ -250,8 +250,8 @@ export function validateDob(dob: string | undefined | null): ValidationResult {
 export const CAMPUS_STREAMS_MAP: Record<string, string[]> = {
   'The Gurukul Nilokheri': ['Non Medical', 'Medical', 'Commerce', 'Humanities'],
   'Gurukul Nilokheri': ['Non Medical', 'Medical', 'Commerce', 'Humanities'],
-  'The Gurukul Jyotisar': ['Non Medical'],
-  'Gurukul Jyotisar': ['Non Medical'],
+  'The Gurukul Jyotisar': ['Non Medical', 'Medical', 'Commerce'],
+  'Gurukul Jyotisar': ['Non Medical', 'Medical', 'Commerce'],
   'Aryakulam Nilokheri': ['Non Medical', 'Medical', 'Commerce'],
 };
 
@@ -260,9 +260,6 @@ export function getStreamsForCampus(campus?: string | null, gender?: string | nu
   const c = (campus || '').trim().toLowerCase();
   if (isFemale || (c.includes('nilokheri') && !c.includes('aryakulam'))) {
     return ['Non Medical', 'Medical', 'Commerce', 'Humanities'];
-  }
-  if (c.includes('jyotisar')) {
-    return ['Non Medical'];
   }
   return ['Non Medical', 'Medical', 'Commerce'];
 }
@@ -273,7 +270,6 @@ export function getStreamsForCampus(campus?: string | null, gender?: string | nu
  * - Stream:
  *   - For Class 11 Girls: Non Medical, Medical, Commerce, Humanities
  *   - For Class 11 Boys: Non Medical, Medical, Commerce (Humanities is strictly for girls only)
- *   - For Class 11 Jyotisar: Non Medical only
  *   - For Class 6, 7, 8, 9: Stream must NOT be selected
  */
 export function validateClassAndStream(
@@ -334,19 +330,9 @@ export function validateClassAndStream(
       };
     }
 
-    const isJyotisar = (studyLocation || '').toLowerCase().includes('jyotisar');
-    if (isJyotisar && cleanStream !== 'Non Medical') {
-      return {
-        isValid: false,
-        error: 'At The Gurukul Jyotisar, only Non Medical stream is available for Class 11. For Medical or Commerce, please select Aryakulam Nilokheri.',
-      };
-    }
-
     const allowedStreams = isFemale
       ? ['Non Medical', 'Medical', 'Commerce', 'Humanities']
-      : (isJyotisar
-          ? ['Non Medical']
-          : ['Non Medical', 'Medical', 'Commerce']);
+      : ['Non Medical', 'Medical', 'Commerce'];
 
     if (!allowedStreams.includes(cleanStream)) {
       return {

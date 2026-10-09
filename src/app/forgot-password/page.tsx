@@ -52,8 +52,10 @@ export default function ForgotPasswordPage() {
     setError('');
     setResendSuccess('');
 
-    if (!identifier.trim()) {
-      setError('Please enter your registered email address or mobile number.');
+    const cleanEmail = identifier.trim().toLowerCase();
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!cleanEmail || !emailRegex.test(cleanEmail)) {
+      setError('Please enter a valid registered email address (e.g. candidate@example.com).');
       return;
     }
 
@@ -66,7 +68,7 @@ export default function ForgotPasswordPage() {
         body: JSON.stringify({
           action: 'send',
           actionType: 'forgot_password',
-          identifier: identifier.trim(),
+          identifier: cleanEmail,
         }),
       });
       const data = await res.json();
@@ -99,7 +101,7 @@ export default function ForgotPasswordPage() {
         body: JSON.stringify({
           action: 'send',
           actionType: 'forgot_password',
-          identifier: identifier.trim(),
+          identifier: identifier.trim().toLowerCase(),
         }),
       });
       const data = await res.json();
@@ -107,7 +109,7 @@ export default function ForgotPasswordPage() {
       if (!res.ok) {
         setError(data.error || 'Failed to resend code.');
       } else {
-        setResendSuccess('Verification code resent successfully.');
+        setResendSuccess('Verification code resent successfully to your email.');
         setResendTimer(30);
         setCanResend(false);
         setTimeout(() => setResendSuccess(''), 4000);
@@ -124,7 +126,7 @@ export default function ForgotPasswordPage() {
     setError('');
 
     if (!otp.trim() || otp.trim().length !== 6) {
-      setError('Please enter the valid 6-digit OTP.');
+      setError('Please enter the valid 6-digit OTP received on your email.');
       return;
     }
 
@@ -146,7 +148,7 @@ export default function ForgotPasswordPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           action: 'verify',
-          identifier: identifier.trim(),
+          identifier: identifier.trim().toLowerCase(),
           otp: otp.trim(),
         }),
       });
@@ -162,7 +164,7 @@ export default function ForgotPasswordPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          identifier: identifier.trim(),
+          identifier: identifier.trim().toLowerCase(),
           otp: otp.trim(),
           newPassword,
         }),
@@ -231,8 +233,8 @@ export default function ForgotPasswordPage() {
           </h2>
           <p className="text-xs text-slate-500">
             {step === 'request'
-              ? 'Enter your registered email or mobile to receive a secure recovery code.'
-              : `Enter the 6-digit OTP sent to ${identifier} and choose a new password.`}
+              ? 'Enter your registered email address to receive a secure recovery code.'
+              : `Enter the 6-digit OTP sent to ${identifier.trim().toLowerCase()} and choose a new password.`}
           </p>
         </div>
 
@@ -247,16 +249,19 @@ export default function ForgotPasswordPage() {
           <form onSubmit={handleRequestOtp} className="space-y-4">
             <div>
               <label className="form-label">
-                Registered Email or Mobile Number <span className="text-rose-500">*</span>
+                Registered Email Address <span className="text-rose-500">*</span>
               </label>
               <input
-                type="text"
+                type="email"
                 required
                 value={identifier}
                 onChange={(e) => setIdentifier(e.target.value)}
-                placeholder="e.g. student@example.com or 9876543210"
+                placeholder="e.g. candidate@example.com"
                 className="form-input-field"
               />
+              <span className="text-[11px] text-slate-400 mt-1 block">
+                We will dispatch an OTP verification code directly to this email.
+              </span>
             </div>
 
             <button

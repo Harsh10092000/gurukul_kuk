@@ -145,7 +145,7 @@ export default function AdmitCardPage() {
                     type="text"
                     value={regNo}
                     onChange={(e) => setRegNo(e.target.value)}
-                    placeholder="e.g. NILB-00001"
+                    placeholder="e.g. NILB-12325"
                     className="form-input-field font-mono font-semibold uppercase"
                     required
                   />

@@ -108,6 +108,10 @@ export async function POST(request: Request) {
     if (!fatherOccVal.isValid) {
       return NextResponse.json({ error: fatherOccVal.error }, { status: 400 });
     }
+    const motherOccVal = validateOccupation(parentInfo?.motherOccupation, "Mother's Occupation");
+    if (!motherOccVal.isValid) {
+      return NextResponse.json({ error: motherOccVal.error }, { status: 400 });
+    }
 
     // 9. Address Validation
     const cityVal = addressInfo?.city?.trim() || addressInfo?.district?.trim();
@@ -143,9 +147,9 @@ export async function POST(request: Request) {
       );
     }
 
-    // 13. Atomically Generate Official Gender-Sequenced Registration ID
-    // BOYS: NILB-00001
-    // GIRLS: NILG-00001
+    // 13. Atomically Generate Official Unique Registration ID
+    // BOYS: NILB-xxxxx (e.g. NILB-12325)
+    // GIRLS: NILG-xxxxx (e.g. NILG-48291)
     const registrationId = await db.getNextRegistrationNumber(gender as 'Male' | 'Female');
 
     // Retrieve candidate email & phone from payload or temporary session
@@ -349,11 +353,10 @@ export async function POST(request: Request) {
           receiptNumber: receiptNo,
           fullName: personalInfo.fullName,
           classApplying: newApplication.classApplying,
-          candidateEmail,
-          candidateMobile,
           fatherName: parentInfo.fatherName || 'N/A',
-          fatherPhone: parentInfo.fatherPhone || 'N/A',
+          fatherOccupation: parentInfo.fatherOccupation || 'N/A',
           motherName: parentInfo.motherName || 'N/A',
+          motherOccupation: parentInfo.motherOccupation || 'N/A',
           dob: personalInfo.dob || 'N/A',
           gender,
           category: personalInfo.category || 'General',

@@ -159,8 +159,8 @@ export default function StatusPage() {
         icon: Award,
         iconBg: 'bg-emerald-100 text-emerald-700',
         title: 'Result Has Been Declared',
-        description: app.result.qualifyingStatus
-          ? `Entrance examination result has been declared. Result Status: ${app.result.qualifyingStatus}${app.result.remarks ? ` (${app.result.remarks})` : ''}.`
+        description: app.result.remarks
+          ? `Entrance examination result has been declared. Remarks: ${app.result.remarks}`
           : 'Entrance examination results have been officially declared.',
         nextStep: 'Check your scorecard and merit ranking via the candidate portal.',
       };
@@ -303,7 +303,7 @@ export default function StatusPage() {
                     required
                     value={query}
                     onChange={(e) => setQuery(e.target.value)}
-                    placeholder="e.g. NILB-00001 or GK26-10001"
+                    placeholder="e.g. NILB-12325 or 9876543210"
                     className="form-input-field font-mono font-semibold uppercase"
                   />
                   <span className="text-[11px] text-slate-400 mt-1 block">

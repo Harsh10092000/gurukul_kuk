@@ -639,6 +639,130 @@ export async function sendNotification(payload: NotificationPayload) {
         </html>
       `;
       break;
+
+    case 'ADMIN_NEW_REGISTRATION_ALERT':
+      subject = `🔔 New Candidate Registration Alert: ${data.fullName || 'Candidate'} (${data.registrationNumber || data.applicationNumber || 'New'}) - Class ${data.classApplying || 'N/A'}`;
+      message = `The Gurukul Admission Portal - New Registration Alert\n\n` +
+        `Candidate Details:\n` +
+        `• Name: ${cleanVal(data.fullName)}\n` +
+        `• Permanent Reg No: ${cleanVal(data.registrationNumber || data.applicationNumber)}\n` +
+        `• Roll Number: ${cleanVal(data.rollNumber, 'Pending Allotment')}\n` +
+        `• Class Applying: ${cleanVal(data.classApplying)}\n` +
+        `• Gender: ${cleanVal(data.gender)}\n` +
+        `• Date of Birth: ${cleanVal(data.dob)}\n` +
+        `• Aadhaar Number: ${cleanVal(data.aadhaarNumber)}\n\n` +
+        `Parent Particulars:\n` +
+        `• Father's Name: ${cleanVal(data.fatherName)}\n` +
+        `• Father's Occupation: ${cleanVal(data.fatherOccupation)}\n` +
+        `• Mother's Name: ${cleanVal(data.motherName)}\n` +
+        `• Mother's Occupation: ${cleanVal(data.motherOccupation)}\n\n` +
+        `Residential Address:\n` +
+        `• Address: ${cleanVal(data.address)}\n\n` +
+        `Fee & Payment Details:\n` +
+        `• Amount Paid: Rs. ${cleanVal(data.amount || data.amountPaid, '800')}\n` +
+        `• Receipt Number: ${cleanVal(data.receiptNumber)}\n` +
+        `• Transaction ID: ${cleanVal(data.transactionId)}\n` +
+        `• Payment Timestamp: ${cleanVal(data.paymentDate || data.registrationTime, new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' }))}\n\n` +
+        `The Gurukul Admission Administration Desk\n` +
+        `Portal: ${SITE_URL}`;
+
+      htmlContent = `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta charset="utf-8">
+          <style>
+            body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #f1f5f9; margin: 0; padding: 24px 12px; color: #1e293b; }
+            .container { max-width: 660px; margin: 0 auto; background: #ffffff; border-radius: 16px; overflow: hidden; border: 1px solid #cbd5e1; box-shadow: 0 10px 25px -5px rgba(0,0,0,0.08); }
+            .header { background: #0b192c; padding: 26px 22px; text-align: center; border-bottom: 4px solid #f59e0b; }
+            .header h1 { color: #ffffff; margin: 0 0 6px 0; font-size: 22px; font-weight: 800; letter-spacing: 0.5px; }
+            .header p { color: #f59e0b; margin: 0; font-size: 12px; font-weight: 700; letter-spacing: 1.2px; }
+            .alert-banner { background: #eff6ff; border-bottom: 1px solid #bfdbfe; padding: 12px 20px; text-align: center; font-size: 13px; font-weight: 800; color: #1e40af; }
+            .content { padding: 28px 24px; }
+            .section-title { font-size: 13px; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; color: #0b192c; border-bottom: 2px solid #e2e8f0; padding-bottom: 6px; margin: 20px 0 12px 0; }
+            .details-table { width: 100%; border-collapse: collapse; margin-bottom: 16px; font-size: 13px; }
+            .details-table td { padding: 8px 12px; border-bottom: 1px solid #f1f5f9; vertical-align: top; }
+            .details-table td:first-child { color: #64748b; font-weight: 600; width: 38%; }
+            .details-table td:last-child { color: #0f172a; font-weight: 700; }
+            .highlight-box { background: #f8fafc; border: 2px dashed #0b192c; border-radius: 10px; padding: 16px; text-align: center; margin: 16px 0; }
+            .reg-label { font-size: 11px; text-transform: uppercase; font-weight: 800; color: #64748b; letter-spacing: 1px; }
+            .reg-val { font-family: 'Courier New', monospace; font-size: 26px; font-weight: 900; color: #0b192c; letter-spacing: 2px; margin: 4px 0; }
+            .footer { background: #f8fafc; padding: 18px 24px; text-align: center; font-size: 11px; color: #64748b; border-top: 1px solid #e2e8f0; line-height: 1.5; }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="header">
+              <h1>THE GURUKUL ADMISSION PORTAL</h1>
+              <p>ADMINISTRATIVE ADMISSION &amp; ENTRANCE EXAMINATION DESK</p>
+            </div>
+            <div class="alert-banner">
+              🔔 NEW CANDIDATE REGISTRATION CONFIRMED
+            </div>
+            <div class="content">
+              <p style="font-size: 14px; line-height: 1.5; color: #334155; margin-top: 0;">
+                A new candidate admission form and fee payment has been successfully completed on <strong>The Gurukul Admission Portal</strong>. Details are recorded below:
+              </p>
+
+              <div class="highlight-box">
+                <div class="reg-label">Permanent Registration Number</div>
+                <div class="reg-val">${cleanVal(data.registrationNumber || data.applicationNumber)}</div>
+                <div style="font-size: 12px; font-weight: 700; color: #166534; margin-top: 4px;">
+                  Class: ${cleanVal(data.classApplying)} • Roll No: ${cleanVal(data.rollNumber, 'Pending Allotment')}
+                </div>
+              </div>
+
+              <div class="section-title">Candidate Particulars</div>
+              <table class="details-table">
+                <tr><td>Full Name</td><td>${cleanVal(data.fullName)}</td></tr>
+                <tr><td>Class Applying</td><td>${cleanVal(data.classApplying)}</td></tr>
+                <tr><td>Gender</td><td>${cleanVal(data.gender)}</td></tr>
+                <tr><td>Date of Birth</td><td>${cleanVal(data.dob)}</td></tr>
+                <tr><td>Aadhaar Card No.</td><td>${cleanVal(data.aadhaarNumber)}</td></tr>
+              </table>
+
+              <div class="section-title">Parent / Guardian Details</div>
+              <table class="details-table">
+                <tr><td>Father's Name</td><td>${cleanVal(data.fatherName)}</td></tr>
+                <tr><td>Father's Occupation</td><td>${cleanVal(data.fatherOccupation)}</td></tr>
+                <tr><td>Mother's Name</td><td>${cleanVal(data.motherName)}</td></tr>
+                <tr><td>Mother's Occupation</td><td>${cleanVal(data.motherOccupation)}</td></tr>
+              </table>
+
+              <div class="section-title">Residential Address</div>
+              <table class="details-table">
+                <tr><td>Address</td><td>${cleanVal(data.address)}</td></tr>
+              </table>
+
+              <div class="section-title">Fee Payment Particulars</div>
+              <table class="details-table">
+                <tr><td>Application Fee Paid</td><td style="color: #166534; font-weight: 800;">₹${cleanVal(data.amount || data.amountPaid, '800')} (Confirmed)</td></tr>
+                <tr><td>Receipt Number</td><td>${cleanVal(data.receiptNumber)}</td></tr>
+                <tr><td>Transaction ID</td><td>${cleanVal(data.transactionId)}</td></tr>
+                <tr><td>Payment Date / Time</td><td>${cleanVal(data.paymentDate || data.registrationTime, new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata', dateStyle: 'medium', timeStyle: 'short' }))}</td></tr>
+              </table>
+            </div>
+            <div class="footer">
+              The Gurukul Admission Portal • Automated System Alert<br>
+              Recipient: ${cleanTo}
+            </div>
+          </div>
+        </body>
+        </html>
+      `;
+      break;
+
+    case 'REGISTRATION_CONFIRMATION':
+      subject = `The Gurukul Admission Portal - Registration Confirmed (${data.registrationNumber || data.applicationNumber})`;
+      message = `Dear ${name || 'Candidate'}, your candidate registration on The Gurukul Admission Portal has been successfully confirmed. Registration Number: ${data.registrationNumber || data.applicationNumber}.`;
+      htmlContent = `
+        <div style="font-family: sans-serif; padding: 20px; color: #1e293b;">
+          <h2>Registration Confirmed</h2>
+          <p>Dear ${name || 'Candidate'},</p>
+          <p>Your candidate registration has been recorded successfully. Permanent Registration Number: <strong>${data.registrationNumber || data.applicationNumber}</strong>.</p>
+        </div>
+      `;
+      break;
   }
 
   // If the recipient looks like an email address, send real email via Nodemailer

@@ -526,8 +526,8 @@ export default function ExamPortalGateway() {
           </div>
 
           {!scheduleLoaded ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 animate-pulse">
-              {[1, 2, 3, 4, 5].map((i) => (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 animate-pulse">
+              {[1, 2, 3, 4].map((i) => (
                 <div key={i} className="p-3.5 bg-slate-100 rounded-lg space-y-2">
                   <div className="h-3 w-12 bg-slate-200 rounded" />
                   <div className="h-4 w-full bg-slate-200 rounded" />
@@ -535,7 +535,7 @@ export default function ExamPortalGateway() {
               ))}
             </div>
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
               {phaseInfo.stages.map((item, idx) => (
                 <div key={idx} className="data-cell space-y-1">
                   <div className="flex justify-between items-center">

@@ -43,10 +43,10 @@ export interface PersonalInfo {
 
 export interface ParentInfo {
   fatherName: string;
-  fatherOccupation?: string;
+  fatherOccupation: string;
   fatherPhone: string;
   motherName: string;
-  motherOccupation?: string;
+  motherOccupation: string;
   motherPhone?: string;
   annualIncome: string;
   guardianName?: string;

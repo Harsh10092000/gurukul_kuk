@@ -57,9 +57,10 @@ export default function ForgotRegistrationPage() {
     setError('');
     setResendSuccess('');
 
-    const cleanInput = identifier.trim();
-    if (!cleanInput) {
-      setError('Please enter your registered 10-digit mobile number or email address.');
+    const cleanInput = identifier.trim().toLowerCase();
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!cleanInput || !emailRegex.test(cleanInput)) {
+      setError('Please enter a valid registered email address (e.g. applicant@gmail.com).');
       return;
     }
 
@@ -83,7 +84,7 @@ export default function ForgotRegistrationPage() {
         return;
       }
 
-      setMaskedTarget(data.maskedEmail || data.maskedPhone || cleanInput);
+      setMaskedTarget(data.maskedEmail || cleanInput);
       setStep('otp');
       setResendTimer(30);
       setCanResend(false);
@@ -105,7 +106,7 @@ export default function ForgotRegistrationPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           action: 'send_otp',
-          identifier: identifier.trim(),
+          identifier: identifier.trim().toLowerCase(),
         }),
       });
       const data = await res.json();
@@ -113,7 +114,7 @@ export default function ForgotRegistrationPage() {
       if (!res.ok) {
         setError(data.error || 'Failed to resend code.');
       } else {
-        setResendSuccess('Verification code resent successfully.');
+        setResendSuccess('Verification code resent successfully to your email.');
         setResendTimer(30);
         setCanResend(false);
         setTimeout(() => setResendSuccess(''), 4000);
@@ -130,7 +131,7 @@ export default function ForgotRegistrationPage() {
     setError('');
 
     if (!otp.trim() || otp.trim().length !== 6) {
-      setError('Please enter the valid 6-digit OTP code.');
+      setError('Please enter the valid 6-digit OTP code received on your email.');
       return;
     }
 
@@ -142,7 +143,7 @@ export default function ForgotRegistrationPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           action: 'verify_otp',
-          identifier: identifier.trim(),
+          identifier: identifier.trim().toLowerCase(),
           otp: otp.trim(),
         }),
       });
@@ -182,15 +183,15 @@ export default function ForgotRegistrationPage() {
           </span>
           <h2 className="text-xl font-bold tracking-tight text-portal-navy">
             {step === 'success' 
-              ? 'Registration Number Dispatched' 
+              ? 'Registration Number Found' 
               : step === 'otp' 
-              ? 'Enter Verification Code' 
+              ? 'Enter Email Verification Code' 
               : 'Find Registration Number'}
           </h2>
           <p className="text-xs text-slate-500">
-            {step === 'request' && 'Enter your registered mobile number or email to retrieve your registration number.'}
-            {step === 'otp' && `Enter the 6-digit OTP code dispatched to ${maskedTarget || 'your registered contact'}.`}
-            {step === 'success' && 'Your Registration Number has been dispatched to your registered email.'}
+            {step === 'request' && 'Enter your registered email address to retrieve your registration number.'}
+            {step === 'otp' && `Enter the 6-digit OTP code dispatched to ${maskedTarget || identifier.trim().toLowerCase()}.`}
+            {step === 'success' && 'Your Registration Number has been retrieved and dispatched to your email.'}
           </p>
         </div>
 
@@ -201,23 +202,23 @@ export default function ForgotRegistrationPage() {
           </div>
         )}
 
-        {/* Step 1: Input Mobile or Email */}
+        {/* Step 1: Input Email Only */}
         {step === 'request' && (
           <form onSubmit={handleRequestOtp} className="space-y-4">
             <div>
               <label className="form-label">
-                Registered Mobile No. or Email <span className="text-rose-500">*</span>
+                Registered Email Address <span className="text-rose-500">*</span>
               </label>
               <input
-                type="text"
+                type="email"
                 required
                 value={identifier}
                 onChange={(e) => setIdentifier(e.target.value)}
-                placeholder="e.g. 9876543210 or applicant@gmail.com"
+                placeholder="e.g. applicant@gmail.com"
                 className="form-input-field"
               />
               <span className="text-[11px] text-slate-400 mt-1 block">
-                Enter the 10-digit mobile number or email used during registration.
+                Enter the email address used during registration to receive a verification OTP.
               </span>
             </div>
 
@@ -226,7 +227,7 @@ export default function ForgotRegistrationPage() {
               disabled={loading}
               className="btn-primary w-full"
             >
-              {loading ? 'Sending Code...' : 'Send Verification Code'}
+              {loading ? 'Sending Code...' : 'Send Verification OTP'}
             </button>
           </form>
         )}
@@ -244,7 +245,7 @@ export default function ForgotRegistrationPage() {
                   onClick={() => setStep('request')}
                   className="text-[11px] text-portal-navy hover:underline"
                 >
-                  Change Contact
+                  Change Email
                 </button>
               </div>
 
@@ -303,21 +304,29 @@ export default function ForgotRegistrationPage() {
                   <CheckCircle2 className="w-10 h-10 text-emerald-600 mx-auto" />
                   <div>
                     <h3 className="text-base font-bold text-portal-navy">
-                      Registration Number Sent to Your Email
+                      Permanent Registration Number Found
                     </h3>
                     <p className="text-xs text-slate-600 mt-1 leading-relaxed">
-                      Dear <strong className="text-slate-900">{retrievedData.name}</strong>, your permanent Registration Number has been dispatched to:
+                      Dear <strong className="text-slate-900">{retrievedData.name}</strong>, your Registration Number is:
                     </p>
                   </div>
 
-                  <div className="bg-white border border-emerald-300 rounded-lg py-2 px-3 inline-block">
-                    <span className="font-mono text-xs font-semibold text-emerald-800">
-                      {retrievedData.maskedEmail || 'Your Registered Email'}
-                    </span>
-                  </div>
+                  {retrievedData.registrationNumber && (
+                    <div className="bg-white border-2 border-emerald-400 rounded-xl py-3 px-4 inline-block shadow-xs">
+                      <div className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Permanent Registration ID</div>
+                      <div className="font-mono text-xl sm:text-2xl font-black text-portal-navy tracking-widest mt-0.5">
+                        {retrievedData.registrationNumber}
+                      </div>
+                      {retrievedData.classApplying && (
+                        <div className="text-[11px] font-semibold text-emerald-700 mt-1">
+                          Class: {retrievedData.classApplying}
+                        </div>
+                      )}
+                    </div>
+                  )}
 
                   <p className="text-[11px] text-slate-500 leading-relaxed">
-                    Please check your inbox and spam folder for the message containing your Registration Number.
+                    This registration number has also been sent to <strong>{retrievedData.maskedEmail || 'your registered email'}</strong>. Please save it for candidate login and Admit Card download.
                   </p>
                 </div>
 
@@ -340,7 +349,7 @@ export default function ForgotRegistrationPage() {
                   href="/"
                   className="btn-primary w-full"
                 >
-                  Sign In with Mobile / Email &amp; Password
+                  Sign In with Email &amp; Password
                 </Link>
               </div>
             )}

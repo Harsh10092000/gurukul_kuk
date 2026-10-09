@@ -177,13 +177,13 @@ export async function GET(request: Request) {
         id: 'result',
         title: 'Entrance Examination Result',
         subtitle: isResultsDeclared
-          ? (examResult?.qualifyingStatus || 'Result Has Been Declared')
+          ? (examResult?.remarks || 'Result Has Been Declared')
           : (isExamDatePassed
             ? 'Results Yet to Be Declared'
             : `Scheduled for ${formatDateString(settings.resultDeclarationDate, '25 Dec 2026')}`),
         status: isResultsDeclared ? 'completed' : 'scheduled',
         details: isResultsDeclared && examResult
-          ? (examResult.remarks ? `Status: ${examResult.qualifyingStatus} - ${examResult.remarks}` : `Status: ${examResult.qualifyingStatus}`)
+          ? (examResult.remarks ? `Remarks: ${examResult.remarks}` : 'Result Has Been Declared')
           : (isExamDatePassed
             ? 'Entrance examination concluded. Results are yet to be declared.'
             : 'Result will be published post examination evaluation.'),

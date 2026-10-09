@@ -126,9 +126,9 @@ export async function POST(req: Request) {
         rollNumber,
         candidateName: candidateName || app?.personalInfo?.fullName || `Candidate (${rollNumber})`,
         dob: dob || app?.personalInfo?.dob || '',
-        classApplying: app?.classApplying || 'Class 6',
+        classApplying: app?.classApplying || '',
         qualifyingStatus,
-        remarks: remarks || (qualifyingStatus === 'Qualified' ? 'Qualified for admission counseling.' : 'Not qualified for current session.'),
+        remarks: remarks || '',
         isMatched: !!app,
         isPublished: Boolean(publishDirectly),
         createdAt: new Date().toISOString(),
@@ -191,18 +191,14 @@ export async function POST(req: Request) {
         entity: 'Results',
         details: {
           totalUploaded: toSave.length,
-          qualified: qualifiedCount,
-          notQualified: notQualifiedCount,
           publishedImmediately: !!publishDirectly,
         },
       });
 
       return NextResponse.json({
         success: true,
-        message: `Successfully uploaded ${toSave.length} results (${qualifiedCount} Qualified, ${notQualifiedCount} Not Qualified).`,
+        message: `Successfully uploaded ${toSave.length} ${toSave.length === 1 ? 'result' : 'results'}.`,
         totalUploaded: toSave.length,
-        qualifiedCount,
-        notQualifiedCount,
       });
     }
 

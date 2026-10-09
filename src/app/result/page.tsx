@@ -213,7 +213,7 @@ function ResultContent() {
 
           <div className="flex items-center justify-between pt-1 flex-wrap gap-2">
             <p className="text-[11px] text-slate-400">
-              * Verification uses Roll Number &amp; Date of Birth. Only Qualified / Not Qualified status is published.
+              * Verification uses Roll Number &amp; Date of Birth as registered on your Admit Card.
             </p>
             <button
               type="submit"

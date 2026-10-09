@@ -456,20 +456,9 @@ export default function AdminAttendancePage() {
                           </div>
                         </td>
                         <td className="p-1.5 text-center">
-                          {c.signature ? (
-                            <div className="h-12 flex items-center justify-center">
-                              {/* eslint-disable-next-line @next/next/no-img-element */}
-                              <img
-                                src={c.signature}
-                                alt="Signature"
-                                className="max-h-10 max-w-[90px] object-contain mx-auto"
-                              />
-                            </div>
-                          ) : (
-                            <div className="h-12 flex items-end justify-center pb-1">
-                              <span className="text-[9px] text-slate-300 font-mono">Sign</span>
-                            </div>
-                          )}
+                          <div className="h-12 w-full flex items-center justify-center border border-dashed border-slate-200 rounded bg-slate-50/40">
+                            {/* Empty space for candidate physical signature after printing */}
+                          </div>
                         </td>
                       </tr>
                     );
@@ -675,20 +664,9 @@ export default function AdminAttendancePage() {
                             </div>
                           </td>
                           <td className="p-0.5 border border-black text-center">
-                            {c.signature ? (
-                              <div className="h-12 flex items-center justify-center">
-                                {/* eslint-disable-next-line @next/next/no-img-element */}
-                                <img
-                                  src={c.signature}
-                                  alt="Signature"
-                                  className="max-h-10 max-w-[85px] object-contain mx-auto"
-                                />
-                              </div>
-                            ) : (
-                              <div className="h-12 flex items-end justify-center pb-1">
-                                <span className="text-[8px] text-slate-400 font-mono">Sign</span>
-                              </div>
-                            )}
+                            <div className="h-12 w-full flex items-center justify-center">
+                              {/* Empty space for candidate physical signature after printing */}
+                            </div>
                           </td>
                         </tr>
                       );

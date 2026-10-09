@@ -134,6 +134,10 @@ export async function POST(request: Request) {
     if (!fatherOccVal.isValid) {
       return NextResponse.json({ error: fatherOccVal.error }, { status: 400 });
     }
+    const motherOccVal = validateOccupation(parentInfo?.motherOccupation, "Mother's Occupation");
+    if (!motherOccVal.isValid) {
+      return NextResponse.json({ error: motherOccVal.error }, { status: 400 });
+    }
 
     // 9. Address Validation
     const cityVal = addressInfo?.city?.trim() || addressInfo?.district?.trim();

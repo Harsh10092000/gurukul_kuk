@@ -443,7 +443,7 @@ export default function ApplyPage() {
     const { name, value } = e.target;
     if (name === 'applyingClass') {
       const is11 = value.includes('11');
-      const allowedStreams = getStreamsForCampus(formData.firstPreference);
+      const allowedStreams = getStreamsForCampus(formData.firstPreference, formData.gender);
       setFormData((prev) => ({
         ...prev,
         applyingClass: value,
@@ -617,16 +617,18 @@ export default function ApplyPage() {
         setError(fNameVal.error || 'Invalid Father Name');
         return;
       }
+      if (!formData.fatherOccupationOption || !formData.fatherOccupationOption.trim()) {
+        setError("Please select Father's Occupation.");
+        return;
+      }
       if (formData.fatherOccupationOption === 'Others' && (!formData.fatherOccupationOther || !formData.fatherOccupationOther.trim())) {
         setError("Please specify Father's Occupation.");
         return;
       }
-      if (formData.fatherOccupation && formData.fatherOccupation.trim()) {
-        const fOccVal = validateOccupation(formData.fatherOccupation, "Father's Occupation");
-        if (!fOccVal.isValid) {
-          setError(fOccVal.error || 'Invalid Father Occupation');
-          return;
-        }
+      const fOccVal = validateOccupation(formData.fatherOccupation, "Father's Occupation", true);
+      if (!fOccVal.isValid) {
+        setError(fOccVal.error || "Please select or specify a valid Father's Occupation.");
+        return;
       }
       const fPhoneVal = validatePhone(formData.fatherPhone, "Father's Mobile Number");
       if (!fPhoneVal.isValid) {
@@ -638,16 +640,18 @@ export default function ApplyPage() {
         setError(mNameVal.error || 'Invalid Mother Name');
         return;
       }
+      if (!formData.motherOccupationOption || !formData.motherOccupationOption.trim()) {
+        setError("Please select Mother's Occupation.");
+        return;
+      }
       if (formData.motherOccupationOption === 'Others' && (!formData.motherOccupationOther || !formData.motherOccupationOther.trim())) {
         setError("Please specify Mother's Occupation.");
         return;
       }
-      if (formData.motherOccupation && formData.motherOccupation.trim()) {
-        const mOccVal = validateOccupation(formData.motherOccupation, "Mother's Occupation");
-        if (!mOccVal.isValid) {
-          setError(mOccVal.error || 'Invalid Mother Occupation');
-          return;
-        }
+      const mOccVal = validateOccupation(formData.motherOccupation, "Mother's Occupation", true);
+      if (!mOccVal.isValid) {
+        setError(mOccVal.error || "Please select or specify a valid Mother's Occupation.");
+        return;
       }
       if (!formData.annualIncome) {
         setError('Please select Annual Family Income.');
@@ -1383,7 +1387,7 @@ export default function ApplyPage() {
                         <span>काउंसलिंग जमा राशि</span>
                       </h3>
                       <div className="bg-amber-50 border border-amber-200 p-3 rounded-lg text-amber-950 font-medium">
-                        तीनों संस्थानों के लिए काउंसलिंग के दिन <strong>₹25,000</strong> जमा करना होगा।
+                        तीनों संस्थानों के लिए काउंसलिंग के दिन <strong>₹25,000</strong> की गैर-वापसी योग्य (non-refundable) राशि जमा करनी होगी।
                       </div>
                     </div>
 
@@ -1517,7 +1521,7 @@ export default function ApplyPage() {
                       <li><strong>Entrance Exam:</strong> Sunday, 14 February 2027 at 8:30 AM at <strong>The Gurukul Nilokheri</strong>.</li>
                       <li><strong>Reporting Time:</strong> Candidates must report at <strong>8:00 AM / 8:30 AM</strong>.</li>
                       <li><strong>Counselling Schedule:</strong> 15, 16 &amp; 17 February 2027 (9:00 AM to 1:00 PM) at <strong>The Gurukul Nilokheri</strong>.</li>
-                      <li><strong>Counselling-Day Deposit:</strong> A deposit of <strong>₹25,000</strong> is to be deposited on the day of counselling.</li>
+                      <li><strong>Counselling-Day Deposit:</strong> A non-refundable deposit of <strong>₹25,000</strong> is to be deposited on the day of counselling.</li>
                       <li><strong>Must Bring:</strong> Admit Card, Aadhaar Card copy, and 2 passport-size photographs.</li>
                     </ul>
                   </div>
@@ -1579,7 +1583,7 @@ export default function ApplyPage() {
                       <li><strong>Entrance Exam:</strong> Sunday, 14 February 2027 at <strong>Aryakulam Nilokheri</strong>.</li>
                       <li><strong>Reporting Time:</strong> Candidates must report at <strong>9:30 AM</strong> at Aryakulam Nilokheri.</li>
                       <li><strong>Counselling Schedule:</strong> 15, 16 &amp; 17 February 2027 (9:00 AM to 1:00 PM) at <strong>Aryakulam Nilokheri</strong>.</li>
-                      <li><strong>Counselling-Day Deposit:</strong> A deposit of <strong>₹25,000</strong> is to be deposited on the day of counselling for all institutions.</li>
+                      <li><strong>Counselling-Day Deposit:</strong> A non-refundable deposit of <strong>₹25,000</strong> is to be deposited on the day of counselling for all institutions.</li>
                       <li><strong>Must Bring:</strong> Admit Card, Aadhaar Card copy, and 2 passport-size photographs.</li>
                     </ul>
                   </div>
@@ -1703,6 +1707,15 @@ export default function ApplyPage() {
                       <option key={st} value={st}>{st}</option>
                     ))}
                   </select>
+                  {/* Informational notice for Boys selecting Class 11 */}
+                  {formData.gender !== 'Female' && (formData.gender as string)?.toLowerCase() !== 'female' && (
+                    <div className="mt-2.5 p-3 bg-blue-50/90 border border-blue-200 rounded-lg text-xs text-blue-900 flex items-start gap-2.5">
+                      <AlertCircle className="w-4 h-4 text-blue-600 flex-shrink-0 mt-0.5" />
+                      <p className="leading-relaxed">
+                        <strong>Please Note:</strong> The Gurukul Jyotisar only has <strong>Non-Medical</strong> branch, whereas Aryakulam Nilokheri offers all three branches (<strong>Non-Medical, Medical, and Commerce</strong>).
+                      </p>
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -1909,10 +1922,11 @@ export default function ApplyPage() {
 
               <div>
                 <label className="form-label">
-                  Father&apos;s Occupation
+                  Father&apos;s Occupation <span className="text-rose-500">*</span>
                 </label>
                 <select
                   name="fatherOccupationOption"
+                  required
                   value={formData.fatherOccupationOption}
                   onChange={(e) => {
                     const val = e.target.value;
@@ -1990,10 +2004,11 @@ export default function ApplyPage() {
 
               <div>
                 <label className="form-label">
-                  Mother&apos;s Occupation
+                  Mother&apos;s Occupation <span className="text-rose-500">*</span>
                 </label>
                 <select
                   name="motherOccupationOption"
+                  required
                   value={formData.motherOccupationOption}
                   onChange={(e) => {
                     const val = e.target.value;

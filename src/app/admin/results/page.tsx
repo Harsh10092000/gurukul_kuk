@@ -38,7 +38,6 @@ export default function AdminResultsPage() {
   const [successMessage, setSuccessMessage] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState<'all' | 'qualified' | 'not_qualified'>('all');
   const [showClearModal, setShowClearModal] = useState(false);
   const [clearing, setClearing] = useState(false);
 
@@ -292,12 +291,6 @@ export default function AdminResultsPage() {
 
   // Filter and search live results
   const filteredResults = resultsList.filter((r) => {
-    if (statusFilter === 'qualified' && r.qualifyingStatus !== 'Qualified' && r.qualifyingStatus !== 'Qualified for Admission') {
-      return false;
-    }
-    if (statusFilter === 'not_qualified' && r.qualifyingStatus !== 'Not Qualified') {
-      return false;
-    }
     if (!searchQuery.trim()) return true;
     const q = searchQuery.toLowerCase();
     return (
@@ -307,11 +300,6 @@ export default function AdminResultsPage() {
       (r.remarks || '').toLowerCase().includes(q)
     );
   });
-
-  const qualifiedTotal = resultsList.filter(
-    (r) => r.qualifyingStatus === 'Qualified' || r.qualifyingStatus === 'Qualified for Admission'
-  ).length;
-  const notQualifiedTotal = resultsList.filter((r) => r.qualifyingStatus === 'Not Qualified').length;
 
   if (loading) {
     return (
@@ -461,14 +449,6 @@ export default function AdminResultsPage() {
                   <span className="font-semibold text-slate-700">
                     Total Parsed: <strong>{previewData.totalRows}</strong>
                   </span>
-                  <span className="text-slate-300">|</span>
-                  <span className="font-semibold text-emerald-700">
-                    Qualified: <strong>{previewData.qualifiedCount}</strong>
-                  </span>
-                  <span className="text-slate-300">|</span>
-                  <span className="font-semibold text-rose-700">
-                    Not Qualified: <strong>{previewData.notQualifiedCount}</strong>
-                  </span>
                 </div>
               </div>
 
@@ -521,32 +501,22 @@ export default function AdminResultsPage() {
                   <thead className="bg-slate-100 text-slate-700 font-bold border-b border-slate-200 sticky top-0 uppercase text-[10px]">
                     <tr>
                       <th className="p-3 w-12 text-center">#</th>
-                      <th className="p-3 w-40">Candidate Name</th>
-                      <th className="p-3 w-32">Roll Number</th>
-                      <th className="p-3 w-28">DOB</th>
-                      <th className="p-3 w-36 text-center">Selection Status</th>
+                      <th className="p-3 w-48">Candidate Name</th>
+                      <th className="p-3 w-36">Roll Number</th>
+                      <th className="p-3 w-32">DOB</th>
                       <th className="p-3">Selection Remarks</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
-                    {previewData.previewRows.map((row: any, idx: number) => {
-                      const isQual = row.qualifyingStatus === 'Qualified';
-                      return (
-                        <tr key={idx} className="hover:bg-slate-50">
-                          <td className="p-3 font-mono text-center text-slate-500 font-bold">{idx + 1}</td>
-                          <td className="p-3 font-bold text-slate-900 uppercase">{row.candidateName}</td>
-                          <td className="p-3 font-mono font-bold text-portal-navy">{row.rollNumber}</td>
-                          <td className="p-3 font-mono text-slate-600">{formatDob(row.dob)}</td>
-                          <td className="p-3 text-center">
-                            <span className={`inline-block px-2.5 py-0.5 rounded-full text-[10px] font-bold ${isQual ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800'
-                              }`}>
-                              {isQual ? 'Qualified' : 'Not Qualified'}
-                            </span>
-                          </td>
-                          <td className="p-3 text-slate-700 font-medium text-[11px]">{row.remarks}</td>
-                        </tr>
-                      );
-                    })}
+                    {previewData.previewRows.map((row: any, idx: number) => (
+                      <tr key={idx} className="hover:bg-slate-50">
+                        <td className="p-3 font-mono text-center text-slate-500 font-bold">{idx + 1}</td>
+                        <td className="p-3 font-bold text-slate-900 uppercase">{row.candidateName}</td>
+                        <td className="p-3 font-mono font-bold text-portal-navy">{row.rollNumber}</td>
+                        <td className="p-3 font-mono text-slate-600">{formatDob(row.dob)}</td>
+                        <td className="p-3 text-slate-700 font-medium text-[11px] leading-relaxed whitespace-pre-wrap break-words min-w-[260px] max-w-xl">{row.remarks}</td>
+                      </tr>
+                    ))}
                   </tbody>
                 </table>
               </div>
@@ -564,7 +534,7 @@ export default function AdminResultsPage() {
               <span>Published &amp; Uploaded Candidate Results</span>
             </h2>
             <p className="text-xs text-slate-500 mt-0.5">
-              Total <strong>{resultsList.length}</strong> candidates in system ({qualifiedTotal} Qualified, {notQualifiedTotal} Not Qualified).
+              Total <strong>{resultsList.length}</strong> candidates in system.
             </p>
           </div>
 
@@ -584,40 +554,11 @@ export default function AdminResultsPage() {
 
         {/* Filter Bar */}
         <div className="flex flex-wrap gap-3 items-center justify-between">
-          <div className="flex flex-wrap items-center gap-2 text-xs font-semibold">
-            <button
-              type="button"
-              onClick={() => setStatusFilter('all')}
-              className={`px-3 py-1.5 rounded-lg transition ${statusFilter === 'all'
-                ? 'bg-portal-navy text-white shadow-xs'
-                : 'bg-white text-slate-700 border border-slate-200 hover:bg-slate-50'
-                }`}
-            >
-              All Results ({resultsList.length})
-            </button>
-            <button
-              type="button"
-              onClick={() => setStatusFilter('qualified')}
-              className={`px-3 py-1.5 rounded-lg transition ${statusFilter === 'qualified'
-                ? 'bg-emerald-700 text-white shadow-xs'
-                : 'bg-white text-emerald-800 border border-emerald-200 hover:bg-emerald-50'
-                }`}
-            >
-              Qualified ({qualifiedTotal})
-            </button>
-            <button
-              type="button"
-              onClick={() => setStatusFilter('not_qualified')}
-              className={`px-3 py-1.5 rounded-lg transition ${statusFilter === 'not_qualified'
-                ? 'bg-rose-700 text-white shadow-xs'
-                : 'bg-white text-rose-800 border border-rose-200 hover:bg-rose-50'
-                }`}
-            >
-              Not Qualified ({notQualifiedTotal})
-            </button>
+          <div className="text-xs font-semibold text-slate-700">
+            <span>Published Candidate Records: <strong>{resultsList.length}</strong></span>
           </div>
 
-          <div className="relative w-full sm:w-72">
+          <div className="relative w-full sm:w-80">
             <input
               type="text"
               value={searchQuery}
@@ -635,17 +576,16 @@ export default function AdminResultsPage() {
               <thead className="bg-slate-50 text-slate-600 font-bold uppercase text-[10px] border-b border-slate-200">
                 <tr>
                   <th className="p-3 w-12 text-center">#</th>
-                  <th className="p-3 w-44">Candidate Name</th>
-                  <th className="p-3 w-32">Roll Number</th>
-                  <th className="p-3 w-28">Date of Birth</th>
-                  <th className="p-3 w-36 text-center">Selection Status</th>
+                  <th className="p-3 w-48">Candidate Name</th>
+                  <th className="p-3 w-36">Roll Number</th>
+                  <th className="p-3 w-32">Date of Birth</th>
                   <th className="p-3">Selection Remarks</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {loading ? (
                   <tr>
-                    <td colSpan={6} className="p-16 text-center text-slate-500">
+                    <td colSpan={5} className="p-16 text-center text-slate-500">
                       <div className="flex flex-col items-center justify-center gap-3">
                         <Loader2 className="w-8 h-8 animate-spin text-portal-navy" />
                         <p className="font-bold text-xs text-slate-800 uppercase">
@@ -656,7 +596,7 @@ export default function AdminResultsPage() {
                   </tr>
                 ) : filteredResults.length === 0 ? (
                   <tr>
-                    <td colSpan={6} className="p-12 text-center text-slate-400 space-y-1">
+                    <td colSpan={5} className="p-12 text-center text-slate-400 space-y-1">
                       <Award className="w-8 h-8 text-slate-300 mx-auto" />
                       <p className="font-semibold text-xs text-slate-600">No results found.</p>
                       <p className="text-[11px] text-slate-400">
@@ -667,32 +607,17 @@ export default function AdminResultsPage() {
                     </td>
                   </tr>
                 ) : (
-                  filteredResults.map((res, idx) => {
-                    const isQual =
-                      res.qualifyingStatus === 'Qualified' ||
-                      res.qualifyingStatus === 'Qualified for Admission';
-                    return (
-                      <tr key={res.id || idx} className="hover:bg-slate-50">
-                        <td className="p-3 font-mono text-center font-bold text-slate-400">{idx + 1}</td>
-                        <td className="p-3 font-bold text-slate-900 uppercase">{res.candidateName}</td>
-                        <td className="p-3 font-mono font-bold text-portal-navy">{res.rollNumber}</td>
-                        <td className="p-3 font-mono text-slate-600">{formatDob(res.dob)}</td>
-                        <td className="p-3 text-center">
-                          <span
-                            className={`inline-block px-2.5 py-0.5 rounded-full text-[10px] font-bold ${isQual
-                              ? 'bg-emerald-50 text-emerald-800 border border-emerald-300'
-                              : 'bg-rose-50 text-rose-800 border border-rose-300'
-                              }`}
-                          >
-                            {isQual ? 'Qualified' : 'Not Qualified'}
-                          </span>
-                        </td>
-                        <td className="p-3 text-slate-700 font-medium text-[11px] leading-relaxed">
-                          {res.remarks || '—'}
-                        </td>
-                      </tr>
-                    );
-                  })
+                  filteredResults.map((res, idx) => (
+                    <tr key={res.id || idx} className="hover:bg-slate-50">
+                      <td className="p-3 font-mono text-center font-bold text-slate-400">{idx + 1}</td>
+                      <td className="p-3 font-bold text-slate-900 uppercase">{res.candidateName}</td>
+                      <td className="p-3 font-mono font-bold text-portal-navy">{res.rollNumber}</td>
+                      <td className="p-3 font-mono text-slate-600">{formatDob(res.dob)}</td>
+                      <td className="p-3 text-slate-700 font-medium text-[11px] leading-relaxed whitespace-pre-wrap break-words min-w-[260px] max-w-xl">
+                        {res.remarks || '—'}
+                      </td>
+                    </tr>
+                  ))
                 )}
               </tbody>
             </table>

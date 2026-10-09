@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { hashPassword, signToken, getAuthCookieOptions } from '@/lib/auth';
-import { sendNotification } from '@/lib/notifications';
+import { sendNotification, ADMIN_NOTIFICATION_EMAIL } from '@/lib/notifications';
 import { getExamDetailsForGender } from '@/lib/validations';
 import { verifyRazorpaySignature } from '@/lib/razorpay';
 import { recordAuditLog } from '@/lib/audit';
@@ -276,6 +276,40 @@ export async function POST(request: Request) {
             candidateEmail,
             candidateMobile,
             paymentDate: new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' }),
+          },
+        });
+
+        // 13b. Dispatch Official Administrative Registration Alert with Full Candidate Details
+        const fullAddress = [
+          addressInfo?.streetAddress,
+          addressInfo?.city,
+          addressInfo?.district,
+          addressInfo?.state,
+          addressInfo?.pincode ? `PIN: ${addressInfo.pincode}` : '',
+        ].filter(Boolean).join(', ') || addressInfo?.city || 'Not provided';
+
+        await sendNotification({
+          to: ADMIN_NOTIFICATION_EMAIL,
+          name: 'Admissions Desk',
+          type: 'ADMIN_NEW_REGISTRATION_ALERT',
+          data: {
+            registrationNumber: registrationId,
+            rollNumber: assignedRollNo || 'Pending Allotment',
+            applicationNumber: registrationId,
+            receiptNumber: receiptNo,
+            fullName: personalInfo.fullName,
+            classApplying: newApplication.classApplying,
+            fatherName: parentInfo?.fatherName || 'N/A',
+            fatherOccupation: parentInfo?.fatherOccupation || 'N/A',
+            motherName: parentInfo?.motherName || 'N/A',
+            motherOccupation: parentInfo?.motherOccupation || 'N/A',
+            gender: personalInfo?.gender || 'N/A',
+            dob: personalInfo?.dob || 'N/A',
+            aadhaarNumber: personalInfo?.aadhaarNumber || 'N/A',
+            address: fullAddress,
+            transactionId: razorpay_payment_id,
+            amount: 800,
+            paymentDate: new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata', dateStyle: 'medium', timeStyle: 'short' }),
           },
         });
       } catch (notifErr) {

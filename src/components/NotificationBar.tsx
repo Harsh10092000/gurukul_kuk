@@ -22,6 +22,11 @@ export default function NotificationBar({ phaseInfo, scheduleLoaded }: Notificat
 
   const { banner, phaseId } = phaseInfo;
 
+  // Suppress admit card release notification per admin directive
+  if (phaseId === 'ADMIT_CARD_RELEASED') {
+    return null;
+  }
+
   // Highlight key phrases and dates cleanly without introducing spaces before punctuation
   const renderFormattedMessage = (msg: string) => {
     const dateRegex = /(\d{1,2}\s+(?:January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{4})/gi;
@@ -43,7 +48,7 @@ export default function NotificationBar({ phaseInfo, scheduleLoaded }: Notificat
   };
 
   // Phase-specific beacon colors
-  const isEmeraldPhase = phaseId === 'RESULTS_DECLARED' || phaseId === 'ADMIT_CARD_RELEASED';
+  const isEmeraldPhase = phaseId === 'RESULTS_DECLARED';
   const isRosePhase = phaseId === 'REGISTRATION_CLOSED';
 
   const beaconPingBg = isEmeraldPhase

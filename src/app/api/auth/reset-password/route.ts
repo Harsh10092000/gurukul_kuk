@@ -62,10 +62,13 @@ export async function POST(req: Request) {
     }
 
     // Check user exists
-    const user = (await db.findUserByIdentifier(cleanId)) || (await db.findUserByPhone(phoneClean));
+    const user = 
+      (await db.findUserByEmail(cleanId)) ||
+      (await db.findUserByIdentifier(cleanId)) || 
+      (phoneClean.length === 10 ? await db.findUserByPhone(phoneClean) : null);
     if (!user) {
       return NextResponse.json(
-        { error: 'No registered candidate account found with this email or mobile number.' },
+        { error: 'No registered candidate account found with this email address.' },
         { status: 404 }
       );
     }
@@ -81,9 +84,11 @@ export async function POST(req: Request) {
       }
     }
 
-    // Update password using unique user.id
+    // Update password using unique user.id or email
     const passwordHash = await hashPassword(newPassword);
-    const updated = await db.updateUserPassword(user.id, passwordHash);
+    const updated = 
+      (await db.updateUserPassword(user.id, passwordHash)) ||
+      (user.email ? await db.updateUserPassword(user.email, passwordHash) : false);
 
     if (!updated) {
       return NextResponse.json({ error: 'Failed to update password.' }, { status: 500 });

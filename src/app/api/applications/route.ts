@@ -206,17 +206,13 @@ export async function POST(request: Request) {
     if (!fatherPhoneVal.isValid) {
       return NextResponse.json({ error: fatherPhoneVal.error }, { status: 400 });
     }
-    if (parentInfo?.fatherOccupation && parentInfo.fatherOccupation.trim()) {
-      const fatherOccVal = validateOccupation(parentInfo.fatherOccupation, "Father's Occupation");
-      if (!fatherOccVal.isValid) {
-        return NextResponse.json({ error: fatherOccVal.error }, { status: 400 });
-      }
+    const fatherOccVal = validateOccupation(parentInfo?.fatherOccupation, "Father's Occupation", true);
+    if (!fatherOccVal.isValid) {
+      return NextResponse.json({ error: fatherOccVal.error }, { status: 400 });
     }
-    if (parentInfo?.motherOccupation && parentInfo.motherOccupation.trim()) {
-      const motherOccVal = validateOccupation(parentInfo.motherOccupation, "Mother's Occupation");
-      if (!motherOccVal.isValid) {
-        return NextResponse.json({ error: motherOccVal.error }, { status: 400 });
-      }
+    const motherOccVal = validateOccupation(parentInfo?.motherOccupation, "Mother's Occupation", true);
+    if (!motherOccVal.isValid) {
+      return NextResponse.json({ error: motherOccVal.error }, { status: 400 });
     }
 
     // 7. Aadhaar Validation & Uniqueness
@@ -374,11 +370,10 @@ export async function POST(request: Request) {
         receiptNumber: receiptNo,
         fullName: candidateName,
         classApplying: newApp.classApplying,
-        candidateEmail: user.email,
-        candidateMobile: candidateMobile,
         fatherName: parentInfo?.fatherName || 'N/A',
-        fatherPhone: parentInfo?.fatherPhone || 'N/A',
+        fatherOccupation: parentInfo?.fatherOccupation || 'N/A',
         motherName: parentInfo?.motherName || 'N/A',
+        motherOccupation: parentInfo?.motherOccupation || 'N/A',
         dob: personalInfo?.dob || 'N/A',
         gender: personalInfo?.gender || 'N/A',
         category: personalInfo?.category || 'General',

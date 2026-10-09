@@ -43,26 +43,22 @@ export async function POST(req: Request) {
     const body = await req.json();
     const { action, identifier, otp } = body;
 
-    const rawTarget = (identifier || '').trim();
-    if (!rawTarget) {
+    const cleanEmail = (identifier || '').trim().toLowerCase();
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!cleanEmail || !emailRegex.test(cleanEmail)) {
       return NextResponse.json(
-        { error: 'Registered Mobile Number or Email Address is required.' },
+        { error: 'Please enter a valid registered Email Address (e.g. candidate@example.com).' },
         { status: 400 }
       );
     }
 
-    const cleanPhone = rawTarget.replace(/\D/g, '').slice(-10);
-    const cleanId = rawTarget.toLowerCase();
-
     // Action 1: Send / Resend OTP
     if (action === 'send_otp' || action === 'resend_otp') {
-      const user = 
-        (cleanPhone.length === 10 ? await db.findUserByPhone(cleanPhone) : null) ||
-        (await db.findUserByIdentifier(cleanId));
+      const user = (await db.findUserByEmail(cleanEmail)) || (await db.findUserByIdentifier(cleanEmail));
 
       if (!user) {
         return NextResponse.json(
-          { error: 'No registered account found matching this Mobile Number or Email. Please check your credentials or create a new registration.' },
+          { error: 'No registered candidate account found with this email address. Please check your credentials or create a new registration.' },
           { status: 404 }
         );
       }
@@ -73,28 +69,24 @@ export async function POST(req: Request) {
 
       // Store OTP in cache
       const payload = { otp: generatedOtp, expiresAt, verified: false };
-      otpStore.set(cleanId, payload);
-      if (cleanPhone.length === 10) otpStore.set(cleanPhone, payload);
+      otpStore.set(cleanEmail, payload);
       if (user.email) otpStore.set(user.email.toLowerCase(), payload);
-      if (user.phone) otpStore.set(user.phone.replace(/\D/g, '').slice(-10), payload);
 
       // Send OTP to registered email
-      if (user.email) {
-        await sendNotification({
-          to: user.email,
-          name: user.name || 'Candidate',
-          type: 'REGISTRATION_OTP',
-          data: { otp: generatedOtp },
-        });
-      }
+      const targetEmail = user.email || cleanEmail;
+      await sendNotification({
+        to: targetEmail,
+        name: user.name || 'Candidate',
+        type: 'REGISTRATION_OTP',
+        data: { otp: generatedOtp },
+      });
 
-      console.log(`[Forgot Reg No] Dispatched OTP for user ${user.id} (${user.email || user.phone}): ${generatedOtp}`);
+      console.log(`[Forgot Reg No] Dispatched OTP for user ${user.id} (${targetEmail}): ${generatedOtp}`);
 
       return NextResponse.json({
         success: true,
-        message: `A 6-digit verification code has been dispatched to ${maskEmail(user.email) || maskPhone(user.phone)}.`,
-        maskedEmail: maskEmail(user.email),
-        maskedPhone: maskPhone(user.phone),
+        message: `A 6-digit verification code has been dispatched to ${maskEmail(targetEmail)}.`,
+        maskedEmail: maskEmail(targetEmail),
         expiresInSeconds: 600,
       });
     }
@@ -104,14 +96,12 @@ export async function POST(req: Request) {
       const userOtp = (otp || '').trim();
       if (!userOtp || userOtp.length !== 6) {
         return NextResponse.json(
-          { error: 'Please enter the 6-digit verification code sent to your registered email/mobile.' },
+          { error: 'Please enter the 6-digit verification code sent to your registered email.' },
           { status: 400 }
         );
       }
 
-      const stored = 
-        otpStore.get(cleanId) ||
-        (cleanPhone.length === 10 ? otpStore.get(cleanPhone) : null);
+      const stored = otpStore.get(cleanEmail);
 
       if (!stored) {
         return NextResponse.json(
@@ -121,8 +111,7 @@ export async function POST(req: Request) {
       }
 
       if (Date.now() > stored.expiresAt) {
-        otpStore.delete(cleanId);
-        if (cleanPhone) otpStore.delete(cleanPhone);
+        otpStore.delete(cleanEmail);
         return NextResponse.json(
           { error: 'Verification code has expired. Please request a new OTP.' },
           { status: 400 }
@@ -137,9 +126,7 @@ export async function POST(req: Request) {
       }
 
       // Find user
-      const user = 
-        (cleanPhone.length === 10 ? await db.findUserByPhone(cleanPhone) : null) ||
-        (await db.findUserByIdentifier(cleanId));
+      const user = (await db.findUserByEmail(cleanEmail)) || (await db.findUserByIdentifier(cleanEmail));
 
       if (!user) {
         return NextResponse.json(
@@ -161,8 +148,7 @@ export async function POST(req: Request) {
 
       // Clear verified OTP
       if (otpStore) {
-        otpStore.delete(cleanId);
-        if (cleanPhone) otpStore.delete(cleanPhone);
+        otpStore.delete(cleanEmail);
         if (user.email) otpStore.delete(user.email.toLowerCase());
       }
 
@@ -171,32 +157,32 @@ export async function POST(req: Request) {
           success: true,
           hasRegistrationNumber: false,
           name: user.name,
-          message: 'Your candidate account is registered, but your permanent Registration Number is generated after application submission and fee payment. You can sign in using your Mobile Number / Email and Password to continue filling your form.',
+          message: 'Your candidate account is registered, but your permanent Registration Number is generated after application submission and fee payment. You can sign in using your Email and Password to continue filling your form.',
         });
       }
 
       // Securely dispatch registration number directly to candidate's registered email
-      if (user.email) {
-        await sendNotification({
-          to: user.email,
-          name: user.name || 'Candidate',
-          type: 'FORGOT_REGISTRATION_RECOVERY',
-          data: {
-            registrationNumber,
-            className: classApplying || 'Entrance Exam 2027-28',
-          },
-        });
-        console.log(`[Forgot Reg No] Dispatched registration number ${registrationNumber} to candidate email ${user.email}`);
-      }
+      const candidateEmail = user.email || cleanEmail;
+      await sendNotification({
+        to: candidateEmail,
+        name: user.name || 'Candidate',
+        type: 'FORGOT_REGISTRATION_RECOVERY',
+        data: {
+          registrationNumber,
+          className: classApplying || 'Entrance Exam 2027-28',
+        },
+      });
+      console.log(`[Forgot Reg No] Dispatched registration number ${registrationNumber} to candidate email ${candidateEmail}`);
 
       return NextResponse.json({
         success: true,
         hasRegistrationNumber: true,
+        registrationNumber,
+        classApplying: classApplying || 'Entrance Examination',
         sentToEmail: true,
         name: user.name,
-        maskedEmail: maskEmail(user.email),
-        maskedPhone: maskPhone(user.phone),
-        message: `Your permanent Registration Number has been dispatched to your registered email address (${maskEmail(user.email)}). Please check your email inbox.`,
+        maskedEmail: maskEmail(candidateEmail),
+        message: `Your permanent Registration Number (${registrationNumber}) has been dispatched to your registered email address (${maskEmail(candidateEmail)}).`,
       });
     }
 

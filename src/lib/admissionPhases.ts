@@ -141,8 +141,6 @@ export function resolveAdmissionPhase(input: PhaseDatesInput): AdmissionPhaseInf
     phaseId = 'RESULTS_DECLARED';
   } else if (isExamConducted) {
     phaseId = 'EXAMINATION_PERIOD';
-  } else if (isAdmitCardReleased) {
-    phaseId = 'ADMIT_CARD_RELEASED';
   } else if (isDateSurpassed || !isPortalOpen) {
     phaseId = 'REGISTRATION_CLOSED';
   } else if (isOverrideExtended) {
@@ -196,24 +194,11 @@ export function resolveAdmissionPhase(input: PhaseDatesInput): AdmissionPhaseInf
       };
       break;
 
-    case 'ADMIT_CARD_RELEASED':
-      banner = {
-        badge: 'ADMIT CARD RELEASED',
-        badgeStyle: 'bg-emerald-600 text-white font-black animate-pulse',
-        message: `Entrance Examination Session ${session} Admit Cards are now officially released! Download your Hall Ticket.`,
-        containerStyle: 'bg-emerald-50/90 border-emerald-300 text-emerald-950',
-        link: {
-          href: '/admit-card',
-          label: 'Download Hall Ticket →',
-        },
-      };
-      break;
-
     case 'REGISTRATION_CLOSED':
       banner = {
         badge: 'REGISTRATIONS CLOSED',
         badgeStyle: 'bg-rose-600 text-white font-black',
-        message: `Online Application for Session ${session} closed on ${regEndFormatted}. Scrutiny of applications & roll number allotment in progress. Hall Tickets (Admit Cards) will be available on ${admitDateFormatted}.`,
+        message: `Online Application for Session ${session} closed on ${regEndFormatted}. Scrutiny of applications & roll number allotment in progress.`,
         containerStyle: 'bg-rose-50/70 border-rose-200 text-rose-950',
         link: {
           href: '/status',
@@ -289,14 +274,11 @@ export function resolveAdmissionPhase(input: PhaseDatesInput): AdmissionPhaseInf
     stage2Badge = 'bg-blue-100 text-blue-800';
   }
 
-  const stage3Status: 'Upcoming' | 'Active' | 'Closed' = isAdmitCardReleased ? 'Active' : now > examDateTime ? 'Closed' : 'Upcoming';
-  const stage3Badge = isAdmitCardReleased ? 'bg-emerald-100 text-emerald-800 font-bold animate-pulse' : 'bg-slate-200 text-slate-700';
+  const stage3Status: 'Upcoming' | 'Active' | 'Conducted' = isResultsDeclared ? 'Conducted' : now >= examDateTime ? 'Active' : 'Upcoming';
+  const stage3Badge = stage3Status === 'Active' ? 'bg-amber-100 text-amber-900' : stage3Status === 'Conducted' ? 'bg-slate-200 text-slate-700' : 'bg-slate-200 text-slate-700';
 
-  const stage4Status: 'Upcoming' | 'Active' | 'Conducted' = isResultsDeclared ? 'Conducted' : now >= examDateTime ? 'Active' : 'Upcoming';
-  const stage4Badge = stage4Status === 'Active' ? 'bg-amber-100 text-amber-900' : stage4Status === 'Conducted' ? 'bg-slate-200 text-slate-700' : 'bg-slate-200 text-slate-700';
-
-  const stage5Status: 'Upcoming' | 'Declared' = isResultsDeclared ? 'Declared' : 'Upcoming';
-  const stage5Badge = isResultsDeclared ? 'bg-emerald-100 text-emerald-800 font-bold' : 'bg-slate-200 text-slate-700';
+  const stage4Status: 'Upcoming' | 'Declared' = isResultsDeclared ? 'Declared' : 'Upcoming';
+  const stage4Badge = isResultsDeclared ? 'bg-emerald-100 text-emerald-800 font-bold' : 'bg-slate-200 text-slate-700';
 
   const stages: AdmissionPhaseInfo['stages'] = [
     {
@@ -315,24 +297,17 @@ export function resolveAdmissionPhase(input: PhaseDatesInput): AdmissionPhaseInf
     },
     {
       stageNumber: '03',
-      event: 'Release of Hall Ticket / Admit Card',
-      date: admitDateFormatted,
+      event: 'Written Entrance Examination',
+      date: examDateFormatted,
       status: stage3Status,
       badgeClass: stage3Badge,
     },
     {
       stageNumber: '04',
-      event: 'Written Entrance Examination',
-      date: examDateFormatted,
-      status: stage4Status,
-      badgeClass: stage4Badge,
-    },
-    {
-      stageNumber: '05',
       event: 'Declaration of Result',
       date: resultDateFormatted,
-      status: stage5Status,
-      badgeClass: stage5Badge,
+      status: stage4Status,
+      badgeClass: stage4Badge,
     },
   ];
 

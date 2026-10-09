@@ -1,5 +1,87 @@
 [
   {
+    "userId": "usr-admin-1",
+    "userName": "Principal / Exam Controller",
+    "userRole": "admin",
+    "action": "UPLOAD_RESULTS_EXCEL",
+    "entity": "Results",
+    "details": {
+      "totalUploaded": 8,
+      "publishedImmediately": true
+    },
+    "id": "audit-1791562508119-sjl2x",
+    "timestamp": "2026-10-09T16:15:08.119Z"
+  },
+  {
+    "userId": "usr-admin-1",
+    "userName": "Principal / Exam Controller",
+    "userRole": "admin",
+    "action": "UPLOAD_RESULTS_EXCEL",
+    "entity": "Results",
+    "details": {
+      "totalUploaded": 8,
+      "qualified": 7,
+      "notQualified": 1,
+      "publishedImmediately": true
+    },
+    "id": "audit-1791561829235-whsat",
+    "timestamp": "2026-10-09T16:03:49.235Z"
+  },
+  {
+    "userId": "usr-admin-1",
+    "userName": "Principal / Exam Controller",
+    "userRole": "admin",
+    "action": "UPLOAD_RESULTS_EXCEL",
+    "entity": "Results",
+    "details": {
+      "totalUploaded": 8,
+      "qualified": 7,
+      "notQualified": 1,
+      "publishedImmediately": true
+    },
+    "id": "audit-1791561119333-njt0i",
+    "timestamp": "2026-10-09T15:51:59.333Z"
+  },
+  {
+    "userId": "usr-admin-1",
+    "userName": "Principal / Exam Controller",
+    "userRole": "admin",
+    "action": "UPLOAD_RESULTS_EXCEL",
+    "entity": "Results",
+    "details": {
+      "totalUploaded": 8,
+      "qualified": 7,
+      "notQualified": 1,
+      "publishedImmediately": true
+    },
+    "id": "audit-1791561089114-2cug8",
+    "timestamp": "2026-10-09T15:51:29.114Z"
+  },
+  {
+    "userId": "usr-1791285321149-s5hqf",
+    "userName": "Ayushi",
+    "userRole": "applicant",
+    "action": "PASSWORD_RESET_SUCCESS",
+    "entity": "User",
+    "details": {
+      "identifier": "anshutemp10@gmail.com"
+    },
+    "id": "audit-1791556933576-hr0cv",
+    "timestamp": "2026-10-09T14:42:13.576Z"
+  },
+  {
+    "userId": "usr-1791285321149-s5hqf",
+    "userName": "Ayushi",
+    "userRole": "applicant",
+    "action": "PASSWORD_RESET_SUCCESS",
+    "entity": "User",
+    "details": {
+      "identifier": "anshutemp10@gmail.com"
+    },
+    "id": "audit-1791556874727-mmz4g",
+    "timestamp": "2026-10-09T14:41:14.727Z"
+  },
+  {
     "userId": "usr-1791473531632-cbnby",
     "userName": "Anshu Miglani",
     "userRole": "applicant",

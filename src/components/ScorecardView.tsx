@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Award, CheckCircle2, XCircle, Calendar, Hash, User, BookOpen } from 'lucide-react';
+import { Award, Calendar, Hash, User, FileText } from 'lucide-react';
 import { ExamResult } from '@/lib/types';
 
 interface ScorecardViewProps {
@@ -9,15 +9,6 @@ interface ScorecardViewProps {
 }
 
 export default function ScorecardView({ result }: ScorecardViewProps) {
-  const isQualified =
-    result.qualifyingStatus === 'Qualified' ||
-    result.qualifyingStatus === 'Qualified for Admission' ||
-    Boolean(result.remarks && (
-      result.remarks.toLowerCase().includes('qualified') ||
-      result.remarks.toLowerCase().includes('selected') ||
-      result.remarks.toLowerCase().includes('shortlist')
-    ) && !result.remarks.toLowerCase().includes('not qualified'));
-
   const formatDob = (dobStr?: string) => {
     if (!dobStr) return '—';
     const s = dobStr.trim();
@@ -40,12 +31,6 @@ export default function ScorecardView({ result }: ScorecardViewProps) {
     return s;
   };
 
-  // Clean formatted class
-  const rawClass = result.classApplying || 'Class 6';
-  const cleanClass = rawClass.toLowerCase().startsWith('class')
-    ? rawClass
-    : `Class ${rawClass}`;
-
   return (
     <div className="w-full max-w-2xl mx-auto my-4 space-y-4 font-sans">
       {/* Result Details Card */}
@@ -62,19 +47,13 @@ export default function ScorecardView({ result }: ScorecardViewProps) {
             </h3>
           </div>
 
-          <span
-            className={`px-3 py-1 rounded-full text-xs font-black uppercase tracking-wider ${
-              isQualified
-                ? 'bg-emerald-100 text-emerald-800 border border-emerald-300'
-                : 'bg-rose-100 text-rose-800 border border-rose-300'
-            }`}
-          >
-            {isQualified ? 'Qualified' : 'Not Qualified'}
+          <span className="px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-slate-100 text-slate-700 border border-slate-200">
+            Official Result
           </span>
         </div>
 
         {/* Candidate Particulars Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 text-xs">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5 text-xs">
           <div className="data-cell">
             <span className="text-slate-500 block text-[10px] font-semibold uppercase tracking-wider flex items-center gap-1">
               <User className="w-3 h-3 text-portal-navy" /> Candidate Name
@@ -101,48 +80,18 @@ export default function ScorecardView({ result }: ScorecardViewProps) {
               {formatDob(result.dob)}
             </span>
           </div>
-
-          <div className="data-cell">
-            <span className="text-slate-500 block text-[10px] font-semibold uppercase tracking-wider flex items-center gap-1">
-              <BookOpen className="w-3 h-3 text-portal-navy" /> Class
-            </span>
-            <span className="font-bold text-sm text-slate-800 mt-1 block">
-              {cleanClass}
-            </span>
-          </div>
         </div>
 
-        {/* Selection Status & Remarks Callout */}
-        <div
-          className={`p-4 rounded-xl border ${
-            isQualified
-              ? 'bg-emerald-50/80 border-emerald-300 text-emerald-950'
-              : 'bg-rose-50/80 border-rose-300 text-rose-950'
-          }`}
-        >
+        {/* Remarks Callout */}
+        <div className="p-4 rounded-xl border border-blue-200 bg-blue-50/70 text-slate-900">
           <div className="flex items-start gap-3">
-            {isQualified ? (
-              <CheckCircle2 className="w-5 h-5 flex-shrink-0 text-emerald-600 mt-0.5" />
-            ) : (
-              <XCircle className="w-5 h-5 flex-shrink-0 text-rose-600 mt-0.5" />
-            )}
-            <div className="space-y-1.5 flex-1">
-              <div className="flex items-center justify-between flex-wrap gap-2">
-                <h4 className="font-extrabold text-sm uppercase tracking-wide">
-                  Selection Status: {isQualified ? 'QUALIFIED' : 'NOT QUALIFIED'}
-                </h4>
-              </div>
-
-              <div>
-                <span className="text-[10px] uppercase font-bold text-slate-500 block">
-                  Remarks:
-                </span>
-                <p className="text-xs font-semibold text-slate-900 mt-0.5 bg-white/80 p-3 rounded-lg border border-slate-200/60 leading-relaxed">
-                  {result.remarks ||
-                    (isQualified
-                      ? 'Qualified for admission counseling.'
-                      : 'Not Qualified for current admission session.')}
-                </p>
+            <FileText className="w-5 h-5 flex-shrink-0 text-portal-navy mt-0.5" />
+            <div className="space-y-1.5 flex-1 min-w-0">
+              <span className="text-[11px] uppercase font-bold text-portal-navy tracking-wider block">
+                Official Remarks
+              </span>
+              <div className="text-xs sm:text-[13px] font-semibold text-slate-900 mt-0.5 bg-white p-3.5 rounded-lg border border-slate-200 leading-relaxed shadow-2xs whitespace-pre-wrap break-words max-h-96 overflow-y-auto">
+                {result.remarks || 'No remarks provided.'}
               </div>
             </div>
           </div>
