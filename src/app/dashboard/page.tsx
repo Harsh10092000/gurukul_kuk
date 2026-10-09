@@ -475,8 +475,8 @@ export default function ApplicantDashboard() {
         : isResultDeclared
         ? 'Result Declared'
         : 'Evaluation Pending',
-      completed: isResultDeclared && Boolean(result?.isPublished),
-      current: isResultDeclared && !result?.isPublished,
+      completed: isResultDeclared,
+      current: false,
     },
   ];
 

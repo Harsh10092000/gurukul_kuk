@@ -3,6 +3,7 @@ import { db } from '@/lib/db';
 import { getCurrentUser } from '@/lib/auth';
 import { recordAuditLog } from '@/lib/audit';
 import { ExamResult } from '@/lib/types';
+import { broadcastResultDeclaredNotification } from '@/lib/notifications';
 
 export async function POST(req: Request) {
   try {
@@ -182,6 +183,9 @@ export async function POST(req: Request) {
 
       if (publishDirectly) {
         await db.updateSettings({ resultsDeclared: true });
+        broadcastResultDeclaredNotification().catch((e) => {
+          console.error('Error broadcasting result notification on import publishDirectly:', e);
+        });
       }
 
       await recordAuditLog({

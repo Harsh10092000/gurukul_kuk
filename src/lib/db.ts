@@ -345,6 +345,7 @@ export async function initDatabase(): Promise<void> {
         exam_duration VARCHAR(64) NOT NULL,
         room_number VARCHAR(64),
         candidate_photo_url TEXT,
+        candidate_signature_url MEDIUMTEXT,
         is_released BOOLEAN DEFAULT FALSE,
         instructions JSON,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
@@ -525,6 +526,15 @@ export async function initDatabase(): Promise<void> {
 
         try {
           await pool.query("ALTER TABLE results MODIFY COLUMN application_id VARCHAR(64) NULL");
+        } catch { }
+
+        // Ensure admit_cards table has candidate_signature_url column
+        try {
+          const [admitColRows]: any = await pool.query("SHOW COLUMNS FROM admit_cards");
+          const admitColNames = Array.isArray(admitColRows) ? admitColRows.map((c: any) => c.Field) : [];
+          if (!admitColNames.includes('candidate_signature_url')) {
+            await pool.query("ALTER TABLE admit_cards ADD COLUMN candidate_signature_url MEDIUMTEXT DEFAULT NULL AFTER candidate_photo_url");
+          }
         } catch { }
       } catch { }
 
@@ -2102,6 +2112,7 @@ export const db = {
       examDuration: r.exam_duration,
       roomNumber: r.room_number,
       candidatePhotoUrl: r.candidate_photo_url,
+      candidateSignatureUrl: r.candidate_signature_url || undefined,
       isReleased: Boolean(r.is_released),
       instructions: safeJsonParse(r.instructions, []),
       createdAt: r.created_at,
@@ -2132,6 +2143,7 @@ export const db = {
           examDuration: r.exam_duration,
           roomNumber: r.room_number,
           candidatePhotoUrl: r.candidate_photo_url,
+          candidateSignatureUrl: r.candidate_signature_url || undefined,
           isReleased: Boolean(r.is_released),
           instructions: safeJsonParse(r.instructions, []),
           createdAt: r.created_at,
@@ -2163,6 +2175,9 @@ export const db = {
         card.address = addressParts.length > 0 ? addressParts.join(', ') : 'HOME NO- 45, KRISHNA GADARN COLONY, THANA- GANGANAGAR, AMEDA ROAD';
         if (app.documents?.photo) {
           card.candidatePhotoUrl = app.documents.photo;
+        }
+        if (app.documents?.signature) {
+          card.candidateSignatureUrl = app.documents.signature;
         }
       }
       // Gender-based exam center, reporting time, and date rules:
@@ -2208,39 +2223,77 @@ export const db = {
         const existingId = existing[0].id;
         const preservedRollNumber = existing[0].roll_number || admitCard.rollNumber;
 
-        await pool.query(
-          `UPDATE admit_cards SET 
-            roll_number = ?,
-            candidate_name = ?,
-            father_name = ?,
-            class_applying = ?,
-            exam_centre_name = ?,
-            exam_centre_address = ?,
-            exam_date = ?,
-            reporting_time = ?,
-            exam_duration = ?,
-            room_number = ?,
-            candidate_photo_url = ?,
-            is_released = ?,
-            instructions = ?
-          WHERE id = ?`,
-          [
-            preservedRollNumber,
-            admitCard.candidateName,
-            admitCard.fatherName,
-            admitCard.classApplying,
-            admitCard.examCentreName,
-            admitCard.examCentreAddress,
-            admitCard.examDate,
-            admitCard.reportingTime,
-            admitCard.examDuration,
-            admitCard.roomNumber,
-            admitCard.candidatePhotoUrl || null,
-            admitCard.isReleased ? 1 : 0,
-            JSON.stringify(admitCard.instructions),
-            existingId,
-          ]
-        );
+        try {
+          await pool.query(
+            `UPDATE admit_cards SET 
+              roll_number = ?,
+              candidate_name = ?,
+              father_name = ?,
+              class_applying = ?,
+              exam_centre_name = ?,
+              exam_centre_address = ?,
+              exam_date = ?,
+              reporting_time = ?,
+              exam_duration = ?,
+              room_number = ?,
+              candidate_photo_url = ?,
+              candidate_signature_url = ?,
+              is_released = ?,
+              instructions = ?
+            WHERE id = ?`,
+            [
+              preservedRollNumber,
+              admitCard.candidateName,
+              admitCard.fatherName,
+              admitCard.classApplying,
+              admitCard.examCentreName,
+              admitCard.examCentreAddress,
+              admitCard.examDate,
+              admitCard.reportingTime,
+              admitCard.examDuration,
+              admitCard.roomNumber,
+              admitCard.candidatePhotoUrl || null,
+              admitCard.candidateSignatureUrl || null,
+              admitCard.isReleased ? 1 : 0,
+              JSON.stringify(admitCard.instructions),
+              existingId,
+            ]
+          );
+        } catch {
+          await pool.query(
+            `UPDATE admit_cards SET 
+              roll_number = ?,
+              candidate_name = ?,
+              father_name = ?,
+              class_applying = ?,
+              exam_centre_name = ?,
+              exam_centre_address = ?,
+              exam_date = ?,
+              reporting_time = ?,
+              exam_duration = ?,
+              room_number = ?,
+              candidate_photo_url = ?,
+              is_released = ?,
+              instructions = ?
+            WHERE id = ?`,
+            [
+              preservedRollNumber,
+              admitCard.candidateName,
+              admitCard.fatherName,
+              admitCard.classApplying,
+              admitCard.examCentreName,
+              admitCard.examCentreAddress,
+              admitCard.examDate,
+              admitCard.reportingTime,
+              admitCard.examDuration,
+              admitCard.roomNumber,
+              admitCard.candidatePhotoUrl || null,
+              admitCard.isReleased ? 1 : 0,
+              JSON.stringify(admitCard.instructions),
+              existingId,
+            ]
+          );
+        }
 
         // Sync roll_number to applications table
         try {
@@ -2291,32 +2344,62 @@ export const db = {
         }
       }
 
-      await pool.query(
-        `INSERT INTO admit_cards (
-          id, application_id, application_number, roll_number, candidate_name, father_name, 
-          class_applying, exam_centre_name, exam_centre_address, exam_date, reporting_time, 
-          exam_duration, room_number, candidate_photo_url, is_released, instructions, created_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        [
-          admitCard.id,
-          admitCard.applicationId,
-          admitCard.applicationNumber,
-          finalRollNumber,
-          admitCard.candidateName,
-          admitCard.fatherName,
-          admitCard.classApplying,
-          admitCard.examCentreName,
-          admitCard.examCentreAddress,
-          admitCard.examDate,
-          admitCard.reportingTime,
-          admitCard.examDuration,
-          admitCard.roomNumber,
-          admitCard.candidatePhotoUrl || null,
-          admitCard.isReleased ? 1 : 0,
-          JSON.stringify(admitCard.instructions),
-          toMySqlDatetime(admitCard.createdAt || new Date()),
-        ]
-      );
+      try {
+        await pool.query(
+          `INSERT INTO admit_cards (
+            id, application_id, application_number, roll_number, candidate_name, father_name, 
+            class_applying, exam_centre_name, exam_centre_address, exam_date, reporting_time, 
+            exam_duration, room_number, candidate_photo_url, candidate_signature_url, is_released, instructions, created_at
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          [
+            admitCard.id,
+            admitCard.applicationId,
+            admitCard.applicationNumber,
+            finalRollNumber,
+            admitCard.candidateName,
+            admitCard.fatherName,
+            admitCard.classApplying,
+            admitCard.examCentreName,
+            admitCard.examCentreAddress,
+            admitCard.examDate,
+            admitCard.reportingTime,
+            admitCard.examDuration,
+            admitCard.roomNumber,
+            admitCard.candidatePhotoUrl || null,
+            admitCard.candidateSignatureUrl || null,
+            admitCard.isReleased ? 1 : 0,
+            JSON.stringify(admitCard.instructions),
+            toMySqlDatetime(admitCard.createdAt || new Date()),
+          ]
+        );
+      } catch {
+        await pool.query(
+          `INSERT INTO admit_cards (
+            id, application_id, application_number, roll_number, candidate_name, father_name, 
+            class_applying, exam_centre_name, exam_centre_address, exam_date, reporting_time, 
+            exam_duration, room_number, candidate_photo_url, is_released, instructions, created_at
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          [
+            admitCard.id,
+            admitCard.applicationId,
+            admitCard.applicationNumber,
+            finalRollNumber,
+            admitCard.candidateName,
+            admitCard.fatherName,
+            admitCard.classApplying,
+            admitCard.examCentreName,
+            admitCard.examCentreAddress,
+            admitCard.examDate,
+            admitCard.reportingTime,
+            admitCard.examDuration,
+            admitCard.roomNumber,
+            admitCard.candidatePhotoUrl || null,
+            admitCard.isReleased ? 1 : 0,
+            JSON.stringify(admitCard.instructions),
+            toMySqlDatetime(admitCard.createdAt || new Date()),
+          ]
+        );
+      }
 
       // Sync roll_number to applications table
       try {

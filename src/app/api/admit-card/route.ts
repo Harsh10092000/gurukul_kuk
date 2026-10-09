@@ -98,6 +98,9 @@ export async function GET(request: Request) {
       // Return admit card with synchronized isReleased flag from settings
       if (card) {
         card.isReleased = isReleased;
+        if (matchingApp?.documents?.signature && !card.candidateSignatureUrl) {
+          card.candidateSignatureUrl = matchingApp.documents.signature;
+        }
       }
 
       return NextResponse.json({ admitCard: card, released: isReleased });
@@ -125,6 +128,9 @@ export async function GET(request: Request) {
     let card = await db.getAdmitCard(userApp.id);
     if (card) {
       card.isReleased = isReleased;
+      if (userApp?.documents?.signature && !card.candidateSignatureUrl) {
+        card.candidateSignatureUrl = userApp.documents.signature;
+      }
     }
     return NextResponse.json({ admitCard: card, released: isReleased });
   } catch (error) {

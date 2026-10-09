@@ -398,9 +398,10 @@ export function AdmitCardSheet({ admitCard, sheetId }: { admitCard: AdmitCard; s
             </div>
           </div>
 
-          {/* Right Side: Uploaded Candidate Photograph (Col 3 / 25%) */}
-          <div className="md:col-span-3 print:col-span-3 flex flex-col justify-center items-center gap-1.5 print:gap-1">
-            <div className="w-32 sm:w-36 h-40 sm:h-44 print:w-28 print:h-34 border border-black bg-slate-50 flex items-center justify-center relative overflow-hidden shadow-inner">
+          {/* Right Side: Uploaded Candidate Photograph & Signature (Col 3 / 25%) */}
+          <div className="md:col-span-3 print:col-span-3 flex flex-col justify-start items-center gap-2 print:gap-1.5 pt-0.5">
+            {/* Candidate Photo Box */}
+            <div className="w-32 sm:w-36 h-36 sm:h-40 print:w-28 print:h-32 border border-black bg-white flex items-center justify-center relative overflow-hidden">
               {admitCard.candidatePhotoUrl ? (
                 /* eslint-disable-next-line @next/next/no-img-element */
                 <img
@@ -414,9 +415,22 @@ export function AdmitCardSheet({ admitCard, sheetId }: { admitCard: AdmitCard; s
                 </div>
               )}
             </div>
-            <span className="text-[9px] print:text-[8px] font-bold uppercase tracking-wider text-slate-600">
-              Candidate Photograph
-            </span>
+
+            {/* Candidate Signature Box */}
+            <div className="w-32 sm:w-36 h-14 sm:h-16 print:w-28 print:h-12 border border-black bg-white flex items-center justify-center relative overflow-hidden">
+              {admitCard.candidateSignatureUrl ? (
+                /* eslint-disable-next-line @next/next/no-img-element */
+                <img
+                  src={admitCard.candidateSignatureUrl}
+                  alt="Candidate Signature"
+                  className="max-w-full max-h-full object-contain p-1"
+                />
+              ) : (
+                <div className="text-center p-1 text-[9px] font-semibold text-slate-400">
+                  Candidate Signature
+                </div>
+              )}
+            </div>
           </div>
         </div>
 

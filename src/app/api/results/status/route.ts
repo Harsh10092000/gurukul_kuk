@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { getCurrentUser } from '@/lib/auth';
-import { sendNotification } from '@/lib/notifications';
+import { broadcastResultDeclaredNotification } from '@/lib/notifications';
 
 export const dynamic = 'force-dynamic';
 
@@ -38,56 +38,9 @@ export async function POST(request: Request) {
 
     // When results are declared, send notification to all registered candidates
     if (body.resultsDeclared === true) {
-      const recipientMap = new Map<string, { email: string; name: string }>();
-
-      try {
-        // Collect candidate emails from applications
-        const applications = await db.getApplications();
-        for (const app of applications) {
-          const email = (app.personalInfo?.candidateEmail || app.personalInfo?.email || '').trim().toLowerCase();
-          const name = app.personalInfo?.fullName?.trim() || 'Candidate';
-          if (email && email.includes('@') && !recipientMap.has(email)) {
-            recipientMap.set(email, { email, name });
-          }
-        }
-
-        // Collect candidate emails from users
-        const users = await db.getAllUsers();
-        for (const u of users) {
-          if (u.role === 'applicant' || (u.role as any) === 'student' || !u.role) {
-            const email = (u.email || '').trim().toLowerCase();
-            const name = u.name?.trim() || 'Candidate';
-            if (email && email.includes('@') && !recipientMap.has(email)) {
-              recipientMap.set(email, { email, name });
-            }
-          }
-        }
-      } catch (fetchErr) {
-        console.error('Error fetching registered candidates for result declaration:', fetchErr);
-      }
-
-      const recipients = Array.from(recipientMap.values());
-      totalRecipients = recipients.length;
-      console.log(`[Result Declaration] Broadcasting announcement to ${totalRecipients} registered candidates...`);
-
-      // Dispatch to each registered candidate without any roll number or specific details
-      for (const r of recipients) {
-        try {
-          const result = await sendNotification({
-            to: r.email,
-            name: r.name,
-            type: 'RESULT_DECLARED',
-            data: {}, // Strict instruction: only message saying result has been declared, no roll no, nothing else
-          });
-          if (result && result.success) {
-            notifiedCount++;
-          }
-        } catch (err) {
-          console.error(`[Result Declaration] Error dispatching to ${r.email}:`, err);
-        }
-      }
-
-      console.log(`[Result Declaration] Sent result announcement to ${notifiedCount}/${totalRecipients} registered candidates.`);
+      const broadcastRes = await broadcastResultDeclaredNotification();
+      notifiedCount = broadcastRes.notifiedCount;
+      totalRecipients = broadcastRes.totalRecipients;
     }
 
     return NextResponse.json({

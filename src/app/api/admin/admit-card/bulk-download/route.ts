@@ -148,6 +148,7 @@ export async function GET(request: Request) {
           examDuration: examDetails.examDuration,
           roomNumber: 'Hall-A',
           candidatePhotoUrl: app.documents?.photo || '/logo-gurukul.png',
+          candidateSignatureUrl: app.documents?.signature || undefined,
           isReleased: true,
           instructions: [
             'Kindly reach exam venue well in time as mentioned on admit card.',
@@ -167,6 +168,7 @@ export async function GET(request: Request) {
         previousSchoolName: card.previousSchoolName || app.academicInfo?.previousSchoolName || app.personalInfo?.previousSchoolName || 'KL INTERNATIONAL SCHOOL',
         aadhaarNumber: card.aadhaarNumber || app.personalInfo?.aadhaarNumber || '740766742979',
         candidatePhotoUrl: app.documents?.photo || card.candidatePhotoUrl || '/logo-gurukul.png',
+        candidateSignatureUrl: app.documents?.signature || card.candidateSignatureUrl || undefined,
       };
 
       const addressParts = [
@@ -203,14 +205,25 @@ export async function GET(request: Request) {
       if (parsedPhoto && card.candidatePhotoUrl) {
         photoDataUri = card.candidatePhotoUrl;
         zip.file(`assets/photos/${roll}.${parsedPhoto.ext}`, parsedPhoto.buffer);
-      } else if (card.candidatePhotoUrl && card.candidatePhotoUrl.startsWith('data:image')) {
+      } else if (card.candidatePhotoUrl && (card.candidatePhotoUrl.startsWith('data:image') || card.candidatePhotoUrl.startsWith('http') || card.candidatePhotoUrl.startsWith('/'))) {
         photoDataUri = card.candidatePhotoUrl;
+      }
+
+      // Candidate Signature extraction
+      let signatureDataUri = '';
+      const parsedSignature = parseDataUrl(card.candidateSignatureUrl);
+      if (parsedSignature && card.candidateSignatureUrl) {
+        signatureDataUri = card.candidateSignatureUrl;
+        zip.file(`assets/signatures/${roll}.${parsedSignature.ext}`, parsedSignature.buffer);
+      } else if (card.candidateSignatureUrl && (card.candidateSignatureUrl.startsWith('data:image') || card.candidateSignatureUrl.startsWith('http') || card.candidateSignatureUrl.startsWith('/'))) {
+        signatureDataUri = card.candidateSignatureUrl;
       }
 
       // Generate HTML with 100% embedded self-contained images
       const htmlContent = generateStandaloneAdmitCardHtml(card, {
         logoPath: logoBase64,
         photoPath: photoDataUri,
+        signaturePath: signatureDataUri,
       });
 
       const fileName = `${clsFolder}/Admit_Card_${roll}_${safeName}.html`;
@@ -233,7 +246,8 @@ export async function GET(request: Request) {
         'Exam Date': card.examDate,
         'Reporting Time': card.reportingTime,
         'Room / Desk': card.roomNumber || 'Hall-A',
-        'Photo Available': parsedPhoto ? 'YES' : 'NO',
+        'Photo Available': parsedPhoto ? 'YES' : (card.candidatePhotoUrl ? 'YES' : 'NO'),
+        'Signature Available': parsedSignature ? 'YES' : (card.candidateSignatureUrl ? 'YES' : 'NO'),
       });
     });
 

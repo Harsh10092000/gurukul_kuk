@@ -10,6 +10,7 @@ export function generateStandaloneAdmitCardHtml(
   options?: {
     logoPath?: string;
     photoPath?: string;
+    signaturePath?: string;
   }
 ): string {
   const details = getExamDetailsForGender(
@@ -73,8 +74,12 @@ export function generateStandaloneAdmitCardHtml(
 
   const logoSrc = options?.logoPath || '';
   const rawPhoto = options?.photoPath || admitCard.candidatePhotoUrl;
-  const hasPhoto = Boolean(rawPhoto && (rawPhoto.startsWith('data:image') || rawPhoto.startsWith('http')));
+  const hasPhoto = Boolean(rawPhoto && (rawPhoto.startsWith('data:image') || rawPhoto.startsWith('http') || rawPhoto.startsWith('/')));
   const photoSrc = hasPhoto ? rawPhoto : '';
+
+  const rawSig = options?.signaturePath || admitCard.candidateSignatureUrl;
+  const hasSig = Boolean(rawSig && (rawSig.startsWith('data:image') || rawSig.startsWith('http') || rawSig.startsWith('/')));
+  const sigSrc = hasSig ? rawSig : '';
 
   const rollNumber = admitCard.rollNumber || 'PENDING';
   const regNumber = admitCard.applicationNumber || 'N/A';
@@ -293,12 +298,13 @@ export function generateStandaloneAdmitCardHtml(
       width: 135px;
       padding-left: 10px;
       text-align: center;
+      vertical-align: top;
     }
     .photo-box {
       width: 125px;
-      height: 145px;
+      height: 140px;
       border: 1px solid #000000;
-      background: #f8fafc;
+      background: #ffffff;
       margin: 0 auto;
       overflow: hidden;
       display: flex;
@@ -309,14 +315,25 @@ export function generateStandaloneAdmitCardHtml(
       width: 100%;
       height: 100%;
       object-fit: cover;
+      display: block;
     }
-    .photo-caption {
-      font-size: 8px;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-      color: #475569;
-      margin-top: 3px;
+    .sig-box {
+      width: 125px;
+      height: 48px;
+      border: 1px solid #000000;
+      background: #ffffff;
+      margin: 6px auto 0 auto;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .sig-box img {
+      max-width: 100%;
+      max-height: 100%;
+      object-fit: contain;
+      display: block;
+      padding: 2px;
     }
     .signatures-table {
       width: 100%;
@@ -514,9 +531,11 @@ export function generateStandaloneAdmitCardHtml(
           </td>
           <td class="photo-cell">
             <div class="photo-box">
-              ${hasPhoto ? `<img src="${photoSrc}" alt="Candidate Photo" style="width:100%; height:100%; object-fit:cover;" />` : `<div style="display:flex; flex-direction:column; align-items:center; justify-content:center; height:100%; padding:8px; text-align:center; color:#475569; background:#f8fafc;"><div style="font-size:24px; line-height:1; margin-bottom:6px; opacity:0.6;">📷</div><div style="font-size:8px; font-weight:800; line-height:1.3; text-transform:uppercase; color:#334155;">PASTE RECENT<br/>COLOR PHOTO<br/>HERE</div></div>`}
+              ${hasPhoto ? `<img src="${photoSrc}" alt="Candidate Photo" />` : `<div style="display:flex; flex-direction:column; align-items:center; justify-content:center; height:100%; padding:8px; text-align:center; color:#475569; background:#f8fafc;"><div style="font-size:24px; line-height:1; margin-bottom:6px; opacity:0.6;">📷</div><div style="font-size:8px; font-weight:800; line-height:1.3; text-transform:uppercase; color:#334155;">PASTE RECENT<br/>COLOR PHOTO<br/>HERE</div></div>`}
             </div>
-            <div class="photo-caption">Candidate Photograph</div>
+            <div class="sig-box">
+              ${hasSig ? `<img src="${sigSrc}" alt="Candidate Signature" />` : `<div style="display:flex; align-items:center; justify-content:center; height:100%; padding:4px; text-align:center; font-size:8px; font-weight:700; color:#64748b; text-transform:uppercase; background:#f8fafc;">Candidate Signature</div>`}
+            </div>
           </td>
         </tr>
       </table>

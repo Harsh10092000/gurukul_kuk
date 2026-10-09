@@ -3,6 +3,7 @@ import { db } from '@/lib/db';
 import { getCurrentUser } from '@/lib/auth';
 import { recordAuditLog } from '@/lib/audit';
 import { updateFormSchedule } from '@/lib/formSchedule';
+import { broadcastResultDeclaredNotification } from '@/lib/notifications';
 
 export const dynamic = 'force-dynamic';
 
@@ -34,6 +35,12 @@ export async function POST(req: Request) {
     const body = await req.json();
     const currentSettings = await db.getSettings();
     const updatedSettings = await db.updateSettings(body);
+
+    if (body.resultsDeclared === true && currentSettings.resultsDeclared !== true) {
+      broadcastResultDeclaredNotification().catch((e) => {
+        console.error('Error broadcasting result notification from settings update:', e);
+      });
+    }
 
     if (body.registrationStartDate || body.registrationEndDate || body.statusOverride !== undefined) {
       try {

@@ -1,4 +1,5 @@
 import nodemailer from 'nodemailer';
+import { db } from './db';
 
 export interface NotificationPayload {
   to: string;
@@ -597,47 +598,69 @@ export async function sendNotification(payload: NotificationPayload) {
 
     case 'RESULT_DECLARED':
       subject = 'The Gurukul Admission Portal - Entrance Examination Result Declared';
-      message = 'Dear Candidate, The Entrance Examination Result has been declared. Please visit the official portal to check your result.';
+      message = `Dear ${name || 'Candidate'},\n\nThe Entrance Examination Result for Session 2027-28 has been officially declared.\n\nPlease visit the official admission portal to check your scorecard and remarks:\n${SITE_URL}/result\n\nThe Gurukul Admission Portal\nAdmissions & Examination Cell`;
       htmlContent = `
-        <!DOCTYPE html>
-        <html>
+        <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+        <html xmlns="http://www.w3.org/1999/xhtml">
         <head>
-          <meta charset="utf-8">
-          <style>
-            body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #f8fafc; margin: 0; padding: 24px 12px; color: #1e293b; }
-            .container { max-width: 580px; margin: 0 auto; background: #ffffff; border-radius: 16px; overflow: hidden; border: 1px solid #e2e8f0; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); }
-            .header { background: #0b192c; padding: 24px; text-align: center; border-bottom: 3px solid #f59e0b; }
-            .header h1 { color: #ffffff; margin: 0 0 4px 0; font-size: 22px; font-weight: 800; letter-spacing: 0.5px; }
-            .header p { color: #f59e0b; margin: 0; font-size: 12px; font-weight: bold; letter-spacing: 1px; }
-            .content { padding: 32px 28px; text-align: center; }
-            .status-badge { display: inline-block; background: #ecfdf5; color: #065f46; font-size: 12px; font-weight: 700; padding: 6px 16px; border-radius: 9999px; border: 1px solid #a7f3d0; margin-bottom: 18px; }
-            .title { font-size: 20px; font-weight: 800; color: #0f172a; margin: 0 0 14px 0; }
-            .message { font-size: 14px; line-height: 1.6; color: #475569; margin: 0 0 24px 0; }
-            .btn { display: inline-block; background: #0b192c; color: #ffffff !important; text-decoration: none; padding: 12px 28px; border-radius: 10px; font-weight: 700; font-size: 13px; }
-            .footer { background: #f1f5f9; padding: 18px 24px; text-align: center; font-size: 11px; color: #64748b; border-top: 1px solid #e2e8f0; line-height: 1.5; }
-          </style>
+          <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+          <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+          <title>The Gurukul Admission Portal - Entrance Result Declared</title>
         </head>
-        <body>
-          <div class="container">
-            <div class="header">
-              <h1>THE GURUKUL ADMISSION PORTAL</h1>
-              <p>ENTRANCE EXAMINATION • SESSION 2027-28</p>
-            </div>
-            <div class="content">
-              <div class="status-badge">Official Announcement</div>
-              <h2 class="title">Result Has Been Declared</h2>
-              <p class="message">
-                The entrance examination result has been declared. You may visit the official admission portal to check your result status.
-              </p>
-              <div>
-                <a href="${SITE_URL}/result" class="btn">Check Result on Portal →</a>
-              </div>
-            </div>
-            <div class="footer">
-              The Gurukul Admission Portal • Haryana<br>
-              Admissions &amp; Examination Cell • ${SMTP_USER}
-            </div>
-          </div>
+        <body style="margin: 0; padding: 0; background-color: #f1f5f9; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #1e293b;">
+          <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" style="background-color: #f1f5f9; padding: 24px 12px;">
+            <tr>
+              <td align="center">
+                <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" style="max-width: 580px; background-color: #ffffff; border-radius: 12px; border: 1px solid #cbd5e1; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);">
+                  <tr>
+                    <td style="background-color: #0b192c; padding: 24px; text-align: center; border-bottom: 3px solid #f59e0b;">
+                      <h1 style="color: #ffffff; margin: 0 0 4px 0; font-size: 20px; font-weight: 800; letter-spacing: 0.5px;">THE GURUKUL ADMISSION PORTAL</h1>
+                      <p style="color: #f59e0b; margin: 0; font-size: 11px; font-weight: 700; letter-spacing: 1px;">ENTRANCE EXAMINATION • SESSION 2027-28</p>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td style="padding: 32px 28px;">
+                      <div style="text-align: center; margin-bottom: 20px;">
+                        <span style="display: inline-block; background-color: #ecfdf5; color: #065f46; font-size: 11px; font-weight: 800; padding: 6px 16px; border-radius: 9999px; border: 1px solid #a7f3d0; text-transform: uppercase; letter-spacing: 0.5px;">
+                          Official Announcement
+                        </span>
+                      </div>
+                      <h2 style="font-size: 20px; font-weight: 800; color: #0f172a; margin: 0 0 16px 0; text-align: center;">
+                        Entrance Examination Result Has Been Declared
+                      </h2>
+                      <p style="font-size: 15px; font-weight: 600; color: #0f172a; margin: 0 0 12px 0;">
+                        Dear ${name || 'Candidate'},
+                      </p>
+                      <p style="font-size: 14px; line-height: 1.6; color: #334155; margin: 0 0 16px 0;">
+                        The Entrance Examination results for <strong>Session 2027-28</strong> have been officially declared. You can now visit the official admission portal to check your scorecard, marks, and candidate remarks.
+                      </p>
+                      <div style="background-color: #f8fafc; border-left: 4px solid #f59e0b; padding: 14px 16px; border-radius: 4px; margin: 0 0 24px 0;">
+                        <p style="margin: 0; font-size: 13px; line-height: 1.5; color: #475569;">
+                          <strong>How to view your result:</strong><br />
+                          Visit the result portal and enter your <strong>Roll Number</strong> or <strong>Registration Number</strong> along with your <strong>Date of Birth</strong>.
+                        </p>
+                      </div>
+                      <div style="text-align: center; margin: 28px 0 20px 0;">
+                        <a href="${SITE_URL}/result" style="display: inline-block; background-color: #0b192c; color: #ffffff !important; text-decoration: none; padding: 14px 32px; border-radius: 8px; font-weight: 700; font-size: 14px; letter-spacing: 0.5px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                          Check Result Online →
+                        </a>
+                      </div>
+                      <p style="font-size: 12px; line-height: 1.5; color: #64748b; margin: 24px 0 0 0; text-align: center;">
+                        Alternatively, you can log in to your Candidate Dashboard to track your admission milestones.
+                      </p>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td style="background-color: #f1f5f9; padding: 20px 24px; text-align: center; font-size: 11px; color: #64748b; border-top: 1px solid #e2e8f0; line-height: 1.6;">
+                      The Gurukul Admission Portal • Admissions &amp; Examination Cell<br />
+                      Helpline: +91 7027849858 / 59 • Email: ${SMTP_USER}<br />
+                      Website: ${SITE_URL}
+                    </td>
+                  </tr>
+                </table>
+              </td>
+            </tr>
+          </table>
         </body>
         </html>
       `;
@@ -717,4 +740,78 @@ export async function sendNotification(payload: NotificationPayload) {
     message,
   };
 }
+
+/**
+ * Broadcasts result declared notification to all registered candidates and applicants.
+ */
+export async function broadcastResultDeclaredNotification(): Promise<{
+  totalRecipients: number;
+  notifiedCount: number;
+}> {
+  const recipientMap = new Map<string, { email: string; name: string }>();
+
+  try {
+    // 1. Applications
+    const applications = await db.getApplications().catch(() => []);
+    for (const app of applications) {
+      if (app.status === 'draft') continue;
+      const emails = [
+        app.personalInfo?.candidateEmail,
+        app.personalInfo?.email,
+      ].filter(Boolean) as string[];
+
+      const name = app.personalInfo?.fullName?.trim() || 'Candidate';
+      for (const rawEmail of emails) {
+        const clean = rawEmail.trim().toLowerCase();
+        if (clean.includes('@') && clean.includes('.') && !recipientMap.has(clean)) {
+          recipientMap.set(clean, { email: clean, name });
+        }
+      }
+    }
+
+    // 2. Users (all applicant/candidate accounts)
+    const users = await db.getAllUsers().catch(() => []);
+    for (const u of users) {
+      if (u.role === 'applicant' || (u.role as any) === 'student' || !u.role) {
+        const clean = (u.email || '').trim().toLowerCase();
+        const name = u.name?.trim() || 'Candidate';
+        if (clean.includes('@') && clean.includes('.') && !recipientMap.has(clean)) {
+          recipientMap.set(clean, { email: clean, name });
+        }
+      }
+    }
+  } catch (err) {
+    console.error('[broadcastResultDeclaredNotification] Error collecting recipients:', err);
+  }
+
+  const recipients = Array.from(recipientMap.values());
+  const totalRecipients = recipients.length;
+  console.log(`[broadcastResultDeclaredNotification] Broadcasting result declaration to ${totalRecipients} candidate(s)...`);
+
+  let notifiedCount = 0;
+  // Dispatch in controlled batches of 4
+  const BATCH_SIZE = 4;
+  for (let i = 0; i < recipients.length; i += BATCH_SIZE) {
+    const batch = recipients.slice(i, i + BATCH_SIZE);
+    const results = await Promise.allSettled(
+      batch.map((r) =>
+        sendNotification({
+          to: r.email,
+          name: r.name,
+          type: 'RESULT_DECLARED',
+          data: {},
+        })
+      )
+    );
+    for (const res of results) {
+      if (res.status === 'fulfilled' && res.value?.success) {
+        notifiedCount++;
+      }
+    }
+  }
+
+  console.log(`[broadcastResultDeclaredNotification] Result announcement completed: ${notifiedCount}/${totalRecipients} candidates successfully notified.`);
+  return { totalRecipients, notifiedCount };
+}
+
 

@@ -98,6 +98,7 @@ export async function GET(request: Request) {
           examDuration: examDetails.examDuration,
           roomNumber: 'Hall-A',
           candidatePhotoUrl: app.documents?.photo || '/logo-gurukul.png',
+          candidateSignatureUrl: app.documents?.signature || undefined,
           isReleased: true,
           instructions: [
             'Kindly reach exam venue well in time as mentioned on admit card.',
@@ -118,6 +119,7 @@ export async function GET(request: Request) {
         previousSchoolName: card.previousSchoolName || app.academicInfo?.previousSchoolName || app.personalInfo?.previousSchoolName || 'KL INTERNATIONAL SCHOOL',
         aadhaarNumber: card.aadhaarNumber || app.personalInfo?.aadhaarNumber || '740766742979',
         candidatePhotoUrl: app.documents?.photo || card.candidatePhotoUrl || '/logo-gurukul.png',
+        candidateSignatureUrl: app.documents?.signature || card.candidateSignatureUrl || undefined,
       };
 
       const addressParts = [
