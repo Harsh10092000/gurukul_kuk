@@ -364,6 +364,8 @@ export async function POST(request: Request) {
           address: fullAddress,
           studyLocation: studyPref.firstPreference,
           previousSchool: prevSchool,
+          previousSchoolName: personalInfo?.previousSchoolName || prevSchool,
+          previousBoard: (personalInfo?.previousBoard === 'Others' ? personalInfo?.otherBoard : personalInfo?.previousBoard) || 'CBSE',
           previousMarks: prevMarks,
           amountPaid: verifiedAmount,
           transactionId: finalTxnId,

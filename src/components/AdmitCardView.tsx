@@ -337,12 +337,7 @@ export function AdmitCardSheet({ admitCard, sheetId }: { admitCard: AdmitCard; s
                     Exam Centre
                   </div>
                   <div className="col-span-7 sm:col-span-8 p-1.5 print:py-0.5 print:px-1.5 font-bold uppercase text-slate-900">
-                    <div>{venueName || instituteName}</div>
-                    {venueAddress && (
-                      <div className="text-[10px] print:text-[9px] font-normal text-slate-600 normal-case mt-0.5">
-                        {venueAddress}
-                      </div>
-                    )}
+                    {venueName || instituteName}
                   </div>
                 </div>
 

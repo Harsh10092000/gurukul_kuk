@@ -484,10 +484,7 @@ export function generateStandaloneAdmitCardHtml(
               </tr>
               <tr>
                 <td class="label-col">Exam Centre</td>
-                <td class="val-col">
-                  <div>${venueName || instituteName}</div>
-                  ${venueAddress ? `<div style="font-size: 10px; font-weight: normal; color: #475569; margin-top: 2px;">${venueAddress}</div>` : ''}
-                </td>
+                <td class="val-col">${venueName || instituteName}</td>
               </tr>
               <tr>
                 <td class="label-col">Candidate Name</td>

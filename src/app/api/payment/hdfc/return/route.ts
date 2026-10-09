@@ -493,6 +493,8 @@ async function handleHdfcReturn(request: Request) {
           address: fullAddress,
           studyLocation: studyLocationPref?.firstPreference || 'The Gurukul Nilokheri',
           previousSchool: prevSchool,
+          previousSchoolName: personalInfo?.previousSchoolName || prevSchool,
+          previousBoard: (personalInfo?.previousBoard === 'Others' ? personalInfo?.otherBoard : personalInfo?.previousBoard) || 'CBSE',
           previousMarks: prevMarks,
           amountPaid: 800,
           transactionId: txnId,

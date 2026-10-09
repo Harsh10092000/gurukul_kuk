@@ -288,6 +288,9 @@ export async function POST(request: Request) {
           addressInfo?.pincode ? `PIN: ${addressInfo.pincode}` : '',
         ].filter(Boolean).join(', ') || addressInfo?.city || 'Not provided';
 
+        const prevBoard = (personalInfo?.previousBoard === 'Others' ? personalInfo?.otherBoard : personalInfo?.previousBoard) || 'CBSE';
+        const formattedDate = new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata', dateStyle: 'medium', timeStyle: 'short' });
+
         await sendNotification({
           to: ADMIN_NOTIFICATION_EMAIL,
           name: 'Admissions Desk',
@@ -299,17 +302,23 @@ export async function POST(request: Request) {
             receiptNumber: receiptNo,
             fullName: personalInfo.fullName,
             classApplying: newApplication.classApplying,
-            fatherName: parentInfo?.fatherName || 'N/A',
-            fatherOccupation: parentInfo?.fatherOccupation || 'N/A',
-            motherName: parentInfo?.motherName || 'N/A',
-            motherOccupation: parentInfo?.motherOccupation || 'N/A',
-            gender: personalInfo?.gender || 'N/A',
-            dob: personalInfo?.dob || 'N/A',
-            aadhaarNumber: personalInfo?.aadhaarNumber || 'N/A',
+            fatherName: parentInfo?.fatherName || 'Not specified',
+            fatherOccupation: parentInfo?.fatherOccupation || 'Not specified',
+            motherName: parentInfo?.motherName || 'Not specified',
+            motherOccupation: parentInfo?.motherOccupation || 'Not specified',
+            gender: personalInfo?.gender || 'Not specified',
+            category: personalInfo?.category || 'General',
+            dob: personalInfo?.dob || 'Not specified',
+            aadhaarNumber: personalInfo?.aadhaarNumber || 'Not specified',
             address: fullAddress,
+            previousSchool: personalInfo?.previousSchoolName || 'Not specified',
+            previousSchoolName: personalInfo?.previousSchoolName || 'Not specified',
+            previousBoard: prevBoard,
             transactionId: razorpay_payment_id,
             amount: 800,
-            paymentDate: new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata', dateStyle: 'medium', timeStyle: 'short' }),
+            amountPaid: 800,
+            registrationTime: formattedDate,
+            paymentDate: formattedDate,
           },
         });
       } catch (notifErr) {
