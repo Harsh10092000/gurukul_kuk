@@ -177,6 +177,7 @@ export async function POST(req: Request) {
         createdAt: new Date().toISOString(),
       }));
 
+      await db.ensureResultsSchema();
       await db.bulkSaveResults(toSave);
 
       if (publishDirectly) {

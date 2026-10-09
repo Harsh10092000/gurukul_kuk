@@ -355,7 +355,7 @@ export async function initDatabase(): Promise<void> {
     await pool.query(
       'CREATE TABLE IF NOT EXISTS results (' +
       '  id VARCHAR(64) PRIMARY KEY,' +
-      '  application_id VARCHAR(64) UNIQUE NOT NULL,' +
+      '  application_id VARCHAR(64) NULL,' +
       '  application_number VARCHAR(64) NOT NULL,' +
       '  roll_number VARCHAR(64) UNIQUE NOT NULL,' +
       '  candidate_name VARCHAR(255) NOT NULL,' +
@@ -371,8 +371,7 @@ export async function initDatabase(): Promise<void> {
       '  counseling_venue TEXT,' +
       '  is_published BOOLEAN DEFAULT FALSE,' +
       '  remarks MEDIUMTEXT,' +
-      '  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,' +
-      '  FOREIGN KEY (application_id) REFERENCES applications(id) ON DELETE CASCADE' +
+      '  created_at DATETIME DEFAULT CURRENT_TIMESTAMP' +
       ');'
     );
 
@@ -503,6 +502,30 @@ export async function initDatabase(): Promise<void> {
         for (const [roll, d] of Object.entries(knownDobs)) {
           await pool.query('UPDATE results SET dob = ? WHERE roll_number = ? AND (dob IS NULL OR dob = "")', [d, roll]);
         }
+
+        // Drop foreign key constraints on results table (e.g. fk_results_app) to allow external/offline candidate results
+        try {
+          await pool.query("ALTER TABLE results DROP FOREIGN KEY fk_results_app");
+        } catch { }
+
+        try {
+          const [fkRows]: any = await pool.query(`
+            SELECT CONSTRAINT_NAME 
+            FROM information_schema.TABLE_CONSTRAINTS 
+            WHERE TABLE_SCHEMA = DATABASE() 
+              AND TABLE_NAME = 'results' 
+              AND CONSTRAINT_TYPE = 'FOREIGN KEY'
+          `);
+          for (const fk of (fkRows || [])) {
+            try {
+              await pool.query(`ALTER TABLE results DROP FOREIGN KEY \`${fk.CONSTRAINT_NAME}\``);
+            } catch { }
+          }
+        } catch { }
+
+        try {
+          await pool.query("ALTER TABLE results MODIFY COLUMN application_id VARCHAR(64) NULL");
+        } catch { }
       } catch { }
 
       await pool.query(`
@@ -2343,10 +2366,36 @@ export const db = {
     };
   },
 
+  async ensureResultsSchema(): Promise<void> {
+    if (useFallbackStorage || !pool) return;
+    try {
+      await pool.query("ALTER TABLE results DROP FOREIGN KEY fk_results_app");
+    } catch { }
+
+    try {
+      const [fkRows]: any = await pool.query(`
+        SELECT CONSTRAINT_NAME 
+        FROM information_schema.TABLE_CONSTRAINTS 
+        WHERE TABLE_SCHEMA = DATABASE() 
+          AND TABLE_NAME = 'results' 
+          AND CONSTRAINT_TYPE = 'FOREIGN KEY'
+      `);
+      for (const fk of (fkRows || [])) {
+        try {
+          await pool.query(`ALTER TABLE results DROP FOREIGN KEY \`${fk.CONSTRAINT_NAME}\``);
+        } catch { }
+      }
+    } catch { }
+
+    try {
+      await pool.query("ALTER TABLE results MODIFY COLUMN application_id VARCHAR(64) NULL");
+    } catch { }
+  },
+
   async publishResult(result: ExamResult): Promise<ExamResult> {
     if (useFallbackStorage || !pool) {
       const store = initFallbackFile();
-      const idx = store.results.findIndex((r) => r.applicationId === result.applicationId);
+      const idx = store.results.findIndex((r) => r.applicationId === result.applicationId || r.rollNumber === result.rollNumber);
       if (idx >= 0) {
         store.results[idx] = result;
       } else {
@@ -2356,8 +2405,7 @@ export const db = {
       return result;
     }
 
-    await pool.query(
-      `INSERT INTO results (
+    const insertSql = `INSERT INTO results (
         id, application_id, application_number, roll_number, candidate_name, dob, class_applying, 
         subjects, total_marks, max_total_marks, percentage, \`rank\`, qualifying_status, 
         counseling_date, counseling_venue, is_published, remarks
@@ -2369,27 +2417,50 @@ export const db = {
         percentage = VALUES(percentage), 
         \`rank\` = VALUES(\`rank\`), 
         is_published = VALUES(is_published),
-        remarks = VALUES(remarks)`,
-      [
-        result.id,
-        result.applicationId,
-        result.applicationNumber,
-        result.rollNumber,
-        result.candidateName,
-        result.dob || null,
-        result.classApplying,
-        JSON.stringify(result.subjects || []),
-        result.totalMarks || 0,
-        result.maxTotalMarks || 100,
-        result.percentage || 0,
-        result.rank || 1,
-        result.qualifyingStatus || 'Qualified',
-        result.counselingDate || null,
-        result.counselingVenue || null,
-        result.isPublished ? 1 : 0,
-        result.remarks || null,
-      ]
-    );
+        remarks = VALUES(remarks)`;
+
+    const params = [
+      result.id,
+      result.applicationId || null,
+      result.applicationNumber,
+      result.rollNumber,
+      result.candidateName,
+      result.dob || null,
+      result.classApplying,
+      JSON.stringify(result.subjects || []),
+      result.totalMarks || 0,
+      result.maxTotalMarks || 100,
+      result.percentage || 0,
+      result.rank || 1,
+      result.qualifyingStatus || 'Qualified',
+      result.counselingDate || null,
+      result.counselingVenue || null,
+      result.isPublished ? 1 : 0,
+      result.remarks || null,
+    ];
+
+    try {
+      await pool.query(insertSql, params);
+    } catch (err: any) {
+      if (err && (err.code === 'ER_NO_REFERENCED_ROW_2' || String(err.message).includes('foreign key constraint fails'))) {
+        console.warn('Foreign key constraint failed on results table. Dropping foreign key constraint and retrying...');
+        await this.ensureResultsSchema();
+
+        try {
+          await pool.query(insertSql, params);
+          return result;
+        } catch (retryErr: any) {
+          if (retryErr && String(retryErr.message).includes('foreign key constraint fails')) {
+            const fallbackParams = [...params];
+            fallbackParams[1] = null; // application_id = null
+            await pool.query(insertSql, fallbackParams);
+            return result;
+          }
+          throw retryErr;
+        }
+      }
+      throw err;
+    }
 
     return result;
   },
@@ -2479,6 +2550,7 @@ export const db = {
   },
 
   async bulkSaveResults(results: ExamResult[]): Promise<{ count: number }> {
+    await this.ensureResultsSchema();
     for (const r of results) {
       await this.publishResult(r);
     }
