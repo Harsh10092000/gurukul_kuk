@@ -1183,7 +1183,6 @@ export default function ApplyPage() {
                         <span>Registration</span>
                       </h3>
                       <ul className="list-disc pl-7 space-y-1.5 text-slate-700">
-                        <li>Registration starts on <strong>5 October 2026</strong>.</li>
                         <li>Registration fee: <strong>₹800</strong>.</li>
                         <li>Last date for registration: <strong>12 February 2027</strong>.</li>
                         <li>A latest coloured photograph of the student is mandatory.</li>
@@ -1303,7 +1302,6 @@ export default function ApplyPage() {
                         <span>पंजीकरण</span>
                       </h3>
                       <ul className="list-disc pl-7 space-y-1.5 text-slate-700">
-                        <li>पंजीकरण <strong>5 अक्तूबर 2026</strong> से प्रारम्भ होगा।</li>
                         <li>पंजीकरण शुल्क <strong>₹800</strong> है।</li>
                         <li>पंजीकरण की अंतिम तिथि <strong>12 फरवरी 2027</strong> है।</li>
                         <li>विद्यार्थी का नवीनतम रंगीन फोटो अपलोड करना अनिवार्य है।</li>
