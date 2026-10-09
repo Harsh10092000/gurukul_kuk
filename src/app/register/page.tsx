@@ -4,11 +4,11 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
-import { 
-  AlertCircle, 
-  Eye, 
-  EyeOff, 
-  RotateCcw 
+import {
+  AlertCircle,
+  Eye,
+  EyeOff,
+  RotateCcw
 } from 'lucide-react';
 
 export default function RegisterPage() {
@@ -42,7 +42,7 @@ export default function RegisterPage() {
           window.location.replace(data.user.role === 'admin' ? '/admin/dashboard' : '/dashboard');
         }
       })
-      .catch(() => {});
+      .catch(() => { });
   }, []);
 
   // Check schedule on load
@@ -56,7 +56,7 @@ export default function RegisterPage() {
           setScheduleStatus(data);
         }
       })
-      .catch(() => {});
+      .catch(() => { });
   }, []);
 
   // Timer countdown for OTP
@@ -206,7 +206,7 @@ export default function RegisterPage() {
           })
         );
         localStorage.removeItem('gurukul_application_draft');
-      } catch (e) {}
+      } catch (e) { }
 
       router.push('/apply');
     } catch {
@@ -233,6 +233,7 @@ export default function RegisterPage() {
               <strong className="text-slate-800 text-sm font-semibold">{email}</strong>
             </p>
           </div>
+
 
           {error && (
             <div className="p-3 rounded-lg bg-rose-50 border border-rose-200 flex items-center gap-2 text-xs text-rose-700">

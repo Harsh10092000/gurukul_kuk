@@ -1045,6 +1045,7 @@ export const db = {
 
         return {
           ...a,
+          stream: a.stream || a.academicInfo?.stream || undefined,
           registrationNumber: a.registrationNumber || a.applicationNumber,
           applicationNumber: a.applicationNumber || a.registrationNumber,
           studyLocationPref: a.studyLocationPref || a.examCentrePref,
@@ -1093,6 +1094,8 @@ export const db = {
             }
           : { firstPreference: defaultFirstPref, secondPreference: defaultSecondPref };
 
+        const parsedAcademic = safeJsonParse(r.academic_info, {});
+
         return {
           id: r.id,
           registrationNumber: r.registration_number || r.application_number,
@@ -1100,10 +1103,11 @@ export const db = {
           rollNumber: r.roll_number || undefined,
           userId: r.user_id,
           classApplying: r.class_applying || 'Class 6',
+          stream: (r as any).stream || parsedAcademic.stream || undefined,
           personalInfo: parsedPersonal,
           parentInfo: parsedParent,
           addressInfo: safeJsonParse(r.address_info, {}),
-          academicInfo: safeJsonParse(r.academic_info, {}),
+          academicInfo: parsedAcademic,
           examCentrePref: centrePref,
           studyLocationPref: centrePref,
           studyLocation: centrePref,
@@ -1140,6 +1144,7 @@ export const db = {
             rollNumber: r.roll_number || undefined,
             userId: r.user_id,
             classApplying: r.class_applying || 'Class 6',
+            stream: (r as any).stream || safeJsonParse(r.academic_info, {}).stream || undefined,
             personalInfo: parsedPersonal,
             parentInfo: safeJsonParse(r.parent_info, {}),
             addressInfo: safeJsonParse(r.address_info, {}),
@@ -1206,6 +1211,7 @@ export const db = {
       rollNumber: r.roll_number || undefined,
       userId: r.user_id,
       classApplying: r.class_applying || 'Class 6',
+      stream: (r as any).stream || safeJsonParse(r.academic_info, {}).stream || undefined,
       personalInfo: parsedPersonal,
       parentInfo: safeJsonParse(r.parent_info, {}),
       addressInfo: safeJsonParse(r.address_info, {}),

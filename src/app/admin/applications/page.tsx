@@ -26,6 +26,7 @@ export default function AdminApplicationsPage() {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedClass, setSelectedClass] = useState('All');
+  const [selectedStream, setSelectedStream] = useState('All');
   const [selectedGender, setSelectedGender] = useState('All');
   const [selectedStatus, setSelectedStatus] = useState('All');
   const [appToDelete, setAppToDelete] = useState<Application | null>(null);
@@ -159,6 +160,18 @@ export default function AdminApplicationsPage() {
       (app.personalInfo?.candidateEmail || '').toLowerCase().includes(q);
 
     const matchesClass = selectedClass === 'All' || app.classApplying === selectedClass;
+
+    const matchesStream = (() => {
+      if (selectedClass !== 'Class 11' || selectedStream === 'All') return true;
+      const s = (app.stream || app.academicInfo?.stream || '').toLowerCase().trim();
+      const target = selectedStream.toLowerCase().trim();
+      if (target.includes('non')) return s.includes('non') || s.includes('pcm');
+      if (target.includes('comm')) return s.includes('comm');
+      if (target.includes('med') && !target.includes('non')) return s.includes('med') && !s.includes('non');
+      if (target.includes('human') || target.includes('art')) return s.includes('human') || s.includes('art');
+      return s === target;
+    })();
+
     const matchesStatus =
       selectedStatus === 'All'
         ? true
@@ -173,7 +186,7 @@ export default function AdminApplicationsPage() {
         ? isFemale
         : !isFemale;
 
-    return matchesSearch && matchesClass && matchesGender && matchesStatus;
+    return matchesSearch && matchesClass && matchesStream && matchesGender && matchesStatus;
   });
 
   const totalPages = Math.max(1, Math.ceil(filteredApps.length / pageSize));
@@ -364,7 +377,7 @@ export default function AdminApplicationsPage() {
       </div>
 
       {/* Filter & Search Toolbar */}
-      <div className="portal-card p-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+      <div className="portal-card p-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
         <div className="relative">
           <input
             type="text"
@@ -382,7 +395,11 @@ export default function AdminApplicationsPage() {
           <select
             value={selectedClass}
             onChange={(e) => {
-              setSelectedClass(e.target.value);
+              const val = e.target.value;
+              setSelectedClass(val);
+              if (val !== 'Class 11') {
+                setSelectedStream('All');
+              }
               setCurrentPage(1);
             }}
             className="form-input-field font-medium"
@@ -399,9 +416,36 @@ export default function AdminApplicationsPage() {
 
         <div>
           <select
+            value={selectedStream}
+            disabled={selectedClass !== 'Class 11'}
+            onChange={(e) => {
+              setSelectedStream(e.target.value);
+              setCurrentPage(1);
+            }}
+            className="form-input-field font-medium disabled:bg-slate-100 disabled:text-slate-400 disabled:cursor-not-allowed"
+            title={selectedClass !== 'Class 11' ? 'Stream filter is only applicable for Class 11th' : 'Filter by Class 11 Stream'}
+          >
+            <option value="All">
+              {selectedClass === 'Class 11' ? 'All Streams (Class 11)' : 'Stream (Class 11 Only)'}
+            </option>
+            <option value="Non Medical">Non Medical</option>
+            <option value="Medical">Medical</option>
+            <option value="Commerce">Commerce</option>
+            {selectedGender !== 'Male' && (
+              <option value="Humanities">Humanities (Girls Only)</option>
+            )}
+          </select>
+        </div>
+
+        <div>
+          <select
             value={selectedGender}
             onChange={(e) => {
-              setSelectedGender(e.target.value);
+              const val = e.target.value;
+              setSelectedGender(val);
+              if (val === 'Male' && selectedStream === 'Humanities') {
+                setSelectedStream('All');
+              }
               setCurrentPage(1);
             }}
             className="form-input-field font-medium"
@@ -494,7 +538,8 @@ export default function AdminApplicationsPage() {
                       </td>
                       <td className="py-3.5 px-4">
                         <span className="bg-slate-100 text-slate-800 border border-slate-200 px-2.5 py-0.5 rounded-md text-[11px] font-semibold">
-                          {app.classApplying?.startsWith('Class') ? app.classApplying : `Class ${app.classApplying}`}{app.stream ? ` (${app.stream})` : ''}
+                          {app.classApplying?.startsWith('Class') ? app.classApplying : `Class ${app.classApplying}`}
+                          {(app.stream || app.academicInfo?.stream) ? ` (${app.stream || app.academicInfo?.stream})` : ''}
                         </span>
                       </td>
                       <td className="py-3.5 px-4">

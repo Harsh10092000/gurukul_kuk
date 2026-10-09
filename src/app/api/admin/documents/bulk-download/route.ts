@@ -82,6 +82,7 @@ export async function GET(request: Request) {
         if (targetStream.includes('non') && !(appStream.includes('non') || appStream.includes('pcm'))) return false;
         if (targetStream.includes('comm') && !appStream.includes('comm')) return false;
         if (targetStream.includes('med') && !targetStream.includes('non') && (!appStream.includes('med') || appStream.includes('non'))) return false;
+        if ((targetStream.includes('human') || targetStream.includes('art')) && !(appStream.includes('human') || appStream.includes('art'))) return false;
       }
 
       // Date range filter

@@ -21,7 +21,10 @@ export interface NotificationPayload {
 
 const SMTP_USER = (process.env.SMTP_USER || process.env.CMAIL || 'anshu.calinfo@gmail.com').trim();
 const SMTP_PASS = (process.env.SMTP_PASS || process.env.CPASS || '').replace(/\s+/g, '');
-const FROM_EMAIL = (process.env.FROM_EMAIL || `"THE GURUKUL NILOKHERI" <${SMTP_USER}>`).trim();
+const SMTP_HOST = (process.env.SMTP_HOST || 'smtp.gmail.com').trim();
+const SMTP_PORT = parseInt(process.env.SMTP_PORT || '465', 10);
+const cleanFromEmail = (process.env.FROM_EMAIL || `"THE GURUKUL NILOKHERI" <${SMTP_USER}>`).trim().replace(/^"|"$/g, '');
+const FROM_EMAIL = cleanFromEmail.includes('<') ? cleanFromEmail : `"THE GURUKUL NILOKHERI" <${SMTP_USER}>`;
 
 export const ADMIN_NOTIFICATION_EMAIL = process.env.ADMIN_ALERT_EMAIL || 'anshu.calinfo@gmail.com';
 export const SITE_URL = (process.env.NEXT_PUBLIC_APP_URL || process.env.NEXT_PUBLIC_SITE_URL || process.env.APP_URL || 'https://thegurukuladmission.com').trim().replace(/\/$/, '');
@@ -34,10 +37,15 @@ function cleanVal(v: any, fallback = 'N/A'): string {
 }
 
 const transporter = nodemailer.createTransport({
-  service: 'gmail',
+  host: SMTP_HOST,
+  port: SMTP_PORT,
+  secure: SMTP_PORT === 465,
   auth: {
     user: SMTP_USER,
     pass: SMTP_PASS,
+  },
+  tls: {
+    rejectUnauthorized: false,
   },
 });
 
@@ -56,8 +64,16 @@ export async function sendNotification(payload: NotificationPayload) {
 
   switch (type) {
     case 'REGISTRATION_OTP':
-      subject = `The Gurukul Nilokheri - Your Registration OTP: ${data.otp}`;
-      message = `Dear ${name || 'Candidate'}, your one-time verification code (OTP) for The Gurukul Entrance Registration is ${data.otp}. Valid for 10 minutes. Do not share with anyone.`;
+      subject = 'The Gurukul Nilokheri - Email Verification Code';
+      message = `The Gurukul Nilokheri - Entrance Examination (Session 2027-28)\n\n` +
+        `Dear ${name || 'Candidate'},\n\n` +
+        `Your one-time verification code (OTP) for online admission registration is: ${data.otp}\n\n` +
+        `This code is valid for 10 minutes. Please enter this code on the registration page to proceed.\n` +
+        `For your security, please do not disclose this code to anyone.\n\n` +
+        `If you did not initiate this request, please disregard this email or contact the Admission Helpdesk at +91 7027849858 / 59.\n\n` +
+        `The Gurukul Nilokheri (Haryana)\n` +
+        `CBSE Affiliated Institutional Network\n` +
+        `Website: ${SITE_URL}`;
       htmlContent = `
         <!DOCTYPE html>
         <html>
@@ -629,10 +645,17 @@ export async function sendNotification(payload: NotificationPayload) {
     try {
       const info = await transporter.sendMail({
         from: FROM_EMAIL,
+        replyTo: SMTP_USER,
         to,
         subject,
         text: message,
         html: htmlContent,
+        headers: {
+          'X-Priority': '1',
+          'X-MSMail-Priority': 'High',
+          'Importance': 'High',
+          'X-Mailer': 'The Gurukul Nilokheri Notification Service',
+        },
       });
 
       console.log(`[Nodemailer] Successfully sent email to ${to}. MessageId: ${info.messageId}`);

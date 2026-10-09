@@ -34,7 +34,8 @@ const FATHER_OCCUPATIONS = [
   'Business / Self-Employed',
   'Agriculture / Farming',
   'Defense / Armed Forces',
-  'Professional (Doctor, Engineer, CA, Advocate)',
+  'Advocate',
+  'Professional (Doctor, Engineer, CA)',
   'Teaching / Academic',
   'Others',
 ];
@@ -45,7 +46,8 @@ const MOTHER_OCCUPATIONS = [
   'Government Service',
   'Teaching / Academic',
   'Business / Self-Employed',
-  'Professional (Doctor, Engineer, CA, Advocate)',
+  'Advocate',
+  'Professional (Doctor, Engineer, CA)',
   'Agriculture / Farming',
   'Others',
 ];
@@ -176,13 +178,19 @@ export default function ApplyPage() {
           ? prev.firstPreference
           : effectiveBoys[0] || 'Aryakulam Nilokheri');
 
+      const remainingBoys = effectiveBoys.filter((l) => l !== nextFirst);
       const nextSecond = isFem
         ? ''
-        : (prev.secondPreference === nextFirst || prev.secondPreference === 'Gurukul Nilokheri'
-          ? (effectiveBoys.find((l) => l !== nextFirst) || '')
-          : prev.secondPreference);
+        : (remainingBoys.includes(prev.secondPreference)
+          ? prev.secondPreference
+          : (remainingBoys[0] || ''));
 
       const nextClass = isFem && prev.applyingClass === 'Class 5' ? 'Class 6' : prev.applyingClass;
+
+      const allowedStreams = getStreamsForCampus(nextFirst, selectedGender);
+      const nextStream = prev.applyingClass.includes('11')
+        ? (prev.stream && allowedStreams.includes(prev.stream as any) ? prev.stream : allowedStreams[0] || 'Non Medical')
+        : prev.stream;
 
       return {
         ...prev,
@@ -190,6 +198,7 @@ export default function ApplyPage() {
         firstPreference: nextFirst,
         secondPreference: nextSecond,
         applyingClass: nextClass,
+        stream: nextStream,
       };
     });
   };
@@ -211,18 +220,20 @@ export default function ApplyPage() {
         activeLocations.includes(l)
       );
       const effectiveBoys = validBoys.length > 0 ? validBoys : ['Aryakulam Nilokheri', 'Gurukul Jyotisar'];
-      if (!effectiveBoys.includes(formData.firstPreference) || formData.firstPreference === 'Gurukul Nilokheri') {
-        setFormData((prev) => {
-          const first = effectiveBoys[0] || 'Aryakulam Nilokheri';
-          const second = prev.secondPreference && prev.secondPreference !== first && effectiveBoys.includes(prev.secondPreference)
-            ? prev.secondPreference
-            : '';
-          return {
-            ...prev,
-            firstPreference: first,
-            secondPreference: second,
-          };
-        });
+      const currentFirst = effectiveBoys.includes(formData.firstPreference) && formData.firstPreference !== 'Gurukul Nilokheri'
+        ? formData.firstPreference
+        : (effectiveBoys[0] || 'Aryakulam Nilokheri');
+      const remainingBoys = effectiveBoys.filter((l) => l !== currentFirst);
+      const currentSecond = remainingBoys.includes(formData.secondPreference)
+        ? formData.secondPreference
+        : (remainingBoys[0] || '');
+
+      if (formData.firstPreference !== currentFirst || formData.secondPreference !== currentSecond) {
+        setFormData((prev) => ({
+          ...prev,
+          firstPreference: currentFirst,
+          secondPreference: currentSecond,
+        }));
       }
     }
   }, [formData.gender, activeLocations]);
@@ -234,12 +245,12 @@ export default function ApplyPage() {
         setFormData((prev) => ({ ...prev, stream: '' }));
       }
     } else {
-      const allowedStreams = getStreamsForCampus(formData.firstPreference);
+      const allowedStreams = getStreamsForCampus(formData.firstPreference, formData.gender);
       if (!formData.stream || !allowedStreams.includes(formData.stream as any)) {
         setFormData((prev) => ({ ...prev, stream: allowedStreams[0] || 'Non Medical' }));
       }
     }
-  }, [formData.applyingClass, formData.firstPreference]);
+  }, [formData.applyingClass, formData.firstPreference, formData.gender]);
 
   // Restore contact info and pre-fill on mount
   useEffect(() => {
@@ -454,11 +465,19 @@ export default function ApplyPage() {
     } else if (name === 'gender') {
       handleGenderSelect(normalizeGender(value));
     } else if (name === 'firstPreference') {
-      const allowedStreams = getStreamsForCampus(value);
+      const isFem = formData.gender === 'Female' || (formData.gender as string)?.toLowerCase() === 'female';
+      const allowedStreams = getStreamsForCampus(value, formData.gender);
+      const remainingBoys = boysActiveLocations.filter((l) => l !== value);
+      const nextSecond = isFem
+        ? ''
+        : (remainingBoys.includes(formData.secondPreference)
+          ? formData.secondPreference
+          : (remainingBoys[0] || ''));
+
       setFormData((prev) => ({
         ...prev,
         firstPreference: value,
-        secondPreference: prev.secondPreference === value ? '' : prev.secondPreference,
+        secondPreference: nextSecond,
         stream: prev.applyingClass.includes('11')
           ? (prev.stream && allowedStreams.includes(prev.stream as any) ? prev.stream : allowedStreams[0] || 'Non Medical')
           : prev.stream,
@@ -1537,15 +1556,16 @@ export default function ApplyPage() {
                     {boysActiveLocations.length > 1 && (
                       <div>
                         <label className="form-label">
-                          2nd Preference Study Location <span className="text-slate-400 font-normal">(Optional)</span>
+                          2nd Preference Study Location <span className="text-rose-500">*</span>
                         </label>
                         <select
                           name="secondPreference"
+                          required
                           value={formData.secondPreference}
                           onChange={handleChange}
-                          className="form-input-field"
+                          className="form-input-field font-semibold"
                         >
-                          <option value="">None / No Second Choice</option>
+                          <option value="">Select 2nd Preference</option>
                           {boysActiveLocations
                             .filter((l) => l !== formData.firstPreference)
                             .map((loc) => (
@@ -1680,11 +1700,11 @@ export default function ApplyPage() {
                   <select
                     name="stream"
                     required
-                    value={formData.stream || getStreamsForCampus(formData.firstPreference)[0] || 'Non Medical'}
+                    value={formData.stream || getStreamsForCampus(formData.firstPreference, formData.gender)[0] || 'Non Medical'}
                     onChange={handleChange}
                     className="form-input-field font-semibold"
                   >
-                    {getStreamsForCampus(formData.firstPreference).map((st) => (
+                    {getStreamsForCampus(formData.firstPreference, formData.gender).map((st) => (
                       <option key={st} value={st}>{st}</option>
                     ))}
                   </select>

@@ -57,6 +57,20 @@ export async function GET(request: Request) {
         filtered = filtered.filter((a) => a.classApplying === classParam);
       }
 
+      // Stream filtering on server
+      const streamParam = searchParams.get('stream');
+      if (streamParam && streamParam !== 'All' && streamParam !== 'all') {
+        const targetStr = streamParam.toLowerCase().trim();
+        filtered = filtered.filter((a) => {
+          const s = (a.stream || a.academicInfo?.stream || '').toLowerCase().trim();
+          if (targetStr.includes('non')) return s.includes('non') || s.includes('pcm');
+          if (targetStr.includes('comm')) return s.includes('comm');
+          if (targetStr.includes('med') && !targetStr.includes('non')) return s.includes('med') && !s.includes('non');
+          if (targetStr.includes('human') || targetStr.includes('art')) return s.includes('human') || s.includes('art');
+          return s === targetStr;
+        });
+      }
+
       // Search query filtering on server
       if (queryParam) {
         const q = queryParam.toLowerCase().trim();

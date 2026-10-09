@@ -271,6 +271,7 @@ export default function AdminReportsPage() {
                   <option value="Non-Medical">Non-Medical (PCM)</option>
                   <option value="Medical">Medical (PCB)</option>
                   <option value="Commerce">Commerce</option>
+                  <option value="Humanities">Humanities (Girls Only)</option>
                 </select>
               </div>
             </div>

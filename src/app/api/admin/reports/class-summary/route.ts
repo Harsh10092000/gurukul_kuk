@@ -95,6 +95,17 @@ export async function GET(request: Request) {
           return str.includes('med') && !str.includes('non');
         },
       },
+      {
+        sNo: 9,
+        class: 'Class 11',
+        stream: 'Humanities (Girls Only)',
+        match: (a: any) => {
+          const cls = (a.classApplying || '').toLowerCase();
+          if (!cls.includes('11')) return false;
+          const str = (a.stream || a.academicInfo?.stream || '').toLowerCase();
+          return str.includes('human') || str.includes('art');
+        },
+      },
     ];
 
     let totalRegistered = 0;

@@ -792,10 +792,6 @@ export default function ApplicantDashboard() {
                 <span className="text-slate-500">Receipt Date</span>
                 <span className="text-slate-800 font-medium">{new Date(application.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}</span>
               </div>
-              <div className="flex justify-between items-center py-1 border-b border-slate-100">
-                <span className="text-slate-500">Payment Gateway</span>
-                <span className="text-slate-800 font-medium">Online Verified (HDFC SmartGateway)</span>
-              </div>
               <div className="flex justify-between items-center py-1">
                 <span className="text-slate-500">Academic Session</span>
                 <span className="text-slate-800 font-semibold">2027-28</span>

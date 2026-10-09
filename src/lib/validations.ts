@@ -249,19 +249,24 @@ export function validateDob(dob: string | undefined | null): ValidationResult {
 
 export const CAMPUS_STREAMS_MAP: Record<string, string[]> = {
   'Gurukul Nilokheri': ['Non Medical', 'Medical', 'Commerce', 'Humanities'],
-  'Gurukul Jyotisar': ['Non Medical', 'Medical', 'Commerce', 'Humanities'],
-  'Aryakulam Nilokheri': ['Non Medical', 'Medical', 'Commerce', 'Humanities'],
+  'Gurukul Jyotisar': ['Non Medical', 'Medical', 'Commerce'],
+  'Aryakulam Nilokheri': ['Non Medical', 'Medical', 'Commerce'],
 };
 
-export function getStreamsForCampus(campus?: string | null): string[] {
-  return ['Non Medical', 'Medical', 'Commerce', 'Humanities'];
+export function getStreamsForCampus(campus?: string | null, gender?: string | null): string[] {
+  const isFemale = (gender || '').trim().toLowerCase() === 'female';
+  if (isFemale || campus === 'Gurukul Nilokheri') {
+    return ['Non Medical', 'Medical', 'Commerce', 'Humanities'];
+  }
+  return ['Non Medical', 'Medical', 'Commerce'];
 }
 
 /**
  * Validate Class and Stream
  * - Allowed classes: 6, 7, 8, 9, 11 (or 'Class 6', 'Class 7', 'Class 8', 'Class 9', 'Class 11')
  * - Stream:
- *   - For Class 11: Non Medical, Medical, Commerce, Humanities
+ *   - For Class 11 Girls: Non Medical, Medical, Commerce, Humanities
+ *   - For Class 11 Boys: Non Medical, Medical, Commerce (Humanities is strictly for girls only)
  *   - For Class 6, 7, 8, 9: Stream must NOT be selected
  */
 export function validateClassAndStream(
@@ -315,11 +320,21 @@ export function validateClassAndStream(
       cleanStream = 'Humanities';
     }
 
-    const allAllowed = ['Non Medical', 'Medical', 'Commerce', 'Humanities'];
-    if (!allAllowed.includes(cleanStream)) {
+    if (!isFemale && cleanStream === 'Humanities') {
       return {
         isValid: false,
-        error: `Invalid stream '${cleanStream}'. Allowed streams: Non Medical, Medical, Commerce, Humanities.`,
+        error: 'Humanities stream is exclusively available for female candidates at The Gurukul Nilokheri. Boys can choose Non Medical, Medical, or Commerce.',
+      };
+    }
+
+    const allowedStreams = isFemale
+      ? ['Non Medical', 'Medical', 'Commerce', 'Humanities']
+      : ['Non Medical', 'Medical', 'Commerce'];
+
+    if (!allowedStreams.includes(cleanStream)) {
+      return {
+        isValid: false,
+        error: `Invalid stream '${cleanStream}'. Allowed streams: ${allowedStreams.join(', ')}.`,
       };
     }
   } else {
@@ -405,7 +420,26 @@ export function validateStudyLocation(
     };
   }
 
-  if (second && second.length > 0 && second !== 'None') {
+  if (effectiveBoys.length > 1) {
+    if (!second || second.trim() === '' || second === 'None') {
+      return {
+        isValid: false,
+        error: 'Second Preferred Study Location is required. Boys candidates must select their 2nd preference institute.',
+      };
+    }
+    if (!effectiveBoys.includes(second)) {
+      return {
+        isValid: false,
+        error: `Invalid Second Preferred Study Location. Must be one of: ${effectiveBoys.join(', ')}.`,
+      };
+    }
+    if (first === second) {
+      return {
+        isValid: false,
+        error: 'Second Preferred Study Location cannot be the same as First Preferred Study Location.',
+      };
+    }
+  } else if (second && second.length > 0 && second !== 'None') {
     if (!effectiveBoys.includes(second)) {
       return {
         isValid: false,

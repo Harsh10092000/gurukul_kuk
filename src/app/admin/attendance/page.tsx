@@ -261,7 +261,10 @@ export default function AdminAttendancePage() {
                 </button>
                 <button
                   type="button"
-                  onClick={() => setSelectedWing('boys')}
+                  onClick={() => {
+                    setSelectedWing('boys');
+                    if (selectedClass === 'Class 11|Humanities') setSelectedClass('');
+                  }}
                   className={`px-3 py-1.5 rounded-md text-xs font-semibold transition ${selectedWing === 'boys'
                       ? 'bg-portal-navy text-white shadow-xs'
                       : 'text-slate-600 hover:text-slate-900'
@@ -271,7 +274,10 @@ export default function AdminAttendancePage() {
                 </button>
                 <button
                   type="button"
-                  onClick={() => setSelectedWing('girls')}
+                  onClick={() => {
+                    setSelectedWing('girls');
+                    if (selectedClass === 'Class 5') setSelectedClass('');
+                  }}
                   className={`px-3 py-1.5 rounded-md text-xs font-semibold transition ${selectedWing === 'girls'
                       ? 'bg-portal-navy text-white shadow-xs'
                       : 'text-slate-600 hover:text-slate-900'
@@ -292,7 +298,7 @@ export default function AdminAttendancePage() {
                   className="text-xs border border-slate-300 rounded-lg px-3 py-1.5 outline-none font-medium text-slate-800 bg-white shadow-xs focus:border-portal-navy"
                 >
                   <option value="">All Classes</option>
-                  <option value="Class 5">Class 5th (Boys)</option>
+                  {selectedWing !== 'girls' && <option value="Class 5">Class 5th (Boys)</option>}
                   <option value="Class 6">Class 6th</option>
                   <option value="Class 7">Class 7th</option>
                   <option value="Class 8">Class 8th</option>
@@ -300,7 +306,9 @@ export default function AdminAttendancePage() {
                   <option value="Class 11|Non Medical">Class 11th — Non Medical</option>
                   <option value="Class 11|Medical">Class 11th — Medical</option>
                   <option value="Class 11|Commerce">Class 11th — Commerce</option>
-                  <option value="Class 11|Humanities">Class 11th — Humanities</option>
+                  {selectedWing !== 'boys' && (
+                    <option value="Class 11|Humanities">Class 11th — Humanities (Girls Only)</option>
+                  )}
                 </select>
               </div>
 
