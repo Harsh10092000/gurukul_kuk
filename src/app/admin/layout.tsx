@@ -57,7 +57,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         if (!data.user || data.user.role !== 'admin') {
           setIsAuthorized(false);
           setAuthChecking(false);
-          router.replace('/admin/login');
+          const redirectTarget = pathname && pathname !== '/admin' ? `?redirect=${encodeURIComponent(pathname)}` : '';
+          router.replace(`/admin/login${redirectTarget}`);
         } else {
           setAdminUser(data.user);
           setIsAuthorized(true);
@@ -68,7 +69,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         if (!isMounted) return;
         setIsAuthorized(false);
         setAuthChecking(false);
-        router.replace('/admin/login');
+        const redirectTarget = pathname && pathname !== '/admin' ? `?redirect=${encodeURIComponent(pathname)}` : '';
+        router.replace(`/admin/login${redirectTarget}`);
       });
 
     return () => {

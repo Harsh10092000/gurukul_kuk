@@ -8,7 +8,7 @@ export interface EdgeTokenPayload {
   iat?: number;
 }
 
-const JWT_SECRET = process.env.JWT_SECRET || 'gurukul_kurukshetra_super_secret_jwt_key_2026';
+const JWT_SECRET = process.env.JWT_SECRET || 'gurukul_kurukshetra_super_secret_jwt_key_2026_entrance_exam';
 export const TOKEN_NAME = 'gurukul_auth_token';
 
 function base64UrlToUint8Array(base64Url: string): Uint8Array {

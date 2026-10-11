@@ -3,7 +3,7 @@ import bcrypt from 'bcryptjs';
 import { cookies } from 'next/headers';
 import { User, UserRole } from './types';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'gurukul_kurukshetra_super_secret_jwt_key_2026';
+const JWT_SECRET = process.env.JWT_SECRET || 'gurukul_kurukshetra_super_secret_jwt_key_2026_entrance_exam';
 const TOKEN_NAME = 'gurukul_auth_token';
 
 export interface TokenPayload {
