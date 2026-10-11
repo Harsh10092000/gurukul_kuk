@@ -25,36 +25,74 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const router = useRouter();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [adminUser, setAdminUser] = useState<any>(null);
+  const [isAuthorized, setIsAuthorized] = useState(false);
+  const [authChecking, setAuthChecking] = useState(pathname !== '/admin/login');
 
   const [unreadNotifCount, setUnreadNotifCount] = useState(0);
   const [unreadEnquiryCount, setUnreadEnquiryCount] = useState(0);
 
+  // Strict client-side authentication check
   useEffect(() => {
-    if (pathname === '/admin/login') return;
+    if (pathname === '/admin/login') {
+      setIsAuthorized(true);
+      setAuthChecking(false);
+      return;
+    }
 
-    fetch('/api/auth/me')
-      .then((res) => res.json())
+    // If already authorized in this session, keep authorized state smoothly across page transitions
+    if (isAuthorized && adminUser) {
+      return;
+    }
+
+    let isMounted = true;
+    setAuthChecking(true);
+
+    fetch('/api/auth/me', { cache: 'no-store' })
+      .then((res) => {
+        if (!res.ok) throw new Error('Auth check failed');
+        return res.json();
+      })
       .then((data) => {
+        if (!isMounted) return;
         if (!data.user || data.user.role !== 'admin') {
-          router.push('/admin/login');
+          setIsAuthorized(false);
+          setAuthChecking(false);
+          router.replace('/admin/login');
         } else {
           setAdminUser(data.user);
+          setIsAuthorized(true);
+          setAuthChecking(false);
         }
       })
-      .catch(() => router.push('/admin/login'));
+      .catch(() => {
+        if (!isMounted) return;
+        setIsAuthorized(false);
+        setAuthChecking(false);
+        router.replace('/admin/login');
+      });
 
+    return () => {
+      isMounted = false;
+    };
+  }, [pathname, router, isAuthorized, adminUser]);
+
+  // Periodic counters fetch only for authenticated admin sessions
+  useEffect(() => {
+    if (!isAuthorized || pathname === '/admin/login') return;
+
+    let isMounted = true;
     const fetchCounters = () => {
-      fetch('/api/admin/notifications?limit=1')
+      fetch('/api/admin/notifications?limit=1', { cache: 'no-store' })
         .then((res) => res.json())
         .then((data) => {
-          if (data.unreadCount !== undefined) setUnreadNotifCount(data.unreadCount);
+          if (isMounted && data.unreadCount !== undefined) setUnreadNotifCount(data.unreadCount);
         })
         .catch(() => {});
 
-      fetch('/api/admin/enquiries?status=new')
+      fetch('/api/admin/enquiries?status=new', { cache: 'no-store' })
         .then((res) => res.json())
         .then((data) => {
-          if (data.enquiries) setUnreadEnquiryCount(data.enquiries.length);
+          if (isMounted && data.enquiries) setUnreadEnquiryCount(data.enquiries.length);
         })
         .catch(() => {});
     };
@@ -71,18 +109,34 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     window.addEventListener('gurukul:notif-count-update', handleNotifCountUpdate);
 
     return () => {
+      isMounted = false;
       clearInterval(interval);
       window.removeEventListener('gurukul:notif-count-update', handleNotifCountUpdate);
     };
-  }, [pathname, router]);
+  }, [isAuthorized, pathname]);
 
   const handleLogout = async () => {
+    setIsAuthorized(false);
+    setAdminUser(null);
     await fetch('/api/auth/logout', { method: 'POST' });
-    router.push('/admin/login');
+    router.replace('/admin/login');
   };
 
+  // Allow login page to render directly
   if (pathname === '/admin/login') {
     return <>{children}</>;
+  }
+
+  // Prevent ANY child page from mounting or rendering until authorization is verified
+  if (authChecking || !isAuthorized) {
+    return (
+      <div className="flex-1 min-h-[60vh] flex flex-col items-center justify-center p-6 font-sans">
+        <div className="text-center space-y-3">
+          <div className="w-8 h-8 border-3 border-portal-navy border-t-transparent rounded-full animate-spin mx-auto" />
+          <p className="text-xs font-semibold text-slate-500">Loading Administrative Portal...</p>
+        </div>
+      </div>
+    );
   }
 
   const navItems = [

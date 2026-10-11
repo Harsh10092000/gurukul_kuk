@@ -104,15 +104,8 @@ export default function AdmissionFormView({
             </div>
           </div>
 
-          {/* Right Patron Portrait */}
-          <div className="w-16 h-16 sm:w-20 sm:h-20 print:w-16 print:h-16 flex-shrink-0 flex items-center justify-center">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src="/gurukul-patron.png"
-              alt="The Gurukul Patron"
-              className="max-h-16 sm:max-h-20 print:max-h-16 max-w-full object-contain rounded-full shadow-xs"
-            />
-          </div>
+          {/* Right Header Space (Left Blank) */}
+          <div className="w-16 h-16 sm:w-20 sm:h-20 print:w-16 print:h-16 flex-shrink-0" />
         </div>
 
         {/* 2. Key Identification Strip */}
@@ -128,7 +121,7 @@ export default function AdmissionFormView({
           <div>
             <span className="text-slate-600 block text-[8px] uppercase font-bold">Class &amp; Stream:</span>
             <span className="font-black text-xs text-black">
-              Class {application.classApplying}{application.stream ? ` (${application.stream})` : ''}
+              {application.classApplying ? (application.classApplying.startsWith('Class') ? application.classApplying : `Class ${application.classApplying}`) : '—'}{application.stream ? ` (${application.stream})` : ''}
             </span>
           </div>
           <div>
@@ -401,10 +394,7 @@ export default function AdmissionFormView({
             </div>
 
             <div>
-              <div className="h-10 border-b border-black mx-auto max-w-[130px] flex items-center justify-center pb-0.5">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src="/principal-signature.png" alt="Principal Signature" className="max-h-9 w-auto object-contain" />
-              </div>
+              <div className="h-10 border-b border-black mx-auto max-w-[130px]"></div>
               <span className="font-black text-black block mt-1 uppercase text-[8px]">
                 Principal / Director
               </span>

@@ -1222,8 +1222,12 @@ export default function ApplyPage() {
                     <div className="pt-4 space-y-2.5">
                       <h3 className="text-xs sm:text-sm font-bold text-portal-navy uppercase tracking-wide flex items-center gap-2">
                         <span className="w-5 h-5 rounded-full bg-portal-navy text-white text-[11px] flex items-center justify-center font-bold">3</span>
-                        <span>Counselling Schedule</span>
+                        <span>Counselling Schedule (For Boys Only)</span>
                       </h3>
+                      <div className="p-2.5 bg-blue-50 border border-blue-200 rounded-lg text-blue-950 text-xs flex items-center gap-2">
+                        <span className="font-bold text-blue-900">Important Note:</span>
+                        <span>Counselling is conducted <strong>only for Boys</strong>. There is <strong>no counselling for Girls</strong>.</span>
+                      </div>
                       <div className="overflow-x-auto border border-slate-200 rounded-lg">
                         <table className="w-full text-left text-xs border-collapse">
                           <thead className="bg-slate-100 text-slate-800 font-bold border-b border-slate-200 text-[11px]">
@@ -1243,9 +1247,9 @@ export default function ApplyPage() {
                               <td className="p-2 border-r border-slate-200 font-medium">14 Feb 2027</td>
                               <td className="p-2 border-r border-slate-200">The Gurukul Nilokheri</td>
                               <td className="p-2 border-r border-slate-200 font-semibold text-rose-700">8:30 AM</td>
-                              <td className="p-2 border-r border-slate-200 font-medium">15, 16 &amp; 17 February 2027</td>
-                              <td className="p-2 border-r border-slate-200">The Gurukul Nilokheri</td>
-                              <td className="p-2 font-medium">9:00 AM to 1:00 PM</td>
+                              <td className="p-2 border-r border-slate-200 font-semibold text-slate-500 italic">No Counselling (For Boys Only)</td>
+                              <td className="p-2 border-r border-slate-200 text-slate-400">—</td>
+                              <td className="p-2 text-slate-400">—</td>
                             </tr>
                             <tr className="hover:bg-slate-50">
                               <td className="p-2 font-bold text-blue-900 border-r border-slate-200 bg-blue-50/50">Boys</td>
@@ -1265,10 +1269,10 @@ export default function ApplyPage() {
                     <div className="pt-4 space-y-1.5">
                       <h3 className="text-xs sm:text-sm font-bold text-portal-navy uppercase tracking-wide flex items-center gap-2">
                         <span className="w-5 h-5 rounded-full bg-portal-navy text-white text-[11px] flex items-center justify-center font-bold">4</span>
-                        <span>Counselling-Day Deposit</span>
+                        <span>Counselling-Day Deposit (Boys Only)</span>
                       </h3>
                       <div className="bg-amber-50 border border-amber-200 p-3 rounded-lg text-amber-950 font-medium">
-                        A non-refundable deposit of <strong>₹25,000</strong> is to be deposited on the day of counselling for all three institutions.
+                        A non-refundable deposit of <strong>₹25,000</strong> is to be deposited on the day of counselling for Boys candidates. <em>(Note: Not applicable for Girls, as there is no counselling for Girls.)</em>
                       </div>
                     </div>
 
@@ -1341,8 +1345,12 @@ export default function ApplyPage() {
                     <div className="pt-4 space-y-2.5">
                       <h3 className="text-xs sm:text-sm font-bold text-portal-navy uppercase tracking-wide flex items-center gap-2">
                         <span className="w-5 h-5 rounded-full bg-portal-navy text-white text-[11px] flex items-center justify-center font-bold">3</span>
-                        <span>परीक्षा एवं काउंसलिंग कार्यक्रम</span>
+                        <span>परीक्षा एवं काउंसलिंग कार्यक्रम (काउंसलिंग केवल लड़कों/छात्रों के लिए)</span>
                       </h3>
+                      <div className="p-2.5 bg-blue-50 border border-blue-200 rounded-lg text-blue-950 text-xs flex items-center gap-2">
+                        <span className="font-bold text-blue-900">महत्वपूर्ण सूचना:</span>
+                        <span>काउंसलिंग प्रक्रिया केवल <strong>छात्रों (लड़कों)</strong> के लिए है। छात्राओं (लड़कियों) के लिए <strong>कोई काउंसलिंग नहीं है</strong>।</span>
+                      </div>
                       <div className="overflow-x-auto border border-slate-200 rounded-lg">
                         <table className="w-full text-left text-xs border-collapse">
                           <thead className="bg-slate-100 text-slate-800 font-bold border-b border-slate-200 text-[11px]">
@@ -1362,9 +1370,9 @@ export default function ApplyPage() {
                               <td className="p-2 border-r border-slate-200 font-medium">14 फरवरी 2027</td>
                               <td className="p-2 border-r border-slate-200">The Gurukul Nilokheri</td>
                               <td className="p-2 border-r border-slate-200 font-semibold text-rose-700">प्रातः 8:30 बजे (रिपोर्ट 8:00 बजे)</td>
-                              <td className="p-2 border-r border-slate-200 font-medium">15, 16 एवं 17 फरवरी 2027</td>
-                              <td className="p-2 border-r border-slate-200">The Gurukul Nilokheri</td>
-                              <td className="p-2 font-medium">प्रातः 9:00 से 1:00 बजे</td>
+                              <td className="p-2 border-r border-slate-200 font-semibold text-slate-500 italic">कोई काउंसलिंग नहीं (केवल लड़कों के लिए)</td>
+                              <td className="p-2 border-r border-slate-200 text-slate-400">—</td>
+                              <td className="p-2 text-slate-400">—</td>
                             </tr>
                             <tr className="hover:bg-slate-50">
                               <td className="p-2 font-bold text-blue-900 border-r border-slate-200 bg-blue-50/50">छात्र</td>
@@ -1384,10 +1392,10 @@ export default function ApplyPage() {
                     <div className="pt-4 space-y-1.5">
                       <h3 className="text-xs sm:text-sm font-bold text-portal-navy uppercase tracking-wide flex items-center gap-2">
                         <span className="w-5 h-5 rounded-full bg-portal-navy text-white text-[11px] flex items-center justify-center font-bold">4</span>
-                        <span>काउंसलिंग जमा राशि</span>
+                        <span>काउंसलिंग जमा राशि (केवल छात्रों के लिए)</span>
                       </h3>
                       <div className="bg-amber-50 border border-amber-200 p-3 rounded-lg text-amber-950 font-medium">
-                        तीनों संस्थानों के लिए काउंसलिंग के दिन <strong>₹25,000</strong> की गैर-वापसी योग्य (non-refundable) राशि जमा करनी होगी।
+                        छात्रों के लिए काउंसलिंग के दिन <strong>₹25,000</strong> की गैर-वापसी योग्य (non-refundable) राशि जमा करनी होगी। <em>(नोट: छात्राओं के लिए कोई काउंसलिंग नहीं है, अतः यह छात्राओं पर लागू नहीं है।)</em>
                       </div>
                     </div>
 
@@ -1520,8 +1528,7 @@ export default function ApplyPage() {
                     <ul className="list-disc pl-4 space-y-0.5 text-slate-700">
                       <li><strong>Entrance Exam:</strong> Sunday, 14 February 2027 at 8:30 AM at <strong>The Gurukul Nilokheri</strong>.</li>
                       <li><strong>Reporting Time:</strong> Candidates must report at <strong>8:00 AM / 8:30 AM</strong>.</li>
-                      <li><strong>Counselling Schedule:</strong> 15, 16 &amp; 17 February 2027 (9:00 AM to 1:00 PM) at <strong>The Gurukul Nilokheri</strong>.</li>
-                      <li><strong>Counselling-Day Deposit:</strong> A non-refundable deposit of <strong>₹25,000</strong> is to be deposited on the day of counselling.</li>
+                      <li><strong>Counselling:</strong> No counselling for Girls (Counselling is conducted for Boys only).</li>
                       <li><strong>Must Bring:</strong> Admit Card, Aadhaar Card copy, and 2 passport-size photographs.</li>
                     </ul>
                   </div>
@@ -1582,8 +1589,8 @@ export default function ApplyPage() {
                     <ul className="list-disc pl-4 space-y-0.5 text-slate-700">
                       <li><strong>Entrance Exam:</strong> Sunday, 14 February 2027 at <strong>Aryakulam Nilokheri</strong>.</li>
                       <li><strong>Reporting Time:</strong> Candidates must report at <strong>9:30 AM</strong> at Aryakulam Nilokheri.</li>
-                      <li><strong>Counselling Schedule:</strong> 15, 16 &amp; 17 February 2027 (9:00 AM to 1:00 PM) at <strong>Aryakulam Nilokheri</strong>.</li>
-                      <li><strong>Counselling-Day Deposit:</strong> A non-refundable deposit of <strong>₹25,000</strong> is to be deposited on the day of counselling for all institutions.</li>
+                      <li><strong>Counselling Schedule (Boys Only):</strong> 15, 16 &amp; 17 February 2027 (9:00 AM to 1:00 PM) at <strong>Aryakulam Nilokheri</strong>.</li>
+                      <li><strong>Counselling-Day Deposit:</strong> A non-refundable deposit of <strong>₹25,000</strong> is to be deposited on the day of counselling for Boys.</li>
                       <li><strong>Must Bring:</strong> Admit Card, Aadhaar Card copy, and 2 passport-size photographs.</li>
                     </ul>
                   </div>

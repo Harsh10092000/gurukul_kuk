@@ -17,16 +17,19 @@ export default function Header() {
   const isAdminRoute = pathname.startsWith('/admin');
   const isAdminLogin = pathname === '/admin/login';
   const isCandidateDashboard = pathname.startsWith('/dashboard') || pathname.startsWith('/apply');
-  const isAdmin = currentUser?.role === 'admin' || isAdminRoute;
+  const isAdmin = currentUser?.role === 'admin';
 
   useEffect(() => {
     let isMounted = true;
-    fetch('/api/auth/me')
+    fetch('/api/auth/me', { cache: 'no-store' })
       .then((res) => res.json())
       .then((data) => {
         if (isMounted && data?.user) setCurrentUser(data.user);
+        else if (isMounted) setCurrentUser(null);
       })
-      .catch(() => {})
+      .catch(() => {
+        if (isMounted) setCurrentUser(null);
+      })
       .finally(() => {
         if (isMounted) setAuthLoading(false);
       });
@@ -55,9 +58,7 @@ export default function Header() {
     ? currentUser.role === 'admin'
       ? '/admin/dashboard'
       : '/dashboard'
-    : isAdminRoute
-      ? '/admin/dashboard'
-      : '/';
+    : '/';
 
   return (
     <header className="w-full bg-white border-b border-slate-200 sticky top-0 z-30 shadow-subtle no-print flex-shrink-0">
