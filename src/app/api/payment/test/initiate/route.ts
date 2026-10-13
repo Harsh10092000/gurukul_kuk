@@ -6,6 +6,7 @@ import {
   getPublicBaseUrl,
   HDFC_CONFIG,
 } from '@/lib/hdfc';
+import { getTestFeeDue } from '@/lib/testFeeDues';
 
 export const dynamic = 'force-dynamic';
 
@@ -16,11 +17,20 @@ export async function POST(request: Request) {
     const userEmail = body.email || 'test@gurukul.com';
     const userPhone = body.phone || '9876543210';
     const regNo = body.registrationNumber || 'TEST-GUR-999';
-    // Dynamic fee due amount for payment testing sideflow (strictly < 100)
-    const rawAmount = typeof body.amount === 'number' ? body.amount : parseFloat(body.amount);
-    const requestedAmount = !isNaN(rawAmount) && rawAmount > 0 && rawAmount < 100 ? rawAmount : 1;
     const dueId = typeof body.dueId === 'string' ? body.dueId.trim() : '';
-    const dueTitle = typeof body.dueTitle === 'string' ? body.dueTitle.trim() : 'Candidate Fee Due';
+
+    // SECURITY: the amount is NEVER taken from the client. HDFC's audit flagged exactly this
+    // as "Parameter Manipulation - Request Amount Tampering". The client may only pick which
+    // due to pay (dueId); the price is always looked up server-side from the fixed catalog.
+    const due = getTestFeeDue(dueId);
+    if (!due) {
+      return NextResponse.json(
+        { error: `Unknown or missing dueId. Must be one of the published test fee dues.` },
+        { status: 400 }
+      );
+    }
+    const requestedAmount = due.amount;
+    const dueTitle = due.title;
 
     // Generate unique test order ID
     const orderId = generateHdfcOrderId('TEST');
