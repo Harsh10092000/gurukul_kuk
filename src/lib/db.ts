@@ -722,9 +722,7 @@ export const db = {
           u.id === identifier ||
           u.id === trimmed ||
           uEmail === trimmed ||
-          (uRegNo && (uRegNo === trimmed || uRegNoClean === cleanAlphaNum)) ||
-          uPhone === trimmed ||
-          (cleanPhone.length === 10 && uPhoneClean === cleanPhone)
+          (uRegNo && (uRegNo === trimmed || uRegNoClean === cleanAlphaNum))
         );
       });
 
@@ -794,14 +792,13 @@ export const db = {
           OR LOWER(u.email) = ? 
           OR LOWER(u.registration_number) = ? 
           OR REPLACE(LOWER(COALESCE(u.registration_number, '')), '-', '') = ?
-          OR RIGHT(u.phone, 10) = ? 
           OR LOWER(a.registration_number) = ? 
           OR REPLACE(LOWER(COALESCE(a.registration_number, '')), '-', '') = ?
           OR LOWER(a.application_number) = ? 
           OR (? = 1 AND u.role = 'admin')
        ORDER BY (u.role = 'admin') DESC
        LIMIT 1`,
-      [trimmed, trimmed, trimmed, cleanAlphaNum, cleanPhone, trimmed, cleanAlphaNum, trimmed, isAdminIdentifier ? 1 : 0]
+      [trimmed, trimmed, trimmed, cleanAlphaNum, trimmed, cleanAlphaNum, trimmed, isAdminIdentifier ? 1 : 0]
     );
     if (!rows.length) return null;
     const r = rows[0];
@@ -1078,14 +1075,8 @@ export const db = {
       }
     }
 
-    // Enforce Unique Mobile Number per candidate
-    if (user.phone) {
-      const cleanPhone = user.phone.replace(/\D/g, '').slice(-10);
-      const existingPhoneUser = await this.findUserByPhone(cleanPhone);
-      if (existingPhoneUser) {
-        throw new Error(`Mobile number +91-${cleanPhone} is already registered. Duplicate phone numbers are prohibited.`);
-      }
-    }
+    // Mobile numbers are NOT required to be unique across candidates (to accommodate siblings/families)
+    const cleanPhone = user.phone ? user.phone.replace(/\D/g, '').slice(-10) : '';
 
     // Registration numbers are NOT generated during initial registration; they are generated upon application fee payment
     const registrationNumber = user.registrationNumber || undefined;

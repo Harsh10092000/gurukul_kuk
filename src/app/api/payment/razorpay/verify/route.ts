@@ -79,7 +79,7 @@ export async function POST(request: Request) {
 
     const gender = (personalInfo?.gender || 'Male') as 'Male' | 'Female';
     const candidateEmail = (personalInfo?.candidateEmail || paymentOrder.customerEmail || '').trim().toLowerCase();
-    const candidateMobile = (personalInfo?.candidateMobile || paymentOrder.customerPhone || '').trim();
+    const candidateMobile = (parentInfo?.fatherPhone || personalInfo?.candidateMobile || paymentOrder.customerPhone || '').trim();
     const cleanPhone = candidateMobile.replace(/\D/g, '').slice(-10);
 
     // 5. Check if an official application already exists for this email
@@ -157,10 +157,14 @@ export async function POST(request: Request) {
       personalInfo: {
         ...personalInfo,
         candidateEmail,
-        candidateMobile,
-        whatsappNumber: addressInfo?.whatsappNumber || candidateMobile,
+        candidateMobile: cleanPhone,
+        whatsappNumber: addressInfo?.whatsappNumber || cleanPhone,
       },
-      parentInfo,
+      parentInfo: {
+        ...parentInfo,
+        fatherPhone: cleanPhone,
+        motherPhone: parentInfo?.motherPhone ? parentInfo.motherPhone.trim() : undefined,
+      },
       addressInfo,
       academicInfo: {
         applyingClass: classApplying,
@@ -306,6 +310,7 @@ export async function POST(request: Request) {
             fatherOccupation: parentInfo?.fatherOccupation || 'Not specified',
             motherName: parentInfo?.motherName || 'Not specified',
             motherOccupation: parentInfo?.motherOccupation || 'Not specified',
+            motherPhone: parentInfo?.motherPhone || 'Not provided',
             gender: personalInfo?.gender || 'Not specified',
             category: personalInfo?.category || 'General',
             dob: personalInfo?.dob || 'Not specified',

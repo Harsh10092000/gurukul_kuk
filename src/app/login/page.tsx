@@ -58,7 +58,7 @@ export default function LoginPage() {
           window.location.replace(data.user.role === 'admin' ? '/admin/dashboard' : '/dashboard');
         }
       })
-      .catch(() => {});
+      .catch(() => { });
   }, [router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -66,8 +66,10 @@ export default function LoginPage() {
     setError('');
     setCaptchaError('');
 
-    if (identifier.includes('@')) {
-      setError('Candidate login requires Registration ID or Mobile Number. Email login is not allowed.');
+    const cleanInput = identifier.trim();
+    const isPurePhone = /^\d{10}$/.test(cleanInput.replace(/\D/g, '')) && !cleanInput.includes('@') && !/[a-zA-Z]/.test(cleanInput);
+    if (isPurePhone) {
+      setError('Login with Mobile Number is not supported. Please use your Registration ID (e.g. NILB-10001) or registered Email Address.');
       return;
     }
 
@@ -96,7 +98,7 @@ export default function LoginPage() {
 
       try {
         localStorage.removeItem('gurukul_application_draft');
-      } catch (e) {}
+      } catch (e) { }
 
       if (data.user.role === 'admin') {
         router.push('/admin/dashboard');
@@ -164,7 +166,7 @@ export default function LoginPage() {
                       1
                     </span>
                     <span>
-                      <strong className="text-slate-900">Registration Number:</strong> Enter your unique registration ID (e.g. <span className="font-mono font-semibold">NILB-10001</span>) or registered 10-digit mobile number.
+                      <strong className="text-slate-900">Registration ID or Email:</strong> Enter your unique registration ID (e.g. <span className="font-mono font-semibold">NILB-10001</span>) or registered Email Address.
                     </span>
                   </li>
                   <li className="flex items-start gap-2.5">
@@ -227,7 +229,7 @@ export default function LoginPage() {
                 <div>
                   <div className="flex justify-between items-center mb-1.5">
                     <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wide">
-                      Registration No. / Mobile Number <span className="text-rose-500">*</span>
+                      Registration No. / Email Address <span className="text-rose-500">*</span>
                     </label>
                     <Link href="/forgot-registration" className="text-portal-gold hover:underline text-xs font-semibold">
                       Forgot Reg No?
@@ -238,7 +240,7 @@ export default function LoginPage() {
                     required
                     value={identifier}
                     onChange={(e) => setIdentifier(e.target.value)}
-                    placeholder="e.g. NILB-10001 or 9876543210"
+                    placeholder="e.g. NILB-10001 or applicant@example.com"
                     className="form-input-field"
                   />
                 </div>

@@ -201,8 +201,12 @@ export default function AdmissionFormView({
                   <span className="font-medium">{application.parentInfo?.motherOccupation || 'Housewife'}</span>
                 </div>
                 <div>
-                  <span className="text-slate-600 block text-[8.5px]">Annual Family Income:</span>
-                  <span className="font-bold">{application.parentInfo?.annualIncome || '—'}</span>
+                  <span className="text-slate-600 block text-[8.5px]">Mother&apos;s Mobile:</span>
+                  <span className="font-mono font-bold">{application.parentInfo?.motherPhone || '—'}</span>
+                </div>
+                <div className="col-span-3 pt-0.5 border-t border-slate-200">
+                  <span className="text-slate-600 inline text-[8.5px]">Annual Family Income: </span>
+                  <span className="font-bold text-[9px]">{application.parentInfo?.annualIncome || '—'}</span>
                 </div>
               </div>
             </div>
@@ -213,17 +217,23 @@ export default function AdmissionFormView({
                 3. Permanent Residential Address
               </div>
               <div className="border-x border-b border-black p-1.5 grid grid-cols-4 gap-x-2 gap-y-1">
-                <div className="col-span-2">
-                  <span className="text-slate-600 block text-[8.5px]">Address Line:</span>
+                <div>
+                  <span className="text-slate-600 block text-[8.5px]">Street Address:</span>
                   <span className="font-medium uppercase text-[9.5px]">{application.addressInfo?.streetAddress || '—'}</span>
                 </div>
                 <div>
-                  <span className="text-slate-600 block text-[8.5px]">District, State:</span>
-                  <span className="font-bold uppercase">{application.addressInfo?.district}, {application.addressInfo?.state}</span>
+                  <span className="text-slate-600 block text-[8.5px]">City / Town / Village:</span>
+                  <span className="font-bold uppercase text-[9.5px]">{application.addressInfo?.city || '—'}</span>
+                </div>
+                <div>
+                  <span className="text-slate-600 block text-[8.5px]">District &amp; State:</span>
+                  <span className="font-bold uppercase text-[9.5px]">
+                    {[application.addressInfo?.district, application.addressInfo?.state].filter(Boolean).join(', ') || '—'}
+                  </span>
                 </div>
                 <div>
                   <span className="text-slate-600 block text-[8.5px]">PIN Code:</span>
-                  <span className="font-mono font-bold">{application.addressInfo?.pincode || '—'}</span>
+                  <span className="font-mono font-bold text-[9.5px]">{application.addressInfo?.pincode || '—'}</span>
                 </div>
               </div>
             </div>

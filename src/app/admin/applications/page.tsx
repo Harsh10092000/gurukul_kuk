@@ -164,7 +164,10 @@ export default function AdminApplicationsPage() {
       (app.personalInfo?.fullName || '').toLowerCase().includes(q) ||
       (app.parentInfo?.fatherPhone || '').includes(q) ||
       (app.personalInfo?.candidateMobile || '').includes(q) ||
-      (app.personalInfo?.candidateEmail || '').toLowerCase().includes(q);
+      (app.personalInfo?.candidateEmail || '').toLowerCase().includes(q) ||
+      (app.addressInfo?.district || '').toLowerCase().includes(q) ||
+      (app.addressInfo?.state || '').toLowerCase().includes(q) ||
+      (app.addressInfo?.city || '').toLowerCase().includes(q);
 
     const matchesClass = selectedClass === 'All' || app.classApplying === selectedClass;
 

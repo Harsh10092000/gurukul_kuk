@@ -89,7 +89,7 @@ export async function GET() {
         escapeCsv(app.personalInfo?.apaarId || ''),
         escapeCsv(app.personalInfo?.familyId || ''),
         escapeCsv(app.personalInfo?.candidateEmail || app.personalInfo?.email || ''),
-        escapeCsv(app.personalInfo?.candidateMobile || ''),
+        escapeCsv(app.personalInfo?.candidateMobile || app.parentInfo?.fatherPhone || ''),
         escapeCsv(app.personalInfo?.whatsappNumber || app.addressInfo?.whatsappNumber || ''),
         escapeCsv(app.parentInfo?.fatherName || ''),
         escapeCsv(app.parentInfo?.fatherPhone || ''),

@@ -294,8 +294,41 @@ export default function ApplicationVerificationPage({ params }: { params: { id: 
                 <span className="text-slate-800">{application.parentInfo.motherOccupation || '—'}</span>
               </div>
               <div>
+                <span className="text-slate-500 block text-[11px]">Mother&apos;s Mobile</span>
+                <span className="font-mono text-slate-900">{application.parentInfo.motherPhone || '—'}</span>
+              </div>
+              <div>
                 <span className="text-slate-500 block text-[11px]">Annual Family Income</span>
                 <span className="text-slate-800">{application.parentInfo.annualIncome || '—'}</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Permanent Residential Address */}
+          <div className="portal-card p-5 space-y-4">
+            <h3 className="font-bold text-slate-900 text-xs uppercase tracking-wider border-b border-slate-100 pb-2">
+              2. Permanent &amp; Residential Address
+            </h3>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-xs">
+              <div className="sm:col-span-2">
+                <span className="text-slate-500 block text-[11px]">Street / House Address</span>
+                <span className="font-medium text-slate-900">{application.addressInfo?.streetAddress || '—'}</span>
+              </div>
+              <div>
+                <span className="text-slate-500 block text-[11px]">City / Town / Village</span>
+                <span className="font-semibold text-slate-900">{application.addressInfo?.city || '—'}</span>
+              </div>
+              <div>
+                <span className="text-slate-500 block text-[11px]">District</span>
+                <span className="font-semibold text-slate-900">{application.addressInfo?.district || '—'}</span>
+              </div>
+              <div>
+                <span className="text-slate-500 block text-[11px]">State / UT</span>
+                <span className="font-semibold text-slate-900">{application.addressInfo?.state || '—'}</span>
+              </div>
+              <div>
+                <span className="text-slate-500 block text-[11px]">PIN Code</span>
+                <span className="font-mono font-bold text-slate-900">{application.addressInfo?.pincode || '—'}</span>
               </div>
             </div>
           </div>
@@ -303,7 +336,7 @@ export default function ApplicationVerificationPage({ params }: { params: { id: 
           {/* Academic & Study Location */}
           <div className="portal-card p-5 space-y-4">
             <h3 className="font-bold text-slate-900 text-xs uppercase tracking-wider border-b border-slate-100 pb-2">
-              2. Academic &amp; Campus Preferences
+              3. Academic &amp; Campus Preferences
             </h3>
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 text-xs">
               <div>

@@ -109,6 +109,12 @@ export async function POST(request: Request) {
     if (!motherOccVal.isValid) {
       return NextResponse.json({ error: motherOccVal.error }, { status: 400 });
     }
+    if (parentInfo?.motherPhone && parentInfo.motherPhone.trim()) {
+      const motherPhoneVal = validatePhone(parentInfo.motherPhone, "Mother's Mobile Phone");
+      if (!motherPhoneVal.isValid) {
+        return NextResponse.json({ error: motherPhoneVal.error }, { status: 400 });
+      }
+    }
 
     // 7. Aadhaar Validation & Uniqueness
     const aadhaarVal = validateAadhaar(personalInfo?.aadhaarNumber);
@@ -150,9 +156,9 @@ export async function POST(request: Request) {
     const aadhaarFileVal = validateUploadedFile(documents?.aadhaarCard, 'Aadhaar Card File');
     if (!aadhaarFileVal.isValid) return NextResponse.json({ error: aadhaarFileVal.error }, { status: 400 });
 
-    // Derive contact coordinates
+    // Derive contact coordinates (candidate mobile matches father's number)
     const candidateEmail = (personalInfo.candidateEmail || '').trim().toLowerCase();
-    const candidateMobile = (personalInfo.candidateMobile || parentInfo.fatherPhone || '').trim();
+    const candidateMobile = (parentInfo?.fatherPhone || personalInfo.candidateMobile || '').trim();
     const cleanPhone = candidateMobile.replace(/\D/g, '').slice(-10);
 
     // Prevent duplicate registration for already completed candidates
@@ -199,9 +205,13 @@ export async function POST(request: Request) {
         personalInfo: {
           ...personalInfo,
           candidateEmail,
-          candidateMobile,
+          candidateMobile: cleanPhone,
         },
-        parentInfo,
+        parentInfo: {
+          ...parentInfo,
+          fatherPhone: cleanPhone,
+          motherPhone: parentInfo?.motherPhone ? parentInfo.motherPhone.trim() : undefined,
+        },
         addressInfo,
         studyLocationPref: studyPref,
         examCentrePref: studyPref,

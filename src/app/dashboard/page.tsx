@@ -703,9 +703,15 @@ export default function ApplicantDashboard() {
                 <span className="font-medium text-slate-900 mt-0.5 block">{application.parentInfo?.motherName}</span>
               </div>
               <div className="data-cell">
-                <span className="text-slate-500 block text-[10px] font-semibold uppercase tracking-wider">Registered Mobile</span>
+                <span className="text-slate-500 block text-[10px] font-semibold uppercase tracking-wider">Father&apos;s Mobile</span>
                 <span className="font-mono text-slate-900 mt-0.5 block">{application.parentInfo?.fatherPhone || application.personalInfo?.candidateMobile}</span>
               </div>
+              {application.parentInfo?.motherPhone && (
+                <div className="data-cell">
+                  <span className="text-slate-500 block text-[10px] font-semibold uppercase tracking-wider">Mother&apos;s Mobile</span>
+                  <span className="font-mono text-slate-900 mt-0.5 block">{application.parentInfo.motherPhone}</span>
+                </div>
+              )}
 
               <div className="data-cell sm:col-span-2">
                 <span className="text-slate-500 block text-[10px] font-semibold uppercase tracking-wider">Campus Preferences</span>
@@ -721,7 +727,7 @@ export default function ApplicantDashboard() {
               <div className="data-cell sm:col-span-3">
                 <span className="text-slate-500 block text-[10px] font-semibold uppercase tracking-wider">Permanent Residential Address</span>
                 <span className="font-medium text-slate-800 mt-0.5 block leading-relaxed">
-                  {application.addressInfo?.streetAddress}, {application.addressInfo?.district}, {application.addressInfo?.state} - {application.addressInfo?.pincode}
+                  {[application.addressInfo?.streetAddress, application.addressInfo?.city, application.addressInfo?.district, application.addressInfo?.state].filter(Boolean).join(', ')}{application.addressInfo?.pincode ? ` - ${application.addressInfo.pincode}` : ''}
                 </span>
               </div>
             </div>

@@ -24,7 +24,7 @@ export async function POST(request: Request) {
 
     if (!identifier || !password) {
       return NextResponse.json(
-        { error: 'Registration Number or Mobile Number and password are required.' },
+        { error: 'Registration Number or Email Address and password are required.' },
         { status: 400 }
       );
     }
@@ -38,21 +38,19 @@ export async function POST(request: Request) {
       cleanId === 'admin' ||
       cleanId.startsWith('admin');
 
+    // Reject raw mobile numbers since contact numbers can be shared among siblings
+    const isPurePhone = /^\d{10}$/.test(cleanId.replace(/\D/g, '')) && !cleanId.includes('@') && !/[a-z]/.test(cleanId);
+    if (isPurePhone && !isAdminIdentifier) {
+      return NextResponse.json(
+        { error: 'Login with Mobile Number is no longer supported because phone numbers may be shared among siblings. Please log in using your Registration ID (e.g. NILB-10001) or registered Email Address.' },
+        { status: 400 }
+      );
+    }
+
     const isDemoAdminMatch =
       isAdminIdentifier &&
       (password === 'Admin@Gurukul2026' || password === 'Admin@Nilokheri2027');
-    const isDemoStudentMatch = (cleanId === 'gk26-10001' || cleanId === 'gk2610001' || cleanId === '+919876543210' || cleanId === '9876543210') && password === 'Student@123';
-
-    // Candidate login strictly requires Registration ID or Mobile Number (emails not allowed for candidates)
-    if (identifier.includes('@') && !isAdminIdentifier) {
-      const userCheck = await db.findUserByIdentifier(identifier);
-      if (!userCheck || userCheck.role !== 'admin') {
-        return NextResponse.json(
-          { error: 'Candidate login requires Registration ID or Mobile Number. Email login is not permitted.' },
-          { status: 400 }
-        );
-      }
-    }
+    const isDemoStudentMatch = (cleanId === 'gk26-10001' || cleanId === 'gk2610001') && password === 'Student@123';
 
     let user = await db.findUserByIdentifier(identifier);
     if (!user && (isAdminIdentifier || isDemoAdminMatch)) {
@@ -62,7 +60,7 @@ export async function POST(request: Request) {
     if (!user) {
       const isStaffAttempt = isAdminIdentifier || cleanId.includes('thegurukul') || cleanId.includes('gurukul');
       return NextResponse.json(
-        { error: isStaffAttempt ? 'Invalid Staff Email Address or password.' : 'Invalid Registration Number / Mobile Number or password.' },
+        { error: isStaffAttempt ? 'Invalid Staff Email Address or password.' : 'Invalid Registration Number / Email Address or password.' },
         { status: 401 }
       );
     }

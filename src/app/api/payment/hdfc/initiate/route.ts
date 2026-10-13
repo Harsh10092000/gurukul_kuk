@@ -138,6 +138,12 @@ export async function POST(request: Request) {
     if (!motherOccVal.isValid) {
       return NextResponse.json({ error: motherOccVal.error }, { status: 400 });
     }
+    if (parentInfo?.motherPhone && parentInfo.motherPhone.trim()) {
+      const motherPhoneVal = validatePhone(parentInfo.motherPhone, "Mother's Mobile Phone");
+      if (!motherPhoneVal.isValid) {
+        return NextResponse.json({ error: motherPhoneVal.error }, { status: 400 });
+      }
+    }
 
     // 9. Address Validation
     const cityVal = addressInfo?.city?.trim() || addressInfo?.district?.trim();
@@ -201,18 +207,6 @@ export async function POST(request: Request) {
         return NextResponse.json(
           {
             error: `An entrance application with email '${candidateEmail}' has already been submitted and confirmed (Registration ID: ${existingEmailApp.registrationNumber || existingEmailApp.applicationNumber}). Duplicate applications are strictly prohibited.`,
-          },
-          { status: 409 }
-        );
-      }
-    }
-
-    if (cleanPhone) {
-      const existingPhoneUser = await db.findUserByPhone(cleanPhone);
-      if (existingPhoneUser && existingPhoneUser.role !== 'admin') {
-        return NextResponse.json(
-          {
-            error: `A candidate account with mobile +91-${cleanPhone} is already registered. Please login to your dashboard instead.`,
           },
           { status: 409 }
         );

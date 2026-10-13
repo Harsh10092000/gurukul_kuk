@@ -112,6 +112,12 @@ export async function POST(request: Request) {
     if (!motherOccVal.isValid) {
       return NextResponse.json({ error: motherOccVal.error }, { status: 400 });
     }
+    if (parentInfo?.motherPhone && parentInfo.motherPhone.trim()) {
+      const motherPhoneVal = validatePhone(parentInfo.motherPhone, "Mother's Mobile Phone");
+      if (!motherPhoneVal.isValid) {
+        return NextResponse.json({ error: motherPhoneVal.error }, { status: 400 });
+      }
+    }
 
     // 9. Address Validation
     const cityVal = addressInfo?.city?.trim() || addressInfo?.district?.trim();
@@ -172,19 +178,12 @@ export async function POST(request: Request) {
       passwordHash = await hashPassword('Student@123');
     }
 
-    // Check if an official user already exists with this email or mobile
-    const cleanPhone = (candidateMobile || parentInfo?.fatherPhone || '').replace(/\D/g, '').slice(-10);
+    // Check if an official user already exists with this email address
+    const cleanPhone = (parentInfo?.fatherPhone || candidateMobile || '').replace(/\D/g, '').slice(-10);
     const existingEmailUser = await db.findUserByEmail(candidateEmail);
     if (existingEmailUser) {
       return NextResponse.json(
         { error: 'An official candidate account with this email address is already registered. Please login instead.' },
-        { status: 409 }
-      );
-    }
-    const existingPhoneUser = await db.findUserByPhone(cleanPhone);
-    if (existingPhoneUser) {
-      return NextResponse.json(
-        { error: `A candidate account with mobile +91-${cleanPhone} is already registered.` },
         { status: 409 }
       );
     }

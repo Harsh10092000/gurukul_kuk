@@ -303,7 +303,7 @@ export default function StatusPage() {
                     required
                     value={query}
                     onChange={(e) => setQuery(e.target.value)}
-                    placeholder="e.g. NILB-12325 or 9876543210"
+                    placeholder="e.g. NILB-12325"
                     className="form-input-field font-mono font-semibold uppercase"
                   />
                   <span className="text-[11px] text-slate-400 mt-1 block">

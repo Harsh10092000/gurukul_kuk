@@ -131,6 +131,7 @@ export default function ApplyPage() {
     motherOccupation: '',
     motherOccupationOption: '',
     motherOccupationOther: '',
+    motherPhone: '',
     annualIncome: '',
     guardianName: '',
     guardianRelation: '',
@@ -138,8 +139,8 @@ export default function ApplyPage() {
     // Step 4: Address
     streetAddress: '',
     city: '',
-    district: 'Kurukshetra',
-    state: 'Haryana',
+    district: '',
+    state: '',
     pincode: '',
 
     // Step 1: Preferred Study Location
@@ -406,6 +407,7 @@ export default function ApplyPage() {
                   if (!m) return '';
                   return MOTHER_OCCUPATIONS.some((o) => o.toLowerCase() === m.toLowerCase() && o !== 'Others') ? '' : m;
                 })(),
+                motherPhone: app.parentInfo?.motherPhone || prev.motherPhone,
                 annualIncome: app.parentInfo?.annualIncome || prev.annualIncome,
                 guardianName: app.parentInfo?.guardianName || prev.guardianName,
                 guardianRelation: app.parentInfo?.guardianRelation || prev.guardianRelation,
@@ -450,12 +452,11 @@ export default function ApplyPage() {
         stream: is11 ? (prev.stream && allowedStreams.includes(prev.stream as any) ? prev.stream : allowedStreams[0] || 'Non Medical') : '',
       }));
     } else if (name === 'state') {
-      const districts = INDIAN_STATES_AND_DISTRICTS[value] || ['Other'];
-      setFormData({
-        ...formData,
+      setFormData((prev) => ({
+        ...prev,
         state: value,
-        district: districts[0] || '',
-      });
+        district: '', // Reset district when state changes
+      }));
     } else if (['fatherPhone', 'motherPhone', 'candidateMobile', 'whatsappNumber'].includes(name)) {
       const clean = value.replace(/\D/g, '').slice(0, 10);
       setFormData((prev) => ({ ...prev, [name]: clean }));
@@ -653,6 +654,13 @@ export default function ApplyPage() {
         setError(mOccVal.error || "Please select or specify a valid Mother's Occupation.");
         return;
       }
+      if (formData.motherPhone && formData.motherPhone.trim()) {
+        const mPhoneVal = validatePhone(formData.motherPhone, "Mother's Mobile Number");
+        if (!mPhoneVal.isValid) {
+          setError(mPhoneVal.error || "Invalid Mother's Mobile Number");
+          return;
+        }
+      }
       if (!formData.annualIncome) {
         setError('Please select Annual Family Income.');
         return;
@@ -667,12 +675,16 @@ export default function ApplyPage() {
         setError('Permanent Street Address is required.');
         return;
       }
-      if (!formData.city.trim()) {
-        setError('City is required.');
+      if (!formData.state.trim()) {
+        setError('Please select State / UT.');
         return;
       }
       if (!formData.district.trim()) {
-        setError('District is required.');
+        setError('Please select District.');
+        return;
+      }
+      if (!formData.city.trim()) {
+        setError('City / Town / Village is required.');
         return;
       }
       if (!formData.pincode.trim() || formData.pincode.length !== 6) {
@@ -744,7 +756,7 @@ export default function ApplyPage() {
           previousBoard: formData.previousBoard,
           otherBoard: formData.otherBoard || undefined,
           candidateEmail: formData.candidateEmail,
-          candidateMobile: formData.candidateMobile,
+          candidateMobile: formData.fatherPhone,
           whatsappNumber: formData.whatsappNumber,
         },
         parentInfo: {
@@ -753,6 +765,7 @@ export default function ApplyPage() {
           fatherPhone: formData.fatherPhone,
           motherName: formData.motherName,
           motherOccupation: formData.motherOccupation,
+          motherPhone: formData.motherPhone ? formData.motherPhone.trim() : undefined,
           annualIncome: formData.annualIncome,
           guardianName: formData.guardianName || undefined,
           guardianRelation: formData.guardianRelation || undefined,
@@ -917,7 +930,7 @@ export default function ApplyPage() {
           religion: formData.religion,
           whatsappNumber: formData.whatsappNumber,
           candidateEmail: formData.candidateEmail,
-          candidateMobile: formData.candidateMobile,
+          candidateMobile: formData.fatherPhone,
         },
         parentInfo: {
           fatherName: formData.fatherName,
@@ -925,6 +938,7 @@ export default function ApplyPage() {
           fatherPhone: formData.fatherPhone,
           motherName: formData.motherName,
           motherOccupation: formData.motherOccupationOption === 'Other' ? formData.motherOccupationOther : formData.motherOccupationOption,
+          motherPhone: formData.motherPhone ? formData.motherPhone.trim() : undefined,
           annualIncome: formData.annualIncome,
           guardianName: formData.guardianName || undefined,
           guardianRelation: formData.guardianRelation || undefined,
@@ -983,7 +997,9 @@ export default function ApplyPage() {
     { num: 6, label: 'Payment' },
   ];
 
-  const currentDistricts = INDIAN_STATES_AND_DISTRICTS[formData.state] || ['Other'];
+  const currentDistricts = formData.state && INDIAN_STATES_AND_DISTRICTS[formData.state]
+    ? INDIAN_STATES_AND_DISTRICTS[formData.state]
+    : [];
 
   const rawBoysActive = ['Aryakulam Nilokheri', 'The Gurukul Jyotisar'].filter((l) =>
     activeLocations.some((al) => al === l || (l.includes('Jyotisar') && al.includes('Jyotisar')))
@@ -1983,6 +1999,8 @@ export default function ApplyPage() {
                   <span className="absolute left-3 top-2.5 text-xs font-semibold text-slate-400">+91</span>
                   <input
                     type="tel"
+                    inputMode="numeric"
+                    pattern="[0-9]*"
                     name="fatherPhone"
                     maxLength={10}
                     required
@@ -2055,6 +2073,26 @@ export default function ApplyPage() {
                     />
                   </div>
                 )}
+              </div>
+
+              <div>
+                <label className="form-label">
+                  Mother&apos;s Mobile Phone <span className="text-slate-400 font-normal text-xs">(Optional)</span>
+                </label>
+                <div className="relative">
+                  <span className="absolute left-3 top-2.5 text-xs font-semibold text-slate-400">+91</span>
+                  <input
+                    type="tel"
+                    inputMode="numeric"
+                    pattern="[0-9]*"
+                    name="motherPhone"
+                    maxLength={10}
+                    value={formData.motherPhone}
+                    onChange={handleChange}
+                    placeholder="10-digit mobile number (optional)"
+                    className="form-input-field pl-10 font-mono"
+                  />
+                </div>
               </div>
 
               <div>
@@ -2134,21 +2172,6 @@ export default function ApplyPage() {
 
               <div>
                 <label className="form-label">
-                  City / Town / Village <span className="text-rose-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  name="city"
-                  required
-                  value={formData.city}
-                  onChange={handleChange}
-                  placeholder="City"
-                  className="form-input-field"
-                />
-              </div>
-
-              <div>
-                <label className="form-label">
                   State / UT <span className="text-rose-500">*</span>
                 </label>
                 <select
@@ -2158,6 +2181,7 @@ export default function ApplyPage() {
                   onChange={handleChange}
                   className="form-input-field"
                 >
+                  <option value="">Select State / UT</option>
                   {Object.keys(INDIAN_STATES_AND_DISTRICTS).map((st) => (
                     <option key={st} value={st}>{st}</option>
                   ))}
@@ -2173,12 +2197,29 @@ export default function ApplyPage() {
                   required
                   value={formData.district}
                   onChange={handleChange}
-                  className="form-input-field"
+                  disabled={!formData.state}
+                  className={`form-input-field ${!formData.state ? 'bg-slate-100 cursor-not-allowed text-slate-400' : ''}`}
                 >
+                  <option value="">{formData.state ? 'Select District' : 'Select State / UT first'}</option>
                   {currentDistricts.map((d) => (
                     <option key={d} value={d}>{d}</option>
                   ))}
                 </select>
+              </div>
+
+              <div>
+                <label className="form-label">
+                  City / Town / Village <span className="text-rose-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  name="city"
+                  required
+                  value={formData.city}
+                  onChange={handleChange}
+                  placeholder="Enter city, town, or village"
+                  className="form-input-field"
+                />
               </div>
 
               <div>
@@ -2324,8 +2365,14 @@ export default function ApplyPage() {
                   </span>
                 </div>
                 <div>
-                  <span className="text-slate-500 block text-[11px]">Father&apos;s Name</span>
-                  <span className="font-medium text-slate-900">{formData.fatherName}</span>
+                  <span className="text-slate-500 block text-[11px]">Parent Names</span>
+                  <span className="font-medium text-slate-900">{formData.fatherName} • {formData.motherName}</span>
+                </div>
+                <div>
+                  <span className="text-slate-500 block text-[11px]">Contact Numbers</span>
+                  <span className="font-mono text-slate-900">
+                    Father: {formData.fatherPhone} {formData.motherPhone ? `• Mother: ${formData.motherPhone}` : ''}
+                  </span>
                 </div>
                 <div>
                   <span className="text-slate-500 block text-[11px]">Study Location</span>

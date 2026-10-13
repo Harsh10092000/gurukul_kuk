@@ -128,8 +128,10 @@ export default function ExamPortalGateway() {
     setError('');
     setCaptchaError('');
 
-    if (identifier.includes('@')) {
-      setError('Candidate login requires Registration ID or Mobile Number. Email login is not allowed.');
+    const cleanInput = identifier.trim();
+    const isPurePhone = /^\d{10}$/.test(cleanInput.replace(/\D/g, '')) && !cleanInput.includes('@') && !/[a-zA-Z]/.test(cleanInput);
+    if (isPurePhone) {
+      setError('Login with Mobile Number is no longer supported because contact numbers can be shared among siblings. Please use your Registration ID (e.g. NILB-10001) or registered Email Address.');
       return;
     }
 
@@ -286,7 +288,7 @@ export default function ExamPortalGateway() {
                     <div>
                       <div className="flex justify-between items-center mb-1.5">
                         <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wide">
-                          Registration No. / Mobile Number <span className="text-rose-500">*</span>
+                          Registration No. / Email Address <span className="text-rose-500">*</span>
                         </label>
                         <Link href="/forgot-registration" className="text-portal-gold hover:underline text-xs font-semibold">
                           Forgot Reg No?
@@ -297,7 +299,7 @@ export default function ExamPortalGateway() {
                         required
                         value={identifier}
                         onChange={(e) => setIdentifier(e.target.value)}
-                        placeholder="e.g. NILB-10001 or 9876543210"
+                        placeholder="e.g. NILB-10001 or applicant@example.com"
                         className="form-input-field"
                       />
                     </div>

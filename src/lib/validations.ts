@@ -127,17 +127,29 @@ export function validateOccupation(occupation: string | undefined | null, fieldL
  * - Rejects repeated single digit like '9999999999'
  */
 export function validatePhone(phone: string | undefined | null, fieldLabel: string): ValidationResult {
-  if (!phone || typeof phone !== 'string') {
+  if (!phone || typeof phone !== 'string' || !phone.trim()) {
     return { isValid: false, error: `${fieldLabel} is required.` };
   }
 
-  const clean = phone.replace(/\D/g, '');
+  const trimmed = phone.trim();
+
+  // Explicitly reject any letters or alphabets
+  if (/[a-zA-Z]/.test(trimmed)) {
+    return { isValid: false, error: `${fieldLabel} cannot contain alphabets or letters.` };
+  }
+
+  // Reject symbols/special characters other than standard phone formatting (+, space, -)
+  if (/[^\d\s+\-]/.test(trimmed)) {
+    return { isValid: false, error: `${fieldLabel} cannot contain special characters or symbols.` };
+  }
+
+  const clean = trimmed.replace(/\D/g, '').slice(-10);
   if (clean.length !== 10) {
     return { isValid: false, error: `${fieldLabel} must be exactly 10 digits.` };
   }
 
   if (!/^[6-9]\d{9}$/.test(clean)) {
-    return { isValid: false, error: `${fieldLabel} must be a valid Indian mobile number starting with 6, 7, 8, or 9.` };
+    return { isValid: false, error: `${fieldLabel} must be a valid 10-digit Indian mobile number starting with 6, 7, 8, or 9.` };
   }
 
   if (/^([6-9])\1{9}$/.test(clean)) {

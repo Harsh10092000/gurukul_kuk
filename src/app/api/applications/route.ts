@@ -79,7 +79,10 @@ export async function GET(request: Request) {
           const name = (app.personalInfo?.fullName || '').toLowerCase();
           const phone = (app.parentInfo?.fatherPhone || app.personalInfo?.candidateMobile || '');
           const email = (app.personalInfo?.candidateEmail || '').toLowerCase();
-          return appNum.includes(q) || name.includes(q) || phone.includes(q) || email.includes(q);
+          const dist = (app.addressInfo?.district || '').toLowerCase();
+          const state = (app.addressInfo?.state || '').toLowerCase();
+          const city = (app.addressInfo?.city || '').toLowerCase();
+          return appNum.includes(q) || name.includes(q) || phone.includes(q) || email.includes(q) || dist.includes(q) || state.includes(q) || city.includes(q);
         });
       }
 
@@ -214,6 +217,12 @@ export async function POST(request: Request) {
     if (!motherOccVal.isValid) {
       return NextResponse.json({ error: motherOccVal.error }, { status: 400 });
     }
+    if (parentInfo?.motherPhone && parentInfo.motherPhone.trim()) {
+      const motherPhoneVal = validatePhone(parentInfo.motherPhone, "Mother's Mobile Phone");
+      if (!motherPhoneVal.isValid) {
+        return NextResponse.json({ error: motherPhoneVal.error }, { status: 400 });
+      }
+    }
 
     // 7. Aadhaar Validation & Uniqueness
     const aadhaarVal = validateAadhaar(personalInfo?.aadhaarNumber);
@@ -252,8 +261,14 @@ export async function POST(request: Request) {
       rollNumber: assignedRollNo,
       classApplying: classApplying || 'Class 6',
       stream: classApplying?.includes('11') ? finalStream : undefined,
-      personalInfo,
-      parentInfo,
+      personalInfo: {
+        ...personalInfo,
+        candidateMobile: parentInfo?.fatherPhone || personalInfo?.candidateMobile,
+      },
+      parentInfo: {
+        ...parentInfo,
+        motherPhone: parentInfo?.motherPhone ? parentInfo.motherPhone.trim() : undefined,
+      },
       addressInfo,
       academicInfo: {
         applyingClass: classApplying,
@@ -374,6 +389,7 @@ export async function POST(request: Request) {
         fatherOccupation: parentInfo?.fatherOccupation || 'N/A',
         motherName: parentInfo?.motherName || 'N/A',
         motherOccupation: parentInfo?.motherOccupation || 'N/A',
+        motherPhone: parentInfo?.motherPhone || 'N/A',
         dob: personalInfo?.dob || 'N/A',
         gender: personalInfo?.gender || 'N/A',
         category: personalInfo?.category || 'General',

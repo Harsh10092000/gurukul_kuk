@@ -100,16 +100,7 @@ export async function POST(request: Request) {
       );
     }
 
-    // Check unique phone only if phone was provided
-    if (phoneClean) {
-      const existingPhoneUser = await db.findUserByPhone(phoneClean);
-      if (existingPhoneUser) {
-        return NextResponse.json(
-          { error: `A candidate account with mobile number +91-${phoneClean} is already registered. Please sign in instead.` },
-          { status: 409 }
-        );
-      }
-    }
+    // Mobile numbers can be shared among siblings/families - unique check applies strictly to Email and Aadhaar
 
     // Registration details verified (NO authentication cookie or official account created before ₹800 fee payment)
     return NextResponse.json({
