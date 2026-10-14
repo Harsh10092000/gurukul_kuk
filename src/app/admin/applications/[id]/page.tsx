@@ -17,7 +17,8 @@ import {
   Eye,
   X,
   Check,
-  AlertCircle
+  AlertCircle,
+  Pencil
 } from 'lucide-react';
 import { Application, AdmitCard } from '@/lib/types';
 import AdmitCardView from '@/components/AdmitCardView';
@@ -44,14 +45,14 @@ export default function ApplicationVerificationPage({ params }: { params: { id: 
   const [errorMsg, setErrorMsg] = useState('');
 
   useEffect(() => {
-    fetch(`/api/applications/${params.id}`)
+    fetch(`/api/applications/${params.id}`, { cache: 'no-store' })
       .then((res) => res.json())
       .then(async (data) => {
         if (data.application) {
           setApplication(data.application);
           setRemarks('');
 
-          const admitRes = await fetch(`/api/admit-card?appId=${data.application.id}`);
+          const admitRes = await fetch(`/api/admit-card?appId=${data.application.id}`, { cache: 'no-store' });
           const admitData = await admitRes.json();
           if (admitData.admitCard) setAdmitCard(admitData.admitCard);
         }
@@ -192,6 +193,15 @@ export default function ApplicationVerificationPage({ params }: { params: { id: 
         </div>
 
         <div className="flex flex-wrap gap-2">
+          <Link
+            href={`/admin/applications/${application.id}/edit`}
+            className="btn-primary text-xs px-3.5 py-1.5 font-bold flex items-center gap-1.5"
+            title="Edit Candidate Details & Artifacts"
+          >
+            <Pencil className="w-3.5 h-3.5" />
+            <span>Edit Application</span>
+          </Link>
+
           <Link
             href={`/admin/applications/${application.id}/admission-form`}
             className="btn-secondary text-xs px-3.5 py-1.5 font-bold flex items-center gap-1.5 text-slate-800"

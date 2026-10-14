@@ -306,6 +306,16 @@ export async function initDatabase(): Promise<void> {
       );
     `);
 
+    // Ensure phone in users table is NOT unique (allows siblings sharing father's contact)
+    try {
+      const [phoneIdxRows]: any = await pool.query("SHOW INDEX FROM users WHERE Column_name = 'phone' AND Non_unique = 0");
+      for (const idx of (phoneIdxRows || [])) {
+        if (idx.Key_name && idx.Key_name !== 'PRIMARY') {
+          await pool.query(`ALTER TABLE users DROP INDEX \`${idx.Key_name}\``);
+        }
+      }
+    } catch {}
+
     await pool.query(`
       CREATE TABLE IF NOT EXISTS applications (
         id VARCHAR(64) PRIMARY KEY,
@@ -1992,16 +2002,42 @@ export const db = {
       const updated: Application = {
         ...existing,
         ...updates,
+        classApplying: updates.classApplying || existing.classApplying,
+        stream: updates.stream !== undefined ? updates.stream : existing.stream,
         personalInfo: updates.personalInfo ? { ...existing.personalInfo, ...updates.personalInfo } : existing.personalInfo,
         parentInfo: updates.parentInfo ? { ...existing.parentInfo, ...updates.parentInfo } : existing.parentInfo,
         addressInfo: updates.addressInfo ? { ...existing.addressInfo, ...updates.addressInfo } : existing.addressInfo,
         academicInfo: updates.academicInfo ? { ...existing.academicInfo, ...updates.academicInfo } : existing.academicInfo,
         examCentrePref: updates.examCentrePref ? { ...existing.examCentrePref, ...updates.examCentrePref } : existing.examCentrePref,
+        studyLocationPref: updates.studyLocationPref ? { ...existing.studyLocationPref, ...updates.studyLocationPref } : (updates.examCentrePref || existing.studyLocationPref),
         documents: updates.documents ? { ...existing.documents, ...updates.documents } : existing.documents,
         updatedAt: now,
       };
 
       store.applications[idx] = updated;
+
+      // Synchronize admit card in store if present
+      const admitIdx = store.admitCards.findIndex((c) => c.applicationId === existing.id || c.applicationNumber === existing.registrationNumber || c.applicationNumber === existing.applicationNumber);
+      if (admitIdx >= 0) {
+        store.admitCards[admitIdx] = {
+          ...store.admitCards[admitIdx],
+          candidateName: updated.personalInfo?.fullName || store.admitCards[admitIdx].candidateName,
+          fatherName: updated.parentInfo?.fatherName || store.admitCards[admitIdx].fatherName,
+          classApplying: updated.classApplying || store.admitCards[admitIdx].classApplying,
+          candidatePhotoUrl: updated.documents?.photo || store.admitCards[admitIdx].candidatePhotoUrl,
+          candidateSignatureUrl: updated.documents?.signature || store.admitCards[admitIdx].candidateSignatureUrl,
+        };
+      }
+
+      // Synchronize user in store if present
+      if (existing.userId) {
+        const userIdx = store.users.findIndex((u) => u.id === existing.userId);
+        if (userIdx >= 0) {
+          store.users[userIdx].name = updated.personalInfo?.fullName || store.users[userIdx].name;
+          store.users[userIdx].phone = updated.parentInfo?.fatherPhone || updated.personalInfo?.candidateMobile || store.users[userIdx].phone;
+        }
+      }
+
       saveFallbackStore(store);
       return updated;
     }
@@ -2013,11 +2049,14 @@ export const db = {
     const updated: Application = {
       ...existing,
       ...updates,
+      classApplying: updates.classApplying || existing.classApplying,
+      stream: updates.stream !== undefined ? updates.stream : existing.stream,
       personalInfo: updates.personalInfo ? { ...existing.personalInfo, ...updates.personalInfo } : existing.personalInfo,
       parentInfo: updates.parentInfo ? { ...existing.parentInfo, ...updates.parentInfo } : existing.parentInfo,
       addressInfo: updates.addressInfo ? { ...existing.addressInfo, ...updates.addressInfo } : existing.addressInfo,
       academicInfo: updates.academicInfo ? { ...existing.academicInfo, ...updates.academicInfo } : existing.academicInfo,
       examCentrePref: updates.examCentrePref ? { ...existing.examCentrePref, ...updates.examCentrePref } : existing.examCentrePref,
+      studyLocationPref: updates.studyLocationPref ? { ...existing.studyLocationPref, ...updates.studyLocationPref } : (updates.examCentrePref || existing.studyLocationPref),
       documents: updates.documents ? { ...existing.documents, ...updates.documents } : existing.documents,
       updatedAt: now,
     };
@@ -2025,15 +2064,28 @@ export const db = {
     try {
       await pool.query(
         `UPDATE applications SET
-          status = ?, remarks = ?, roll_number = COALESCE(?, roll_number), personal_info = ?, academic_info = ?,
-          documents = ?, updated_at = ?
+          class_applying = ?,
+          status = ?,
+          remarks = ?,
+          roll_number = COALESCE(?, roll_number),
+          personal_info = ?,
+          parent_info = ?,
+          address_info = ?,
+          academic_info = ?,
+          exam_centre_pref = ?,
+          documents = ?,
+          updated_at = ?
          WHERE id = ? OR application_number = ? OR registration_number = ?`,
         [
+          updated.classApplying,
           updated.status,
           updated.remarks || null,
           updated.rollNumber || null,
           JSON.stringify(updated.personalInfo),
+          JSON.stringify(updated.parentInfo),
+          JSON.stringify(updated.addressInfo),
           JSON.stringify(updated.academicInfo),
+          JSON.stringify(updated.examCentrePref || updated.studyLocationPref || {}),
           JSON.stringify(updated.documents || {}),
           toMySqlDatetime(),
           existing.id,
@@ -2041,6 +2093,38 @@ export const db = {
           existing.registrationNumber || existing.id,
         ]
       );
+
+      // Synchronize admit card in database
+      await pool.query(
+        `UPDATE admit_cards SET
+          candidate_name = ?,
+          father_name = ?,
+          class_applying = ?,
+          candidate_photo_url = COALESCE(?, candidate_photo_url),
+          candidate_signature_url = COALESCE(?, candidate_signature_url)
+         WHERE application_id = ? OR application_number = ?`,
+        [
+          updated.personalInfo?.fullName || existing.personalInfo?.fullName,
+          updated.parentInfo?.fatherName || existing.parentInfo?.fatherName,
+          updated.classApplying,
+          updated.documents?.photo || null,
+          updated.documents?.signature || null,
+          existing.id,
+          existing.applicationNumber || existing.id,
+        ]
+      );
+
+      // Synchronize user profile in database
+      if (existing.userId) {
+        await pool.query(
+          `UPDATE users SET name = ?, phone = ? WHERE id = ?`,
+          [
+            updated.personalInfo?.fullName || existing.personalInfo?.fullName,
+            updated.parentInfo?.fatherPhone || updated.personalInfo?.candidateMobile || existing.parentInfo?.fatherPhone || existing.personalInfo?.candidateMobile || '',
+            existing.userId,
+          ]
+        );
+      }
     } catch (e) {
       console.warn('MySQL updateApplicationDetails error:', e);
       return null;
@@ -2153,6 +2237,9 @@ export const db = {
                     a.rollNumber === card?.rollNumber
                   );
       if (app) {
+        if (app.personalInfo?.fullName) card.candidateName = app.personalInfo.fullName;
+        if (app.parentInfo?.fatherName) card.fatherName = app.parentInfo.fatherName;
+        if (app.classApplying) card.classApplying = app.classApplying;
         card.motherName = app.parentInfo?.motherName || 'MEENA';
         card.previousSchoolName = app.academicInfo?.previousSchoolName || app.personalInfo?.previousSchoolName || 'KL INTERNATIONAL SCHOOL';
         card.aadhaarNumber = app.personalInfo?.aadhaarNumber || '740766742979';

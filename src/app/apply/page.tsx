@@ -1173,8 +1173,8 @@ export default function ApplyPage() {
                       type="button"
                       onClick={() => setInstructionLang('en')}
                       className={`px-3 py-1 rounded text-xs font-bold transition ${instructionLang === 'en'
-                          ? 'bg-white text-portal-navy shadow-xs'
-                          : 'text-white/80 hover:text-white'
+                        ? 'bg-white text-portal-navy shadow-xs'
+                        : 'text-white/80 hover:text-white'
                         }`}
                     >
                       English
@@ -1183,8 +1183,8 @@ export default function ApplyPage() {
                       type="button"
                       onClick={() => setInstructionLang('hi')}
                       className={`px-3 py-1 rounded text-xs font-bold transition ${instructionLang === 'hi'
-                          ? 'bg-white text-portal-navy shadow-xs'
-                          : 'text-white/80 hover:text-white'
+                        ? 'bg-white text-portal-navy shadow-xs'
+                        : 'text-white/80 hover:text-white'
                         }`}
                     >
                       हिन्दी
@@ -1281,14 +1281,14 @@ export default function ApplyPage() {
                       </div>
                     </div>
 
-                    {/* 4. Counselling-Day Deposit */}
+                    {/* 4. Non-Refundable Deposit */}
                     <div className="pt-4 space-y-1.5">
                       <h3 className="text-xs sm:text-sm font-bold text-portal-navy uppercase tracking-wide flex items-center gap-2">
                         <span className="w-5 h-5 rounded-full bg-portal-navy text-white text-[11px] flex items-center justify-center font-bold">4</span>
-                        <span>Counselling-Day Deposit (Boys Only)</span>
+                        <span>Non-Refundable Deposit</span>
                       </h3>
                       <div className="bg-amber-50 border border-amber-200 p-3 rounded-lg text-amber-950 font-medium">
-                        A non-refundable deposit of <strong>₹25,000</strong> is to be deposited on the day of counselling for Boys candidates. <em>(Note: Not applicable for Girls, as there is no counselling for Girls.)</em>
+                        A non-refundable deposit of <strong>₹25,000</strong> for all candidates.
                       </div>
                     </div>
 
@@ -1404,14 +1404,14 @@ export default function ApplyPage() {
                       </div>
                     </div>
 
-                    {/* 4. काउंसलिंग जमा राशि */}
+                    {/* 4. गैर-वापसी योग्य जमा राशि */}
                     <div className="pt-4 space-y-1.5">
                       <h3 className="text-xs sm:text-sm font-bold text-portal-navy uppercase tracking-wide flex items-center gap-2">
                         <span className="w-5 h-5 rounded-full bg-portal-navy text-white text-[11px] flex items-center justify-center font-bold">4</span>
-                        <span>काउंसलिंग जमा राशि (केवल छात्रों के लिए)</span>
+                        <span>गैर-वापसी योग्य जमा राशि</span>
                       </h3>
                       <div className="bg-amber-50 border border-amber-200 p-3 rounded-lg text-amber-950 font-medium">
-                        छात्रों के लिए काउंसलिंग के दिन <strong>₹25,000</strong> की गैर-वापसी योग्य (non-refundable) राशि जमा करनी होगी। <em>(नोट: छात्राओं के लिए कोई काउंसलिंग नहीं है, अतः यह छात्राओं पर लागू नहीं है।)</em>
+                        सभी अभ्यर्थियों के लिए <strong>₹25,000</strong> की गैर-वापसी योग्य (non-refundable) जमा राशि।
                       </div>
                     </div>
 
@@ -1482,14 +1482,14 @@ export default function ApplyPage() {
                     type="button"
                     onClick={() => handleGenderSelect('Male')}
                     className={`flex items-center gap-3 p-3 rounded-lg border text-left cursor-pointer transition select-none ${formData.gender === 'Male'
-                        ? 'border-portal-navy bg-portal-navy/5 text-portal-navy font-bold shadow-xs ring-1 ring-portal-navy'
-                        : 'border-slate-200 hover:bg-slate-50 text-slate-700 bg-white'
+                      ? 'border-portal-navy bg-portal-navy/5 text-portal-navy font-bold shadow-xs ring-1 ring-portal-navy'
+                      : 'border-slate-200 hover:bg-slate-50 text-slate-700 bg-white'
                       }`}
                   >
                     <div
                       className={`w-4 h-4 rounded-full border flex items-center justify-center transition ${formData.gender === 'Male'
-                          ? 'border-portal-navy bg-white'
-                          : 'border-slate-300 bg-white'
+                        ? 'border-portal-navy bg-white'
+                        : 'border-slate-300 bg-white'
                         }`}
                     >
                       {formData.gender === 'Male' && (
@@ -1503,14 +1503,14 @@ export default function ApplyPage() {
                     type="button"
                     onClick={() => handleGenderSelect('Female')}
                     className={`flex items-center gap-3 p-3 rounded-lg border text-left cursor-pointer transition select-none ${formData.gender === 'Female'
-                        ? 'border-portal-navy bg-portal-navy/5 text-portal-navy font-bold shadow-xs ring-1 ring-portal-navy'
-                        : 'border-slate-200 hover:bg-slate-50 text-slate-700 bg-white'
+                      ? 'border-portal-navy bg-portal-navy/5 text-portal-navy font-bold shadow-xs ring-1 ring-portal-navy'
+                      : 'border-slate-200 hover:bg-slate-50 text-slate-700 bg-white'
                       }`}
                   >
                     <div
                       className={`w-4 h-4 rounded-full border flex items-center justify-center transition ${formData.gender === 'Female'
-                          ? 'border-portal-navy bg-white'
-                          : 'border-slate-300 bg-white'
+                        ? 'border-portal-navy bg-white'
+                        : 'border-slate-300 bg-white'
                         }`}
                     >
                       {formData.gender === 'Female' && (
@@ -1544,7 +1544,7 @@ export default function ApplyPage() {
                     <ul className="list-disc pl-4 space-y-0.5 text-slate-700">
                       <li><strong>Entrance Exam:</strong> Sunday, 14 February 2027 at 8:30 AM at <strong>The Gurukul Nilokheri</strong>.</li>
                       <li><strong>Reporting Time:</strong> Candidates must report at <strong>8:00 AM / 8:30 AM</strong>.</li>
-                      <li><strong>Counselling:</strong> No counselling for Girls (Counselling is conducted for Boys only).</li>
+                      <li><strong>Admission Deposit:</strong> To secure the seat, a non-refundable fee of <strong>₹25,000</strong> must be deposited after the declaration of the result.</li>
                       <li><strong>Must Bring:</strong> Admit Card, Aadhaar Card copy, and 2 passport-size photographs.</li>
                     </ul>
                   </div>
@@ -1606,7 +1606,7 @@ export default function ApplyPage() {
                       <li><strong>Entrance Exam:</strong> Sunday, 14 February 2027 at <strong>Aryakulam Nilokheri</strong>.</li>
                       <li><strong>Reporting Time:</strong> Candidates must report at <strong>9:30 AM</strong> at Aryakulam Nilokheri.</li>
                       <li><strong>Counselling Schedule (Boys Only):</strong> 15, 16 &amp; 17 February 2027 (9:00 AM to 1:00 PM) at <strong>Aryakulam Nilokheri</strong>.</li>
-                      <li><strong>Counselling-Day Deposit:</strong> A non-refundable deposit of <strong>₹25,000</strong> is to be deposited on the day of counselling for Boys.</li>
+                      <li><strong>Counselling-Day Deposit:</strong> A non-refundable deposit of <strong>₹25,000</strong> is to be deposited on the day of counselling for Boys candidates.</li>
                       <li><strong>Must Bring:</strong> Admit Card, Aadhaar Card copy, and 2 passport-size photographs.</li>
                     </ul>
                   </div>

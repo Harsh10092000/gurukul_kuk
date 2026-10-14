@@ -49,7 +49,7 @@ export default function RootLayout({
         <meta name="google" content="notranslate" />
         <meta name="googlebot" content="notranslate" />
         <meta name="robots" content="notranslate" />
-        <meta http-equiv="Content-Language" content="en, hi" />
+        <meta httpEquiv="Content-Language" content="en, hi" />
         <script
           dangerouslySetInnerHTML={{
             __html: `

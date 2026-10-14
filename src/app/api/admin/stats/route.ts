@@ -40,7 +40,8 @@ export async function GET() {
     // State-wise breakdown (across active candidates)
     const stateCounts: Record<string, number> = {};
     activeApplications.forEach((a) => {
-      const state = a.addressInfo?.state || 'Haryana';
+      const rawState = a.addressInfo?.state;
+      const state = rawState && rawState.trim() ? rawState.trim() : 'Haryana';
       stateCounts[state] = (stateCounts[state] || 0) + 1;
     });
 

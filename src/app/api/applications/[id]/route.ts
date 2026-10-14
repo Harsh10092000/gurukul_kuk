@@ -163,8 +163,130 @@ export async function PATCH(
 
     return NextResponse.json({ success: true, application: updatedApp });
   } catch (error) {
-    console.error('Error updating application:', error);
+    console.error('Error updating application status:', error);
     return NextResponse.json({ error: 'Failed to update application' }, { status: 500 });
+  }
+}
+
+export async function PUT(
+  request: Request,
+  { params }: { params: { id: string } }
+) {
+  try {
+    const user = await getCurrentUser();
+    if (!user || user.role !== 'admin') {
+      return NextResponse.json({ error: 'Admin authorization required' }, { status: 403 });
+    }
+
+    const id = params.id;
+    const existingApp = await db.getApplicationById(id);
+    if (!existingApp) {
+      return NextResponse.json({ error: 'Application not found' }, { status: 404 });
+    }
+
+    const body = await request.json();
+    const {
+      personalInfo = {},
+      parentInfo = {},
+      addressInfo = {},
+      academicInfo = {},
+      classApplying,
+      stream,
+      studyLocationPref,
+      documents = {},
+    } = body;
+
+    // IMMUTABILITY ENFORCEMENT: Unique keys (Email, Aadhaar, Registration No., Roll No.) cannot be modified
+    const lockedEmail = existingApp.personalInfo?.candidateEmail || existingApp.personalInfo?.email || '';
+    const lockedAadhaar = existingApp.personalInfo?.aadhaarNumber || '';
+    const lockedRegNo = existingApp.registrationNumber || existingApp.applicationNumber;
+    const lockedRollNo = existingApp.rollNumber;
+    const lockedStatus = existingApp.status; // Preserve existing status (no under_review changes)
+
+    // Sanitize and clean phone numbers (10 numeric digits)
+    const cleanFatherPhone = parentInfo.fatherPhone ? parentInfo.fatherPhone.replace(/\D/g, '').slice(-10) : (existingApp.parentInfo?.fatherPhone || '');
+    const cleanMotherPhone = parentInfo.motherPhone ? parentInfo.motherPhone.replace(/\D/g, '').slice(-10) : (existingApp.parentInfo?.motherPhone || '');
+    const cleanCandMobile = personalInfo.candidateMobile ? personalInfo.candidateMobile.replace(/\D/g, '').slice(-10) : (cleanFatherPhone || existingApp.personalInfo?.candidateMobile || '');
+    const cleanWhatsapp = addressInfo.whatsappNumber ? addressInfo.whatsappNumber.replace(/\D/g, '').slice(-10) : (personalInfo.whatsappNumber ? personalInfo.whatsappNumber.replace(/\D/g, '').slice(-10) : cleanCandMobile);
+    const cleanPincode = addressInfo.pincode ? addressInfo.pincode.replace(/\D/g, '').slice(0, 6) : (existingApp.addressInfo?.pincode || '');
+
+    // Merge documents (excluding parent signature per policy)
+    const mergedDocs = {
+      ...(existingApp.documents || {}),
+      ...(documents || {}),
+    };
+    delete mergedDocs.parentSignature; // Explicitly ensure parent signature is not stored
+
+    const targetClass = classApplying || academicInfo.applyingClass || existingApp.classApplying;
+    const targetStream = targetClass.includes('11') ? (stream || academicInfo.stream || existingApp.stream || 'Non Medical') : undefined;
+
+    const updates = {
+      classApplying: targetClass,
+      stream: targetStream,
+      status: lockedStatus, // Unchanged
+      registrationNumber: lockedRegNo,
+      rollNumber: lockedRollNo,
+      personalInfo: {
+        ...(existingApp.personalInfo || {}),
+        ...personalInfo,
+        fullName: personalInfo.fullName ? personalInfo.fullName.trim() : existingApp.personalInfo?.fullName,
+        dob: personalInfo.dob ? personalInfo.dob.trim() : existingApp.personalInfo?.dob,
+        gender: personalInfo.gender || existingApp.personalInfo?.gender || 'Male',
+        category: personalInfo.category || existingApp.personalInfo?.category || 'General',
+        candidateEmail: lockedEmail,
+        email: lockedEmail,
+        aadhaarNumber: lockedAadhaar,
+        candidateMobile: cleanCandMobile,
+        whatsappNumber: cleanWhatsapp,
+      },
+      parentInfo: {
+        ...(existingApp.parentInfo || {}),
+        ...parentInfo,
+        fatherName: parentInfo.fatherName ? parentInfo.fatherName.trim() : existingApp.parentInfo?.fatherName,
+        fatherOccupation: parentInfo.fatherOccupation ? parentInfo.fatherOccupation.trim() : existingApp.parentInfo?.fatherOccupation,
+        fatherPhone: cleanFatherPhone,
+        motherName: parentInfo.motherName ? parentInfo.motherName.trim() : existingApp.parentInfo?.motherName,
+        motherOccupation: parentInfo.motherOccupation ? parentInfo.motherOccupation.trim() : existingApp.parentInfo?.motherOccupation,
+        motherPhone: cleanMotherPhone || undefined,
+        annualIncome: parentInfo.annualIncome ? parentInfo.annualIncome.trim() : existingApp.parentInfo?.annualIncome,
+      },
+      addressInfo: {
+        ...(existingApp.addressInfo || {}),
+        ...addressInfo,
+        streetAddress: addressInfo.streetAddress ? addressInfo.streetAddress.trim() : existingApp.addressInfo?.streetAddress,
+        city: addressInfo.city !== undefined ? addressInfo.city.trim() : existingApp.addressInfo?.city,
+        district: addressInfo.district ? addressInfo.district.trim() : existingApp.addressInfo?.district,
+        state: addressInfo.state ? addressInfo.state.trim() : existingApp.addressInfo?.state,
+        pincode: cleanPincode,
+        whatsappNumber: cleanWhatsapp,
+      },
+      academicInfo: {
+        ...(existingApp.academicInfo || {}),
+        ...academicInfo,
+        applyingClass: targetClass,
+        stream: targetStream,
+        previousSchoolName: academicInfo.previousSchoolName || personalInfo.previousSchoolName || existingApp.academicInfo?.previousSchoolName,
+        previousBoard: academicInfo.previousBoard || personalInfo.previousBoard || existingApp.academicInfo?.previousBoard,
+        otherBoard: academicInfo.otherBoard || personalInfo.otherBoard || existingApp.academicInfo?.otherBoard,
+      },
+      studyLocationPref: studyLocationPref || existingApp.studyLocationPref || existingApp.examCentrePref,
+      examCentrePref: studyLocationPref || existingApp.studyLocationPref || existingApp.examCentrePref,
+      documents: mergedDocs,
+    };
+
+    const updated = await db.updateApplicationDetails(id, updates);
+    if (!updated) {
+      return NextResponse.json({ error: 'Failed to update candidate record in database.' }, { status: 500 });
+    }
+
+    return NextResponse.json({
+      success: true,
+      message: 'Candidate application and admit card updated successfully.',
+      application: updated,
+    });
+  } catch (error) {
+    console.error('Error in admin PUT application update:', error);
+    return NextResponse.json({ error: 'Internal server error while saving candidate details.' }, { status: 500 });
   }
 }
 

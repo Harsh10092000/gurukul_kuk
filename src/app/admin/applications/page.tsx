@@ -15,7 +15,8 @@ import {
   EyeOff, 
   ChevronLeft, 
   ChevronRight,
-  Loader2
+  Loader2,
+  Pencil
 } from 'lucide-react';
 import { Application } from '@/lib/types';
 
@@ -576,18 +577,18 @@ export default function AdminApplicationsPage() {
                         <div className="flex items-center justify-end gap-2">
                           <Link
                             href={`/admin/applications/${app.id}`}
-                            className="btn-primary text-xs h-8 px-3"
+                            className="btn-secondary text-xs h-8 px-3"
                           >
                             View
                           </Link>
-                          <button
-                            type="button"
-                            onClick={() => setAppToDelete(app)}
-                            className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition"
-                            title="Delete Candidate Record"
+                          <Link
+                            href={`/admin/applications/${app.id}/edit`}
+                            className="btn-primary text-xs h-8 px-3 flex items-center gap-1.5 font-bold"
+                            title="Edit Candidate Details"
                           >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
+                            <Pencil className="w-3.5 h-3.5" />
+                            <span>Edit</span>
+                          </Link>
                         </div>
                       </td>
                     </tr>

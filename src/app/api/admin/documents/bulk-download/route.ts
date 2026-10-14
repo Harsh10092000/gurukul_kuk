@@ -99,7 +99,7 @@ export async function GET(request: Request) {
 
     // Summary Manifest CSV
     const manifestRows = [
-      ['S.No', 'Registration ID', 'Roll Number', 'Candidate Name', 'Class', 'Stream', 'Gender', 'Phone', 'Father Name', 'Exam Centre', 'Photo Available', 'Signature Available', 'Aadhaar Available'],
+      ['S.No', 'Registration ID', 'Roll Number', 'Candidate Name', 'Class', 'Stream', 'Gender', 'Father Phone / Mobile', 'Mother Mobile', 'Father Name', 'Exam Centre', 'Photo Available', 'Signature Available', 'Aadhaar Available'],
     ];
 
     let filesIncluded = 0;
@@ -201,6 +201,7 @@ export async function GET(request: Request) {
         app.stream || app.academicInfo?.stream || 'N/A',
         app.personalInfo?.gender || '',
         app.personalInfo?.candidateMobile || app.parentInfo?.fatherPhone || '',
+        app.parentInfo?.motherPhone || '',
         app.parentInfo?.fatherName || '',
         app.studyLocationPref?.firstPreference || '',
         hasPhoto ? 'YES' : 'NO',

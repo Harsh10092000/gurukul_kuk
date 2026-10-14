@@ -114,10 +114,14 @@ export async function GET(request: Request) {
       // Enrich card
       const enrichedCard: AdmitCard = {
         ...card,
+        candidateName: app.personalInfo?.fullName || card.candidateName,
+        fatherName: app.parentInfo?.fatherName || card.fatherName,
+        motherName: app.parentInfo?.motherName || card.motherName || 'MEENA',
+        classApplying: app.classApplying || card.classApplying,
+        stream: app.stream || app.academicInfo?.stream || card.stream,
         gender: app.personalInfo?.gender,
-        motherName: card.motherName || app.parentInfo?.motherName || 'MEENA',
-        previousSchoolName: card.previousSchoolName || app.academicInfo?.previousSchoolName || app.personalInfo?.previousSchoolName || 'KL INTERNATIONAL SCHOOL',
-        aadhaarNumber: card.aadhaarNumber || app.personalInfo?.aadhaarNumber || '740766742979',
+        previousSchoolName: app.academicInfo?.previousSchoolName || app.personalInfo?.previousSchoolName || card.previousSchoolName || 'KL INTERNATIONAL SCHOOL',
+        aadhaarNumber: app.personalInfo?.aadhaarNumber || card.aadhaarNumber || '740766742979',
         candidatePhotoUrl: app.documents?.photo || card.candidatePhotoUrl || '/logo-gurukul.png',
         candidateSignatureUrl: app.documents?.signature || card.candidateSignatureUrl || undefined,
       };
