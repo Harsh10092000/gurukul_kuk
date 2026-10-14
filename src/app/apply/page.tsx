@@ -1408,10 +1408,10 @@ export default function ApplyPage() {
                     <div className="pt-4 space-y-1.5">
                       <h3 className="text-xs sm:text-sm font-bold text-portal-navy uppercase tracking-wide flex items-center gap-2">
                         <span className="w-5 h-5 rounded-full bg-portal-navy text-white text-[11px] flex items-center justify-center font-bold">4</span>
-                        <span>गैर-वापसी योग्य जमा राशि</span>
+                        <span>गैर-वापसी जमा राशि</span>
                       </h3>
                       <div className="bg-amber-50 border border-amber-200 p-3 rounded-lg text-amber-950 font-medium">
-                        सभी अभ्यर्थियों के लिए <strong>₹25,000</strong> की गैर-वापसी योग्य (non-refundable) जमा राशि।
+                        सभी अभ्यर्थियों के लिए <strong>₹25,000</strong> की गैर-वापसी (non-refundable) जमा राशि।
                       </div>
                     </div>
 
