@@ -3,6 +3,7 @@ import { db } from '@/lib/db';
 import { getCurrentUser } from '@/lib/auth';
 import { sendNotification } from '@/lib/notifications';
 import { isValidApplicationStatus, isValidStatusTransition } from '@/lib/applicationMetrics';
+import { validateAadhaar } from '@/lib/validations';
 
 export async function GET(
   request: Request,
@@ -196,12 +197,55 @@ export async function PUT(
       documents = {},
     } = body;
 
-    // IMMUTABILITY ENFORCEMENT: Unique keys (Email, Aadhaar, Registration No., Roll No.) cannot be modified
+    // IMMUTABILITY ENFORCEMENT:
+    // 1. Email, Registration No., Roll No. cannot be modified
+    // 2. Class, Stream, and Gender are locked to preserve Roll Number & Exam Allotment integrity
     const lockedEmail = existingApp.personalInfo?.candidateEmail || existingApp.personalInfo?.email || '';
-    const lockedAadhaar = existingApp.personalInfo?.aadhaarNumber || '';
     const lockedRegNo = existingApp.registrationNumber || existingApp.applicationNumber;
     const lockedRollNo = existingApp.rollNumber;
+    const lockedClass = existingApp.classApplying;
+    const lockedStream = existingApp.stream;
+    const lockedGender = existingApp.personalInfo?.gender || 'Male';
     const lockedStatus = existingApp.status; // Preserve existing status (no under_review changes)
+
+    // AADHAAR CARD VALIDATION & DUPLICATE BLOCKING:
+    // Admin can update Aadhaar, but if the new Aadhaar exists on another application, block it.
+    const submittedAadhaar = personalInfo.aadhaarNumber !== undefined 
+      ? String(personalInfo.aadhaarNumber).trim() 
+      : (existingApp.personalInfo?.aadhaarNumber || '');
+    const cleanAadhaar = submittedAadhaar.replace(/\D/g, '').slice(0, 12);
+
+    if (cleanAadhaar) {
+      const aadhaarCheck = validateAadhaar(cleanAadhaar);
+      if (!aadhaarCheck.isValid) {
+        return NextResponse.json(
+          { error: aadhaarCheck.error || 'Aadhaar card number must be exactly 12 numeric digits.' },
+          { status: 400 }
+        );
+      }
+
+      // Check for duplicate in database if changed
+      const existingCleanAadhaar = (existingApp.personalInfo?.aadhaarNumber || '').replace(/\D/g, '');
+      if (cleanAadhaar !== existingCleanAadhaar) {
+        const duplicateApp = await db.findApplicationByAadhaar(cleanAadhaar);
+        if (
+          duplicateApp &&
+          duplicateApp.id !== existingApp.id &&
+          duplicateApp.userId !== existingApp.userId &&
+          duplicateApp.applicationNumber !== existingApp.applicationNumber &&
+          duplicateApp.registrationNumber !== existingApp.registrationNumber
+        ) {
+          return NextResponse.json(
+            {
+              error: `Aadhaar card number '${cleanAadhaar}' already exists in the system for candidate "${duplicateApp.personalInfo?.fullName || 'Another Candidate'}" (Reg: ${duplicateApp.registrationNumber || duplicateApp.applicationNumber || duplicateApp.id}). Duplicate Aadhaar entry is blocked for security.`,
+            },
+            { status: 409 }
+          );
+        }
+      }
+    }
+
+    const targetAadhaar = cleanAadhaar || existingApp.personalInfo?.aadhaarNumber || '';
 
     // Sanitize and clean phone numbers (10 numeric digits)
     const cleanFatherPhone = parentInfo.fatherPhone ? parentInfo.fatherPhone.replace(/\D/g, '').slice(-10) : (existingApp.parentInfo?.fatherPhone || '');
@@ -217,8 +261,9 @@ export async function PUT(
     };
     delete mergedDocs.parentSignature; // Explicitly ensure parent signature is not stored
 
-    const targetClass = classApplying || academicInfo.applyingClass || existingApp.classApplying;
-    const targetStream = targetClass.includes('11') ? (stream || academicInfo.stream || existingApp.stream || 'Non Medical') : undefined;
+    // Class and Stream are locked to existing values
+    const targetClass = lockedClass;
+    const targetStream = lockedClass.includes('11') ? lockedStream : undefined;
 
     const updates = {
       classApplying: targetClass,
@@ -231,11 +276,11 @@ export async function PUT(
         ...personalInfo,
         fullName: personalInfo.fullName ? personalInfo.fullName.trim() : existingApp.personalInfo?.fullName,
         dob: personalInfo.dob ? personalInfo.dob.trim() : existingApp.personalInfo?.dob,
-        gender: personalInfo.gender || existingApp.personalInfo?.gender || 'Male',
+        gender: lockedGender,
         category: personalInfo.category || existingApp.personalInfo?.category || 'General',
         candidateEmail: lockedEmail,
         email: lockedEmail,
-        aadhaarNumber: lockedAadhaar,
+        aadhaarNumber: targetAadhaar,
         candidateMobile: cleanCandMobile,
         whatsappNumber: cleanWhatsapp,
       },

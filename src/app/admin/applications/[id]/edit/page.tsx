@@ -11,6 +11,7 @@ import {
   Upload,
   CheckCircle,
   AlertCircle,
+  AlertTriangle,
   Eye,
   X,
   Loader2,
@@ -63,6 +64,8 @@ export default function AdminEditApplicationPage({ params }: { params: { id: str
   const [application, setApplication] = useState<Application | null>(null);
   const [admitCard, setAdmitCard] = useState<AdmitCard | null>(null);
   const [errorMsg, setErrorMsg] = useState('');
+  const [errorModal, setErrorModal] = useState<{ title?: string; message: string } | null>(null);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [successMsg, setSuccessMsg] = useState('');
   const [savedJustNow, setSavedJustNow] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -71,11 +74,12 @@ export default function AdminEditApplicationPage({ params }: { params: { id: str
 
   // Form State
   const [formData, setFormData] = useState({
-    // Personal Details (Locked immutable keys: email, aadhaar, regNo, rollNo)
+    // Personal Details (Unique locked keys: email, regNo, rollNo, class, stream)
     fullName: '',
     dob: '',
     gender: 'Male' as 'Male' | 'Female',
     category: 'General',
+    aadhaarNumber: '',
     panNumber: '',
     apaarId: '',
     familyId: '',
@@ -131,6 +135,7 @@ export default function AdminEditApplicationPage({ params }: { params: { id: str
             dob: app.personalInfo?.dob || '',
             gender: app.personalInfo?.gender || 'Male',
             category: app.personalInfo?.category || 'General',
+            aadhaarNumber: app.personalInfo?.aadhaarNumber || '',
             panNumber: app.personalInfo?.panNumber || '',
             apaarId: app.personalInfo?.apaarId || '',
             familyId: app.personalInfo?.familyId || '',
@@ -200,6 +205,9 @@ export default function AdminEditApplicationPage({ params }: { params: { id: str
         classApplying: value,
         stream: is11 ? (prev.stream || 'Non Medical') : '',
       }));
+    } else if (name === 'aadhaarNumber') {
+      const clean = value.replace(/\D/g, '').slice(0, 12);
+      setFormData((prev) => ({ ...prev, aadhaarNumber: clean }));
     } else if (['fatherPhone', 'motherPhone', 'candidateMobile', 'whatsappNumber'].includes(name)) {
       const clean = value.replace(/\D/g, '').slice(0, 10);
       setFormData((prev) => ({ ...prev, [name]: clean }));
@@ -216,7 +224,10 @@ export default function AdminEditApplicationPage({ params }: { params: { id: str
     if (!file) return;
 
     if (file.size > 2 * 1024 * 1024) {
-      setErrorMsg(`File size must be 2 MB or less. Selected file is ${(file.size / (1024 * 1024)).toFixed(2)} MB.`);
+      setErrorModal({
+        title: 'File Size Exceeded',
+        message: `File size must be 2 MB or less. Selected file is ${(file.size / (1024 * 1024)).toFixed(2)} MB.`,
+      });
       return;
     }
 
@@ -237,8 +248,19 @@ export default function AdminEditApplicationPage({ params }: { params: { id: str
     e.preventDefault();
     if (!application) return;
 
+    // Validate Aadhaar if provided
+    const cleanAadhaar = formData.aadhaarNumber.replace(/\D/g, '');
+    if (formData.aadhaarNumber && cleanAadhaar.length !== 12) {
+      setErrorModal({
+        title: 'Invalid Aadhaar Format',
+        message: 'Aadhaar card number must be exactly 12 numeric digits.',
+      });
+      return;
+    }
+
     setSaving(true);
     setErrorMsg('');
+    setErrorModal(null);
     setSuccessMsg('');
 
     try {
@@ -250,6 +272,7 @@ export default function AdminEditApplicationPage({ params }: { params: { id: str
           dob: formData.dob,
           gender: formData.gender,
           category: formData.category,
+          aadhaarNumber: cleanAadhaar || formData.aadhaarNumber,
           panNumber: formData.panNumber || undefined,
           apaarId: formData.apaarId || undefined,
           familyId: formData.familyId || undefined,
@@ -305,19 +328,24 @@ export default function AdminEditApplicationPage({ params }: { params: { id: str
       const data = await res.json();
       if (data.success && data.application) {
         setApplication(data.application);
-        setSuccessMsg('Information edited successfully.');
+        setShowSuccessModal(true);
         setSavedJustNow(true);
         setTimeout(() => {
           setSavedJustNow(false);
         }, 3500);
-        setTimeout(() => {
-          setSuccessMsg('');
-        }, 6000);
       } else {
-        setErrorMsg(data.error || 'Failed to save candidate modifications.');
+        const msg = data.error || 'Failed to save candidate modifications.';
+        const isAadhaarDup = msg.toLowerCase().includes('aadhaar');
+        setErrorModal({
+          title: isAadhaarDup ? 'Duplicate Aadhaar Number Detected' : 'Unable to Save Changes',
+          message: msg,
+        });
       }
     } catch {
-      setErrorMsg('Network error occurred while saving candidate details.');
+      setErrorModal({
+        title: 'Network / Connection Error',
+        message: 'Network error occurred while saving candidate details. Please try again.',
+      });
     } finally {
       setSaving(false);
     }
@@ -381,7 +409,6 @@ export default function AdminEditApplicationPage({ params }: { params: { id: str
   const rollNumber = application.rollNumber || admitCard?.rollNumber || 'PENDING';
   const regNumber = application.registrationNumber || application.applicationNumber;
   const lockedEmail = application.personalInfo?.candidateEmail || application.personalInfo?.email || '—';
-  const lockedAadhaar = application.personalInfo?.aadhaarNumber || '—';
 
   return (
     <div className="space-y-6 max-w-5xl mx-auto pb-16 font-sans">
@@ -424,37 +451,14 @@ export default function AdminEditApplicationPage({ params }: { params: { id: str
         </div>
       </div>
 
-      {/* Notifications */}
-      {errorMsg && (
-        <div className="p-3.5 bg-rose-50 border border-rose-200 rounded-xl text-rose-900 text-xs font-medium flex items-center gap-2.5 shadow-xs">
-          <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
-          <span>{errorMsg}</span>
-        </div>
-      )}
-
-      {successMsg && (
-        <div className="p-3.5 bg-emerald-50 border border-emerald-200 rounded-xl text-emerald-900 text-xs font-semibold flex items-center justify-between gap-2.5 shadow-xs">
-          <div className="flex items-center gap-2">
-            <CheckCircle className="w-4 h-4 text-emerald-600 shrink-0" />
-            <span>{successMsg}</span>
-          </div>
-          <Link
-            href={`/admin/applications/${application.id}`}
-            className="text-xs text-emerald-800 hover:text-emerald-950 font-bold underline decoration-emerald-500 underline-offset-2 shrink-0"
-          >
-            View Updated Dossier →
-          </Link>
-        </div>
-      )}
-
-      {/* Immutable / Unique Identifier Locked Banner */}
+      {/* Unique Identifier Locked Banner */}
       <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 space-y-3">
         <div className="flex items-center gap-2 text-slate-800 font-bold text-xs uppercase tracking-wider">
           <Lock className="w-3.5 h-3.5 text-slate-500" />
           <span>Unique Audit Identifiers (Immutable &amp; Locked)</span>
         </div>
         <p className="text-[11px] text-slate-500 leading-relaxed">
-          Registration Number, Roll Number, Aadhaar Number, and Candidate Email are unique primary academic keys. They are locked to preserve audit integrity and prevent authentication collisions.
+          Registration Number, Roll Number, Candidate Email, Gender, and Class/Stream are locked academic keys to preserve examination series and roll number allotment integrity.
         </p>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs pt-1">
           <div className="bg-white p-2.5 rounded-lg border border-slate-200">
@@ -472,16 +476,16 @@ export default function AdminEditApplicationPage({ params }: { params: { id: str
             </span>
           </div>
           <div className="bg-white p-2.5 rounded-lg border border-slate-200">
-            <span className="text-[10px] text-slate-400 font-bold block uppercase">Aadhaar Number</span>
-            <span className="font-mono font-bold text-slate-900 text-sm flex items-center justify-between">
-              {lockedAadhaar}
-              <Lock className="w-3 h-3 text-slate-400" />
-            </span>
-          </div>
-          <div className="bg-white p-2.5 rounded-lg border border-slate-200">
             <span className="text-[10px] text-slate-400 font-bold block uppercase">Candidate Email</span>
             <span className="font-semibold text-slate-900 text-xs truncate block flex items-center justify-between">
               <span className="truncate">{lockedEmail}</span>
+              <Lock className="w-3 h-3 text-slate-400 shrink-0 ml-1" />
+            </span>
+          </div>
+          <div className="bg-white p-2.5 rounded-lg border border-slate-200">
+            <span className="text-[10px] text-slate-400 font-bold block uppercase">Class &amp; Stream</span>
+            <span className="font-semibold text-slate-900 text-xs flex items-center justify-between">
+              <span className="truncate">{formData.classApplying}{formData.stream ? ` (${formData.stream})` : ''}</span>
               <Lock className="w-3 h-3 text-slate-400 shrink-0 ml-1" />
             </span>
           </div>
@@ -528,19 +532,27 @@ export default function AdminEditApplicationPage({ params }: { params: { id: str
             </div>
 
             <div>
-              <label className="form-label">
-                Gender <span className="text-rose-500">*</span>
-              </label>
-              <select
-                name="gender"
-                required
-                value={formData.gender}
-                onChange={handleChange}
-                className="form-input-field font-semibold"
-              >
-                <option value="Male">Male</option>
-                <option value="Female">Female</option>
-              </select>
+              <div className="flex items-center justify-between">
+                <label className="form-label">
+                  Gender
+                </label>
+                <span className="inline-flex items-center gap-1 text-[10px] text-amber-700 bg-amber-50 font-semibold px-2 py-0.5 rounded border border-amber-200">
+                  <Lock className="w-2.5 h-2.5" /> Locked
+                </span>
+              </div>
+              <div className="relative">
+                <input
+                  type="text"
+                  disabled
+                  readOnly
+                  value={formData.gender}
+                  className="form-input-field bg-slate-100 text-slate-700 font-bold cursor-not-allowed border-slate-300"
+                />
+                <Lock className="w-3.5 h-3.5 text-slate-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+              </div>
+              <p className="text-[10px] text-slate-500 mt-1">
+                Locked to preserve Roll Number, Exam Centre, and Reporting Schedule.
+              </p>
             </div>
 
             <div>
@@ -560,6 +572,26 @@ export default function AdminEditApplicationPage({ params }: { params: { id: str
                 <option value="ST">ST</option>
                 <option value="EWS">EWS</option>
               </select>
+            </div>
+
+            <div>
+              <label className="form-label">
+                Aadhaar Card Number (12 Digits) <span className="text-rose-500">*</span>
+              </label>
+              <input
+                type="text"
+                inputMode="numeric"
+                maxLength={12}
+                name="aadhaarNumber"
+                required
+                placeholder="12-digit UIDAI number"
+                value={formData.aadhaarNumber}
+                onChange={handleChange}
+                className="form-input-field font-mono font-semibold tracking-wider"
+              />
+              <p className="text-[10px] text-slate-500 mt-1">
+                Must be 12 numeric digits. Duplicate checks verified on save.
+              </p>
             </div>
 
             <div>
@@ -878,38 +910,52 @@ export default function AdminEditApplicationPage({ params }: { params: { id: str
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
             <div>
-              <label className="form-label">
-                Class Applying For <span className="text-rose-500">*</span>
-              </label>
-              <select
-                name="classApplying"
-                required
-                value={formData.classApplying}
-                onChange={handleChange}
-                className="form-input-field font-semibold"
-              >
-                {CLASS_OPTIONS.map((c) => (
-                  <option key={c} value={c}>{c}</option>
-                ))}
-              </select>
+              <div className="flex items-center justify-between">
+                <label className="form-label">
+                  Class Applying For
+                </label>
+                <span className="inline-flex items-center gap-1 text-[10px] text-amber-700 bg-amber-50 font-semibold px-2 py-0.5 rounded border border-amber-200">
+                  <Lock className="w-2.5 h-2.5" /> Locked
+                </span>
+              </div>
+              <div className="relative">
+                <input
+                  type="text"
+                  disabled
+                  readOnly
+                  value={formData.classApplying}
+                  className="form-input-field bg-slate-100 text-slate-700 font-bold cursor-not-allowed border-slate-300"
+                />
+                <Lock className="w-3.5 h-3.5 text-slate-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+              </div>
+              <p className="text-[10px] text-slate-500 mt-1">
+                Locked to preserve Roll Number &amp; exam hall allotment integrity.
+              </p>
             </div>
 
             {formData.classApplying.includes('11') && (
               <div>
-                <label className="form-label">
-                  Class 11 Academic Stream <span className="text-rose-500">*</span>
-                </label>
-                <select
-                  name="stream"
-                  required
-                  value={formData.stream}
-                  onChange={handleChange}
-                  className="form-input-field font-semibold"
-                >
-                  {STREAM_OPTIONS.map((st) => (
-                    <option key={st} value={st}>{st}</option>
-                  ))}
-                </select>
+                <div className="flex items-center justify-between">
+                  <label className="form-label">
+                    Class 11 Academic Stream
+                  </label>
+                  <span className="inline-flex items-center gap-1 text-[10px] text-amber-700 bg-amber-50 font-semibold px-2 py-0.5 rounded border border-amber-200">
+                    <Lock className="w-2.5 h-2.5" /> Locked
+                  </span>
+                </div>
+                <div className="relative">
+                  <input
+                    type="text"
+                    disabled
+                    readOnly
+                    value={formData.stream || 'Non Medical'}
+                    className="form-input-field bg-slate-100 text-slate-700 font-bold cursor-not-allowed border-slate-300"
+                  />
+                  <Lock className="w-3.5 h-3.5 text-slate-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                </div>
+                <p className="text-[10px] text-slate-500 mt-1">
+                  Locked to prevent stream and exam question booklet series conflicts.
+                </p>
               </div>
             )}
 
@@ -1193,6 +1239,107 @@ export default function AdminEditApplicationPage({ params }: { params: { id: str
                   <span>Delete Record</span>
                 )}
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Saving In-Progress Overlay Loader */}
+      {saving && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-xs p-4 animate-fadeIn pointer-events-auto">
+          <div className="bg-white rounded-2xl p-6 shadow-2xl flex flex-col items-center gap-3 border border-slate-100 max-w-xs w-full text-center animate-in fade-in zoom-in-95 duration-150">
+            <div className="w-12 h-12 rounded-full bg-blue-50 text-portal-navy flex items-center justify-center">
+              <Loader2 className="w-6 h-6 animate-spin text-portal-navy" />
+            </div>
+            <div>
+              <h4 className="text-sm font-bold text-slate-900">Saving Changes...</h4>
+              <p className="text-xs text-slate-500 mt-0.5">Validating and saving candidate details</p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Security / Validation Error Pop-up Modal */}
+      {errorModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/65 backdrop-blur-xs p-4 animate-fadeIn">
+          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4 border border-slate-200 relative animate-in fade-in zoom-in-95 duration-150">
+            <button
+              type="button"
+              onClick={() => setErrorModal(null)}
+              className="absolute top-4 right-4 text-slate-400 hover:text-slate-600 p-1 rounded-lg transition"
+              title="Close modal"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            <div className="w-12 h-12 rounded-full bg-rose-100 text-rose-600 flex items-center justify-center mx-auto shadow-xs">
+              <AlertTriangle className="w-6 h-6 text-rose-600" />
+            </div>
+
+            <div className="text-center space-y-2">
+              <h3 className="text-base font-bold text-slate-900">
+                {errorModal.title || 'Security / Validation Alert'}
+              </h3>
+              <div className="bg-rose-50 border border-rose-200 rounded-xl p-3.5 text-left">
+                <p className="text-xs text-rose-900 leading-relaxed font-medium">
+                  {errorModal.message}
+                </p>
+              </div>
+            </div>
+
+            <div className="pt-1">
+              <button
+                type="button"
+                onClick={() => setErrorModal(null)}
+                className="w-full btn-primary text-xs py-2.5 font-bold flex items-center justify-center gap-1.5 shadow-sm"
+              >
+                <span>Understood</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Information Edited Success Pop-up Modal */}
+      {showSuccessModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/65 backdrop-blur-xs p-4 animate-fadeIn">
+          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4 border border-emerald-100 relative animate-in fade-in zoom-in-95 duration-150">
+            <button
+              type="button"
+              onClick={() => setShowSuccessModal(false)}
+              className="absolute top-4 right-4 text-slate-400 hover:text-slate-600 p-1 rounded-lg transition"
+              title="Close modal"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            <div className="w-12 h-12 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center mx-auto shadow-xs">
+              <CheckCircle className="w-6 h-6 text-emerald-600" />
+            </div>
+
+            <div className="text-center space-y-1.5">
+              <h3 className="text-base font-bold text-slate-900">
+                Information Edited Successfully
+              </h3>
+              <p className="text-xs text-slate-600 leading-relaxed">
+                Candidate details and admit card records for <strong>{application.personalInfo?.fullName}</strong> ({regNumber}) have been successfully updated in the database.
+              </p>
+            </div>
+
+            <div className="flex flex-col sm:flex-row gap-2.5 pt-2">
+              <button
+                type="button"
+                onClick={() => setShowSuccessModal(false)}
+                className="btn-secondary flex-1 text-xs py-2.5 font-semibold text-center"
+              >
+                Continue Editing
+              </button>
+              <Link
+                href={`/admin/applications/${application.id}`}
+                className="btn-primary flex-1 text-xs py-2.5 font-bold text-center flex items-center justify-center gap-1.5 shadow-sm"
+              >
+                <span>View Dossier →</span>
+              </Link>
             </div>
           </div>
         </div>

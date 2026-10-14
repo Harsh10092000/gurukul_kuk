@@ -1368,6 +1368,24 @@ export const db = {
     const clean = aadhaarNumber ? aadhaarNumber.replace(/\D/g, '') : '';
     if (!clean) return null;
 
+    if (pool && !useFallbackStorage) {
+      try {
+        const [rows]: any = await pool.query(
+          `SELECT id FROM applications 
+           WHERE status != 'rejected' 
+             AND REPLACE(REPLACE(JSON_UNQUOTE(JSON_EXTRACT(personal_info, '$.aadhaarNumber')), ' ', ''), '-', '') = ?
+           LIMIT 1`,
+          [clean]
+        );
+        if (rows && rows.length > 0) {
+          return this.getApplicationById(rows[0].id);
+        }
+        return null;
+      } catch (e) {
+        console.warn('MySQL findApplicationByAadhaar error, falling back:', e);
+      }
+    }
+
     const allApps = await this.getApplications();
     const found = allApps.find((a) => {
       const aClean = (a.personalInfo?.aadhaarNumber || '').replace(/\D/g, '');
