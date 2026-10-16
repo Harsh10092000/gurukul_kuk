@@ -75,29 +75,25 @@ export async function POST(request: Request) {
         }
 
         if (isPaid) {
-          const completionResult = await completePaymentAndRegistration({
-            orderId,
-            paymentId,
-            gateway: 'razorpay',
+          // Mark payment order as verified CHARGED with payment ID so it appears in admin approval table
+          await db.updatePaymentOrderRecord(orderId, {
+            status: 'CHARGED',
+            paymentResponse: {
+              gateway: 'razorpay',
+              razorpay_payment_id: paymentId,
+              razorpay_order_id: orderId,
+              verifiedAt: new Date().toISOString(),
+              syncSource: 'admin_razorpay_sync',
+            },
           });
 
-          if (completionResult.success) {
-            results.recoveredCount++;
-            results.details.push({
-              orderId,
-              status: 'RECOVERED_AND_REGISTERED',
-              registrationNumber: completionResult.registrationNumber,
-              rollNumber: completionResult.rollNumber,
-              customerEmail: order.customerEmail,
-            });
-          } else {
-            results.errors++;
-            results.details.push({
-              orderId,
-              status: 'RECOVERY_FAILED',
-              error: completionResult.error,
-            });
-          }
+          results.recoveredCount++;
+          results.details.push({
+            orderId,
+            status: 'AWAITING_ADMIN_APPROVAL',
+            paymentId,
+            customerEmail: order.customerEmail,
+          });
         } else {
           results.stillUnpaid++;
           results.details.push({

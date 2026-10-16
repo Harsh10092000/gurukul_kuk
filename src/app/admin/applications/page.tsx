@@ -74,15 +74,15 @@ export default function AdminApplicationsPage() {
         if (recoveredCount > 0) {
           setSyncResult({
             type: 'success',
-            message: `Success! Recovered and registered ${recoveredCount} candidate(s) from Razorpay. Roll numbers and admit cards have been generated.`,
+            message: `Found ${recoveredCount} candidate(s) whose payment is completed on Razorpay! They are now listed in the "Payment Rescue & Fallback Safety Net" banner below. Click "Approve & Allot Seq" to officially register them.`,
           });
-          fetchApplications();
           fetchPendingPaid();
         } else {
           setSyncResult({
             type: 'info',
             message: `Checked ${totalChecked} unconfirmed order(s). All records are up to date (no unlinked paid orders found on Razorpay).`,
           });
+          fetchPendingPaid();
         }
       } else {
         setSyncResult({

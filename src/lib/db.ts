@@ -3837,7 +3837,7 @@ export const db = {
                ))
              )
              AND a.id IS NULL
-           ORDER BY p.created_at DESC`
+           ORDER BY p.id DESC`
         );
         return (rows || []).map((r: any) => ({
           id: r.id,
