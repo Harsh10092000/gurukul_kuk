@@ -22,10 +22,12 @@ export async function POST(request: Request) {
       const [rows]: any = await pool.query(
         `SELECT order_id, status, customer_email, customer_phone, amount, application_payload, created_at
          FROM payment_orders
-         WHERE status IN ('PENDING', 'PROCESSING', 'CANCELLED')
-           AND created_at >= NOW() - INTERVAL 7 DAY
+         WHERE (registration_number IS NULL OR registration_number = '' OR application_id IS NULL)
+           AND status != 'CHARGED'
+           AND application_payload IS NOT NULL
+           AND created_at >= NOW() - INTERVAL 30 DAY
          ORDER BY created_at DESC
-         LIMIT 50`
+         LIMIT 100`
       );
       pendingOrders = (rows || []).map((r: any) => ({
         orderId: r.order_id,
@@ -39,7 +41,7 @@ export async function POST(request: Request) {
       const store = (db as any).initFallbackFile ? (db as any).initFallbackFile() : null;
       if (store && store.paymentOrders) {
         pendingOrders = store.paymentOrders.filter(
-          (o: any) => o.status === 'PENDING' || o.status === 'PROCESSING' || o.status === 'CANCELLED'
+          (o: any) => (!o.registrationNumber || o.status !== 'CHARGED') && o.applicationPayload
         );
       }
     }

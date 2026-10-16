@@ -16,7 +16,8 @@ import {
   ChevronLeft, 
   ChevronRight,
   Loader2,
-  Pencil
+  Pencil,
+  RefreshCw
 } from 'lucide-react';
 import { Application } from '@/lib/types';
 
@@ -57,6 +58,47 @@ export default function AdminApplicationsPage() {
   const [pendingPaidCandidates, setPendingPaidCandidates] = useState<any[]>([]);
   const [approvingOrder, setApprovingOrder] = useState<string | null>(null);
   const [approveMsg, setApproveMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+
+  // Sync with Razorpay State
+  const [syncLoading, setSyncLoading] = useState(false);
+  const [syncResult, setSyncResult] = useState<{ type: 'success' | 'info' | 'error'; message: string } | null>(null);
+
+  const handleSyncWithRazorpay = async () => {
+    setSyncLoading(true);
+    setSyncResult(null);
+    try {
+      const res = await fetch('/api/admin/reconcile-payments', { method: 'POST' });
+      const data = await res.json();
+      if (data.success && data.summary) {
+        const { recoveredCount, totalChecked } = data.summary;
+        if (recoveredCount > 0) {
+          setSyncResult({
+            type: 'success',
+            message: `Success! Recovered and registered ${recoveredCount} candidate(s) from Razorpay. Roll numbers and admit cards have been generated.`,
+          });
+          fetchApplications();
+          fetchPendingPaid();
+        } else {
+          setSyncResult({
+            type: 'info',
+            message: `Checked ${totalChecked} unconfirmed order(s). All records are up to date (no unlinked paid orders found on Razorpay).`,
+          });
+        }
+      } else {
+        setSyncResult({
+          type: 'error',
+          message: data.error || 'Failed to sync with Razorpay.',
+        });
+      }
+    } catch {
+      setSyncResult({
+        type: 'error',
+        message: 'Network error while connecting to payment reconciliation service.',
+      });
+    } finally {
+      setSyncLoading(false);
+    }
+  };
 
   const fetchPendingPaid = () => {
     fetch('/api/admin/approve-candidate', { cache: 'no-store' })
@@ -286,6 +328,17 @@ export default function AdminApplicationsPage() {
         </div>
 
         <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={handleSyncWithRazorpay}
+            disabled={syncLoading}
+            id="sync-razorpay-btn"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-indigo-600 hover:bg-indigo-700 text-white shadow-xs transition-colors disabled:opacity-50 cursor-pointer"
+            title="Check Razorpay for any completed payments that were not registered yet"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 ${syncLoading ? 'animate-spin' : ''}`} />
+            <span>{syncLoading ? 'Syncing...' : 'Sync with Razorpay'}</span>
+          </button>
           <a
             href="/api/admin/export"
             download
@@ -295,6 +348,35 @@ export default function AdminApplicationsPage() {
           </a>
         </div>
       </div>
+
+      {/* Sync with Razorpay Result Notification */}
+      {syncResult && (
+        <div
+          className={`p-4 rounded-xl text-xs font-semibold flex items-center justify-between gap-3 shadow-xs ${
+            syncResult.type === 'success'
+              ? 'bg-emerald-50 border border-emerald-300 text-emerald-900'
+              : syncResult.type === 'info'
+              ? 'bg-blue-50 border border-blue-300 text-blue-900'
+              : 'bg-rose-50 border border-rose-300 text-rose-900'
+          }`}
+        >
+          <div className="flex items-center gap-2">
+            {syncResult.type === 'success' ? (
+              <CheckCircle2 className="w-4 h-4 text-emerald-600 flex-shrink-0" />
+            ) : (
+              <AlertCircle className={`w-4 h-4 flex-shrink-0 ${syncResult.type === 'info' ? 'text-blue-600' : 'text-rose-600'}`} />
+            )}
+            <span>{syncResult.message}</span>
+          </div>
+          <button
+            type="button"
+            onClick={() => setSyncResult(null)}
+            className="text-slate-500 hover:text-slate-800 text-xs font-bold"
+          >
+            ✕
+          </button>
+        </div>
+      )}
 
       {/* Approval Success/Error Notification */}
       {approveMsg && (
