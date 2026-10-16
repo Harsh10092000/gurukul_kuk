@@ -103,7 +103,9 @@ export default function AdminEditApplicationPage({ params }: { params: { id: str
     // Address Details
     streetAddress: '',
     state: '',
+    otherState: '',
     district: '',
+    otherDistrict: '',
     city: '',
     pincode: '',
 
@@ -157,7 +159,9 @@ export default function AdminEditApplicationPage({ params }: { params: { id: str
 
             streetAddress: app.addressInfo?.streetAddress || '',
             state: app.addressInfo?.state || '',
+            otherState: app.addressInfo?.otherState || '',
             district: app.addressInfo?.district || '',
+            otherDistrict: app.addressInfo?.otherDistrict || '',
             city: app.addressInfo?.city || '',
             pincode: app.addressInfo?.pincode || '',
 
@@ -193,10 +197,19 @@ export default function AdminEditApplicationPage({ params }: { params: { id: str
     const { name, value } = e.target;
 
     if (name === 'state') {
+      const isOtherState = value === 'Other State / UT';
       setFormData((prev) => ({
         ...prev,
         state: value,
-        district: '', // Reset district when state changes
+        district: isOtherState ? 'Other District' : '', // Reset district when state changes
+        otherState: isOtherState ? prev.otherState : '',
+        otherDistrict: isOtherState ? prev.otherDistrict : '',
+      }));
+    } else if (name === 'district') {
+      setFormData((prev) => ({
+        ...prev,
+        district: value,
+        otherDistrict: value === 'Other District' ? prev.otherDistrict : '',
       }));
     } else if (name === 'classApplying') {
       const is11 = value.includes('11');
@@ -264,6 +277,13 @@ export default function AdminEditApplicationPage({ params }: { params: { id: str
     setSuccessMsg('');
 
     try {
+      const effectiveState = formData.state === 'Other State / UT' && formData.otherState?.trim()
+        ? formData.otherState.trim()
+        : formData.state;
+      const effectiveDistrict = (formData.district === 'Other District' || formData.state === 'Other State / UT') && formData.otherDistrict?.trim()
+        ? formData.otherDistrict.trim()
+        : formData.district;
+
       const payload = {
         classApplying: formData.classApplying,
         stream: formData.classApplying.includes('11') ? formData.stream : undefined,
@@ -296,10 +316,12 @@ export default function AdminEditApplicationPage({ params }: { params: { id: str
         addressInfo: {
           streetAddress: formData.streetAddress,
           city: formData.city,
-          district: formData.district,
-          state: formData.state,
+          district: effectiveDistrict,
+          state: effectiveState,
           pincode: formData.pincode,
           whatsappNumber: formData.whatsappNumber || formData.candidateMobile,
+          otherState: formData.otherState?.trim() || undefined,
+          otherDistrict: formData.otherDistrict?.trim() || undefined,
         },
         academicInfo: {
           applyingClass: formData.classApplying,
@@ -460,7 +482,7 @@ export default function AdminEditApplicationPage({ params }: { params: { id: str
         <p className="text-[11px] text-slate-500 leading-relaxed">
           Registration Number, Roll Number, Candidate Email, Gender, and Class/Stream are locked academic keys to preserve examination series and roll number allotment integrity.
         </p>
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs pt-1">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 text-xs pt-1">
           <div className="bg-white p-2.5 rounded-lg border border-slate-200">
             <span className="text-[10px] text-slate-400 font-bold block uppercase">Registration ID</span>
             <span className="font-mono font-bold text-slate-900 text-sm flex items-center justify-between">
@@ -487,6 +509,18 @@ export default function AdminEditApplicationPage({ params }: { params: { id: str
             <span className="font-semibold text-slate-900 text-xs flex items-center justify-between">
               <span className="truncate">{formData.classApplying}{formData.stream ? ` (${formData.stream})` : ''}</span>
               <Lock className="w-3 h-3 text-slate-400 shrink-0 ml-1" />
+            </span>
+          </div>
+          <div className="bg-white p-2.5 rounded-lg border border-slate-200">
+            <span className="text-[10px] text-slate-400 font-bold block uppercase">Transaction ID</span>
+            <span className="font-mono font-bold text-slate-900 text-xs truncate block" title={application.transactionId || '----'}>
+              {application.transactionId || '----'}
+            </span>
+          </div>
+          <div className="bg-white p-2.5 rounded-lg border border-slate-200">
+            <span className="text-[10px] text-slate-400 font-bold block uppercase">Registration Date &amp; Time</span>
+            <span className="font-medium text-slate-900 text-[11px] block">
+              {application.createdAt ? new Date(application.createdAt).toLocaleString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true }) : '----'}
             </span>
           </div>
         </div>
@@ -864,6 +898,57 @@ export default function AdminEditApplicationPage({ params }: { params: { id: str
                 ))}
               </select>
             </div>
+
+            {formData.state === 'Other State / UT' && (
+              <>
+                <div>
+                  <label className="form-label">
+                    Specify State / UT <span className="text-rose-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    name="otherState"
+                    required
+                    value={formData.otherState}
+                    onChange={handleChange}
+                    placeholder="Enter State / UT name"
+                    className="form-input-field font-semibold"
+                  />
+                </div>
+
+                <div>
+                  <label className="form-label">
+                    Specify District <span className="text-rose-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    name="otherDistrict"
+                    required
+                    value={formData.otherDistrict}
+                    onChange={handleChange}
+                    placeholder="Enter District name"
+                    className="form-input-field font-semibold"
+                  />
+                </div>
+              </>
+            )}
+
+            {formData.state !== 'Other State / UT' && formData.district === 'Other District' && (
+              <div className="sm:col-span-2">
+                <label className="form-label">
+                  Specify District <span className="text-rose-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  name="otherDistrict"
+                  required
+                  value={formData.otherDistrict}
+                  onChange={handleChange}
+                  placeholder="Enter District name"
+                  className="form-input-field font-semibold"
+                />
+              </div>
+            )}
 
             <div>
               <label className="form-label">

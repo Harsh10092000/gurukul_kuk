@@ -618,7 +618,7 @@ export const validateAllFiveDocuments = validateAllFourDocuments;
 /**
  * Official contact and address constants
  */
-export const OFFICIAL_HELPLINE_PHONE = '+91 7027849858 / 59';
+export const OFFICIAL_HELPLINE_PHONE = 'Boys: 7082416858, 7082424558 | Girls: 7027849858';
 export const OFFICIAL_FOOTER_ADDRESS = 'SIDHPUR MINOR, NIGDU ROAD, NILOKHERI 132117';
 
 /**

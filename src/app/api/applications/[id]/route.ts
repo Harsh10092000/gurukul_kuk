@@ -22,6 +22,21 @@ export async function GET(
       return NextResponse.json({ error: 'Application not found' }, { status: 404 });
     }
 
+    // Fallback: If transactionId is missing, resolve it from payment_orders
+    if (!application.transactionId) {
+      const email = application.personalInfo?.candidateEmail || (application.personalInfo as any)?.email;
+      if (email) {
+        const order = await db.getPaymentOrderByEmail(email);
+        if (order) {
+          const raw = order.paymentResponse as any;
+          const tx = raw?.razorpay_payment_id || raw?.paymentId || (order as any).transactionId || raw?.id;
+          if (tx) {
+            application.transactionId = tx;
+          }
+        }
+      }
+    }
+
     // Authorization: Prevent IDOR (applicant can only view their own dossier; admin can view all)
     if (user.role !== 'admin' && application.userId !== user.userId) {
       return NextResponse.json(

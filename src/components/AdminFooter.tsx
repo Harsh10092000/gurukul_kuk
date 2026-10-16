@@ -71,7 +71,7 @@ export default function AdminFooter() {
             <div className="space-y-1 text-slate-400">
               <div className="flex items-center gap-2">
                 <Phone className="w-3.5 h-3.5 text-portal-gold shrink-0" />
-                <span>+91 7027849858 / 59</span>
+                <span>Boys: 7082416858, 7082424558 | Girls: 7027849858</span>
               </div>
               <div className="flex items-center gap-2">
                 <Mail className="w-3.5 h-3.5 text-portal-gold shrink-0" />

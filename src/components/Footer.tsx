@@ -125,7 +125,8 @@ export default function Footer() {
               SIDHPUR MINOR, NIGDU ROAD, NILOKHERI 132117
             </p>
             <p>
-              Helpline: +91 7027849858 / 59
+              Boys Helpline: +91 7082416858, 7082424558<br />
+              Girls Helpline: +91 7027849858
             </p>
             <p>
               Email: thegurukulnilokheri@gmail.com

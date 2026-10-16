@@ -121,7 +121,7 @@ async function handleHdfcReturn(request: Request) {
           );
           return NextResponse.redirect(
             new URL(
-              `/apply?payment=pending&orderId=${encodeURIComponent(orderId)}&txnId=${encodeURIComponent(txnIdRecovered)}&msg=Your+payment+was+received+successfully.+However+your+registration+session+expired+during+payment.+Please+contact+our+helpdesk+at+%2B91+7027849858+with+your+Order+ID+%28${encodeURIComponent(orderId)}%29+to+complete+registration.`,
+              `/apply?payment=pending&orderId=${encodeURIComponent(orderId)}&txnId=${encodeURIComponent(txnIdRecovered)}&msg=Your+payment+was+received+successfully.+However+your+registration+session+expired+during+payment.+Please+contact+our+helpdesk+(Boys:+7082416858,+7082424558+|+Girls:+7027849858)+with+your+Order+ID+%28${encodeURIComponent(orderId)}%29+to+complete+registration.`,
               baseUrl
             ),
             303

@@ -226,7 +226,7 @@ export default function StatusPage() {
         iconBg: 'bg-rose-100 text-rose-700',
         title: 'Application Not Approved',
         description: app.remarks || 'Your application does not fulfill the admission criteria for Session 2027-28.',
-        nextStep: 'Contact The Gurukul Admission Helpdesk (+91 7027849858 / 59) for further inquiries.',
+        nextStep: 'Contact The Gurukul Admission Helpdesk (Boys: 7082416858, 7082424558 | Girls: 7027849858) for further inquiries.',
       };
     }
 
@@ -383,7 +383,7 @@ export default function StatusPage() {
               <span className="font-bold block">Application Not Located</span>
               <p className="leading-relaxed">{error}</p>
               <p className="text-[11px] text-slate-500 pt-0.5">
-                For assistance, contact The Gurukul Helpline: +91 7027849858 / 59
+                For assistance, contact The Gurukul Helpline: Boys: 7082416858, 7082424558 | Girls: 7027849858
               </p>
             </div>
           </div>

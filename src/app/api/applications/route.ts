@@ -3,6 +3,8 @@ import { db, toMySqlDatetime } from '@/lib/db';
 import { getCurrentUser } from '@/lib/auth';
 import { sendNotification, ADMIN_NOTIFICATION_EMAIL } from '@/lib/notifications';
 import { computeApplicationMetrics } from '@/lib/applicationMetrics';
+import { fetchRazorpayOrder, fetchRazorpayOrderPayments } from '@/lib/razorpay';
+import { completePaymentAndRegistration } from '@/lib/payment-completion';
 import {
   validateName,
   validateOccupation,
@@ -108,7 +110,61 @@ export async function GET(request: Request) {
         (user.registrationNumber && (a.registrationNumber === user.registrationNumber || a.applicationNumber === user.registrationNumber))
       ) || null;
     }
-    return NextResponse.json({ application });
+
+    // Check if candidate has a completed payment order awaiting administrative approval/registration
+    let pendingPaidOrder: any = null;
+    if ((!application || !application.registrationNumber) && user.email) {
+      let order = await db.getPaymentOrderByEmail(user.email);
+      if (order && order.status !== 'CHARGED') {
+        // Real-time live check with Razorpay to self-heal
+        try {
+          let capturedPaymentId = '';
+          const paymentsRes = await fetchRazorpayOrderPayments(order.orderId);
+          if (paymentsRes && paymentsRes.items && paymentsRes.items.length > 0) {
+            const captured = paymentsRes.items.find((p) => p.status === 'captured' || p.status === 'authorized');
+            if (captured) capturedPaymentId = captured.id;
+          } else {
+            const rzpOrder = await fetchRazorpayOrder(order.orderId);
+            if (rzpOrder && (rzpOrder.status === 'paid' || rzpOrder.amount_paid > 0)) {
+              capturedPaymentId = `pay_recovered_${Date.now()}`;
+            }
+          }
+
+          if (capturedPaymentId) {
+            const compRes = await completePaymentAndRegistration({
+              orderId: order.orderId,
+              paymentId: capturedPaymentId,
+              gateway: 'razorpay',
+            });
+            if (compRes.success) {
+              const updatedApp = await db.findApplicationByEmail(user.email);
+              if (updatedApp) {
+                application = updatedApp;
+              }
+              const reloadedOrder = await db.getPaymentOrderByOrderId(order.orderId);
+              if (reloadedOrder) order = reloadedOrder;
+            }
+          }
+        } catch (checkErr) {
+          console.warn('[Applications GET] Error verifying in-flight Razorpay order:', checkErr);
+        }
+      }
+
+      if ((!application || !application.registrationNumber) && order && (order.status === 'CHARGED' || order.status === 'PROCESSING' || order.status === 'PENDING' || (order.paymentResponse as any)?.status === 'captured' || (order.paymentResponse as any)?.razorpay_payment_id)) {
+        pendingPaidOrder = {
+          orderId: order.orderId,
+          amount: order.amount,
+          status: order.status,
+          customerEmail: order.customerEmail,
+          customerPhone: order.customerPhone,
+          applicationPayload: order.applicationPayload,
+          createdAt: order.createdAt,
+          paymentId: (order.paymentResponse as any)?.razorpay_payment_id || (order.paymentResponse as any)?.paymentId || '',
+        };
+      }
+    }
+
+    return NextResponse.json({ application, pendingPaidOrder });
   } catch (error) {
     console.error('Error fetching applications:', error);
     return NextResponse.json({ error: 'Failed to fetch application data' }, { status: 500 });

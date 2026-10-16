@@ -57,7 +57,7 @@ export default function AdminSettingsPage() {
     examVenueAddress: 'Nilokheri, Karnal, Haryana - 132117',
     resultDeclarationDate: '2027-03-01',
     counselingStartDate: '2027-03-10',
-    helplinePhone: '+91 7027849858 / 59',
+    helplinePhone: 'Boys: 7082416858, 7082424558 | Girls: 7027849858',
     helplineEmail: 'thegurukulnilokheri@gmail.com',
     activeStudyLocations: ['The Gurukul Nilokheri', 'The Gurukul Jyotisar', 'Aryakulam Nilokheri'],
   });

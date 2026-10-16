@@ -70,7 +70,7 @@ export default function Header() {
               CBSE Affiliated Institutional Network
             </span>
             <span className="hidden sm:inline text-slate-600">|</span>
-            <span>Helpline: +91 7027849858 / 59</span>
+            <span>Helpline Boys: 7082416858, 7082424558 | Girls: 7027849858</span>
             <span className="hidden md:inline text-slate-600">|</span>
             <span className="hidden md:inline">thegurukulnilokheri@gmail.com</span>
           </div>

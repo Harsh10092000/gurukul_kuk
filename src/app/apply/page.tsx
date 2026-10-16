@@ -140,7 +140,9 @@ export default function ApplyPage() {
     streetAddress: '',
     city: '',
     district: '',
+    otherDistrict: '',
     state: '',
+    otherState: '',
     pincode: '',
 
     // Step 1: Preferred Study Location
@@ -264,6 +266,13 @@ export default function ApplyPage() {
           gender: normalizeGender(parsed.gender || prev.gender),
         }));
         if (parsed.photo) setNtaCheckbox(true);
+      }
+    } catch { }
+
+    try {
+      const savedPendingOrder = sessionStorage.getItem('gurukul_pending_order_id');
+      if (savedPendingOrder) {
+        setPendingOrderId(savedPendingOrder);
       }
     } catch { }
 
@@ -414,7 +423,9 @@ export default function ApplyPage() {
                 streetAddress: app.addressInfo?.streetAddress || prev.streetAddress,
                 city: app.addressInfo?.city || prev.city,
                 district: app.addressInfo?.district || prev.district,
+                otherDistrict: app.addressInfo?.otherDistrict || '',
                 state: app.addressInfo?.state || prev.state,
+                otherState: app.addressInfo?.otherState || '',
                 pincode: app.addressInfo?.pincode || prev.pincode,
                 firstPreference: app.studyLocationPref?.firstPreference || app.examCentrePref?.firstPreference || prev.firstPreference,
                 secondPreference: app.studyLocationPref?.secondPreference || app.examCentrePref?.secondPreference || prev.secondPreference,
@@ -452,10 +463,19 @@ export default function ApplyPage() {
         stream: is11 ? (prev.stream && allowedStreams.includes(prev.stream as any) ? prev.stream : allowedStreams[0] || 'Non Medical') : '',
       }));
     } else if (name === 'state') {
+      const isOtherState = value === 'Other State / UT';
       setFormData((prev) => ({
         ...prev,
         state: value,
-        district: '', // Reset district when state changes
+        district: isOtherState ? 'Other District' : '', // Auto-select Other District if Other State / UT is chosen
+        otherState: isOtherState ? prev.otherState : '',
+        otherDistrict: isOtherState ? prev.otherDistrict : '',
+      }));
+    } else if (name === 'district') {
+      setFormData((prev) => ({
+        ...prev,
+        district: value,
+        otherDistrict: value === 'Other District' ? prev.otherDistrict : '',
       }));
     } else if (['fatherPhone', 'motherPhone', 'candidateMobile', 'whatsappNumber'].includes(name)) {
       const clean = value.replace(/\D/g, '').slice(0, 10);
@@ -679,8 +699,16 @@ export default function ApplyPage() {
         setError('Please select State / UT.');
         return;
       }
+      if (formData.state === 'Other State / UT' && (!formData.otherState || !formData.otherState.trim())) {
+        setError('Please specify your State / UT name.');
+        return;
+      }
       if (!formData.district.trim()) {
         setError('Please select District.');
+        return;
+      }
+      if ((formData.state === 'Other State / UT' || formData.district === 'Other District') && (!formData.otherDistrict || !formData.otherDistrict.trim())) {
+        setError('Please specify your District name.');
         return;
       }
       if (!formData.city.trim()) {
@@ -739,6 +767,13 @@ export default function ApplyPage() {
     }
 
     try {
+      const effectiveState = formData.state === 'Other State / UT' && formData.otherState?.trim()
+        ? formData.otherState.trim()
+        : formData.state;
+      const effectiveDistrict = (formData.district === 'Other District' || formData.state === 'Other State / UT') && formData.otherDistrict?.trim()
+        ? formData.otherDistrict.trim()
+        : formData.district;
+
       const payload = {
         password: chosenPassword || undefined,
         classApplying: formData.applyingClass,
@@ -773,10 +808,12 @@ export default function ApplyPage() {
         addressInfo: {
           streetAddress: formData.streetAddress,
           city: formData.city,
-          district: formData.district,
-          state: formData.state,
+          district: effectiveDistrict,
+          state: effectiveState,
           pincode: formData.pincode,
           whatsappNumber: formData.whatsappNumber,
+          otherState: formData.otherState?.trim() || undefined,
+          otherDistrict: formData.otherDistrict?.trim() || undefined,
         },
         studyLocationPref: {
           firstPreference: formData.firstPreference,
@@ -806,7 +843,23 @@ export default function ApplyPage() {
 
       const data = await res.json();
 
+      if (data.alreadyProcessed && data.redirectUrl) {
+        try {
+          localStorage.removeItem('gurukul_application_draft');
+          sessionStorage.removeItem('gurukul_reg_info');
+          sessionStorage.removeItem('gurukul_pending_order_id');
+        } catch { }
+        window.location.href = data.redirectUrl;
+        return;
+      }
+
       if (!res.ok || !data.success) {
+        if (data.paymentPending && data.orderId) {
+          setPendingOrderId(data.orderId);
+          try {
+            sessionStorage.setItem('gurukul_pending_order_id', data.orderId);
+          } catch { }
+        }
         setError(data.error || 'Payment gateway initialization failed. Please review your details and try again.');
         setLoading(false);
         return;
@@ -834,6 +887,11 @@ export default function ApplyPage() {
           return;
         }
 
+        setPendingOrderId(data.orderId);
+        try {
+          sessionStorage.setItem('gurukul_pending_order_id', data.orderId);
+        } catch { }
+
         const options = {
           key: data.keyId,
           amount: data.amount,
@@ -853,41 +911,125 @@ export default function ApplyPage() {
           handler: async function (response: any) {
             setLoading(true);
             setVerifyingPayment(true);
-            try {
-              const verifyRes = await fetch('/api/payment/razorpay/verify', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(response),
-              });
-              const verifyData = await verifyRes.json();
-              if (verifyData.success && verifyData.redirectUrl) {
-                try {
-                  localStorage.removeItem('gurukul_application_draft');
-                  sessionStorage.removeItem('gurukul_reg_info');
-                } catch { }
-                window.location.href = verifyData.redirectUrl;
-              } else {
-                setVerifyingPayment(false);
-                setError(verifyData.error || 'Payment verification failed. Please contact admission helpline.');
-                setLoading(false);
+
+            let verified = false;
+            let targetRedirect = '';
+
+            for (let attempt = 1; attempt <= 3; attempt++) {
+              try {
+                const verifyRes = await fetch('/api/payment/razorpay/verify', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify(response),
+                });
+                const verifyData = await verifyRes.json();
+                if (verifyData.success && verifyData.redirectUrl) {
+                  verified = true;
+                  targetRedirect = verifyData.redirectUrl;
+                  break;
+                }
+              } catch (err) {
+                console.warn(`[PaymentHandler] Verification attempt ${attempt} failed:`, err);
               }
-            } catch {
-              setVerifyingPayment(false);
-              setError('Failed to confirm transaction. If money was deducted, please contact admissions helpdesk with your Order ID: ' + data.orderId);
-              setLoading(false);
+              if (attempt < 3) {
+                await new Promise((res) => setTimeout(res, 1500));
+              }
             }
+
+            if (verified && targetRedirect) {
+              try {
+                localStorage.removeItem('gurukul_application_draft');
+                sessionStorage.removeItem('gurukul_reg_info');
+                sessionStorage.removeItem('gurukul_pending_order_id');
+              } catch { }
+              window.location.href = targetRedirect;
+              return;
+            }
+
+            // Fallback: If verification request had network blips, redirect to thank-you page
+            // The thank-you page will verify database state directly without stranding the student on /apply
+            const fallbackThankYou = `/payment/thank-you?orderId=${encodeURIComponent(data.orderId)}&txnId=${encodeURIComponent(response.razorpay_payment_id || '')}`;
+            try {
+              localStorage.removeItem('gurukul_application_draft');
+              sessionStorage.removeItem('gurukul_reg_info');
+              sessionStorage.removeItem('gurukul_pending_order_id');
+            } catch { }
+            window.location.href = fallbackThankYou;
           },
           modal: {
-            ondismiss: function () {
+            ondismiss: async function () {
+              setLoading(true);
+              setVerifyingPayment(true);
+
+              // Mobile UPI Safety Check:
+              // When users switch to UPI apps (GPay, PhonePe, Paytm), the browser triggers ondismiss upon app switch.
+              // We MUST check with Razorpay API whether the payment was captured before treating as cancelled!
+              try {
+                const checkRes = await fetch('/api/payment/razorpay/complete-pending', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                    orderId: data.orderId,
+                    formData: payload,
+                  }),
+                });
+                const checkData = await checkRes.json();
+
+                if (checkData.success && checkData.redirectUrl) {
+                  try {
+                    localStorage.removeItem('gurukul_application_draft');
+                    sessionStorage.removeItem('gurukul_reg_info');
+                    sessionStorage.removeItem('gurukul_pending_order_id');
+                  } catch { }
+                  window.location.href = checkData.redirectUrl;
+                  return;
+                }
+
+                if (checkData.paymentPending) {
+                  setVerifyingPayment(false);
+                  setLoading(false);
+                  setPendingOrderId(data.orderId);
+                  setError('Your payment is still being processed by your bank. If money was debited from your account, click "Verify & Complete Registration" below to finalize your Admit Card.');
+                  return;
+                }
+              } catch (checkErr) {
+                console.warn('[ModalDismiss] Could not verify pending order status:', checkErr);
+              }
+
+              // Only if confirmed not captured:
               setLoading(false);
+              setVerifyingPayment(false);
+              setPendingOrderId(null);
+              try {
+                sessionStorage.removeItem('gurukul_pending_order_id');
+              } catch { }
+              setError('Payment was cancelled or closed. Your application has not been submitted. Click "Pay ₹800 & Submit Application" below to try again.');
+              if (data?.orderId) {
+                fetch('/api/payment/razorpay/cancel', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ orderId: data.orderId }),
+                }).catch(() => {});
+              }
             },
           },
         };
 
         const rzp = new (window as any).Razorpay(options);
         rzp.on('payment.failed', function (resp: any) {
-          setError(resp?.error?.description || 'Payment was unsuccessful. Please try again.');
           setLoading(false);
+          setPendingOrderId(null);
+          try {
+            sessionStorage.removeItem('gurukul_pending_order_id');
+          } catch { }
+          setError(resp?.error?.description || 'Payment was unsuccessful or declined by your bank. Your application is not registered. Please try again with a different payment method.');
+          if (data?.orderId) {
+            fetch('/api/payment/razorpay/cancel', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ orderId: data.orderId, status: 'FAILED', reason: resp?.error?.description }),
+            }).catch(() => {});
+          }
         });
         rzp.open();
         return;
@@ -911,6 +1053,13 @@ export default function ApplyPage() {
     setRecoveringPayment(true);
     setError('');
     try {
+      const effectiveState = formData.state === 'Other State / UT' && formData.otherState?.trim()
+        ? formData.otherState.trim()
+        : formData.state;
+      const effectiveDistrict = (formData.district === 'Other District' || formData.state === 'Other State / UT') && formData.otherDistrict?.trim()
+        ? formData.otherDistrict.trim()
+        : formData.district;
+
       const payload = {
         classApplying: formData.applyingClass,
         stream: formData.stream || undefined,
@@ -946,9 +1095,11 @@ export default function ApplyPage() {
         addressInfo: {
           streetAddress: formData.streetAddress,
           city: formData.city,
-          district: formData.district,
-          state: formData.state,
+          district: effectiveDistrict,
+          state: effectiveState,
           pincode: formData.pincode,
+          otherState: formData.otherState?.trim() || undefined,
+          otherDistrict: formData.otherDistrict?.trim() || undefined,
         },
         studyLocationPref: {
           firstPreference: formData.firstPreference,
@@ -963,7 +1114,12 @@ export default function ApplyPage() {
         password: formData.password || undefined,
       };
 
-      const res = await fetch('/api/payment/hdfc/complete-pending', {
+      const isRazorpayOrder = pendingOrderId.startsWith('order_') || process.env.NEXT_PUBLIC_ACTIVE_PAYMENT_GATEWAY !== 'hdfc';
+      const recoveryEndpoint = isRazorpayOrder
+        ? '/api/payment/razorpay/complete-pending'
+        : '/api/payment/hdfc/complete-pending';
+
+      const res = await fetch(recoveryEndpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -973,12 +1129,19 @@ export default function ApplyPage() {
       });
       const data = await res.json();
       if (!res.ok || !data.success) {
+        if (data.rejected || data.status === 'FAILED') {
+          setPendingOrderId(null);
+          try {
+            sessionStorage.removeItem('gurukul_pending_order_id');
+          } catch { }
+        }
         throw new Error(data.error || 'Failed to complete registration for this order.');
       }
 
       try {
         localStorage.removeItem('gurukul_application_draft');
         sessionStorage.removeItem('gurukul_reg_info');
+        sessionStorage.removeItem('gurukul_pending_order_id');
       } catch { }
       window.location.href = data.redirectUrl || `/payment/thank-you?orderId=${encodeURIComponent(pendingOrderId)}&regNo=${encodeURIComponent(data.registrationNumber)}`;
     } catch (err: any) {
@@ -1113,29 +1276,18 @@ export default function ApplyPage() {
             <div className="mt-3 ml-7 pt-3 border-t border-rose-200/60 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div>
                 <p className="text-xs text-slate-700 font-semibold">
-                  Already paid ₹800 on {process.env.NEXT_PUBLIC_ACTIVE_PAYMENT_GATEWAY === 'hdfc' ? 'HDFC SmartGateway' : 'Razorpay'} for Order ID: <span className="font-mono text-portal-navy bg-slate-100 px-1.5 py-0.5 rounded">{pendingOrderId}</span>?
+                  Payment for Order ID <span className="font-mono text-portal-navy bg-slate-100 px-1.5 py-0.5 rounded">{pendingOrderId}</span> is under verification with the bank.
                 </p>
                 <p className="text-[11px] text-slate-500 mt-0.5">
-                  Your details are preserved. Click to verify payment with the bank and issue your Admit Card immediately.
+                  An automated email will be sent once payment is confirmed or rejected. You can also log into your candidate account with your registered email and password to view status.
                 </p>
               </div>
-              <button
-                type="button"
-                onClick={handleRecoverPayment}
-                disabled={recoveringPayment}
-                className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white rounded-lg text-xs font-bold shadow-xs transition-colors flex items-center justify-center gap-1.5 whitespace-nowrap cursor-pointer disabled:opacity-60"
+              <Link
+                href="/login"
+                className="px-4 py-2 bg-portal-navy hover:bg-slate-800 text-white rounded-lg text-xs font-bold shadow-xs transition-colors flex items-center justify-center gap-1.5 whitespace-nowrap cursor-pointer"
               >
-                {recoveringPayment ? (
-                  <>
-                    <span className="animate-spin inline-block w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full" />
-                    <span>Verifying with Bank...</span>
-                  </>
-                ) : (
-                  <>
-                    <span>⚡ Verify & Complete Registration</span>
-                  </>
-                )}
-              </button>
+                Go to Candidate Login &rarr;
+              </Link>
             </div>
           )}
         </div>
@@ -2207,6 +2359,57 @@ export default function ApplyPage() {
                 </select>
               </div>
 
+              {formData.state === 'Other State / UT' && (
+                <>
+                  <div>
+                    <label className="form-label">
+                      Specify State / UT <span className="text-rose-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      name="otherState"
+                      required
+                      value={formData.otherState}
+                      onChange={handleChange}
+                      placeholder="Enter State / UT name"
+                      className="form-input-field"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="form-label">
+                      Specify District <span className="text-rose-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      name="otherDistrict"
+                      required
+                      value={formData.otherDistrict}
+                      onChange={handleChange}
+                      placeholder="Enter District name"
+                      className="form-input-field"
+                    />
+                  </div>
+                </>
+              )}
+
+              {formData.state !== 'Other State / UT' && formData.district === 'Other District' && (
+                <div className="sm:col-span-2">
+                  <label className="form-label">
+                    Specify District <span className="text-rose-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    name="otherDistrict"
+                    required
+                    value={formData.otherDistrict}
+                    onChange={handleChange}
+                    placeholder="Enter District name"
+                    className="form-input-field"
+                  />
+                </div>
+              )}
+
               <div>
                 <label className="form-label">
                   City / Town / Village <span className="text-rose-500">*</span>
@@ -2382,7 +2585,9 @@ export default function ApplyPage() {
                 </div>
                 <div>
                   <span className="text-slate-500 block text-[11px]">Residence</span>
-                  <span className="font-medium text-slate-900">{formData.city}, {formData.state}</span>
+                  <span className="font-medium text-slate-900">
+                    {formData.city}, {formData.state === 'Other State / UT' && formData.otherState?.trim() ? formData.otherState.trim() : formData.state}
+                  </span>
                 </div>
               </div>
             </div>

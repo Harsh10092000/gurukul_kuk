@@ -95,7 +95,7 @@ export default function AdminLoginPage() {
           <div className="pt-8 border-t border-white/10 space-y-1.5">
             <div className="text-[10px] text-slate-400 uppercase tracking-wider font-semibold">The Gurukul Nilokheri</div>
             <p className="text-slate-400 text-[11px]">Session 2027-28 · CBSE Affiliated</p>
-            <p className="text-slate-500 text-[11px]">+91 7027849858 / 59</p>
+            <p className="text-slate-500 text-[11px]">Boys: 7082416858, 7082424558 | Girls: 7027849858</p>
           </div>
         </div>
 

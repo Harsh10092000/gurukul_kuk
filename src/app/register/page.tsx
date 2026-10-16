@@ -27,6 +27,7 @@ export default function RegisterPage() {
 
   // UI state
   const [error, setError] = useState('');
+  const [gateStatus, setGateStatus] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [scheduleStatus, setScheduleStatus] = useState<{
     isOpen: boolean;
@@ -76,6 +77,7 @@ export default function RegisterPage() {
   const handleInitiateRegistration = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    setGateStatus(null);
 
     if (!name.trim() || name.trim().length < 2) {
       setError('Please enter candidate’s full name as per Aadhaar Card.');
@@ -105,6 +107,7 @@ export default function RegisterPage() {
 
       if (!res.ok) {
         setError(data.error || 'Failed to dispatch verification code.');
+        setGateStatus(data.gateStatus || null);
         setLoading(false);
         return;
       }
@@ -152,6 +155,7 @@ export default function RegisterPage() {
   const handleVerifyAndRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    setGateStatus(null);
 
     if (!otp.trim() || otp.trim().length !== 6) {
       setError('Please enter the 6-digit OTP received on your email.');
@@ -192,6 +196,7 @@ export default function RegisterPage() {
 
       if (!regRes.ok) {
         setError(regData.error || 'Failed to complete registration.');
+        setGateStatus(regData.gateStatus || null);
         setLoading(false);
         return;
       }
@@ -236,9 +241,21 @@ export default function RegisterPage() {
 
 
           {error && (
-            <div className="p-3 rounded-lg bg-rose-50 border border-rose-200 flex items-center gap-2 text-xs text-rose-700">
-              <AlertCircle className="w-4 h-4 flex-shrink-0" />
-              <span>{error}</span>
+            <div className="p-3.5 rounded-lg bg-rose-50 border border-rose-200 text-xs text-rose-700 space-y-2">
+              <div className="flex items-start gap-2 font-medium">
+                <AlertCircle className="w-4 h-4 flex-shrink-0 text-rose-600 mt-0.5" />
+                <span>{error}</span>
+              </div>
+              {(gateStatus === 'ALREADY_REGISTERED' || gateStatus === 'PAYMENT_PENDING' || gateStatus === 'AUTO_CONFIRMED') && (
+                <div className="pt-1">
+                  <Link
+                    href="/"
+                    className="inline-flex items-center justify-center w-full px-3 py-2 bg-portal-navy text-white text-xs font-semibold rounded-md shadow hover:bg-slate-800 transition"
+                  >
+                    Proceed to Login Dashboard
+                  </Link>
+                </div>
+              )}
             </div>
           )}
 
@@ -370,9 +387,21 @@ export default function RegisterPage() {
         </div>
 
         {error && (
-          <div className="p-3 rounded-lg bg-rose-50 border border-rose-200 flex items-center gap-2 text-xs text-rose-700 font-medium">
-            <AlertCircle className="w-4 h-4 flex-shrink-0 text-rose-600" />
-            <span>{error}</span>
+          <div className="p-3.5 rounded-lg bg-rose-50 border border-rose-200 text-xs text-rose-700 space-y-2 font-medium">
+            <div className="flex items-start gap-2">
+              <AlertCircle className="w-4 h-4 flex-shrink-0 text-rose-600 mt-0.5" />
+              <span>{error}</span>
+            </div>
+            {(gateStatus === 'ALREADY_REGISTERED' || gateStatus === 'PAYMENT_PENDING' || gateStatus === 'AUTO_CONFIRMED') && (
+              <div className="pt-1">
+                <Link
+                  href="/"
+                  className="inline-flex items-center justify-center w-full px-3 py-2 bg-portal-navy text-white text-xs font-semibold rounded-md shadow hover:bg-slate-800 transition"
+                >
+                  Proceed to Login Dashboard
+                </Link>
+              </div>
+            )}
           </div>
         )}
 

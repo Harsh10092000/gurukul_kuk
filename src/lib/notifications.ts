@@ -16,7 +16,8 @@ export interface NotificationPayload {
   | 'REGISTRATION_CONFIRMATION'
   | 'FORGOT_REGISTRATION_RECOVERY'
   | 'FEE_PAYMENT_RECEIPT'
-  | 'ADMIN_NEW_REGISTRATION_ALERT';
+  | 'ADMIN_NEW_REGISTRATION_ALERT'
+  | 'PAYMENT_FAILED_ALERT';
   data: Record<string, string | number>;
 }
 
@@ -73,7 +74,7 @@ export async function sendNotification(payload: NotificationPayload) {
         `Dear ${name || 'Candidate'},\n\n` +
         `Your verification code for online admission registration is: ${data.otp}\n\n` +
         `This code is valid for 10 minutes. Please enter this code on the registration page to verify your email.\n\n` +
-        `If you did not initiate this request, please disregard this email or contact the Admission Helpdesk at +91 7027849858 / 59.\n\n` +
+        `If you did not initiate this request, please disregard this email or contact the Admission Helpdesk (Boys: 7082416858, 7082424558 | Girls: 7027849858).\n\n` +
         `The Gurukul Admission Portal\n` +
         `Website: ${SITE_URL}`;
       htmlContent = `
@@ -111,7 +112,7 @@ export async function sendNotification(payload: NotificationPayload) {
                         </tr>
                       </table>
                       <p style="font-size: 13px; line-height: 1.6; color: #64748b; margin: 0 0 16px 0;">
-                        If you did not initiate this request, you can safely disregard this email. For assistance, contact our Admission Helpdesk at <strong>+91 7027849858 / 59</strong>.
+                        If you did not initiate this request, you can safely disregard this email. For assistance, contact our Admission Helpdesk at <strong>Boys: 7082416858, 7082424558 | Girls: 7027849858</strong>.
                       </p>
                     </td>
                   </tr>
@@ -203,7 +204,7 @@ export async function sendNotification(payload: NotificationPayload) {
               </div>
 
               <p style="font-size: 12px; color: #64748b; line-height: 1.5; margin: 0;">
-                For queries regarding entrance examination, please contact the Admission Helpdesk at <strong>+91 7027849858 / 59</strong> or email <strong>${SMTP_USER}</strong>.
+                For queries regarding entrance examination, please contact the Admission Helpdesk at <strong>Boys: 7082416858, 7082424558 | Girls: 7027849858</strong> or email <strong>${SMTP_USER}</strong>.
               </p>
             </div>
             <div class="footer">
@@ -401,7 +402,7 @@ export async function sendNotification(payload: NotificationPayload) {
             </div>
             <div class="footer">
               The Gurukul Admission Portal • Haryana<br>
-              Helpline: +91 7027849858 / 59 • Email: ${SMTP_USER}
+              Helpline: Boys: 7082416858, 7082424558 | Girls: 7027849858 • Email: ${SMTP_USER}
             </div>
           </div>
         </body>
@@ -462,7 +463,7 @@ export async function sendNotification(payload: NotificationPayload) {
             </div>
             <div class="footer">
               The Gurukul Admission Portal • Haryana<br>
-              Helpline: +91 7027849858 / 59 • Email: ${SMTP_USER}
+              Helpline: Boys: 7082416858, 7082424558 | Girls: 7027849858 • Email: ${SMTP_USER}
             </div>
           </div>
         </body>
@@ -579,7 +580,7 @@ export async function sendNotification(payload: NotificationPayload) {
             </div>
             <div class="footer">
               The Gurukul Admission Portal • Haryana<br>
-              Helpline: +91 7027849858 / 59 • Email: ${SMTP_USER}
+              Helpline: Boys: 7082416858, 7082424558 | Girls: 7027849858 • Email: ${SMTP_USER}
             </div>
           </div>
         </body>
@@ -653,7 +654,7 @@ export async function sendNotification(payload: NotificationPayload) {
                   <tr>
                     <td style="background-color: #f1f5f9; padding: 20px 24px; text-align: center; font-size: 11px; color: #64748b; border-top: 1px solid #e2e8f0; line-height: 1.6;">
                       The Gurukul Admission Portal • Admissions &amp; Examination Cell<br />
-                      Helpline: +91 7027849858 / 59 • Email: ${SMTP_USER}<br />
+                      Helpline: Boys: 7082416858, 7082424558 | Girls: 7027849858 • Email: ${SMTP_USER}<br />
                       Website: ${SITE_URL}
                     </td>
                   </tr>
@@ -675,6 +676,65 @@ export async function sendNotification(payload: NotificationPayload) {
           <p>Dear ${name || 'Candidate'},</p>
           <p>Your candidate registration has been recorded successfully. Permanent Registration Number: <strong>${data.registrationNumber || data.applicationNumber}</strong>.</p>
         </div>
+      `;
+      break;
+
+    case 'PAYMENT_FAILED_ALERT':
+      subject = `Payment Transaction Failed - The Gurukul Entrance Examination 2027-28`;
+      message = `Dear ${name || 'Parent / Candidate'}, your entrance examination fee payment of ₹800 (Order ID: ${data.orderId || 'N/A'}) was declined or failed by your bank / Razorpay. Your application has not been submitted and your temporary candidate record has been removed. Please click here to register again: ${SITE_URL}/apply`;
+      htmlContent = `
+        <!DOCTYPE html>
+        <html>
+        <head><meta charset="utf-8"></head>
+        <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #f8fafc; margin: 0; padding: 20px;">
+          <table width="100%" cellpadding="0" cellspacing="0" style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 12px; overflow: hidden; border: 1px solid #e2e8f0; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);">
+            <tr>
+              <td style="background-color: #8b0000; padding: 24px; text-align: center;">
+                <h1 style="color: #ffffff; margin: 0; font-size: 20px; font-weight: 800; letter-spacing: 0.5px;">THE GURUKUL ADMISSION PORTAL</h1>
+                <p style="color: #fca5a5; margin: 4px 0 0 0; font-size: 12px; font-weight: 500;">Annual Entrance Examination Session 2027–28</p>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding: 32px 24px;">
+                <div style="background-color: #fef2f2; border: 1px solid #fecaca; border-radius: 8px; padding: 14px 18px; margin-bottom: 24px;">
+                  <span style="display: block; font-size: 13px; font-weight: 700; color: #991b1b; text-transform: uppercase; letter-spacing: 0.5px;">⚠️ Payment Transaction Failed / Declined</span>
+                  <span style="display: block; font-size: 12px; color: #b91c1c; margin-top: 4px;">Examination Fee: ₹800.00 • Order ID: ${data.orderId || 'N/A'}</span>
+                </div>
+
+                <p style="font-size: 14px; color: #1e293b; margin: 0 0 16px 0; line-height: 1.6;">
+                  Dear <strong>${name || 'Parent / Candidate'}</strong>,
+                </p>
+                <p style="font-size: 13px; color: #334155; margin: 0 0 16px 0; line-height: 1.6;">
+                  We regret to inform you that your entrance examination fee payment of <strong>₹800.00</strong> could not be processed and was declined or failed by your bank / Razorpay.
+                </p>
+                <p style="font-size: 13px; color: #334155; margin: 0 0 16px 0; line-height: 1.6;">
+                  Reason: <em>${data.reason || 'Transaction unconfirmed or declined by banking gateway'}</em>.
+                </p>
+                <p style="font-size: 13px; color: #334155; margin: 0 0 24px 0; line-height: 1.6;">
+                  Because fee payment was not completed, your application has not been submitted and your temporary candidate record has been cleared from our database. You can now submit a fresh application.
+                </p>
+
+                <div style="text-align: center; margin: 28px 0;">
+                  <a href="${SITE_URL}/apply" style="background-color: #8b0000; color: #ffffff; padding: 14px 28px; text-decoration: none; border-radius: 8px; font-size: 14px; font-weight: 700; display: inline-block;">
+                    Register &amp; Submit Application Again &rarr;
+                  </a>
+                </div>
+
+                <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 14px; font-size: 12px; color: #64748b; line-height: 1.5;">
+                  <strong>Note:</strong> If ₹800 was debited from your bank account, it will be automatically reversed back to your source account by your bank within 3–5 working days as per standard banking settlement guidelines.
+                </div>
+              </td>
+            </tr>
+            <tr>
+              <td style="background-color: #f1f5f9; padding: 20px 24px; text-align: center; font-size: 11px; color: #64748b; border-top: 1px solid #e2e8f0; line-height: 1.6;">
+                The Gurukul Admission Portal • Admissions &amp; Examination Cell<br />
+                Helpline: Boys: 7082416858, 7082424558 | Girls: 7027849858 • Email: ${SMTP_USER}<br />
+                Website: ${SITE_URL}
+              </td>
+            </tr>
+          </table>
+        </body>
+        </html>
       `;
       break;
   }

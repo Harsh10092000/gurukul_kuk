@@ -200,7 +200,7 @@ function ThankYouContent() {
                 <ul className="list-disc pl-4 space-y-1 text-[11.5px] text-amber-900/90 pt-1">
                   <li>If your account was debited, please check your candidate dashboard or wait 2-3 minutes for the bank webhook to settle.</li>
                   <li>If payment was not completed, please return to the application form and complete the fee payment.</li>
-                  <li>Need assistance? Contact our Admission Helpdesk at <strong>+91 7027849858 / 59</strong>.</li>
+                  <li>Need assistance? Contact our Admission Helpdesk at <strong>Boys: 7082416858, 7082424558 | Girls: 7027849858</strong>.</li>
                 </ul>
               </div>
 
@@ -348,7 +348,7 @@ function ThankYouContent() {
         {/* Institutional Footer Help */}
         <div className="text-center text-xs text-slate-500 space-y-1">
           <p>The Gurukul Nilokheri • CBSE Affiliated Institution</p>
-          <p>Admission Cell Helpline: +91 7027849858 / 59 • thegurukulnilokheri@gmail.com</p>
+          <p>Admission Cell Helpline: Boys: 7082416858, 7082424558 | Girls: 7027849858 • thegurukulnilokheri@gmail.com</p>
         </div>
       </div>
     </div>

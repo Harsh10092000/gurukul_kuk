@@ -35,6 +35,7 @@ export default function ApplicantDashboard() {
   const [resultsDeclared, setResultsDeclared] = useState<boolean>(false);
   const [loading, setLoading] = useState(true);
   const [draftSaved, setDraftSaved] = useState(false);
+  const [pendingPaidOrder, setPendingPaidOrder] = useState<any>(null);
 
   // Resubmission State
   const [uploadedDocs, setUploadedDocs] = useState<{ [key: string]: string }>({});
@@ -118,13 +119,18 @@ export default function ApplicantDashboard() {
         fetch('/api/applications')
           .then((res) => res.json())
           .then(async (data) => {
-            if (!data.application || data.application.paymentStatus !== 'completed') {
-              window.location.href = '/apply';
+            if (data.pendingPaidOrder && (!data.application || !data.application.registrationNumber)) {
+              setPendingPaidOrder(data.pendingPaidOrder);
+              setLoading(false);
               return;
             }
 
-            setApplication(data.application);
-            await syncDashboardData(data.application.id);
+            if (data.application && (data.application.paymentStatus === 'completed' || data.application.status === 'approved')) {
+              setApplication(data.application);
+              await syncDashboardData(data.application.id);
+            } else if (data.application) {
+              setApplication(data.application);
+            }
             setLoading(false);
           })
           .catch((err) => {
@@ -203,6 +209,117 @@ export default function ApplicantDashboard() {
         <div className="text-center space-y-3">
           <div className="w-8 h-8 border-2 border-portal-navy border-t-transparent rounded-full animate-spin mx-auto" />
           <p className="text-xs font-semibold text-slate-600">Loading candidate portal...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // CANDIDATE WHOSE PAYMENT IS DONE BUT REGISTRATION IS PENDING ADMIN APPROVAL
+  if (pendingPaidOrder) {
+    const payload = pendingPaidOrder.applicationPayload || {};
+    const personal = payload.personalInfo || {};
+    const parent = payload.parentInfo || {};
+    const studyPref = payload.studyLocationPref || {};
+
+    return (
+      <div className="max-w-4xl mx-auto px-4 py-8 space-y-6">
+        {/* Banner */}
+        <div className="bg-gradient-to-r from-portal-navy to-slate-900 text-white rounded-2xl p-6 sm:p-8 shadow-xl border border-slate-700/50 relative overflow-hidden">
+          <div className="relative z-10 space-y-3">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="bg-amber-500/20 text-amber-300 border border-amber-500/30 text-xs font-bold px-3 py-1 rounded-full flex items-center gap-1.5">
+                <Clock className="w-3.5 h-3.5 text-amber-400" />
+                Payment Under Process with Bank
+              </span>
+            </div>
+
+            <h1 className="text-2xl sm:text-3xl font-black text-white">
+              Welcome, {personal.fullName || currentUser?.name || 'Applicant'}
+            </h1>
+            <p className="text-xs sm:text-sm text-slate-300 max-w-2xl leading-relaxed">
+              Your entrance examination fee payment of ₹800 is currently under process with your bank / Razorpay. Please do not submit another payment.
+            </p>
+          </div>
+        </div>
+
+        {/* Status Callout Card */}
+        <div className="bg-amber-50 border border-amber-200 rounded-xl p-5 text-xs text-amber-900 space-y-2">
+          <div className="flex items-center gap-2 font-bold text-amber-950 text-sm">
+            <Clock className="w-4 h-4 text-amber-600 flex-shrink-0" />
+            <span>Fee Payment Under Verification</span>
+          </div>
+          <p className="leading-relaxed text-amber-800">
+            Your payment is currently being confirmed by the banking gateway. You do not need to make another payment. Once confirmation is received from Razorpay, your official <strong>Registration Number</strong> and <strong>Roll Number</strong> will be generated automatically, and your confirmation receipt will be sent to your registered email address ({personal.candidateEmail || currentUser?.email || 'registered email'}).
+          </p>
+          <p className="text-[11px] text-amber-700">
+            If your transaction is declined or failed by the bank, you will receive an email notification and you can then register again.
+          </p>
+        </div>
+
+        {/* Application Details Summary */}
+        <div className="portal-card p-6 sm:p-8 space-y-6">
+          <h2 className="text-base font-bold text-slate-900 border-b border-slate-200 pb-3 flex items-center gap-2">
+            <FileText className="w-4 h-4 text-portal-navy" />
+            <span>Preserved Application Particulars</span>
+          </h2>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-5 text-xs">
+            <div className="bg-slate-50 p-3.5 rounded-lg border border-slate-200">
+              <span className="text-slate-500 block mb-1">Candidate Full Name</span>
+              <span className="font-bold text-slate-900 text-sm">{personal.fullName || '—'}</span>
+            </div>
+            <div className="bg-slate-50 p-3.5 rounded-lg border border-slate-200">
+              <span className="text-slate-500 block mb-1">Applying For Class</span>
+              <span className="font-bold text-slate-900 text-sm">{payload.classApplying || 'Class 6'} {payload.stream ? `(${payload.stream})` : ''}</span>
+            </div>
+            <div className="bg-slate-50 p-3.5 rounded-lg border border-slate-200">
+              <span className="text-slate-500 block mb-1">Gender / Category</span>
+              <span className="font-bold text-slate-900 text-sm">{personal.gender || '—'} / {personal.category || 'General'}</span>
+            </div>
+            <div className="bg-slate-50 p-3.5 rounded-lg border border-slate-200">
+              <span className="text-slate-500 block mb-1">Father's Name</span>
+              <span className="font-bold text-slate-900 text-sm">{parent.fatherName || '—'}</span>
+            </div>
+            <div className="bg-slate-50 p-3.5 rounded-lg border border-slate-200">
+              <span className="text-slate-500 block mb-1">Contact Mobile</span>
+              <span className="font-bold text-slate-900 text-sm">{parent.fatherPhone || personal.candidateMobile || pendingPaidOrder.customerPhone || '—'}</span>
+            </div>
+            <div className="bg-slate-50 p-3.5 rounded-lg border border-slate-200">
+              <span className="text-slate-500 block mb-1">Preferred Campus</span>
+              <span className="font-bold text-slate-900 text-sm">{studyPref.firstPreference || 'The Gurukul Nilokheri'}</span>
+            </div>
+          </div>
+
+          {/* Payment Transaction Details */}
+          <div className="mt-4 pt-4 border-t border-slate-200 bg-emerald-50/50 p-4 rounded-xl border border-emerald-200/60">
+            <h3 className="text-xs font-bold text-emerald-950 uppercase tracking-wider mb-3 flex items-center gap-1.5">
+              <CreditCard className="w-3.5 h-3.5 text-emerald-700" />
+              <span>Verified Payment Record</span>
+            </h3>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs">
+              <div>
+                <span className="text-slate-500 block text-[11px]">Fee Paid</span>
+                <span className="font-bold text-emerald-800 text-base">₹800.00</span>
+              </div>
+              <div>
+                <span className="text-slate-500 block text-[11px]">Razorpay Order ID</span>
+                <span className="font-mono text-slate-800 font-medium">{pendingPaidOrder.orderId}</span>
+              </div>
+              <div>
+                <span className="text-slate-500 block text-[11px]">Payment Reference / ID</span>
+                <span className="font-mono text-slate-800 font-medium">{pendingPaidOrder.paymentId || 'Captured on Razorpay'}</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Institutional Helpdesk Contact */}
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 pt-3 text-xs text-slate-500">
+            <div className="flex items-center gap-2">
+              <Phone className="w-4 h-4 text-portal-navy" />
+              <span>Admissions Helpline: <strong>Boys: 7082416858, 7082424558 | Girls: 7027849858</strong></span>
+            </div>
+            <span>Office Hours: 9:00 AM – 5:00 PM (Monday – Saturday)</span>
+          </div>
         </div>
       </div>
     );
@@ -727,7 +844,12 @@ export default function ApplicantDashboard() {
               <div className="data-cell sm:col-span-3">
                 <span className="text-slate-500 block text-[10px] font-semibold uppercase tracking-wider">Permanent Residential Address</span>
                 <span className="font-medium text-slate-800 mt-0.5 block leading-relaxed">
-                  {[application.addressInfo?.streetAddress, application.addressInfo?.city, application.addressInfo?.district, application.addressInfo?.state].filter(Boolean).join(', ')}{application.addressInfo?.pincode ? ` - ${application.addressInfo.pincode}` : ''}
+                  {[
+                    application.addressInfo?.streetAddress,
+                    application.addressInfo?.city,
+                    application.addressInfo?.otherDistrict || application.addressInfo?.district,
+                    application.addressInfo?.otherState || application.addressInfo?.state
+                  ].filter(Boolean).join(', ')}{application.addressInfo?.pincode ? ` - ${application.addressInfo.pincode}` : ''}
                 </span>
               </div>
             </div>
@@ -837,7 +959,7 @@ export default function ApplicantDashboard() {
             <div className="pt-2 border-t border-slate-800 space-y-1.5 text-xs font-mono text-slate-200">
               <div className="flex items-center justify-between">
                 <span className="text-slate-400 font-sans text-[11px]">Helpline:</span>
-                <span>+91 7027849858 / 59</span>
+                <span>Boys: 7082416858, 7082424558 | Girls: 7027849858</span>
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-slate-400 font-sans text-[11px]">Email:</span>

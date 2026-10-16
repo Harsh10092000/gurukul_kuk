@@ -61,6 +61,8 @@ export interface AddressInfo {
   pincode: string;
   whatsappNumber: string;
   alternatePhone?: string;
+  otherState?: string;
+  otherDistrict?: string;
 }
 
 export type EligibleClass = 'Class 5' | 'Class 6' | 'Class 7' | 'Class 8' | 'Class 9' | 'Class 11' | '5' | '6' | '7' | '8' | '9' | '11';
@@ -136,7 +138,7 @@ export interface PaymentOrderRecord {
   orderId: string;
   amount: number;
   currency: string;
-  status: 'PENDING' | 'CHARGED' | 'FAILED' | 'AUTHENTICATION_FAILED' | 'AUTHORIZATION_FAILED' | 'CANCELLED';
+  status: 'PENDING' | 'PROCESSING' | 'CHARGED' | 'FAILED' | 'AUTHENTICATION_FAILED' | 'AUTHORIZATION_FAILED' | 'CANCELLED';
   customerEmail: string;
   customerPhone: string;
   customerId: string;

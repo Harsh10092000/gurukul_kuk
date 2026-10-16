@@ -228,7 +228,10 @@ export default function AdmissionFormView({
                 <div>
                   <span className="text-slate-600 block text-[8.5px]">District &amp; State:</span>
                   <span className="font-bold uppercase text-[9.5px]">
-                    {[application.addressInfo?.district, application.addressInfo?.state].filter(Boolean).join(', ') || '—'}
+                    {[
+                      application.addressInfo?.otherDistrict || application.addressInfo?.district,
+                      application.addressInfo?.otherState || application.addressInfo?.state
+                    ].filter(Boolean).join(', ') || '—'}
                   </span>
                 </div>
                 <div>
@@ -358,12 +361,14 @@ export default function AdmissionFormView({
             <div>
               <span className="text-slate-600 block text-[8px]">Transaction ID:</span>
               <strong className="text-black truncate block text-[9.5px]" title={application.paymentInfo?.transactionId || application.transactionId}>
-                {application.paymentInfo?.transactionId || application.transactionId || 'PAID-ONLINE'}
+                {application.paymentInfo?.transactionId || application.transactionId || '----'}
               </strong>
             </div>
             <div>
-              <span className="text-slate-600 block text-[8px]">Payment Mode:</span>
-              <strong className="text-black">Online / Razorpay</strong>
+              <span className="text-slate-600 block text-[8px]">Registration Date &amp; Time:</span>
+              <strong className="text-black text-[9px]">
+                {application.createdAt ? new Date(application.createdAt).toLocaleString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true }) : '----'}
+              </strong>
             </div>
             <div>
               <span className="text-slate-600 block text-[8px]">Fee Reconciliation:</span>

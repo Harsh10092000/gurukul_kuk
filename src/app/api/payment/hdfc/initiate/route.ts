@@ -213,6 +213,26 @@ export async function POST(request: Request) {
       }
     }
 
+    // In-flight stuck payment guard (no time limit)
+    const activePendingOrder = await db.findActivePendingOrder({
+      email: candidateEmail,
+      aadhaar: personalInfo?.aadhaarNumber,
+    });
+    if (activePendingOrder) {
+      const orderTime = new Date(activePendingOrder.createdAt).getTime();
+      const elapsedMins = Math.max(1, Math.round((Date.now() - orderTime) / 60000));
+      return NextResponse.json(
+        {
+          error: `A payment transaction of ₹800 is already in process with the bank for this candidate (Order ID: ${activePendingOrder.orderId}, initiated ${elapsedMins} minute${elapsedMins > 1 ? 's' : ''} ago). To prevent accidental double payment, you cannot initiate another payment until this transaction is confirmed or rejected by the bank.`,
+          paymentPending: true,
+          orderId: activePendingOrder.orderId,
+          status: activePendingOrder.status,
+          elapsedMins,
+        },
+        { status: 409 }
+      );
+    }
+
     // Generate unique order ID
     const orderId = generateHdfcOrderId('GUR');
     const returnUrl = resolveReturnUrl(request);

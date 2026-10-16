@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { comparePassword, hashPassword, signToken, getAuthCookieOptions } from '@/lib/auth';
 import { checkRateLimit, rateLimitResponse, getClientIp, clearRateLimit, RATE_LIMIT_CONFIGS } from '@/lib/rate-limit';
+import { fetchRazorpayOrderPayments } from '@/lib/razorpay';
 
 export async function POST(request: Request) {
   try {
@@ -57,6 +58,14 @@ export async function POST(request: Request) {
       user = await db.ensureAdminUser();
     }
 
+    // Only allow linking if application was already completed with payment
+    if (!user && !isAdminIdentifier && cleanId.includes('@')) {
+      const appByEmail = await db.findApplicationByEmail(cleanId);
+      if (appByEmail && appByEmail.paymentStatus === 'completed' && appByEmail.userId) {
+        user = await db.getUserById(appByEmail.userId);
+      }
+    }
+
     if (!user) {
       const isStaffAttempt = isAdminIdentifier || cleanId.includes('thegurukul') || cleanId.includes('gurukul');
       return NextResponse.json(
@@ -90,9 +99,35 @@ export async function POST(request: Request) {
     if (!isPasswordValid) {
       const isStaff = user.role === 'admin' || isAdminIdentifier;
       return NextResponse.json(
-        { error: isStaff ? 'Invalid Staff Email Address or password.' : 'Invalid Registration Number / Email or password.' },
+        { error: isStaff ? 'Invalid Staff Email Address or password.' : 'Invalid Registration Number / Email Address or password.' },
         { status: 401 }
       );
+    }
+
+    // Candidate can log in if officially registered, fee payment was confirmed, OR payment is under process
+    if (user.role === 'applicant' && !isDemoStudentMatch) {
+      const userApp = (await db.getApplicationByUserId(user.id)) || (user.email ? await db.findApplicationByEmail(user.email) : null);
+      const isAppPaid = userApp && (userApp.paymentStatus === 'completed' || userApp.status === 'approved');
+
+      let canLogin = !!isAppPaid;
+
+      if (!canLogin && user.email) {
+        const order = await db.getPaymentOrderByEmail(user.email);
+        if (order) {
+          if (order.status === 'CHARGED' && (!!order.registrationNumber || !!(order.paymentResponse as any)?.razorpay_payment_id)) {
+            canLogin = true;
+          } else if (order.status === 'PENDING' || order.status === 'PROCESSING') {
+            canLogin = true; // Allow login to view under-process payment dashboard!
+          }
+        }
+      }
+
+      if (!canLogin) {
+        return NextResponse.json(
+          { error: 'Invalid Registration Number / Email Address or password.' },
+          { status: 401 }
+        );
+      }
     }
 
     // Ensure registration number is present

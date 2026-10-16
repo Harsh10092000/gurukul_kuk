@@ -87,7 +87,7 @@ const DEFAULT_SETTINGS: SystemSettings = {
   examVenueAddress: 'Nilokheri, Karnal, Haryana - 132117',
   resultDeclarationDate: '2027-02-14',
   counselingStartDate: '2027-04-15',
-  helplinePhone: '+91 7027849858 / 59',
+  helplinePhone: 'Boys: 7082416858, 7082424558 | Girls: 7027849858',
   helplineEmail: 'thegurukulnilokheri@gmail.com',
   activeStudyLocations: ['The Gurukul Nilokheri', 'The Gurukul Jyotisar', 'Aryakulam Nilokheri'],
   statusOverride: 'auto',
@@ -261,6 +261,14 @@ export async function ensureDb(): Promise<mysql.Pool | null> {
   return pool;
 }
 
+export async function getDbPool(): Promise<mysql.Pool | null> {
+  return await ensureDb();
+}
+
+export function isUsingFallbackStorage(): boolean {
+  return useFallbackStorage || !pool;
+}
+
 /**
  * Initialize Database tables in MySQL or initialize fallback JSON store
  */
@@ -418,7 +426,7 @@ export async function initDatabase(): Promise<void> {
         exam_venue_address TEXT,
         result_declaration_date VARCHAR(32) DEFAULT '2027-02-14',
         counseling_start_date VARCHAR(32) DEFAULT '2027-04-15',
-        helpline_phone VARCHAR(64) DEFAULT '+91 7027849858 / 59',
+        helpline_phone VARCHAR(64) DEFAULT 'Boys: 7082416858, 7082424558 | Girls: 7027849858',
         helpline_email VARCHAR(128) DEFAULT 'thegurukulnilokheri@gmail.com',
         active_study_locations JSON DEFAULT NULL,
         updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
@@ -450,7 +458,7 @@ export async function initDatabase(): Promise<void> {
             exam_venue_address TEXT,
             result_declaration_date VARCHAR(32) DEFAULT '2027-02-14',
             counseling_start_date VARCHAR(32) DEFAULT '2027-04-15',
-            helpline_phone VARCHAR(64) DEFAULT '+91 7027849858 / 59',
+            helpline_phone VARCHAR(64) DEFAULT 'Boys: 7082416858, 7082424558 | Girls: 7027849858',
             helpline_email VARCHAR(128) DEFAULT 'thegurukulnilokheri@gmail.com',
             active_study_locations JSON DEFAULT NULL,
             updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
@@ -578,7 +586,7 @@ export async function initDatabase(): Promise<void> {
             'Aryakulam Nilokheri (Boys) / The Gurukul Nilokheri (Girls)',
             'Nilokheri, Karnal, Haryana - 132117',
             '2027-02-14', '2027-04-15',
-            '+91 7027849858 / 59', 'thegurukulnilokheri@gmail.com',
+            'Boys: 7082416858, 7082424558 | Girls: 7027849858', 'thegurukulnilokheri@gmail.com',
             '["The Gurukul Nilokheri", "The Gurukul Jyotisar", "Aryakulam Nilokheri"]',
             NOW()
           )
@@ -1076,20 +1084,30 @@ export const db = {
     const id = 'usr-' + Date.now() + '-' + Math.random().toString(36).substring(2, 7);
     const createdAt = new Date().toISOString();
 
+    // Registration numbers are generated upon application fee payment
+    const registrationNumber = user.registrationNumber || undefined;
+
     // Enforce Unique Email Address per candidate
     if (user.email) {
       const cleanEmail = user.email.trim().toLowerCase();
       const existingEmailUser = await this.findUserByEmail(cleanEmail);
       if (existingEmailUser) {
+        if (user.role === 'applicant') {
+          // Idempotent applicant handling: link registrationNumber if provided and return existing user
+          if (registrationNumber && !existingEmailUser.registrationNumber) {
+            if (pool && !useFallbackStorage) {
+              await pool.query('UPDATE users SET registration_number = ? WHERE id = ?', [registrationNumber, existingEmailUser.id]);
+            }
+            existingEmailUser.registrationNumber = registrationNumber;
+          }
+          return existingEmailUser;
+        }
         throw new Error(`Email address "${cleanEmail}" is already registered. Duplicate email accounts are prohibited.`);
       }
     }
 
     // Mobile numbers are NOT required to be unique across candidates (to accommodate siblings/families)
     const cleanPhone = user.phone ? user.phone.replace(/\D/g, '').slice(-10) : '';
-
-    // Registration numbers are NOT generated during initial registration; they are generated upon application fee payment
-    const registrationNumber = user.registrationNumber || undefined;
 
     const newUser: User & { passwordHash?: string } = {
       id,
@@ -1103,11 +1121,26 @@ export const db = {
     };
 
     if (pool && !useFallbackStorage) {
-      await pool.query(
-        'INSERT INTO users (id, name, email, phone, password_hash, role, registration_number, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
-        [id, user.name, user.email, user.phone, user.passwordHash, user.role, registrationNumber || null, toMySqlDatetime(createdAt)]
-      );
-      return newUser;
+      try {
+        await pool.query(
+          'INSERT INTO users (id, name, email, phone, password_hash, role, registration_number, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+          [id, user.name, user.email, user.phone, user.passwordHash, user.role, registrationNumber || null, toMySqlDatetime(createdAt)]
+        );
+        return newUser;
+      } catch (insertErr: any) {
+        if (insertErr?.code === 'ER_DUP_ENTRY' && user.email) {
+          const cleanEmail = user.email.trim().toLowerCase();
+          const existing = await this.findUserByEmail(cleanEmail);
+          if (existing) {
+            if (registrationNumber && !existing.registrationNumber) {
+              await pool.query('UPDATE users SET registration_number = ? WHERE id = ?', [registrationNumber, existing.id]);
+              existing.registrationNumber = registrationNumber;
+            }
+            return existing;
+          }
+        }
+        throw insertErr;
+      }
     }
 
     const store = initFallbackFile();
@@ -1682,7 +1715,10 @@ export const db = {
       // Persist registration number to user record in MySQL if not already set
       await pool.query('UPDATE users SET registration_number = ? WHERE id = ? AND registration_number IS NULL', [regNumber, app.userId]);
 
-      const [existingAppRows]: any = await pool.query('SELECT id FROM applications WHERE user_id = ?', [app.userId]);
+      const [existingAppRows]: any = await pool.query(
+        'SELECT id FROM applications WHERE user_id = ? OR application_number = ? LIMIT 1',
+        [app.userId, regNumber]
+      );
       if (existingAppRows.length > 0) {
         await pool.query(
           `UPDATE applications SET
@@ -1713,42 +1749,82 @@ export const db = {
         return { ...newApp, id: existingAppRows[0].id };
       }
 
-      await pool.query(
-        `INSERT INTO applications (
-          id, application_number, roll_number, user_id, class_applying, 
-          personal_info, parent_info, address_info, academic_info, 
-          exam_centre_pref, documents, status, remarks, 
-          payment_status, amount_paid, transaction_id, created_at, updated_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        [
-          id,
-          regNumber,
-          newApp.rollNumber || null,
-          app.userId,
-          app.classApplying,
-          JSON.stringify(newApp.personalInfo),
-          JSON.stringify(app.parentInfo),
-          JSON.stringify(app.addressInfo),
-          JSON.stringify(app.academicInfo),
-          JSON.stringify(newApp.examCentrePref),
-          JSON.stringify(app.documents || {}),
-          app.status,
-          app.remarks || null,
-          app.paymentStatus,
-          newApp.amountPaid,
-          app.transactionId || null,
-          toMySqlDatetime(),
-          toMySqlDatetime(),
-        ]
-      );
-      return newApp;
+      try {
+        await pool.query(
+          `INSERT INTO applications (
+            id, application_number, roll_number, user_id, class_applying, 
+            personal_info, parent_info, address_info, academic_info, 
+            exam_centre_pref, documents, status, remarks, 
+            payment_status, amount_paid, transaction_id, created_at, updated_at
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          [
+            id,
+            regNumber,
+            newApp.rollNumber || null,
+            app.userId,
+            app.classApplying,
+            JSON.stringify(newApp.personalInfo),
+            JSON.stringify(app.parentInfo),
+            JSON.stringify(app.addressInfo),
+            JSON.stringify(app.academicInfo),
+            JSON.stringify(newApp.examCentrePref),
+            JSON.stringify(app.documents || {}),
+            app.status,
+            app.remarks || null,
+            app.paymentStatus,
+            newApp.amountPaid,
+            app.transactionId || null,
+            toMySqlDatetime(),
+            toMySqlDatetime(),
+          ]
+        );
+        return newApp;
+      } catch (insertErr: any) {
+        if (insertErr?.code === 'ER_DUP_ENTRY') {
+          const [dupRows]: any = await pool.query(
+            'SELECT id FROM applications WHERE application_number = ? OR user_id = ? LIMIT 1',
+            [regNumber, app.userId]
+          );
+          if (dupRows && dupRows.length > 0) {
+            const existingId = dupRows[0].id;
+            await pool.query(
+              `UPDATE applications SET
+                application_number = ?, roll_number = COALESCE(?, roll_number), class_applying = ?, personal_info = ?, parent_info = ?,
+                address_info = ?, academic_info = ?, exam_centre_pref = ?, documents = ?,
+                status = ?, remarks = ?, payment_status = ?, amount_paid = ?, transaction_id = ?,
+                updated_at = ?
+               WHERE id = ?`,
+              [
+                regNumber,
+                newApp.rollNumber || null,
+                app.classApplying,
+                JSON.stringify(newApp.personalInfo),
+                JSON.stringify(app.parentInfo),
+                JSON.stringify(app.addressInfo),
+                JSON.stringify(app.academicInfo),
+                JSON.stringify(newApp.examCentrePref),
+                JSON.stringify(app.documents || {}),
+                app.status,
+                app.remarks || null,
+                app.paymentStatus,
+                newApp.amountPaid,
+                app.transactionId || null,
+                toMySqlDatetime(),
+                existingId,
+              ]
+            );
+            return { ...newApp, id: existingId };
+          }
+        }
+        throw insertErr;
+      }
     }
 
     const store = initFallbackFile();
     if (user && !user.registrationNumber) {
       user.registrationNumber = regNumber;
     }
-    const existingDraftIdx = store.applications.findIndex(a => a.userId === app.userId);
+    const existingDraftIdx = store.applications.findIndex(a => a.userId === app.userId || a.applicationNumber === regNumber || a.registrationNumber === regNumber);
     if (existingDraftIdx !== -1) {
       store.applications[existingDraftIdx] = newApp;
     } else {
@@ -2943,7 +3019,7 @@ export const db = {
               settings.examVenueAddress || 'Nilokheri, Karnal, Haryana - 132117',
               settings.resultDeclarationDate || '2027-02-14',
               settings.counselingStartDate || '2027-04-15',
-              settings.helplinePhone || '+91 7027849858 / 59',
+              settings.helplinePhone || 'Boys: 7082416858, 7082424558 | Girls: 7027849858',
               settings.helplineEmail || 'thegurukulnilokheri@gmail.com',
               settings.activeStudyLocations ? JSON.stringify(settings.activeStudyLocations) : JSON.stringify(['The Gurukul Nilokheri', 'The Gurukul Jyotisar', 'Aryakulam Nilokheri']),
               settings.statusOverride || 'auto',
@@ -3692,6 +3768,349 @@ export const db = {
     }
 
     return updatedRecord;
+  },
+
+  async getPaymentOrderByEmail(email: string): Promise<PaymentOrderRecord | null> {
+    await ensureDb();
+    if (!email) return null;
+    const cleanEmail = email.trim().toLowerCase();
+
+    if (pool && !useFallbackStorage) {
+      try {
+        const [rows]: any = await pool.query(
+          'SELECT * FROM payment_orders WHERE LOWER(customer_email) = ? ORDER BY created_at DESC LIMIT 1',
+          [cleanEmail]
+        );
+        if (rows && rows.length > 0) {
+          const r = rows[0];
+          return {
+            id: r.id,
+            orderId: r.order_id,
+            amount: parseFloat(r.amount),
+            currency: r.currency,
+            status: r.status,
+            customerEmail: r.customer_email,
+            customerPhone: r.customer_phone,
+            customerId: r.customer_id,
+            applicationId: r.application_id,
+            registrationNumber: r.registration_number,
+            applicationPayload: safeJsonParse(r.application_payload, null),
+            paymentResponse: safeJsonParse(r.payment_response, null),
+            createdAt: r.created_at ? new Date(r.created_at).toISOString() : new Date().toISOString(),
+            updatedAt: r.updated_at ? new Date(r.updated_at).toISOString() : new Date().toISOString(),
+          };
+        }
+        return null;
+      } catch (e) {
+        console.warn('MySQL getPaymentOrderByEmail error:', e);
+        return null;
+      }
+    }
+
+    const store = initFallbackFile();
+    if (!store.paymentOrders) return null;
+    const matches = store.paymentOrders
+      .filter((p) => (p.customerEmail || '').trim().toLowerCase() === cleanEmail)
+      .sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime());
+    return matches[0] || null;
+  },
+
+  async getPendingPaidOrders(): Promise<PaymentOrderRecord[]> {
+    await ensureDb();
+
+    if (pool && !useFallbackStorage) {
+      try {
+        const [rows]: any = await pool.query(
+          `SELECT p.* FROM payment_orders p
+           LEFT JOIN applications a ON (
+             (p.customer_email IS NOT NULL AND LOWER(JSON_UNQUOTE(JSON_EXTRACT(a.personal_info, '$.candidateEmail'))) = LOWER(p.customer_email) AND a.payment_status = 'completed')
+             OR (p.application_id IS NOT NULL AND a.id = p.application_id AND a.payment_status = 'completed')
+           )
+           WHERE p.application_payload IS NOT NULL
+             AND (p.registration_number IS NULL OR p.registration_number = '' OR p.application_id IS NULL)
+             AND (
+               p.status = 'CHARGED' 
+               OR p.status = 'PROCESSING'
+               OR (p.payment_response IS NOT NULL AND (
+                 JSON_UNQUOTE(JSON_EXTRACT(p.payment_response, '$.razorpay_payment_id')) IS NOT NULL
+                 OR JSON_UNQUOTE(JSON_EXTRACT(p.payment_response, '$.paymentId')) IS NOT NULL
+               ))
+             )
+             AND a.id IS NULL
+           ORDER BY p.created_at DESC`
+        );
+        return (rows || []).map((r: any) => ({
+          id: r.id,
+          orderId: r.order_id,
+          amount: parseFloat(r.amount),
+          currency: r.currency,
+          status: r.status,
+          customerEmail: r.customer_email,
+          customerPhone: r.customer_phone,
+          customerId: r.customer_id,
+          applicationId: r.application_id,
+          registrationNumber: r.registration_number,
+          applicationPayload: safeJsonParse(r.application_payload, null),
+          paymentResponse: safeJsonParse(r.payment_response, null),
+          createdAt: r.created_at ? new Date(r.created_at).toISOString() : new Date().toISOString(),
+          updatedAt: r.updated_at ? new Date(r.updated_at).toISOString() : new Date().toISOString(),
+        }));
+      } catch (e) {
+        console.warn('MySQL getPendingPaidOrders error:', e);
+        return [];
+      }
+    }
+
+    const store = initFallbackFile();
+    if (!store.paymentOrders) return [];
+    const completedEmails = new Set(
+      (store.applications || [])
+        .filter((a) => a.paymentStatus === 'completed')
+        .map((a) => (a.personalInfo?.candidateEmail || '').trim().toLowerCase())
+        .filter(Boolean)
+    );
+
+    return store.paymentOrders
+      .filter((p) => {
+        if (!p.applicationPayload) return false;
+        if (p.registrationNumber && p.applicationId) return false;
+        const email = (p.customerEmail || p.applicationPayload?.personalInfo?.candidateEmail || '').trim().toLowerCase();
+        if (email && completedEmails.has(email)) return false;
+        const hasPaymentId = !!((p.paymentResponse as any)?.razorpay_payment_id || (p.paymentResponse as any)?.paymentId);
+        const isPaid = p.status === 'CHARGED' || p.status === 'PROCESSING' || hasPaymentId;
+        return isPaid;
+      })
+      .sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime());
+  },
+
+  async findActivePendingOrder(params: {
+    email?: string;
+    aadhaar?: string;
+    maxAgeMinutes?: number;
+  }): Promise<PaymentOrderRecord | null> {
+    await ensureDb();
+    const cleanEmail = (params.email || '').trim().toLowerCase();
+    const cleanAadhaar = (params.aadhaar || '').trim();
+    const maxAge = params.maxAgeMinutes;
+
+    if (!cleanEmail && !cleanAadhaar) return null;
+
+    if (pool && !useFallbackStorage) {
+      try {
+        const queryWithAge = `SELECT * FROM payment_orders
+           WHERE status IN ('PENDING', 'PROCESSING')
+             AND created_at >= NOW() - INTERVAL ? MINUTE
+             AND (
+               (? != '' AND LOWER(customer_email) = ?)
+               OR (? != '' AND application_payload IS NOT NULL AND JSON_UNQUOTE(JSON_EXTRACT(application_payload, '$.personalInfo.aadhaarNumber')) = ?)
+             )
+           ORDER BY created_at DESC
+           LIMIT 1`;
+
+        const queryWithoutAge = `SELECT * FROM payment_orders
+           WHERE status IN ('PENDING', 'PROCESSING')
+             AND (
+               (? != '' AND LOWER(customer_email) = ?)
+               OR (? != '' AND application_payload IS NOT NULL AND JSON_UNQUOTE(JSON_EXTRACT(application_payload, '$.personalInfo.aadhaarNumber')) = ?)
+             )
+           ORDER BY created_at DESC
+           LIMIT 1`;
+
+        const [rows]: any = await pool.query(
+          maxAge ? queryWithAge : queryWithoutAge,
+          maxAge
+            ? [maxAge, cleanEmail, cleanEmail, cleanAadhaar, cleanAadhaar]
+            : [cleanEmail, cleanEmail, cleanAadhaar, cleanAadhaar]
+        );
+
+        if (rows && rows.length > 0) {
+          const r = rows[0];
+          return {
+            id: r.id,
+            orderId: r.order_id,
+            amount: parseFloat(r.amount),
+            currency: r.currency,
+            status: r.status,
+            customerEmail: r.customer_email,
+            customerPhone: r.customer_phone,
+            customerId: r.customer_id,
+            applicationId: r.application_id,
+            registrationNumber: r.registration_number,
+            applicationPayload: safeJsonParse(r.application_payload, null),
+            paymentResponse: safeJsonParse(r.payment_response, null),
+            createdAt: r.created_at ? new Date(r.created_at).toISOString() : new Date().toISOString(),
+            updatedAt: r.updated_at ? new Date(r.updated_at).toISOString() : new Date().toISOString(),
+          };
+        }
+        return null;
+      } catch (e) {
+        console.warn('MySQL findActivePendingOrder error:', e);
+        return null;
+      }
+    }
+
+    const store = initFallbackFile();
+    if (!store.paymentOrders) return null;
+
+    const match = store.paymentOrders.find((p) => {
+      if (p.status !== 'PENDING' && p.status !== 'PROCESSING') return false;
+      if (maxAge) {
+        const cutoffTime = Date.now() - maxAge * 60 * 1000;
+        const created = new Date(p.createdAt || 0).getTime();
+        if (created < cutoffTime) return false;
+      }
+
+      const pEmail = (p.customerEmail || p.applicationPayload?.personalInfo?.candidateEmail || '').trim().toLowerCase();
+      const pAadhaar = (p.applicationPayload?.personalInfo?.aadhaarNumber || '').trim();
+
+      if (cleanEmail && pEmail === cleanEmail) return true;
+      if (cleanAadhaar && pAadhaar === cleanAadhaar) return true;
+      return false;
+    });
+
+    return match || null;
+  },
+
+  async createOrUpdatePendingUser(params: {
+    name: string;
+    email: string;
+    phone: string;
+    passwordHash: string;
+  }): Promise<string> {
+    await ensureDb();
+    const cleanEmail = params.email.trim().toLowerCase();
+    const cleanPhone = params.phone.replace(/\D/g, '').slice(-10);
+
+    if (pool && !useFallbackStorage) {
+      try {
+        const [existing]: any = await pool.query('SELECT id, role, registration_number FROM users WHERE LOWER(email) = ? LIMIT 1', [cleanEmail]);
+        if (existing && existing.length > 0) {
+          const u = existing[0];
+          if (u.role !== 'admin') {
+            await pool.query(
+              'UPDATE users SET name = ?, phone = ?, password_hash = ? WHERE id = ?',
+              [params.name, cleanPhone, params.passwordHash, u.id]
+            );
+          }
+          return u.id;
+        }
+
+        const newId = 'usr-' + Date.now() + '-' + Math.random().toString(36).substring(2, 7);
+        await pool.query(
+          `INSERT INTO users (id, name, email, phone, password_hash, role, registration_number, created_at)
+           VALUES (?, ?, ?, ?, ?, 'applicant', NULL, ?)`,
+          [newId, params.name, cleanEmail, cleanPhone, params.passwordHash, toMySqlDatetime()]
+        );
+        return newId;
+      } catch (e) {
+        console.warn('MySQL createOrUpdatePendingUser error:', e);
+      }
+    }
+
+    const store = initFallbackFile();
+    let u = (store.users || []).find(user => (user.email || '').toLowerCase() === cleanEmail);
+    if (u) {
+      if (u.role !== 'admin') {
+        u.name = params.name;
+        u.phone = cleanPhone;
+        (u as any).passwordHash = params.passwordHash;
+      }
+      saveFallbackStore(store);
+      return u.id;
+    }
+
+    const newId = 'usr-' + Date.now() + '-' + Math.random().toString(36).substring(2, 7);
+    const newUser = {
+      id: newId,
+      name: params.name,
+      email: cleanEmail,
+      phone: cleanPhone,
+      role: 'applicant' as const,
+      passwordHash: params.passwordHash,
+      createdAt: new Date().toISOString(),
+    };
+    store.users = store.users || [];
+    store.users.push(newUser);
+    saveFallbackStore(store);
+    return newId;
+  },
+
+  async purgeFailedPaymentCandidate(params: {
+    email: string;
+    orderId?: string;
+    reason?: string;
+  }): Promise<void> {
+    await ensureDb();
+    const cleanEmail = (params.email || '').trim().toLowerCase();
+    const orderId = params.orderId;
+
+    if (!cleanEmail) return;
+
+    if (pool && !useFallbackStorage) {
+      try {
+        // Protect confirmed students: only purge if candidate does NOT have a completed application
+        const [confirmed]: any = await pool.query(
+          `SELECT id FROM applications 
+           WHERE payment_status = 'completed' 
+             AND (LOWER(JSON_UNQUOTE(JSON_EXTRACT(personal_info, '$.candidateEmail'))) = ? 
+                  OR user_id IN (SELECT id FROM users WHERE LOWER(email) = ?))`,
+          [cleanEmail, cleanEmail]
+        );
+
+        if (!confirmed || confirmed.length === 0) {
+          // Delete unconfirmed applicant user record
+          await pool.query(
+            'DELETE FROM users WHERE LOWER(email) = ? AND role = "applicant" AND (registration_number IS NULL OR registration_number = "")',
+            [cleanEmail]
+          );
+          // Delete unconfirmed application record if any
+          await pool.query(
+            "DELETE FROM applications WHERE payment_status != 'completed' AND LOWER(JSON_UNQUOTE(JSON_EXTRACT(personal_info, '$.candidateEmail'))) = ?",
+            [cleanEmail]
+          );
+          // Mark all pending/processing orders for this email as FAILED so they don't block fresh registration
+          await pool.query(
+            "UPDATE payment_orders SET status = 'FAILED' WHERE LOWER(customer_email) = ? AND status IN ('PENDING', 'PROCESSING')",
+            [cleanEmail]
+          );
+        }
+
+        if (orderId) {
+          await pool.query("UPDATE payment_orders SET status = 'FAILED' WHERE order_id = ? AND status != 'CHARGED'", [orderId]);
+        }
+      } catch (e) {
+        console.warn('MySQL purgeFailedPaymentCandidate error:', e);
+      }
+      return;
+    }
+
+    const store = initFallbackFile();
+    const isConfirmed = (store.applications || []).some(
+      a => a.paymentStatus === 'completed' && a.personalInfo?.candidateEmail?.toLowerCase() === cleanEmail
+    );
+    if (!isConfirmed) {
+      store.users = (store.users || []).filter(
+        u => !(u.email && u.email.toLowerCase() === cleanEmail && !u.registrationNumber && u.role === 'applicant')
+      );
+      store.applications = (store.applications || []).filter(
+        a => !(a.personalInfo?.candidateEmail && a.personalInfo.candidateEmail.toLowerCase() === cleanEmail && a.paymentStatus !== 'completed')
+      );
+      if (store.paymentOrders) {
+        store.paymentOrders.forEach(p => {
+          const pEmail = (p.customerEmail || p.applicationPayload?.personalInfo?.candidateEmail || '').trim().toLowerCase();
+          if (pEmail === cleanEmail && (p.status === 'PENDING' || p.status === 'PROCESSING')) {
+            p.status = 'FAILED';
+          }
+        });
+      }
+    }
+    if (orderId && store.paymentOrders) {
+      const ord = store.paymentOrders.find(p => p.orderId === orderId);
+      if (ord && ord.status !== 'CHARGED') {
+        ord.status = 'FAILED';
+      }
+    }
+    saveFallbackStore(store);
   },
 };
 

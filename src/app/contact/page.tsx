@@ -138,7 +138,8 @@ export default function ContactPage() {
                   <div>
                     <span className="font-semibold text-white block">Helpline Numbers</span>
                     <div className="font-mono text-slate-300 text-xs space-y-0.5">
-                      <div>+91 7027849858 / 59</div>
+                      <div>Boys: +91 7082416858, 7082424558</div>
+                      <div>Girls: +91 7027849858</div>
                     </div>
                   </div>
                 </div>

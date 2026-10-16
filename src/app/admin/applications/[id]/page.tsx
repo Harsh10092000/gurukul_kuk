@@ -82,6 +82,24 @@ export default function ApplicationVerificationPage({ params }: { params: { id: 
     return s;
   };
 
+  const formatDateTime = (dtStr?: string) => {
+    if (!dtStr) return '----';
+    try {
+      const d = new Date(dtStr);
+      if (isNaN(d.getTime())) return '----';
+      return d.toLocaleString('en-IN', {
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: true,
+      });
+    } catch {
+      return '----';
+    }
+  };
+
   const updateStatus = async (status: Application['status'], customRemark?: string) => {
     setActionLoading(true);
     setErrorMsg('');
@@ -189,6 +207,11 @@ export default function ApplicationVerificationPage({ params }: { params: { id: 
             <h1 className="text-lg sm:text-xl font-bold text-slate-900">
               Candidate Dossier: {application.personalInfo.fullName}
             </h1>
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-500 mt-1">
+              <span>Registration Date &amp; Time: <strong className="text-slate-800 font-medium">{formatDateTime(application.createdAt)}</strong></span>
+              <span className="text-slate-300">•</span>
+              <span>Transaction ID: <strong className="text-slate-800 font-mono">{application.transactionId || '----'}</strong></span>
+            </div>
           </div>
         </div>
 
@@ -330,11 +353,15 @@ export default function ApplicationVerificationPage({ params }: { params: { id: 
               </div>
               <div>
                 <span className="text-slate-500 block text-[11px]">District</span>
-                <span className="font-semibold text-slate-900">{application.addressInfo?.district || '—'}</span>
+                <span className="font-semibold text-slate-900">
+                  {application.addressInfo?.otherDistrict || application.addressInfo?.district || '—'}
+                </span>
               </div>
               <div>
                 <span className="text-slate-500 block text-[11px]">State / UT</span>
-                <span className="font-semibold text-slate-900">{application.addressInfo?.state || '—'}</span>
+                <span className="font-semibold text-slate-900">
+                  {application.addressInfo?.otherState || application.addressInfo?.state || '—'}
+                </span>
               </div>
               <div>
                 <span className="text-slate-500 block text-[11px]">PIN Code</span>
@@ -364,6 +391,18 @@ export default function ApplicationVerificationPage({ params }: { params: { id: 
                 <span className="text-slate-500 block text-[11px]">Entrance Fee Status</span>
                 <span className="font-semibold text-emerald-700">
                   Paid (₹{application.amountPaid || 800})
+                </span>
+              </div>
+              <div>
+                <span className="text-slate-500 block text-[11px]">Transaction ID</span>
+                <span className="font-mono font-bold text-slate-900">
+                  {application.transactionId || '----'}
+                </span>
+              </div>
+              <div>
+                <span className="text-slate-500 block text-[11px]">Registration Date &amp; Time</span>
+                <span className="font-medium text-slate-900">
+                  {formatDateTime(application.createdAt)}
                 </span>
               </div>
 

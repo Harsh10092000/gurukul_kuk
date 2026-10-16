@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { getCurrentUser } from '@/lib/auth';
+import { getCurrentUser, hashPassword } from '@/lib/auth';
 import {
   validateName,
   validateOccupation,
@@ -12,7 +12,8 @@ import {
   validateAllFourDocuments,
   validateUploadedFile,
 } from '@/lib/validations';
-import { createRazorpayOrder, RAZORPAY_CONFIG } from '@/lib/razorpay';
+import { createRazorpayOrder, RAZORPAY_CONFIG, fetchRazorpayOrderPayments, fetchRazorpayOrder } from '@/lib/razorpay';
+import { completePaymentAndRegistration } from '@/lib/payment-completion';
 import { checkRateLimit, rateLimitResponse, getClientIp } from '@/lib/rate-limit';
 
 export const dynamic = 'force-dynamic';
@@ -174,6 +175,102 @@ export async function POST(request: Request) {
       }
     }
 
+    // 8. Prevent duplicate in-flight payments (stuck payment guard - no time limit, checks Razorpay live status)
+    const activePendingOrder = await db.findActivePendingOrder({
+      email: candidateEmail,
+      aadhaar: personalInfo?.aadhaarNumber,
+    });
+
+    if (activePendingOrder) {
+      let isCaptured = false;
+      let isAllFailed = false;
+      let capturedPaymentId = '';
+
+      try {
+        const paymentsRes = await fetchRazorpayOrderPayments(activePendingOrder.orderId);
+        if (paymentsRes && paymentsRes.items && paymentsRes.items.length > 0) {
+          const captured = paymentsRes.items.find((p) => p.status === 'captured' || p.status === 'authorized');
+          if (captured) {
+            isCaptured = true;
+            capturedPaymentId = captured.id;
+          } else {
+            const everyFailed = paymentsRes.items.every(
+              (p) => p.status === 'failed' || p.status === 'refunded'
+            );
+            if (everyFailed) {
+              isAllFailed = true;
+            }
+          }
+        } else {
+          const rzpOrder = await fetchRazorpayOrder(activePendingOrder.orderId);
+          if (rzpOrder) {
+            if (rzpOrder.status === 'paid' || rzpOrder.amount_paid > 0) {
+              isCaptured = true;
+              capturedPaymentId = `pay_recovered_${Date.now()}`;
+            } else if (rzpOrder.status === 'attempted') {
+              // In flight payment attempt
+            } else {
+              // Status is 'created' (0 payment attempts made)
+              // If order was created more than 5 minutes ago with 0 attempts, consider it expired/abandoned
+              const orderAgeMs = Date.now() - new Date(activePendingOrder.createdAt).getTime();
+              if (orderAgeMs > 5 * 60 * 1000) {
+                isAllFailed = true;
+              }
+            }
+          } else {
+            isAllFailed = true;
+          }
+        }
+      } catch (checkErr) {
+        console.warn(`[CreateOrder] Could not verify in-flight Razorpay order ${activePendingOrder.orderId}:`, checkErr);
+      }
+
+      // If the in-flight payment was actually captured, automatically register candidate without second payment!
+      if (isCaptured) {
+        const result = await completePaymentAndRegistration({
+          orderId: activePendingOrder.orderId,
+          paymentId: capturedPaymentId,
+          gateway: 'razorpay',
+        });
+
+        if (result.success) {
+          return NextResponse.json({
+            success: true,
+            alreadyProcessed: true,
+            registrationNumber: result.registrationNumber,
+            rollNumber: result.rollNumber,
+            redirectUrl: result.redirectUrl,
+            message: 'Your payment was already confirmed by the bank. Your registration has been finalized.',
+          });
+        }
+      }
+
+      // If all payment attempts for this order definitively failed/expired, purge and allow fresh order!
+      if (isAllFailed) {
+        await db.purgeFailedPaymentCandidate({
+          email: candidateEmail,
+          orderId: activePendingOrder.orderId,
+          reason: 'Previous payment attempt failed or expired during in-flight check',
+        });
+        // Candidate details purged from unconfirmed records, and candidate is now allowed to try again fresh!
+      } else {
+        // Payment is genuinely under process / stuck at bank side
+        const orderTime = new Date(activePendingOrder.createdAt).getTime();
+        const elapsedMins = Math.max(1, Math.round((Date.now() - orderTime) / 60000));
+
+        return NextResponse.json(
+          {
+            error: `A payment transaction of ₹800 is already in process with your bank / Razorpay for this candidate (Order ID: ${activePendingOrder.orderId}, initiated ${elapsedMins} minute${elapsedMins > 1 ? 's' : ''} ago). To prevent accidental double payment, you cannot initiate another payment until this transaction is confirmed or rejected by the bank. If money was debited from your account, your application will be registered automatically without paying again. Please login with your registered email and password to check your payment status.`,
+            paymentPending: true,
+            orderId: activePendingOrder.orderId,
+            status: activePendingOrder.status,
+            elapsedMins,
+          },
+          { status: 409 }
+        );
+      }
+    }
+
     // Create unique receipt tag for Razorpay
     const receiptId = `REC_${Date.now()}_${Math.floor(1000 + Math.random() * 9000)}`.slice(0, 40);
     const customerId = cleanPhone ? `cust_${cleanPhone}` : `cust_${Date.now()}`;
@@ -188,6 +285,22 @@ export async function POST(request: Request) {
         applyingClass: classApplying,
         studyLocation: studyPref.firstPreference,
       },
+    });
+
+    // Register or update candidate user record with their chosen password
+    // This allows them to log in to their dashboard and view payment status if payment is stuck
+    let passwordHash = '';
+    if (password) {
+      passwordHash = await hashPassword(password);
+    } else {
+      passwordHash = await hashPassword('Student@123');
+    }
+
+    const pendingUserId = await db.createOrUpdatePendingUser({
+      name: personalInfo.fullName.trim(),
+      email: candidateEmail,
+      phone: cleanPhone,
+      passwordHash,
     });
 
     // Store pending payment order record in MySQL with official application fee (₹800)

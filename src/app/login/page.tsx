@@ -191,7 +191,8 @@ export default function LoginPage() {
               {/* Admissions Helpline Box */}
               <div className="bg-slate-50 border border-slate-200 rounded-lg p-4 space-y-1.5 text-xs text-slate-600">
                 <div className="font-semibold text-slate-900">Admissions Helpdesk</div>
-                <div>Phone: +91 7027849858 / 59</div>
+                <div>Boys Helpline: +91 7082416858, 7082424558</div>
+                <div>Girls Helpline: +91 7027849858</div>
                 <div>Email: thegurukulnilokheri@gmail.com</div>
                 <div className="text-[11px] text-slate-500 pt-1">Hours: 9:00 AM – 4:00 PM (Mon – Sat)</div>
               </div>
@@ -212,9 +213,11 @@ export default function LoginPage() {
               </div>
 
               {error && (
-                <div className="p-3 rounded-lg bg-rose-50 border border-rose-200 flex items-center gap-2 text-xs text-rose-800 font-medium">
-                  <AlertCircle className="w-4 h-4 flex-shrink-0 text-rose-600" />
-                  <span>{error}</span>
+                <div className="p-3.5 rounded-xl bg-rose-50 border border-rose-200 text-xs text-rose-800 font-medium">
+                  <div className="flex items-start gap-2">
+                    <AlertCircle className="w-4 h-4 flex-shrink-0 text-rose-600 mt-0.5" />
+                    <span className="leading-relaxed">{error}</span>
+                  </div>
                 </div>
               )}
 

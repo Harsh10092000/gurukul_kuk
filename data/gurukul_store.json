@@ -68,6 +68,77 @@
   },
   "notifications": [],
   "enquiries": [],
-  "paymentOrders": [],
+  "paymentOrders": [
+    {
+      "orderId": "order_sim_fail_1792142194982",
+      "amount": 800,
+      "currency": "INR",
+      "status": "FAILED",
+      "customerEmail": "sim_test_1792142194833_failed@example.com",
+      "customerPhone": "9876543210",
+      "applicationPayload": {
+        "personalInfo": {
+          "candidateEmail": "sim_test_1792142194833_failed@example.com",
+          "fullName": "Failed Candidate"
+        }
+      },
+      "id": "pord-1792142195005-iuoo8",
+      "createdAt": "2026-10-16T09:16:35.005Z",
+      "updatedAt": "2026-10-16T09:16:35.005Z"
+    },
+    {
+      "orderId": "order_sim_stuck_1792142195043",
+      "amount": 800,
+      "currency": "INR",
+      "status": "FAILED",
+      "customerEmail": "sim_test_1792142194833_stuck@example.com",
+      "customerPhone": "9876543210",
+      "applicationPayload": {
+        "personalInfo": {
+          "candidateEmail": "sim_test_1792142194833_stuck@example.com",
+          "fullName": "Stuck Candidate",
+          "aadhaarNumber": "999988887777"
+        }
+      },
+      "id": "pord-1792142195057-moljo",
+      "createdAt": "2026-10-16T09:16:35.057Z",
+      "updatedAt": "2026-10-16T09:16:35.057Z"
+    },
+    {
+      "orderId": "order_sim_fail_1792142254194",
+      "amount": 800,
+      "currency": "INR",
+      "status": "FAILED",
+      "customerEmail": "sim_test_1792142254060_failed@example.com",
+      "customerPhone": "9876543210",
+      "applicationPayload": {
+        "personalInfo": {
+          "candidateEmail": "sim_test_1792142254060_failed@example.com",
+          "fullName": "Failed Candidate"
+        }
+      },
+      "id": "pord-1792142254219-34x9x",
+      "createdAt": "2026-10-16T09:17:34.219Z",
+      "updatedAt": "2026-10-16T09:17:34.219Z"
+    },
+    {
+      "orderId": "order_ToWkbui5AmUmPl",
+      "amount": 800,
+      "currency": "INR",
+      "status": "FAILED",
+      "customerEmail": "sim_test_1792142254060_stuck@example.com",
+      "customerPhone": "9876543210",
+      "applicationPayload": {
+        "personalInfo": {
+          "candidateEmail": "sim_test_1792142254060_stuck@example.com",
+          "fullName": "Stuck Candidate",
+          "aadhaarNumber": "999988887777"
+        }
+      },
+      "id": "pord-1792142254489-w3sfr",
+      "createdAt": "2026-10-16T09:17:34.489Z",
+      "updatedAt": "2026-10-16T09:17:34.489Z"
+    }
+  ],
   "tempApplications": {}
 }

@@ -53,6 +53,46 @@ export default function AdminApplicationsPage() {
   const [bulkErrorMsg, setBulkErrorMsg] = useState('');
   const [showBulkModal, setShowBulkModal] = useState(false);
 
+  // Paid Candidates Awaiting Approval State
+  const [pendingPaidCandidates, setPendingPaidCandidates] = useState<any[]>([]);
+  const [approvingOrder, setApprovingOrder] = useState<string | null>(null);
+  const [approveMsg, setApproveMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+
+  const fetchPendingPaid = () => {
+    fetch('/api/admin/approve-candidate', { cache: 'no-store' })
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.candidates) {
+          setPendingPaidCandidates(data.candidates);
+        }
+      })
+      .catch(() => {});
+  };
+
+  const handleApproveCandidate = async (orderId: string) => {
+    setApprovingOrder(orderId);
+    setApproveMsg(null);
+    try {
+      const res = await fetch('/api/admin/approve-candidate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ orderId }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setApproveMsg({ type: 'success', text: data.message });
+        fetchApplications();
+        fetchPendingPaid();
+      } else {
+        setApproveMsg({ type: 'error', text: data.error || 'Failed to approve candidate.' });
+      }
+    } catch {
+      setApproveMsg({ type: 'error', text: 'Error connecting to server.' });
+    } finally {
+      setApprovingOrder(null);
+    }
+  };
+
   const fetchApplications = () => {
     fetch('/api/applications', { cache: 'no-store' })
       .then((res) => res.json())
@@ -90,6 +130,7 @@ export default function AdminApplicationsPage() {
   useEffect(() => {
     fetchApplications();
     fetchSettings();
+    fetchPendingPaid();
   }, []);
 
   const handleBulkGenerateAdmitCards = async () => {
@@ -253,7 +294,134 @@ export default function AdminApplicationsPage() {
             Export CSV
           </a>
         </div>
-      </div>      {/* Bulk Admit Card Release Banner */}
+      </div>
+
+      {/* Approval Success/Error Notification */}
+      {approveMsg && (
+        <div
+          className={`p-4 rounded-xl text-xs font-semibold flex items-center justify-between gap-3 shadow-xs ${
+            approveMsg.type === 'success'
+              ? 'bg-emerald-50 border border-emerald-300 text-emerald-900'
+              : 'bg-rose-50 border border-rose-300 text-rose-900'
+          }`}
+        >
+          <div className="flex items-center gap-2">
+            {approveMsg.type === 'success' ? (
+              <CheckCircle2 className="w-4 h-4 text-emerald-600 flex-shrink-0" />
+            ) : (
+              <AlertCircle className="w-4 h-4 text-rose-600 flex-shrink-0" />
+            )}
+            <span>{approveMsg.text}</span>
+          </div>
+          <button
+            type="button"
+            onClick={() => setApproveMsg(null)}
+            className="text-slate-500 hover:text-slate-800 text-xs font-bold"
+          >
+            ✕
+          </button>
+        </div>
+      )}
+
+      {/* Payment Rescue & Fallback Safety Net Section */}
+      {pendingPaidCandidates.length > 0 && (
+        <div className="bg-gradient-to-r from-amber-50/90 via-orange-50/70 to-amber-50/90 border border-amber-300/90 rounded-2xl p-5 sm:p-6 shadow-sm space-y-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-xl bg-amber-500 text-white flex items-center justify-center font-black text-sm shadow-xs flex-shrink-0">
+                {pendingPaidCandidates.length}
+              </div>
+              <div>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <h3 className="font-bold text-amber-950 text-sm">
+                    Payment Rescue &amp; Fallback Safety Net
+                  </h3>
+                  <span className="bg-amber-500/20 text-amber-900 border border-amber-400 text-[10px] font-bold px-2 py-0.5 rounded-full">
+                    {pendingPaidCandidates.length} Unlinked Orders
+                  </span>
+                </div>
+                <p className="text-[11px] text-amber-800 leading-relaxed mt-0.5">
+                  Emergency safety net for unlinked or orphaned bank transactions. All regular Razorpay payments are auto-approved instantly. If any order is ever delayed or unlinked, administrators can click <strong>Approve &amp; Allot Seq</strong> to rescue the record and issue their sequential Registration and Roll numbers.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div className="overflow-x-auto bg-white rounded-xl border border-amber-200/80 shadow-xs">
+            <table className="w-full text-left text-xs">
+              <thead className="bg-amber-100/60 text-amber-950 border-b border-amber-200 font-bold uppercase tracking-wider text-[10px]">
+                <tr>
+                  <th className="py-3 px-4">Candidate Details</th>
+                  <th className="py-3 px-4">Class &amp; Stream</th>
+                  <th className="py-3 px-4">Campus Preference</th>
+                  <th className="py-3 px-4">Fee Paid</th>
+                  <th className="py-3 px-4">Razorpay Order ID</th>
+                  <th className="py-3 px-4 text-right">Administrative Action</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-amber-100/70">
+                {pendingPaidCandidates.map((cand) => (
+                  <tr key={cand.orderId} className="hover:bg-amber-50/40 transition-colors">
+                    <td className="py-3 px-4">
+                      <div className="font-bold text-slate-900">{cand.candidateName}</div>
+                      <div className="text-[11px] text-slate-500 mt-0.5">
+                        {cand.gender} • {cand.category} • Father: {cand.fatherName || '—'}
+                      </div>
+                      <div className="text-[10px] text-slate-400 font-mono mt-0.5">
+                        {cand.candidateEmail} • {cand.candidateMobile}
+                      </div>
+                    </td>
+                    <td className="py-3 px-4 text-slate-700">
+                      <div className="font-bold text-slate-900">{cand.classApplying}</div>
+                      {cand.stream && (
+                        <span className="inline-block bg-slate-100 text-slate-700 text-[10px] px-1.5 py-0.5 rounded font-medium mt-0.5">
+                          {cand.stream}
+                        </span>
+                      )}
+                    </td>
+                    <td className="py-3 px-4 text-slate-700">
+                      <span className="font-medium text-slate-800">{cand.firstPreference}</span>
+                    </td>
+                    <td className="py-3 px-4">
+                      <span className="font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full text-[11px]">
+                        ₹{cand.amount} Paid
+                      </span>
+                    </td>
+                    <td className="py-3 px-4">
+                      <span className="font-mono text-[11px] text-slate-600 block">{cand.orderId}</span>
+                      <span className="text-[10px] text-slate-400">
+                        {new Date(cand.createdAt).toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata', dateStyle: 'short' })}
+                      </span>
+                    </td>
+                    <td className="py-3 px-4 text-right">
+                      <button
+                        type="button"
+                        onClick={() => handleApproveCandidate(cand.orderId)}
+                        disabled={approvingOrder === cand.orderId}
+                        className="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white font-bold text-xs rounded-lg shadow-xs transition inline-flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                      >
+                        {approvingOrder === cand.orderId ? (
+                          <>
+                            <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                            <span>Allotting Seq...</span>
+                          </>
+                        ) : (
+                          <>
+                            <Check className="w-3.5 h-3.5" />
+                            <span>Approve &amp; Allot Seq</span>
+                          </>
+                        )}
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* Bulk Admit Card Release Banner */}
       <div className="portal-card-navy p-6 flex flex-col md:flex-row items-start md:items-center justify-between gap-5">
         <div className="space-y-1.5 max-w-xl">
           <div className="flex items-center gap-2 flex-wrap">

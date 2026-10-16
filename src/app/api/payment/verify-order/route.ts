@@ -1,5 +1,8 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
+import { signToken, getAuthCookieOptions } from '@/lib/auth';
+import { fetchRazorpayOrder, fetchRazorpayOrderPayments } from '@/lib/razorpay';
+import { completePaymentAndRegistration } from '@/lib/payment-completion';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -24,7 +27,7 @@ export async function GET(request: Request) {
     }
 
     // 1. Fetch live order record directly from MySQL
-    const paymentOrder = await db.getPaymentOrderByOrderId(orderId);
+    let paymentOrder = await db.getPaymentOrderByOrderId(orderId);
     if (!paymentOrder) {
       return NextResponse.json(
         { verified: false, error: 'No transaction record found in database for this Order ID.' },
@@ -33,8 +36,46 @@ export async function GET(request: Request) {
     }
 
     // 2. Verify actual payment status (strictly CHARGED or SUCCESS)
-    const orderStatusStr = String(paymentOrder.status || '').toUpperCase();
-    const isCharged = orderStatusStr === 'CHARGED' || orderStatusStr === 'SUCCESS';
+    let orderStatusStr = String(paymentOrder.status || '').toUpperCase();
+    let isCharged = orderStatusStr === 'CHARGED' || orderStatusStr === 'SUCCESS';
+
+    if (!isCharged) {
+      // Self-Healing Live Check with Razorpay:
+      try {
+        let capturedPaymentId = '';
+        const paymentsRes = await fetchRazorpayOrderPayments(orderId);
+        if (paymentsRes && paymentsRes.items && paymentsRes.items.length > 0) {
+          const captured = paymentsRes.items.find((p) => p.status === 'captured' || p.status === 'authorized');
+          if (captured) {
+            capturedPaymentId = captured.id;
+          }
+        } else {
+          const rzpOrder = await fetchRazorpayOrder(orderId);
+          if (rzpOrder && (rzpOrder.status === 'paid' || rzpOrder.amount_paid > 0)) {
+            capturedPaymentId = `pay_recovered_${Date.now()}`;
+          }
+        }
+
+        if (capturedPaymentId) {
+          const completionResult = await completePaymentAndRegistration({
+            orderId,
+            paymentId: capturedPaymentId,
+            gateway: 'razorpay',
+          });
+          if (completionResult.success) {
+            const reloadedOrder = await db.getPaymentOrderByOrderId(orderId);
+            if (reloadedOrder) {
+              paymentOrder = reloadedOrder;
+              orderStatusStr = String(paymentOrder.status || '').toUpperCase();
+              isCharged = orderStatusStr === 'CHARGED' || orderStatusStr === 'SUCCESS';
+            }
+          }
+        }
+      } catch (recoveryErr) {
+        console.warn(`[VerifyOrder] Live recovery check error for ${orderId}:`, recoveryErr);
+      }
+    }
+
     if (!isCharged) {
       return NextResponse.json(
         {
@@ -102,7 +143,7 @@ export async function GET(request: Request) {
       application.transactionId ||
       `TXN_${orderId.replace(/^GUR_/, '')}`;
 
-    return NextResponse.json(
+    const response = NextResponse.json(
       {
         verified: true,
         order: {
@@ -137,6 +178,20 @@ export async function GET(request: Request) {
       },
       { status: 200, headers }
     );
+
+    // Issue authentication cookie so candidate is immediately logged into portal
+    if (user) {
+      const token = signToken({
+        userId: user.id,
+        name: user.name,
+        email: user.email,
+        role: user.role as any,
+      });
+      const cookieOptions = getAuthCookieOptions();
+      response.cookies.set(cookieOptions.name, token, cookieOptions);
+    }
+
+    return response;
   } catch (error: any) {
     console.error('Order verification error:', error);
     return NextResponse.json(

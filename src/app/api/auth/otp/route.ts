@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { sendNotification } from '@/lib/notifications';
 import { db } from '@/lib/db';
+import { resolveCandidateRegistrationGate } from '@/lib/registration-guard';
 import { checkRateLimit, rateLimitResponse, getClientIp, clearRateLimit, RATE_LIMIT_CONFIGS } from '@/lib/rate-limit';
 
 // Global in-memory OTP cache (key: identifier, value: { otp, expiresAt, verified })
@@ -87,18 +88,17 @@ export async function POST(req: Request) {
           );
         }
 
-        const existingEmailUser = await db.findUserByEmail(email.trim().toLowerCase());
-        if (existingEmailUser) {
+        // Checkpoint 1: Registration Gate - Check why account exists & resolve stuck payment / orphan records
+        const gateCheck = await resolveCandidateRegistrationGate(email.trim().toLowerCase());
+        if (!gateCheck.allowed) {
           return NextResponse.json(
-            { error: 'An account with this email address already exists. Please sign in instead.' },
-            { status: 409 }
-          );
-        }
-
-        const existingEmailApp = await db.findApplicationByEmail(email.trim().toLowerCase());
-        if (existingEmailApp && existingEmailApp.paymentStatus === 'completed') {
-          return NextResponse.json(
-            { error: 'An entrance application with this email address is already registered. Please sign in to your dashboard.' },
+            {
+              error: gateCheck.message,
+              gateStatus: gateCheck.status,
+              orderId: gateCheck.orderId,
+              registrationNumber: gateCheck.registrationNumber,
+              redirectTo: '/login',
+            },
             { status: 409 }
           );
         }

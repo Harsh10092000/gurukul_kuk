@@ -1,5 +1,111 @@
 [
   {
+    "userId": "usr-admin-1",
+    "userName": "Principal / Exam Controller",
+    "userRole": "admin",
+    "action": "ADMIN_APPROVED_AND_REGISTERED_CANDIDATE",
+    "entity": "payment_orders",
+    "entityId": "TEST_1791886091901_04A97950",
+    "details": {
+      "orderId": "TEST_1791886091901_04A97950",
+      "paymentId": "pay_admin_appr_1792059081712",
+      "registrationNumber": "NILB-57547",
+      "rollNumber": "27060004",
+      "adminEmail": "admin@thegurukulnilokheri.com",
+      "remarks": "Manual approval from admin portal"
+    },
+    "id": "audit-1792059081811-0gutw",
+    "timestamp": "2026-10-15T10:11:21.811Z"
+  },
+  {
+    "userId": "usr-1792059081788-apulr",
+    "userName": "Audit Tester",
+    "userRole": "applicant",
+    "action": "PAYMENT_SUCCESS_CONFIRMED",
+    "entity": "payment_orders",
+    "entityId": "TEST_1791886091901_04A97950",
+    "details": {
+      "gateway": "razorpay",
+      "orderId": "TEST_1791886091901_04A97950",
+      "paymentId": "pay_admin_appr_1792059081712",
+      "registrationNumber": "NILB-57547",
+      "rollNumber": "27060004",
+      "amount": 800
+    },
+    "id": "audit-1792059081797-1trya",
+    "timestamp": "2026-10-15T10:11:21.797Z"
+  },
+  {
+    "userId": "usr-admin-1",
+    "userName": "Principal / Exam Controller",
+    "userRole": "admin",
+    "action": "ADMIN_APPROVED_AND_REGISTERED_CANDIDATE",
+    "entity": "payment_orders",
+    "entityId": "order_TloFOyAhAK9Tmt",
+    "details": {
+      "orderId": "order_TloFOyAhAK9Tmt",
+      "paymentId": "pay_admin_appr_1792059051154",
+      "registrationNumber": "NILB-49522",
+      "adminEmail": "admin@thegurukulnilokheri.com",
+      "remarks": "Manual approval from admin portal"
+    },
+    "id": "audit-1792059051164-hn5uz",
+    "timestamp": "2026-10-15T10:10:51.164Z"
+  },
+  {
+    "userId": "usr-admin-1",
+    "userName": "Principal / Exam Controller",
+    "userRole": "admin",
+    "action": "ADMIN_APPROVED_AND_REGISTERED_CANDIDATE",
+    "entity": "payment_orders",
+    "entityId": "TEST_1791469108553_C93018AB",
+    "details": {
+      "orderId": "TEST_1791469108553_C93018AB",
+      "paymentId": "pay_admin_appr_1792059037416",
+      "registrationNumber": "NILB-18069",
+      "rollNumber": "27060003",
+      "adminEmail": "admin@thegurukulnilokheri.com",
+      "remarks": "Manual approval from admin portal"
+    },
+    "id": "audit-1792059037523-8m8lr",
+    "timestamp": "2026-10-15T10:10:37.523Z"
+  },
+  {
+    "userId": "usr-1792059037494-afxra",
+    "userName": "Audit Officer",
+    "userRole": "applicant",
+    "action": "PAYMENT_SUCCESS_CONFIRMED",
+    "entity": "payment_orders",
+    "entityId": "TEST_1791469108553_C93018AB",
+    "details": {
+      "gateway": "razorpay",
+      "orderId": "TEST_1791469108553_C93018AB",
+      "paymentId": "pay_admin_appr_1792059037416",
+      "registrationNumber": "NILB-18069",
+      "rollNumber": "27060003",
+      "amount": 800
+    },
+    "id": "audit-1792059037506-4ek60",
+    "timestamp": "2026-10-15T10:10:37.506Z"
+  },
+  {
+    "userId": "usr-admin-1",
+    "userName": "Principal / Exam Controller",
+    "userRole": "admin",
+    "action": "ADMIN_APPROVED_AND_REGISTERED_CANDIDATE",
+    "entity": "payment_orders",
+    "entityId": "order_TlS9MmZp2pRJIG",
+    "details": {
+      "orderId": "order_TlS9MmZp2pRJIG",
+      "paymentId": "pay_admin_appr_1792058962435",
+      "registrationNumber": "NILB-49522",
+      "adminEmail": "admin@thegurukulnilokheri.com",
+      "remarks": "Manual approval from admin portal"
+    },
+    "id": "audit-1792058962453-h7osw",
+    "timestamp": "2026-10-15T10:09:22.453Z"
+  },
+  {
     "userId": "usr-1791872060498-du3jn",
     "userName": "Satvik",
     "userRole": "applicant",

@@ -7,6 +7,9 @@ export const RAZORPAY_CONFIG = {
   get KEY_SECRET(): string {
     return process.env.RAZORPAY_KEY_SECRET || '';
   },
+  get WEBHOOK_SECRET(): string {
+    return process.env.RAZORPAY_WEBHOOK_SECRET || process.env.RAZORPAY_KEY_SECRET || '';
+  },
   // The actual amount charged by Razorpay during checkout (₹800 while paying)
   get CHECKOUT_AMOUNT_RUPEES(): number {
     const envVal = process.env.RAZORPAY_PAYMENT_AMOUNT;
@@ -163,6 +166,93 @@ export async function fetchRazorpayPayment(
     return (await response.json()) as RazorpayPaymentResponse;
   } catch (err) {
     console.error(`Failed to fetch Razorpay payment ${paymentId}:`, err);
+    return null;
+  }
+}
+
+/**
+ * Verifies Razorpay webhook signature using HMAC-SHA256 of raw request body
+ */
+export function verifyRazorpayWebhookSignature(params: {
+  rawBody: string;
+  signature: string;
+  secret?: string;
+}): boolean {
+  const { rawBody, signature, secret } = params;
+  const webhookSecret = secret || RAZORPAY_CONFIG.WEBHOOK_SECRET;
+
+  if (!rawBody || !signature || !webhookSecret) {
+    return false;
+  }
+
+  try {
+    const expectedSignature = crypto
+      .createHmac('sha256', webhookSecret)
+      .update(rawBody)
+      .digest('hex');
+
+    const expectedBuffer = Buffer.from(expectedSignature, 'utf8');
+    const signatureBuffer = Buffer.from(signature, 'utf8');
+
+    if (expectedBuffer.length !== signatureBuffer.length) {
+      return false;
+    }
+
+    return crypto.timingSafeEqual(expectedBuffer, signatureBuffer);
+  } catch (err) {
+    console.error('Error verifying Razorpay webhook signature:', err);
+    return false;
+  }
+}
+
+/**
+ * Fetches order details directly from Razorpay
+ */
+export async function fetchRazorpayOrder(
+  orderId: string
+): Promise<RazorpayOrderResponse | null> {
+  if (!orderId) return null;
+  try {
+    const response = await fetch(`https://api.razorpay.com/v1/orders/${encodeURIComponent(orderId)}`, {
+      method: 'GET',
+      headers: {
+        Authorization: getBasicAuthHeader(),
+      },
+    });
+
+    if (!response.ok) {
+      return null;
+    }
+
+    return (await response.json()) as RazorpayOrderResponse;
+  } catch (err) {
+    console.error(`Failed to fetch Razorpay order ${orderId}:`, err);
+    return null;
+  }
+}
+
+/**
+ * Fetches all payments associated with a Razorpay order
+ */
+export async function fetchRazorpayOrderPayments(
+  orderId: string
+): Promise<{ count: number; items: RazorpayPaymentResponse[] } | null> {
+  if (!orderId) return null;
+  try {
+    const response = await fetch(`https://api.razorpay.com/v1/orders/${encodeURIComponent(orderId)}/payments`, {
+      method: 'GET',
+      headers: {
+        Authorization: getBasicAuthHeader(),
+      },
+    });
+
+    if (!response.ok) {
+      return null;
+    }
+
+    return await response.json();
+  } catch (err) {
+    console.error(`Failed to fetch payments for Razorpay order ${orderId}:`, err);
     return null;
   }
 }

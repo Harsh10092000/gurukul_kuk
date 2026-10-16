@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { resolveCandidateRegistrationGate } from '@/lib/registration-guard';
 import { db } from '@/lib/db';
 import { hashPassword, signToken, getAuthCookieOptions } from '@/lib/auth';
 import { checkFormStatus } from '@/lib/formSchedule';
@@ -83,19 +84,18 @@ export async function POST(request: Request) {
       }
     }
 
-    // Check if user already exists with this email
-    const existingUser = await db.findUserByEmail(email.trim().toLowerCase());
-    if (existingUser) {
+    // Checkpoint 1: Registration Gate - Check why account exists & resolve stuck payment / orphan records
+    const cleanEmail = email.trim().toLowerCase();
+    const gateCheck = await resolveCandidateRegistrationGate(cleanEmail);
+    if (!gateCheck.allowed) {
       return NextResponse.json(
-        { error: 'An account with this email address already exists. Please login instead.' },
-        { status: 409 }
-      );
-    }
-
-    const existingApp = await db.findApplicationByEmail(email.trim().toLowerCase());
-    if (existingApp && existingApp.paymentStatus === 'completed') {
-      return NextResponse.json(
-        { error: 'An entrance application with this email address is already registered. Please login instead.' },
+        {
+          error: gateCheck.message,
+          gateStatus: gateCheck.status,
+          orderId: gateCheck.orderId,
+          registrationNumber: gateCheck.registrationNumber,
+          redirectTo: '/login',
+        },
         { status: 409 }
       );
     }

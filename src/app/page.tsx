@@ -470,7 +470,7 @@ export default function ExamPortalGateway() {
                 </div>
                 <div>
                   <h5 className="font-bold text-xs text-white">Admissions &amp; Candidate Helpline</h5>
-                  <p className="text-[11px] text-slate-300">+91 7027849858 / 59 • Mon–Sat 9am–4pm</p>
+                  <p className="text-[11px] text-slate-300">Boys: 7082416858, 7082424558 | Girls: 7027849858 • Mon–Sat 9am–4pm</p>
                 </div>
               </div>
               <Link
