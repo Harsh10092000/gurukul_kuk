@@ -437,7 +437,7 @@ export default function AdminApplicationsPage() {
                   <th className="py-3 px-4">Class &amp; Stream</th>
                   <th className="py-3 px-4">Campus Preference</th>
                   <th className="py-3 px-4">Fee Paid</th>
-                  <th className="py-3 px-4">Razorpay Order ID</th>
+                  <th className="py-3 px-4">Razorpay Order &amp; Payment ID</th>
                   <th className="py-3 px-4 text-right">Administrative Action</th>
                 </tr>
               </thead>
@@ -470,8 +470,13 @@ export default function AdminApplicationsPage() {
                       </span>
                     </td>
                     <td className="py-3 px-4">
-                      <span className="font-mono text-[11px] text-slate-600 block">{cand.orderId}</span>
-                      <span className="text-[10px] text-slate-400">
+                      <span className="font-mono text-[11px] font-semibold text-slate-800 block">{cand.orderId}</span>
+                      {cand.paymentId && (
+                        <span className="font-mono text-[10px] text-emerald-800 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-300 inline-block mt-0.5">
+                          {cand.paymentId}
+                        </span>
+                      )}
+                      <span className="text-[10px] text-slate-400 block mt-0.5">
                         {new Date(cand.createdAt).toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata', dateStyle: 'short' })}
                       </span>
                     </td>
