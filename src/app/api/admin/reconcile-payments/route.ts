@@ -19,14 +19,16 @@ export async function POST(request: Request) {
     let pendingOrders: any[] = [];
 
     if (!useFallback && pool) {
+      // Set session sort buffer if needed, and query lightweight columns without heavy LONGTEXT payloads
+      await pool.query('SET SESSION sort_buffer_size = 4 * 1024 * 1024').catch(() => {});
       const [rows]: any = await pool.query(
-        `SELECT order_id, status, customer_email, customer_phone, amount, application_payload, created_at
+        `SELECT id, order_id, status, customer_email, customer_phone, amount, created_at
          FROM payment_orders
          WHERE (registration_number IS NULL OR registration_number = '' OR application_id IS NULL)
            AND status != 'CHARGED'
            AND application_payload IS NOT NULL
            AND created_at >= NOW() - INTERVAL 30 DAY
-         ORDER BY created_at DESC
+         ORDER BY id DESC
          LIMIT 100`
       );
       pendingOrders = (rows || []).map((r: any) => ({
@@ -34,7 +36,6 @@ export async function POST(request: Request) {
         status: r.status,
         customerEmail: r.customer_email,
         customerPhone: r.customer_phone,
-        applicationPayload: typeof r.application_payload === 'string' ? JSON.parse(r.application_payload) : r.application_payload,
         createdAt: r.created_at,
       }));
     } else {
