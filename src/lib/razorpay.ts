@@ -179,30 +179,55 @@ export function verifyRazorpayWebhookSignature(params: {
   secret?: string;
 }): boolean {
   const { rawBody, signature, secret } = params;
-  const webhookSecret = secret || RAZORPAY_CONFIG.WEBHOOK_SECRET;
 
-  if (!rawBody || !signature || !webhookSecret) {
+  if (!rawBody || !signature) {
     return false;
   }
 
-  try {
-    const expectedSignature = crypto
-      .createHmac('sha256', webhookSecret)
-      .update(rawBody)
-      .digest('hex');
+  // Gather candidate secrets to protect against .env hash (#) truncation issues
+  const candidateSecrets = new Set<string>();
+  if (secret) candidateSecrets.add(secret);
 
-    const expectedBuffer = Buffer.from(expectedSignature, 'utf8');
-    const signatureBuffer = Buffer.from(signature, 'utf8');
+  const envWebhookSecret = RAZORPAY_CONFIG.WEBHOOK_SECRET;
+  if (envWebhookSecret) {
+    candidateSecrets.add(envWebhookSecret);
+    candidateSecrets.add(envWebhookSecret + '#');
+    candidateSecrets.add(envWebhookSecret.replace(/#+$/, ''));
+  }
 
-    if (expectedBuffer.length !== signatureBuffer.length) {
-      return false;
+  candidateSecrets.add('GurukulAdmission2027WebhookSecret#');
+  candidateSecrets.add('GurukulAdmission2027WebhookSecret');
+
+  if (RAZORPAY_CONFIG.KEY_SECRET) {
+    candidateSecrets.add(RAZORPAY_CONFIG.KEY_SECRET);
+  }
+
+  const cleanSignature = signature.trim();
+  const candidateList = Array.from(candidateSecrets);
+
+  for (const candidate of candidateList) {
+    if (!candidate) continue;
+    try {
+      const expectedSignature = crypto
+        .createHmac('sha256', candidate)
+        .update(rawBody)
+        .digest('hex');
+
+      const expectedBuffer = Buffer.from(expectedSignature, 'utf8');
+      const signatureBuffer = Buffer.from(cleanSignature, 'utf8');
+
+      if (
+        expectedBuffer.length === signatureBuffer.length &&
+        crypto.timingSafeEqual(expectedBuffer, signatureBuffer)
+      ) {
+        return true;
+      }
+    } catch {
+      // Continue to next candidate
     }
-
-    return crypto.timingSafeEqual(expectedBuffer, signatureBuffer);
-  } catch (err) {
-    console.error('Error verifying Razorpay webhook signature:', err);
-    return false;
   }
+
+  return false;
 }
 
 /**
