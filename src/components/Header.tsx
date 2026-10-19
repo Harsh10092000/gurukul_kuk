@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname } from 'next/navigation';
-import { Menu, X, LogOut, ShieldCheck } from 'lucide-react';
+import { Menu, X, LogOut, ShieldCheck, Download } from 'lucide-react';
 import AdminNotificationBell from '@/components/AdminNotificationBell';
 
 export default function Header() {
@@ -134,6 +134,15 @@ export default function Header() {
             </div>
           ) : !isAdmin ? (
             <>
+              <a
+                href="/entrance-exam-syllabus-2027-28.pdf"
+                download="Entrance-Exam-Syllabus-2027-28.pdf"
+                className="hover:text-portal-navy transition whitespace-nowrap flex items-center gap-1.5 text-amber-700 hover:text-amber-800 font-semibold"
+                title="Download Entrance Test Syllabus (PDF)"
+              >
+                <span>Syllabus</span>
+                <span className="text-[9px] font-bold bg-amber-100 text-amber-800 px-1 py-0.2 rounded font-mono">PDF</span>
+              </a>
               <Link href="/status" className="hover:text-portal-navy transition whitespace-nowrap">
                 Check Status
               </Link>
@@ -243,6 +252,18 @@ export default function Header() {
         <div className="lg:hidden bg-white border-t border-slate-200 px-4 py-4 space-y-3 shadow-elevated">
           {!isAdmin ? (
             <div className="flex flex-col space-y-2 text-sm font-semibold text-slate-700">
+              <a
+                href="/entrance-exam-syllabus-2027-28.pdf"
+                download="Entrance-Exam-Syllabus-2027-28.pdf"
+                onClick={() => setMobileMenuOpen(false)}
+                className="py-2 px-3 rounded-lg hover:bg-amber-50 text-amber-800 transition flex items-center justify-between"
+              >
+                <span className="flex items-center gap-2">
+                  <span>Entrance Exam Syllabus</span>
+                  <span className="text-[10px] font-bold bg-amber-100 text-amber-800 px-1.5 py-0.5 rounded font-mono">PDF</span>
+                </span>
+                <Download className="w-4 h-4 text-amber-700" />
+              </a>
               <Link
                 href="/status"
                 onClick={() => setMobileMenuOpen(false)}

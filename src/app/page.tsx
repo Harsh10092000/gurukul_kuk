@@ -9,7 +9,8 @@ import {
   Eye,
   EyeOff,
   ArrowRight,
-  Headphones
+  Headphones,
+  Download
 } from 'lucide-react';
 import VisualCaptcha from '@/components/VisualCaptcha';
 import NotificationBar from '@/components/NotificationBar';
@@ -422,6 +423,22 @@ export default function ExamPortalGateway() {
               </h4>
 
               <div className="space-y-2">
+                <a
+                  href="/entrance-exam-syllabus-2027-28.pdf"
+                  download="Entrance-Exam-Syllabus-2027-28.pdf"
+                  className="p-2.5 sm:p-3 bg-slate-50 hover:bg-slate-100/80 rounded-lg border border-slate-200/80 transition flex items-center justify-between group"
+                  title="Download Entrance Test Syllabus (PDF)"
+                >
+                  <div>
+                    <h5 className="font-semibold text-xs text-slate-800 group-hover:text-portal-navy transition flex items-center gap-1.5">
+                      <span>Entrance Exam Syllabus</span>
+                      <span className="text-[9px] font-bold bg-amber-100 text-amber-800 px-1.5 py-0.2 rounded font-mono">PDF</span>
+                    </h5>
+                    <p className="text-[11px] text-slate-500">Classes 6th, 7th, 8th, 9th &amp; 11th</p>
+                  </div>
+                  <Download className="w-4 h-4 text-slate-400 group-hover:text-portal-navy transition flex-shrink-0" />
+                </a>
+
                 <Link
                   href="/status"
                   className="p-2.5 sm:p-3 bg-slate-50 hover:bg-slate-100/80 rounded-lg border border-slate-200/80 transition flex items-center justify-between group"
