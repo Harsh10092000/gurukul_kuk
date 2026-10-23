@@ -20,6 +20,7 @@ export default function AdminAttendancePage() {
   const [loading, setLoading] = useState(true);
   const [selectedClass, setSelectedClass] = useState('');
   const [selectedWing, setSelectedWing] = useState<'all' | 'boys' | 'girls'>('all');
+  const [wingCounts, setWingCounts] = useState<{ all: number; boys: number; girls: number }>({ all: 0, boys: 0, girls: 0 });
   const [officialCentre, setOfficialCentre] = useState('Aryakulam Nilokheri (Boys) / The Gurukul Nilokheri (Girls)');
   const [officialVenueAddress, setOfficialVenueAddress] = useState('Nilokheri, Karnal - 132117');
   const [officialExamDate, setOfficialExamDate] = useState('14 February 2027');
@@ -73,6 +74,9 @@ export default function AdminAttendancePage() {
       .then((data) => {
         if (isMounted) {
           setCandidates(data.candidates || []);
+          if (data.counts) {
+            setWingCounts(data.counts);
+          }
           setLoading(false);
         }
       })
@@ -257,7 +261,7 @@ export default function AdminAttendancePage() {
                       : 'text-slate-600 hover:text-slate-900'
                     }`}
                 >
-                  All Candidates ({candidates.length})
+                  All Candidates {wingCounts.all > 0 ? `(${wingCounts.all})` : ''}
                 </button>
                 <button
                   type="button"
@@ -270,7 +274,7 @@ export default function AdminAttendancePage() {
                       : 'text-slate-600 hover:text-slate-900'
                     }`}
                 >
-                  Boys Wing
+                  Boys Wing {wingCounts.boys > 0 ? `(${wingCounts.boys})` : ''}
                 </button>
                 <button
                   type="button"
@@ -283,7 +287,7 @@ export default function AdminAttendancePage() {
                       : 'text-slate-600 hover:text-slate-900'
                     }`}
                 >
-                  Girls Wing
+                  Girls Wing {wingCounts.girls > 0 ? `(${wingCounts.girls})` : ''}
                 </button>
               </div>
             </div>
@@ -334,11 +338,11 @@ export default function AdminAttendancePage() {
           <div className="pt-3 border-t border-slate-100 flex flex-wrap items-center justify-between gap-3 text-xs text-slate-600">
             <div className="flex flex-wrap items-center gap-2">
               <Building className="w-3.5 h-3.5 text-portal-navy shrink-0" />
-              <span>Centre: <strong className="text-slate-800">{officialCentre}</strong></span>
+              <span>Centre: <strong className="text-slate-800">{currentSheetCentre}</strong></span>
               <span className="text-slate-300">|</span>
               <span>Date: <strong className="text-slate-800">{officialExamDate}</strong></span>
               <span className="text-slate-300">|</span>
-              <span>Time: <strong className="text-slate-800">{officialExamTime}</strong></span>
+              <span>Time: <strong className="text-slate-800">{currentSheetTime}</strong></span>
             </div>
             <div className="text-[11px] text-slate-400 font-medium">
               Standard Examination Format: 10 Candidates per A4 Page
@@ -600,7 +604,11 @@ export default function AdminAttendancePage() {
                     </span>
                   </div>
                   <h2 className="text-xl font-black text-black uppercase tracking-wider font-serif mt-0.5">
-                    THE GURUKUL NILOKHERI
+                    {selectedWing === 'boys'
+                      ? 'ARYAKULAM NILOKHERI'
+                      : selectedWing === 'girls'
+                      ? 'THE GURUKUL NILOKHERI'
+                      : 'THE GURUKUL ADMISSION PORTAL'}
                   </h2>
                   <p className="text-xs font-black text-black uppercase tracking-wide">
                     ENTRANCE EXAMINATION 2027-28 — {getWingTitle()}
