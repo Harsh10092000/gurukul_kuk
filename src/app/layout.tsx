@@ -19,8 +19,16 @@ export const metadata: Metadata = {
   description:
     'Official Online Entrance Examination and Admission Portal for The Gurukul Nilokheri (with affiliated campuses The Gurukul Jyotisar & Aryakulam Nilokheri). Apply online for Classes 6th, 7th, 8th, 9th, and 11th with online ₹800 fee payment, immediate Admission form, and admit card download.',
   icons: {
-    icon: '/favicon.ico',
-    apple: '/logo-gurukul.png',
+    icon: [
+      { url: '/favicon.ico?v=2', sizes: 'any' },
+      { url: '/icon-32x32.png?v=2', type: 'image/png', sizes: '32x32' },
+      { url: '/logo-gurukul.png?v=2', type: 'image/png', sizes: '1024x1024' },
+    ],
+    shortcut: '/favicon.ico?v=2',
+    apple: [
+      { url: '/apple-touch-icon.png?v=2', sizes: '180x180', type: 'image/png' },
+      { url: '/logo-gurukul.png?v=2' },
+    ],
   },
   keywords: [
     'The Gurukul Nilokheri',
@@ -45,7 +53,10 @@ export default function RootLayout({
   return (
     <html lang="en" translate="no" className={`${inter.variable} ${merriweather.variable} scroll-smooth notranslate`}>
       <head>
-        <link rel="icon" href="/favicon.ico" sizes="any" />
+        <link rel="icon" href="/favicon.ico?v=2" sizes="any" />
+        <link rel="icon" type="image/png" sizes="32x32" href="/icon-32x32.png?v=2" />
+        <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png?v=2" />
+        <link rel="shortcut icon" href="/favicon.ico?v=2" />
         <meta name="google" content="notranslate" />
         <meta name="googlebot" content="notranslate" />
         <meta name="robots" content="notranslate" />
