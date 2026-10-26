@@ -32,19 +32,32 @@ export default function AdminApplicationsPage() {
   const [applications, setApplications] = useState<Application[]>([]);
   const [metrics, setMetrics] = useState<any>(null);
   const [totalRecords, setTotalRecords] = useState(0);
+  const [filteredCount, setFilteredCount] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
   const [loading, setLoading] = useState(true);
+  const [tableLoading, setTableLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   const [selectedClass, setSelectedClass] = useState('All');
   const [selectedStream, setSelectedStream] = useState('All');
   const [selectedGender, setSelectedGender] = useState('All');
   const [selectedStatus, setSelectedStatus] = useState('All');
+  const [counts, setCounts] = useState({ active: 0, submitted: 0, approved: 0, correctionNeeded: 0 });
   const [appToDelete, setAppToDelete] = useState<Application | null>(null);
   const [actionLoading, setActionLoading] = useState(false);
   const [deleteError, setDeleteError] = useState('');
 
-  // Pagination State
+  // Pagination State - Default to 20 records per page as requested
   const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize, setPageSize] = useState(10);
+  const [pageSize, setPageSize] = useState(20);
+
+  // Debounce search input (300ms) to prevent expensive calls on each keystroke
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(searchQuery);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
 
   // Bulk Admit Card Issuance State
   const [admitCardsReleased, setAdmitCardsReleased] = useState<boolean | null>(null);
@@ -123,7 +136,7 @@ export default function AdminApplicationsPage() {
       const data = await res.json();
       if (data.success) {
         setApproveMsg({ type: 'success', text: data.message });
-        fetchApplications();
+        fetchApplications(currentPage, pageSize);
         fetchPendingPaid();
       } else {
         setApproveMsg({ type: 'error', text: data.error || 'Failed to approve candidate.' });
@@ -135,16 +148,42 @@ export default function AdminApplicationsPage() {
     }
   };
 
-  const fetchApplications = () => {
-    fetch('/api/applications', { cache: 'no-store' })
+  const fetchApplications = (page = currentPage, size = pageSize) => {
+    setTableLoading(true);
+    const params = new URLSearchParams({
+      page: String(page),
+      limit: String(size),
+      status: selectedStatus,
+      class: selectedClass,
+      stream: selectedStream,
+      gender: selectedGender,
+    });
+    if (debouncedSearch.trim()) {
+      params.set('q', debouncedSearch.trim());
+    }
+
+    fetch(`/api/applications?${params.toString()}`, { cache: 'no-store' })
       .then((res) => res.json())
       .then((data) => {
         if (data.applications) setApplications(data.applications);
         if (data.metrics) setMetrics(data.metrics);
-        if (data.totalRecords !== undefined) setTotalRecords(data.totalRecords);
+        if (data.counts) setCounts(data.counts);
+        if (data.pagination) {
+          setTotalPages(data.pagination.totalPages || 1);
+          setTotalRecords(data.pagination.totalRecords || 0);
+          setFilteredCount(data.pagination.filteredCount !== undefined ? data.pagination.filteredCount : (data.pagination.totalRecords || 0));
+        } else if (data.totalRecords !== undefined) {
+          setTotalRecords(data.totalRecords);
+          setFilteredCount(data.filteredCount !== undefined ? data.filteredCount : data.totalRecords);
+          setTotalPages(Math.max(1, Math.ceil((data.filteredCount || data.totalRecords) / size)));
+        }
         setLoading(false);
+        setTableLoading(false);
       })
-      .catch(() => setLoading(false));
+      .catch(() => {
+        setLoading(false);
+        setTableLoading(false);
+      });
   };
 
   const formatDob = (dobStr?: string) => {
@@ -170,10 +209,13 @@ export default function AdminApplicationsPage() {
   };
 
   useEffect(() => {
-    fetchApplications();
     fetchSettings();
     fetchPendingPaid();
   }, []);
+
+  useEffect(() => {
+    fetchApplications(currentPage, pageSize);
+  }, [currentPage, pageSize, selectedStatus, selectedClass, selectedStream, selectedGender, debouncedSearch]);
 
   const handleBulkGenerateAdmitCards = async () => {
     setBulkLoading(true);
@@ -232,60 +274,13 @@ export default function AdminApplicationsPage() {
     }
   };
 
-  const registeredApplications = applications.filter((app) => {
-    if (!app) return false;
-    if (app.status === 'draft') return false;
-    if ((app.registrationNumber || '').startsWith('DRAFT-')) return false;
-    return true;
-  });
+  const paginatedApps = applications;
+  const validCurrentPage = Math.min(currentPage, Math.max(1, totalPages));
 
-  const filteredApps = registeredApplications.filter((app) => {
-    const q = searchQuery.toLowerCase().trim();
-    const matchesSearch =
-      !q ||
-      (app.applicationNumber || '').toLowerCase().includes(q) ||
-      (app.registrationNumber || '').toLowerCase().includes(q) ||
-      (app.personalInfo?.fullName || '').toLowerCase().includes(q) ||
-      (app.parentInfo?.fatherPhone || '').includes(q) ||
-      (app.personalInfo?.candidateMobile || '').includes(q) ||
-      (app.personalInfo?.candidateEmail || '').toLowerCase().includes(q) ||
-      (app.addressInfo?.district || '').toLowerCase().includes(q) ||
-      (app.addressInfo?.state || '').toLowerCase().includes(q) ||
-      (app.addressInfo?.city || '').toLowerCase().includes(q);
-
-    const matchesClass = selectedClass === 'All' || app.classApplying === selectedClass;
-
-    const matchesStream = (() => {
-      if (selectedClass !== 'Class 11' || selectedStream === 'All') return true;
-      const s = (app.stream || app.academicInfo?.stream || '').toLowerCase().trim();
-      const target = selectedStream.toLowerCase().trim();
-      if (target.includes('non')) return s.includes('non') || s.includes('pcm');
-      if (target.includes('comm')) return s.includes('comm');
-      if (target.includes('med') && !target.includes('non')) return s.includes('med') && !s.includes('non');
-      if (target.includes('human') || target.includes('art')) return s.includes('human') || s.includes('art');
-      return s === target;
-    })();
-
-    const matchesStatus =
-      selectedStatus === 'All'
-        ? true
-        : app.status === selectedStatus;
-
-    const appGender = (app.personalInfo?.gender || '').toLowerCase();
-    const isFemale = appGender === 'female' || appGender === 'girl' || (app.registrationNumber || '').startsWith('NILG');
-    const matchesGender =
-      selectedGender === 'All'
-        ? true
-        : selectedGender === 'Female'
-        ? isFemale
-        : !isFemale;
-
-    return matchesSearch && matchesClass && matchesStream && matchesGender && matchesStatus;
-  });
-
-  const totalPages = Math.max(1, Math.ceil(filteredApps.length / pageSize));
-  const validCurrentPage = Math.min(currentPage, totalPages);
-  const paginatedApps = filteredApps.slice((validCurrentPage - 1) * pageSize, validCurrentPage * pageSize);
+  const activeCount = counts.active || totalRecords;
+  const submittedCount = counts.submitted || 0;
+  const approvedCount = counts.approved || 0;
+  const correctionCount = counts.correctionNeeded || 0;
 
   const handleDeleteApp = async () => {
     if (!appToDelete) return;
@@ -298,7 +293,7 @@ export default function AdminApplicationsPage() {
       const data = await res.json();
       if (data.success) {
         setAppToDelete(null);
-        fetchApplications();
+        fetchApplications(currentPage, pageSize);
       } else {
         setDeleteError(data.error || 'Failed to delete application.');
       }
@@ -308,11 +303,6 @@ export default function AdminApplicationsPage() {
       setActionLoading(false);
     }
   };
-
-  const activeCount = registeredApplications.length;
-  const submittedCount = registeredApplications.filter((a) => a.status === 'submitted' || a.status === 'under_review').length;
-  const approvedCount = registeredApplications.filter((a) => a.status === 'approved').length;
-  const correctionCount = registeredApplications.filter((a) => a.status === 'correction_needed').length;
 
   return (
     <div className="space-y-6">
@@ -741,17 +731,25 @@ export default function AdminApplicationsPage() {
       {/* Applications Table */}
       <div className="portal-card p-0 overflow-hidden border border-slate-200/90 shadow-sm">
         <div className="p-4 sm:px-6 border-b border-slate-100 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 text-xs bg-slate-50/50">
-          <span className="font-bold text-slate-900">
-            Showing {filteredApps.length} Candidates
-          </span>
+          <div className="flex items-center gap-2">
+            <span className="font-bold text-slate-900">
+              Showing {applications.length} Candidates
+            </span>
+            {tableLoading && (
+              <Loader2 className="w-3.5 h-3.5 animate-spin text-portal-navy" />
+            )}
+          </div>
           <span className="text-slate-500 text-[11px] font-medium">
-            {filteredApps.length} of {registeredApplications.length} registered dossiers
+            {filteredCount} matching of {totalRecords} registered dossiers (Page {validCurrentPage} of {totalPages})
           </span>
         </div>
 
         {loading ? (
-          <div className="py-16 text-center text-xs text-slate-500 font-medium">Loading candidate dossiers...</div>
-        ) : filteredApps.length === 0 ? (
+          <div className="py-16 text-center text-xs text-slate-500 font-medium flex items-center justify-center gap-2">
+            <Loader2 className="w-4 h-4 animate-spin text-portal-navy" />
+            <span>Loading candidate dossiers...</span>
+          </div>
+        ) : applications.length === 0 ? (
           <div className="py-16 text-center text-xs text-slate-400 font-medium">
             No registered applications match your search and filter criteria.
           </div>
@@ -855,20 +853,39 @@ export default function AdminApplicationsPage() {
         )}
 
         {/* Pagination Bar */}
-        {filteredApps.length > 0 && (
+        {filteredCount > 0 && (
           <div className="p-3.5 border-t border-slate-200 bg-slate-50 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs">
-            <div className="text-slate-600">
-              Showing <strong>{(validCurrentPage - 1) * pageSize + 1}</strong> to{' '}
-              <strong>{Math.min(validCurrentPage * pageSize, filteredApps.length)}</strong> of{' '}
-              <strong>{filteredApps.length}</strong> candidates
+            <div className="flex flex-wrap items-center gap-4 text-slate-600">
+              <div>
+                Showing <strong>{filteredCount > 0 ? (validCurrentPage - 1) * pageSize + 1 : 0}</strong> to{' '}
+                <strong>{Math.min(validCurrentPage * pageSize, filteredCount)}</strong> of{' '}
+                <strong>{filteredCount}</strong> candidates
+              </div>
+
+              <div className="flex items-center gap-1.5 border-l border-slate-200 pl-4">
+                <span className="text-slate-500 font-medium">Per Page:</span>
+                <select
+                  value={pageSize}
+                  onChange={(e) => {
+                    const newSize = parseInt(e.target.value, 10);
+                    setPageSize(newSize);
+                    setCurrentPage(1);
+                  }}
+                  className="bg-white border border-slate-300 rounded px-2 py-0.5 font-semibold text-slate-700 cursor-pointer text-xs"
+                >
+                  <option value={10}>10</option>
+                  <option value={20}>20</option>
+                  <option value={50}>50</option>
+                </select>
+              </div>
             </div>
 
             <div className="flex items-center gap-1">
               <button
                 type="button"
                 onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                disabled={validCurrentPage <= 1}
-                className="px-2.5 py-1 rounded border border-slate-300 bg-white text-slate-700 font-medium hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed"
+                disabled={validCurrentPage <= 1 || tableLoading}
+                className="px-2.5 py-1 rounded border border-slate-300 bg-white text-slate-700 font-medium hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
               >
                 Previous
               </button>
@@ -880,8 +897,8 @@ export default function AdminApplicationsPage() {
               <button
                 type="button"
                 onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-                disabled={validCurrentPage >= totalPages}
-                className="px-2.5 py-1 rounded border border-slate-300 bg-white text-slate-700 font-medium hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed"
+                disabled={validCurrentPage >= totalPages || tableLoading}
+                className="px-2.5 py-1 rounded border border-slate-300 bg-white text-slate-700 font-medium hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
               >
                 Next
               </button>

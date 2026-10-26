@@ -64,6 +64,14 @@ export async function POST(request: Request) {
       );
     }
 
+    // 3b. Religion Validation
+    if (!personalInfo?.religion || !personalInfo.religion.trim()) {
+      return NextResponse.json(
+        { error: 'Please select Candidate Religion.' },
+        { status: 400 }
+      );
+    }
+
     // 4. Preferred Study Location Validation
     const systemSettings = await db.getSettings();
     const studyPref = studyLocationPref || { firstPreference: 'The Gurukul Nilokheri' };

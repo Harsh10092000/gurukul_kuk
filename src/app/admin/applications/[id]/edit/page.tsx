@@ -79,6 +79,7 @@ export default function AdminEditApplicationPage({ params }: { params: { id: str
     dob: '',
     gender: 'Male' as 'Male' | 'Female',
     category: 'General',
+    religion: '',
     aadhaarNumber: '',
     panNumber: '',
     apaarId: '',
@@ -137,6 +138,7 @@ export default function AdminEditApplicationPage({ params }: { params: { id: str
             dob: app.personalInfo?.dob || '',
             gender: app.personalInfo?.gender || 'Male',
             category: app.personalInfo?.category || 'General',
+            religion: app.personalInfo?.religion || '',
             aadhaarNumber: app.personalInfo?.aadhaarNumber || '',
             panNumber: app.personalInfo?.panNumber || '',
             apaarId: app.personalInfo?.apaarId || '',
@@ -271,6 +273,14 @@ export default function AdminEditApplicationPage({ params }: { params: { id: str
       return;
     }
 
+    if (!formData.religion || !formData.religion.trim()) {
+      setErrorModal({
+        title: 'Candidate Religion Required',
+        message: 'Please select candidate religion.',
+      });
+      return;
+    }
+
     setSaving(true);
     setErrorMsg('');
     setErrorModal(null);
@@ -292,6 +302,7 @@ export default function AdminEditApplicationPage({ params }: { params: { id: str
           dob: formData.dob,
           gender: formData.gender,
           category: formData.category,
+          religion: formData.religion,
           aadhaarNumber: cleanAadhaar || formData.aadhaarNumber,
           panNumber: formData.panNumber || undefined,
           apaarId: formData.apaarId || undefined,
@@ -605,6 +616,28 @@ export default function AdminEditApplicationPage({ params }: { params: { id: str
                 <option value="SC">SC</option>
                 <option value="ST">ST</option>
                 <option value="EWS">EWS</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="form-label">
+                Religion <span className="text-rose-500">*</span>
+              </label>
+              <select
+                name="religion"
+                required
+                value={formData.religion}
+                onChange={handleChange}
+                className="form-input-field"
+              >
+                <option value="">Select Religion</option>
+                <option value="Hindu">Hindu</option>
+                <option value="Sikh">Sikh</option>
+                <option value="Jain">Jain</option>
+                <option value="Buddhist">Buddhist</option>
+                <option value="Muslim">Muslim</option>
+                <option value="Christian">Christian</option>
+                <option value="Other">Other</option>
               </select>
             </div>
 

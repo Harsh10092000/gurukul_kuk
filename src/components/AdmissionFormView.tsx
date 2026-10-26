@@ -125,9 +125,9 @@ export default function AdmissionFormView({
             </span>
           </div>
           <div>
-            <span className="text-slate-600 block text-[8px] uppercase font-bold">Category &amp; Gender:</span>
+            <span className="text-slate-600 block text-[8px] uppercase font-bold">Category, Religion &amp; Gender:</span>
             <span className="font-bold text-xs text-black">
-              {application.personalInfo?.category || 'General'} • {application.personalInfo?.gender || '—'}
+              {application.personalInfo?.category || 'General'} • {application.personalInfo?.religion || '-'} • {application.personalInfo?.gender || '—'}
             </span>
           </div>
         </div>
@@ -154,6 +154,10 @@ export default function AdmissionFormView({
                 <div>
                   <span className="text-slate-600 block text-[8.5px]">Aadhaar Number:</span>
                   <span className="font-mono font-bold">{application.personalInfo?.aadhaarNumber || '—'}</span>
+                </div>
+                <div>
+                  <span className="text-slate-600 block text-[8.5px]">Religion:</span>
+                  <span className="font-bold uppercase">{application.personalInfo?.religion || '-'}</span>
                 </div>
                 <div>
                   <span className="text-slate-600 block text-[8.5px]">PEN (Permanent Education No):</span>

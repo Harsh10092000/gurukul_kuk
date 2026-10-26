@@ -77,6 +77,7 @@ export default function ApplyPage() {
   const [pendingOrderId, setPendingOrderId] = useState<string | null>(null);
   const [recoveringPayment, setRecoveringPayment] = useState(false);
   const [verifyingPayment, setVerifyingPayment] = useState(false);
+  const [paymentOverlayMode, setPaymentOverlayMode] = useState<'success' | 'cancelled'>('success');
 
   // Password Visibility States
   const [showPassword, setShowPassword] = useState(false);
@@ -114,7 +115,7 @@ export default function ApplyPage() {
     previousBoard: 'CBSE',
     otherBoard: '',
     nationality: 'Indian',
-    religion: 'Hindu',
+    religion: '',
     candidateEmail: '',
     candidateMobile: '',
     whatsappNumber: '',
@@ -382,6 +383,7 @@ export default function ApplyPage() {
                 dob: app.personalInfo?.dob || prev.dob,
                 gender: normalizeGender(app.personalInfo?.gender || prev.gender),
                 category: app.personalInfo?.category || prev.category,
+                religion: app.personalInfo?.religion || prev.religion || '',
                 aadhaarNumber: app.personalInfo?.aadhaarNumber || prev.aadhaarNumber,
                 panNumber: app.personalInfo?.panNumber || prev.panNumber,
                 apaarId: app.personalInfo?.apaarId || prev.apaarId,
@@ -600,6 +602,10 @@ export default function ApplyPage() {
       const aadhaarVal = validateAadhaar(formData.aadhaarNumber);
       if (!aadhaarVal.isValid) {
         setError(aadhaarVal.error || 'Invalid Aadhaar Number');
+        return;
+      }
+      if (!formData.religion || !formData.religion.trim()) {
+        setError('Please select Candidate Religion.');
         return;
       }
       const classVal = validateClassAndStream(formData.applyingClass, formData.stream, formData.firstPreference, formData.gender);
@@ -909,6 +915,7 @@ export default function ApplyPage() {
             color: '#8b0000',
           },
           handler: async function (response: any) {
+            setPaymentOverlayMode('success');
             setLoading(true);
             setVerifyingPayment(true);
 
@@ -958,6 +965,7 @@ export default function ApplyPage() {
           },
           modal: {
             ondismiss: async function () {
+              setPaymentOverlayMode('cancelled');
               setLoading(true);
               setVerifyingPayment(true);
 
@@ -1846,6 +1854,28 @@ export default function ApplyPage() {
 
               <div>
                 <label className="form-label">
+                  Religion <span className="text-rose-500">*</span>
+                </label>
+                <select
+                  name="religion"
+                  required
+                  value={formData.religion}
+                  onChange={handleChange}
+                  className="form-input-field"
+                >
+                  <option value="">Select Religion</option>
+                  <option value="Hindu">Hindu</option>
+                  <option value="Sikh">Sikh</option>
+                  <option value="Jain">Jain</option>
+                  <option value="Buddhist">Buddhist</option>
+                  <option value="Muslim">Muslim</option>
+                  <option value="Christian">Christian</option>
+                  <option value="Other">Other</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="form-label">
                   Class Applying For <span className="text-rose-500">*</span>
                 </label>
                 <select
@@ -2702,29 +2732,55 @@ export default function ApplyPage() {
         </div>
       )}
 
-      {/* Full-Screen Payment Finalizing Overlay */}
+      {/* Full-Screen Payment Processing Overlay */}
       {verifyingPayment && (
         <div className="fixed inset-0 z-[9999] bg-slate-900/85 backdrop-blur-md flex flex-col items-center justify-center p-4">
           <div className="bg-white rounded-2xl p-8 max-w-md w-full shadow-2xl text-center border border-slate-100 flex flex-col items-center animate-in fade-in zoom-in-95 duration-200">
-            <div className="relative mb-5">
-              <div className="w-16 h-16 rounded-full border-4 border-emerald-100 border-t-emerald-600 animate-spin"></div>
-              <div className="absolute inset-0 flex items-center justify-center">
-                <ShieldCheck className="w-8 h-8 text-emerald-600" />
-              </div>
-            </div>
-            <h3 className="text-xl font-bold text-slate-900 mb-1">Payment Received Successfully!</h3>
-            <span className="text-xs font-semibold text-emerald-800 bg-emerald-50 border border-emerald-200 px-3 py-1 rounded-full mb-3 inline-block">
-              Finalizing Institutional Registration...
-            </span>
-            <p className="text-xs text-slate-600 leading-relaxed max-w-sm mb-4">
-              We are issuing your permanent <strong>Registration ID</strong> and generating your <strong>Entrance Admit Card</strong>.
-            </p>
-            <div className="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden">
-              <div className="bg-emerald-600 h-full rounded-full animate-pulse w-3/4"></div>
-            </div>
-            <p className="text-[11px] text-slate-400 mt-3">
-              Please do not refresh or navigate back. Redirecting to your confirmation receipt...
-            </p>
+            {paymentOverlayMode === 'cancelled' ? (
+              <>
+                <div className="relative mb-5">
+                  <div className="w-16 h-16 rounded-full border-4 border-amber-200 border-t-amber-500 animate-spin"></div>
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <AlertCircle className="w-8 h-8 text-amber-500" />
+                  </div>
+                </div>
+                <h3 className="text-xl font-bold text-slate-900 mb-1">Checking Payment Status</h3>
+                <span className="text-xs font-semibold text-amber-800 bg-amber-50 border border-amber-200 px-3 py-1 rounded-full mb-3 inline-block">
+                  Payment Window Closed • Try Again
+                </span>
+                <p className="text-xs text-slate-600 leading-relaxed max-w-sm mb-4">
+                  Payment session was cancelled or closed. Verifying status with the banking gateway so you can try again safely.
+                </p>
+                <div className="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden">
+                  <div className="bg-amber-500 h-full rounded-full animate-pulse w-3/4"></div>
+                </div>
+                <p className="text-[11px] text-slate-400 mt-3">
+                  Please wait a moment... All your particulars remain safe to retry.
+                </p>
+              </>
+            ) : (
+              <>
+                <div className="relative mb-5">
+                  <div className="w-16 h-16 rounded-full border-4 border-emerald-100 border-t-emerald-600 animate-spin"></div>
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <ShieldCheck className="w-8 h-8 text-emerald-600" />
+                  </div>
+                </div>
+                <h3 className="text-xl font-bold text-slate-900 mb-1">Payment Received Successfully!</h3>
+                <span className="text-xs font-semibold text-emerald-800 bg-emerald-50 border border-emerald-200 px-3 py-1 rounded-full mb-3 inline-block">
+                  Finalizing Institutional Registration...
+                </span>
+                <p className="text-xs text-slate-600 leading-relaxed max-w-sm mb-4">
+                  We are issuing your permanent <strong>Registration ID</strong> and generating your <strong>Entrance Admit Card</strong>.
+                </p>
+                <div className="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden">
+                  <div className="bg-emerald-600 h-full rounded-full animate-pulse w-3/4"></div>
+                </div>
+                <p className="text-[11px] text-slate-400 mt-3">
+                  Please do not refresh or navigate back. Redirecting to your confirmation receipt...
+                </p>
+              </>
+            )}
           </div>
         </div>
       )}

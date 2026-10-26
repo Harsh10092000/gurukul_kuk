@@ -58,6 +58,14 @@ export async function POST(request: Request) {
       );
     }
 
+    // 3b. Religion Validation
+    if (!personalInfo?.religion || !personalInfo.religion.trim()) {
+      return NextResponse.json(
+        { error: 'Please select Candidate Religion.' },
+        { status: 400 }
+      );
+    }
+
     // 4. Aadhaar Validation
     const aadhaarVal = validateAadhaar(personalInfo?.aadhaarNumber);
     if (!aadhaarVal.isValid) {

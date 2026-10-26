@@ -30,69 +30,62 @@ export async function GET(request: Request) {
     }
 
     if (user.role === 'admin') {
-      const allApplications = await db.getApplications();
-      // Exclude draft records: only officially registered candidates are shown
-      const registeredApplications = allApplications.filter(
-        (a) => a.status !== 'draft' && !(a.registrationNumber || '').startsWith('DRAFT-')
-      );
-      const metrics = computeApplicationMetrics(registeredApplications);
-
       const { searchParams } = new URL(request.url);
-      const statusParam = searchParams.get('status');
-      const classParam = searchParams.get('class');
-      const queryParam = searchParams.get('q');
+      const allParam = searchParams.get('all') === 'true';
+      const statusParam = searchParams.get('status') || undefined;
+      const classParam = searchParams.get('class') || undefined;
+      const streamParam = searchParams.get('stream') || undefined;
+      const genderParam = searchParams.get('gender') || undefined;
+      const queryParam = searchParams.get('q') || undefined;
       const includeDrafts = searchParams.get('include_drafts') === 'true';
+      const pageParam = parseInt(searchParams.get('page') || '1', 10);
+      const limitParam = parseInt(searchParams.get('limit') || '20', 10);
 
-      let filtered = includeDrafts ? allApplications : registeredApplications;
-
-      // Status filtering on server
-      if (statusParam && statusParam !== 'all_records') {
-        if (statusParam === 'All' || statusParam === 'active') {
-          filtered = filtered.filter((a) => a.status !== 'rejected');
-        } else {
-          filtered = filtered.filter((a) => a.status === statusParam);
+      // If explicit 'all=true' is requested (e.g. for CSV export or bulk processing)
+      if (allParam) {
+        const allApplications = await db.getApplications();
+        const registeredApplications = allApplications.filter(
+          (a) => a.status !== 'draft' && !(a.registrationNumber || '').startsWith('DRAFT-')
+        );
+        const metrics = computeApplicationMetrics(registeredApplications);
+        let filtered = includeDrafts ? allApplications : registeredApplications;
+        if (statusParam && statusParam !== 'all_records') {
+          if (statusParam === 'All' || statusParam === 'active') {
+            filtered = filtered.filter((a) => a.status !== 'rejected');
+          } else {
+            filtered = filtered.filter((a) => a.status === statusParam);
+          }
         }
-      }
-
-      // Class filtering on server
-      if (classParam && classParam !== 'All') {
-        filtered = filtered.filter((a) => a.classApplying === classParam);
-      }
-
-      // Stream filtering on server
-      const streamParam = searchParams.get('stream');
-      if (streamParam && streamParam !== 'All' && streamParam !== 'all') {
-        const targetStr = streamParam.toLowerCase().trim();
-        filtered = filtered.filter((a) => {
-          const s = (a.stream || a.academicInfo?.stream || '').toLowerCase().trim();
-          if (targetStr.includes('non')) return s.includes('non') || s.includes('pcm');
-          if (targetStr.includes('comm')) return s.includes('comm');
-          if (targetStr.includes('med') && !targetStr.includes('non')) return s.includes('med') && !s.includes('non');
-          if (targetStr.includes('human') || targetStr.includes('art')) return s.includes('human') || s.includes('art');
-          return s === targetStr;
+        if (classParam && classParam !== 'All') {
+          filtered = filtered.filter((a) => a.classApplying === classParam);
+        }
+        return NextResponse.json({
+          applications: filtered,
+          metrics,
+          totalRecords: registeredApplications.length,
+          filteredCount: filtered.length,
         });
       }
 
-      // Search query filtering on server
-      if (queryParam) {
-        const q = queryParam.toLowerCase().trim();
-        filtered = filtered.filter((app) => {
-          const appNum = (app.applicationNumber || app.registrationNumber || '').toLowerCase();
-          const name = (app.personalInfo?.fullName || '').toLowerCase();
-          const phone = (app.parentInfo?.fatherPhone || app.personalInfo?.candidateMobile || '');
-          const email = (app.personalInfo?.candidateEmail || '').toLowerCase();
-          const dist = (app.addressInfo?.district || '').toLowerCase();
-          const state = (app.addressInfo?.state || '').toLowerCase();
-          const city = (app.addressInfo?.city || '').toLowerCase();
-          return appNum.includes(q) || name.includes(q) || phone.includes(q) || email.includes(q) || dist.includes(q) || state.includes(q) || city.includes(q);
-        });
-      }
+      // High-performance paginated summary for admin panel (loads first 10-20 records as requested)
+      const paginatedResult = await db.getPaginatedApplicationsSummary({
+        page: pageParam,
+        limit: limitParam,
+        q: queryParam,
+        status: statusParam,
+        classApplying: classParam,
+        stream: streamParam,
+        gender: genderParam,
+        includeDrafts,
+      });
 
       return NextResponse.json({
-        applications: filtered,
-        metrics,
-        totalRecords: registeredApplications.length,
-        filteredCount: filtered.length,
+        applications: paginatedResult.applications,
+        pagination: paginatedResult.pagination,
+        counts: paginatedResult.counts,
+        metrics: paginatedResult.metrics,
+        totalRecords: paginatedResult.pagination.totalRecords,
+        filteredCount: paginatedResult.pagination.filteredCount,
       });
     }
 
@@ -235,6 +228,11 @@ export async function POST(request: Request) {
     const gender = personalInfo?.gender;
     if (gender !== 'Male' && gender !== 'Female') {
       return NextResponse.json({ error: 'Gender must be selected as either Male or Female.' }, { status: 400 });
+    }
+
+    // 3b. Religion
+    if (!personalInfo?.religion || !personalInfo.religion.trim()) {
+      return NextResponse.json({ error: 'Please select Candidate Religion.' }, { status: 400 });
     }
 
     // 4. Preferred Study Location

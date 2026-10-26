@@ -16,6 +16,7 @@ import {
   PaymentOrderRecord
 } from './types';
 import { getExamDetailsForGender } from './validations';
+import { computeApplicationMetrics } from './applicationMetrics';
 
 // Default configuration from environment (supports individual DB_* vars or DATABASE_URL)
 function parseDbConfig() {
@@ -699,6 +700,13 @@ export async function initDatabase(): Promise<void> {
       console.warn('Admin account initialization check notice:', adminErr);
     }
 
+    // Ensure all critical performance indexes exist in MySQL
+    try {
+      await ensurePerformanceIndexes(pool);
+    } catch (idxErr) {
+      console.warn('Notice ensuring performance indexes:', idxErr);
+    }
+
     useFallbackStorage = false;
   } catch (err) {
     console.warn(
@@ -707,6 +715,48 @@ export async function initDatabase(): Promise<void> {
     );
     useFallbackStorage = true;
     initFallbackFile();
+  }
+}
+
+/**
+ * Ensures critical database indexes exist for ultra-fast query execution and pagination.
+ */
+async function ensurePerformanceIndexes(pool: mysql.Pool): Promise<void> {
+  const indexDefinitions = [
+    { table: 'applications', indexName: 'idx_app_status', columns: 'status' },
+    { table: 'applications', indexName: 'idx_app_created', columns: 'created_at' },
+    { table: 'applications', indexName: 'idx_app_status_created', columns: 'status, created_at' },
+    { table: 'applications', indexName: 'idx_app_class', columns: 'class_applying' },
+    { table: 'applications', indexName: 'idx_app_class_status', columns: 'class_applying, status' },
+    { table: 'applications', indexName: 'idx_app_payment_status', columns: 'payment_status' },
+    { table: 'applications', indexName: 'idx_app_roll', columns: 'roll_number' },
+    { table: 'applications', indexName: 'idx_app_reg_no', columns: 'registration_number' },
+    { table: 'applications', indexName: 'idx_app_app_no', columns: 'application_number' },
+    { table: 'applications', indexName: 'idx_app_user', columns: 'user_id' },
+    { table: 'payment_orders', indexName: 'idx_pay_status', columns: 'status' },
+    { table: 'payment_orders', indexName: 'idx_pay_customer_email', columns: 'customer_email(191)' },
+    { table: 'payment_orders', indexName: 'idx_pay_created', columns: 'created_at' },
+    { table: 'payment_orders', indexName: 'idx_pay_app_id', columns: 'application_id' },
+    { table: 'users', indexName: 'idx_users_role', columns: 'role' },
+    { table: 'users', indexName: 'idx_users_phone', columns: 'phone' },
+    { table: 'users', indexName: 'idx_users_reg_no', columns: 'registration_number' },
+    { table: 'admin_notifications', indexName: 'idx_notif_read_created', columns: 'is_read, created_at' },
+    { table: 'contact_enquiries', indexName: 'idx_enquiries_status_created', columns: 'status, created_at' },
+  ];
+
+  for (const item of indexDefinitions) {
+    try {
+      const [existing]: any = await pool.query(
+        `SELECT INDEX_NAME FROM INFORMATION_SCHEMA.STATISTICS 
+         WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ? AND INDEX_NAME = ? LIMIT 1`,
+        [item.table, item.indexName]
+      );
+      if (!existing || existing.length === 0) {
+        await pool.query(`CREATE INDEX \`${item.indexName}\` ON \`${item.table}\` (${item.columns})`);
+      }
+    } catch {
+      // Table might not exist yet or warning
+    }
   }
 }
 
@@ -1287,6 +1337,523 @@ export const db = {
         return [];
       }
     }
+  },
+
+  async getPaginatedApplicationsSummary(options: {
+    page?: number;
+    limit?: number;
+    q?: string;
+    status?: string;
+    classApplying?: string;
+    stream?: string;
+    gender?: string;
+    includeDrafts?: boolean;
+  }): Promise<{
+    applications: Application[];
+    pagination: {
+      currentPage: number;
+      pageSize: number;
+      totalRecords: number;
+      filteredCount: number;
+      totalPages: number;
+    };
+    counts: {
+      active: number;
+      submitted: number;
+      approved: number;
+      correctionNeeded: number;
+    };
+    metrics: any;
+  }> {
+    await ensureDb();
+    const page = Math.max(1, options.page || 1);
+    const limit = Math.min(100, Math.max(1, options.limit || 20));
+    const offset = (page - 1) * limit;
+
+    if (pool && !useFallbackStorage) {
+      try {
+        // Fast status category counts directly from indexed status column
+        const [statusRows]: any = await pool.query(`
+          SELECT status, COUNT(*) as cnt 
+          FROM applications 
+          WHERE (status IS NULL OR status != 'draft') AND (registration_number IS NULL OR registration_number NOT LIKE 'DRAFT-%')
+          GROUP BY status
+        `);
+
+        let activeCount = 0;
+        let submittedCount = 0;
+        let approvedCount = 0;
+        let correctionNeededCount = 0;
+        let totalRecords = 0;
+
+        for (const r of (statusRows || [])) {
+          const st = r.status || 'submitted';
+          const c = parseInt(r.cnt || '0', 10);
+          totalRecords += c;
+          if (st !== 'rejected') activeCount += c;
+          if (st === 'submitted' || st === 'under_review') submittedCount += c;
+          if (st === 'approved' || st === 'admit_card_ready' || st === 'admitted') approvedCount += c;
+          if (st === 'correction_needed') correctionNeededCount += c;
+        }
+
+        const whereClauses: string[] = [];
+        const params: any[] = [];
+
+        if (!options.includeDrafts) {
+          whereClauses.push("(a.status IS NULL OR a.status != 'draft') AND (a.registration_number IS NULL OR a.registration_number NOT LIKE 'DRAFT-%')");
+        }
+
+        if (options.status && options.status !== 'All' && options.status !== 'all_records') {
+          if (options.status === 'active') {
+            whereClauses.push("a.status != 'rejected'");
+          } else if (options.status === 'registered') {
+            whereClauses.push("(a.status != 'draft')");
+          } else {
+            whereClauses.push("a.status = ?");
+            params.push(options.status);
+          }
+        }
+
+        if (options.classApplying && options.classApplying !== 'All') {
+          whereClauses.push("a.class_applying = ?");
+          params.push(options.classApplying);
+        }
+
+        if (options.stream && options.stream !== 'All' && options.stream !== 'all') {
+          const st = options.stream.toLowerCase().trim();
+          if (st.includes('non')) {
+            whereClauses.push("(LOWER(COALESCE(a.stream, '')) LIKE '%non%' OR LOWER(COALESCE(a.stream, '')) LIKE '%pcm%' OR LOWER(COALESCE(JSON_UNQUOTE(JSON_EXTRACT(a.academic_info, '$.stream')), '')) LIKE '%non%' OR LOWER(COALESCE(JSON_UNQUOTE(JSON_EXTRACT(a.academic_info, '$.stream')), '')) LIKE '%pcm%')");
+          } else if (st.includes('comm')) {
+            whereClauses.push("(LOWER(COALESCE(a.stream, '')) LIKE '%comm%' OR LOWER(COALESCE(JSON_UNQUOTE(JSON_EXTRACT(a.academic_info, '$.stream')), '')) LIKE '%comm%')");
+          } else if (st.includes('med')) {
+            whereClauses.push("((LOWER(COALESCE(a.stream, '')) LIKE '%med%' AND LOWER(COALESCE(a.stream, '')) NOT LIKE '%non%') OR (LOWER(COALESCE(JSON_UNQUOTE(JSON_EXTRACT(a.academic_info, '$.stream')), '')) LIKE '%med%' AND LOWER(COALESCE(JSON_UNQUOTE(JSON_EXTRACT(a.academic_info, '$.stream')), '')) NOT LIKE '%non%'))");
+          } else if (st.includes('human') || st.includes('art')) {
+            whereClauses.push("(LOWER(COALESCE(a.stream, '')) LIKE '%human%' OR LOWER(COALESCE(a.stream, '')) LIKE '%art%' OR LOWER(COALESCE(JSON_UNQUOTE(JSON_EXTRACT(a.academic_info, '$.stream')), '')) LIKE '%human%' OR LOWER(COALESCE(JSON_UNQUOTE(JSON_EXTRACT(a.academic_info, '$.stream')), '')) LIKE '%art%')");
+          }
+        }
+
+        if (options.gender && options.gender !== 'All') {
+          if (options.gender === 'Female') {
+            whereClauses.push("(LOWER(COALESCE(JSON_UNQUOTE(JSON_EXTRACT(a.personal_info, '$.gender')), '')) IN ('female', 'girl') OR a.registration_number LIKE 'NILG-%' OR a.application_number LIKE 'NILG-%')");
+          } else if (options.gender === 'Male') {
+            whereClauses.push("(LOWER(COALESCE(JSON_UNQUOTE(JSON_EXTRACT(a.personal_info, '$.gender')), 'male')) NOT IN ('female', 'girl') AND (a.registration_number IS NULL OR a.registration_number NOT LIKE 'NILG-%') AND (a.application_number IS NULL OR a.application_number NOT LIKE 'NILG-%'))");
+          }
+        }
+
+        if (options.q) {
+          const likeQ = `%${options.q.trim()}%`;
+          whereClauses.push(`(
+            a.application_number LIKE ? OR 
+            a.registration_number LIKE ? OR 
+            a.roll_number LIKE ? OR 
+            u.name LIKE ? OR 
+            u.email LIKE ? OR 
+            u.phone LIKE ? OR 
+            JSON_UNQUOTE(JSON_EXTRACT(a.personal_info, '$.fullName')) LIKE ? OR 
+            JSON_UNQUOTE(JSON_EXTRACT(a.personal_info, '$.candidateMobile')) LIKE ? OR 
+            JSON_UNQUOTE(JSON_EXTRACT(a.personal_info, '$.candidateEmail')) LIKE ? OR 
+            JSON_UNQUOTE(JSON_EXTRACT(a.parent_info, '$.fatherPhone')) LIKE ? OR 
+            JSON_UNQUOTE(JSON_EXTRACT(a.parent_info, '$.fatherName')) LIKE ?
+          )`);
+          params.push(likeQ, likeQ, likeQ, likeQ, likeQ, likeQ, likeQ, likeQ, likeQ, likeQ, likeQ);
+        }
+
+        const whereSql = whereClauses.length > 0 ? `WHERE ${whereClauses.join(' AND ')}` : '';
+
+        // Filtered count
+        const [countResult]: any = await pool.query(
+          `SELECT COUNT(*) as filtered_count FROM applications a LEFT JOIN users u ON a.user_id = u.id ${whereSql}`,
+          params
+        );
+        const filteredCount = parseInt(countResult?.[0]?.filtered_count || '0', 10);
+
+        // Fetch ONLY the required slice of records, excluding documents and address_info for maximum speed
+        const [rows]: any = await pool.query(
+          `SELECT 
+            a.id, 
+            a.application_number, 
+            a.registration_number, 
+            a.roll_number, 
+            a.user_id, 
+            a.class_applying, 
+            a.stream, 
+            a.study_location,
+            a.personal_info, 
+            a.parent_info, 
+            a.exam_centre_pref, 
+            a.academic_info, 
+            a.status, 
+            a.payment_status, 
+            a.amount_paid, 
+            a.transaction_id, 
+            a.created_at, 
+            a.updated_at,
+            u.name as user_name, 
+            u.email as user_email, 
+            u.phone as user_phone
+          FROM applications a
+          LEFT JOIN users u ON a.user_id = u.id
+          ${whereSql}
+          ORDER BY a.created_at DESC
+          LIMIT ? OFFSET ?`,
+          [...params, limit, offset]
+        );
+
+        const mappedApps = (rows || []).map((r: any) => {
+          const parsedPersonal = safeJsonParse(r.personal_info, {});
+          const resolvedName = (parsedPersonal.fullName && parsedPersonal.fullName !== 'Temp Delete Test' && parsedPersonal.fullName.trim() !== '')
+            ? parsedPersonal.fullName
+            : (r.user_name || 'Applicant');
+          parsedPersonal.fullName = resolvedName;
+          if (!parsedPersonal.candidateEmail) parsedPersonal.candidateEmail = r.user_email || '';
+          if (!parsedPersonal.candidateMobile) parsedPersonal.candidateMobile = r.user_phone || '';
+
+          const parsedParent = safeJsonParse(r.parent_info, {});
+          if (!parsedParent.fatherPhone) parsedParent.fatherPhone = parsedPersonal.candidateMobile || r.user_phone || '';
+
+          const candidateGender = (parsedPersonal.gender || 'Male') as 'Male' | 'Female';
+          const defaultFirstPref = candidateGender === 'Female' ? 'The Gurukul Nilokheri' : 'Aryakulam Nilokheri';
+          const defaultSecondPref = candidateGender === 'Female' ? 'None' : 'The Gurukul Jyotisar';
+          const parsedPref = safeJsonParse(r.exam_centre_pref, null);
+          const centrePref = parsedPref && (parsedPref.firstPreference || parsedPref.studyLocation)
+            ? {
+                firstPreference: parsedPref.firstPreference || parsedPref.studyLocation || defaultFirstPref,
+                secondPreference: parsedPref.secondPreference || defaultSecondPref,
+              }
+            : { firstPreference: defaultFirstPref, secondPreference: defaultSecondPref };
+
+          const parsedAcademic = safeJsonParse(r.academic_info, {});
+
+          return {
+            id: r.id,
+            registrationNumber: r.registration_number || r.application_number,
+            applicationNumber: r.application_number || r.registration_number,
+            rollNumber: r.roll_number || undefined,
+            userId: r.user_id,
+            classApplying: r.class_applying || 'Class 6',
+            stream: (r as any).stream || parsedAcademic.stream || undefined,
+            personalInfo: parsedPersonal,
+            parentInfo: parsedParent,
+            addressInfo: safeJsonParse(r.address_info, {}),
+            academicInfo: parsedAcademic,
+            examCentrePref: centrePref,
+            studyLocationPref: centrePref,
+            studyLocation: centrePref,
+            documents: {},
+            status: r.status || 'submitted',
+            remarks: r.remarks,
+            paymentStatus: r.payment_status || 'completed',
+            amountPaid: parseFloat(r.amount_paid || 0),
+            transactionId: r.transaction_id,
+            createdAt: r.created_at ? (r.created_at instanceof Date ? r.created_at.toISOString() : String(r.created_at)) : new Date().toISOString(),
+            updatedAt: r.updated_at ? (r.updated_at instanceof Date ? r.updated_at.toISOString() : String(r.updated_at)) : new Date().toISOString(),
+          };
+        });
+
+        const totalPages = Math.max(1, Math.ceil(filteredCount / limit));
+
+        return {
+          applications: mappedApps,
+          pagination: {
+            currentPage: page,
+            pageSize: limit,
+            totalRecords,
+            filteredCount,
+            totalPages,
+          },
+          counts: {
+            active: activeCount,
+            submitted: submittedCount,
+            approved: approvedCount,
+            correctionNeeded: correctionNeededCount,
+          },
+          metrics: {
+            total: totalRecords,
+            active: activeCount,
+            submitted: submittedCount,
+            draft: 0,
+            underReview: submittedCount,
+            approved: approvedCount,
+            correctionNeeded: correctionNeededCount,
+            rejected: 0,
+            totalFeesCollected: activeCount * 800,
+          },
+        };
+      } catch (e) {
+        console.error('MySQL getPaginatedApplicationsSummary query failed:', e);
+      }
+    }
+
+    // Fallback store implementation
+    const allApps = await this.getApplications();
+    const registered = options.includeDrafts ? allApps : allApps.filter(
+      (a) => a.status !== 'draft' && !(a.registrationNumber || '').startsWith('DRAFT-')
+    );
+
+    let filtered = registered;
+    if (options.status && options.status !== 'All' && options.status !== 'all_records') {
+      if (options.status === 'active') {
+        filtered = filtered.filter((a) => a.status !== 'rejected');
+      } else {
+        filtered = filtered.filter((a) => a.status === options.status);
+      }
+    }
+
+    if (options.classApplying && options.classApplying !== 'All') {
+      filtered = filtered.filter((a) => a.classApplying === options.classApplying);
+    }
+
+    if (options.stream && options.stream !== 'All' && options.stream !== 'all') {
+      const targetStr = options.stream.toLowerCase().trim();
+      filtered = filtered.filter((a) => {
+        const s = (a.stream || a.academicInfo?.stream || '').toLowerCase().trim();
+        if (targetStr.includes('non')) return s.includes('non') || s.includes('pcm');
+        if (targetStr.includes('comm')) return s.includes('comm');
+        if (targetStr.includes('med') && !targetStr.includes('non')) return s.includes('med') && !s.includes('non');
+        if (targetStr.includes('human') || targetStr.includes('art')) return s.includes('human') || s.includes('art');
+        return s === targetStr;
+      });
+    }
+
+    if (options.gender && options.gender !== 'All') {
+      filtered = filtered.filter((app) => {
+        const appGender = (app.personalInfo?.gender || '').toLowerCase();
+        const isFemale = appGender === 'female' || appGender === 'girl' || (app.registrationNumber || '').startsWith('NILG');
+        return options.gender === 'Female' ? isFemale : !isFemale;
+      });
+    }
+
+    if (options.q) {
+      const q = options.q.toLowerCase().trim();
+      filtered = filtered.filter((app) => {
+        const appNum = (app.applicationNumber || app.registrationNumber || '').toLowerCase();
+        const name = (app.personalInfo?.fullName || '').toLowerCase();
+        const phone = (app.parentInfo?.fatherPhone || app.personalInfo?.candidateMobile || '');
+        const email = (app.personalInfo?.candidateEmail || '').toLowerCase();
+        return appNum.includes(q) || name.includes(q) || phone.includes(q) || email.includes(q);
+      });
+    }
+
+    const filteredCount = filtered.length;
+    const totalPages = Math.max(1, Math.ceil(filteredCount / limit));
+    const paginated = filtered.slice(offset, offset + limit).map((a) => ({
+      ...a,
+      documents: {},
+    }));
+
+    const activeCount = registered.filter((a) => a.status !== 'rejected').length;
+    const submittedCount = registered.filter((a) => a.status === 'submitted' || a.status === 'under_review').length;
+    const approvedCount = registered.filter((a) => a.status === 'approved').length;
+    const correctionNeededCount = registered.filter((a) => a.status === 'correction_needed').length;
+
+    return {
+      applications: paginated,
+      pagination: {
+        currentPage: page,
+        pageSize: limit,
+        totalRecords: registered.length,
+        filteredCount,
+        totalPages,
+      },
+      counts: {
+        active: activeCount,
+        submitted: submittedCount,
+        approved: approvedCount,
+        correctionNeeded: correctionNeededCount,
+      },
+      metrics: computeApplicationMetrics(registered),
+    };
+  },
+
+  async getAdminDashboardStats(): Promise<any> {
+    await ensureDb();
+    if (pool && !useFallbackStorage) {
+      try {
+        // Fast class breakdown
+        const [classRows]: any = await pool.query(`
+          SELECT class_applying, status, COUNT(*) as cnt 
+          FROM applications 
+          WHERE (status IS NULL OR status != 'draft') AND (status != 'rejected')
+          GROUP BY class_applying, status
+        `);
+        const classCounts: Record<string, number> = {};
+        for (const r of (classRows || [])) {
+          const cls = r.class_applying || 'Class 6';
+          classCounts[cls] = (classCounts[cls] || 0) + parseInt(r.cnt || '0', 10);
+        }
+
+        // Fast demographic breakdown (only reading lightweight fields, no documents!)
+        const [demoRows]: any = await pool.query(`
+          SELECT 
+            application_number, 
+            registration_number, 
+            JSON_UNQUOTE(JSON_EXTRACT(personal_info, '$.gender')) as gender,
+            JSON_UNQUOTE(JSON_EXTRACT(address_info, '$.state')) as state,
+            status,
+            amount_paid,
+            payment_status
+          FROM applications 
+          WHERE (status IS NULL OR status != 'draft')
+        `);
+
+        let boysCount = 0;
+        let girlsCount = 0;
+        const stateCounts: Record<string, number> = {};
+        let totalFeesCollected = 0;
+
+        for (const r of (demoRows || [])) {
+          if (r.status !== 'rejected') {
+            const g = (r.gender || '').toLowerCase();
+            const appNo = (r.application_number || r.registration_number || '').toUpperCase();
+            if (g === 'female' || g === 'girl' || appNo.startsWith('NILG')) {
+              girlsCount++;
+            } else {
+              boysCount++;
+            }
+
+            const state = r.state && r.state.trim() ? r.state.trim() : 'Haryana';
+            stateCounts[state] = (stateCounts[state] || 0) + 1;
+          }
+          if (r.payment_status === 'completed') {
+            totalFeesCollected += parseFloat(r.amount_paid || 0);
+          }
+        }
+
+        // Fast recent 8 applications
+        const [recentRows]: any = await pool.query(`
+          SELECT 
+            a.id, a.application_number, a.registration_number, a.roll_number, a.class_applying, a.stream,
+            a.status, a.payment_status, a.amount_paid, a.created_at, a.personal_info, a.parent_info, a.exam_centre_pref, a.academic_info,
+            u.name as user_name, u.email as user_email, u.phone as user_phone
+          FROM applications a
+          LEFT JOIN users u ON a.user_id = u.id
+          WHERE (a.status IS NULL OR a.status != 'draft') AND a.status != 'rejected'
+          ORDER BY a.created_at DESC
+          LIMIT 8
+        `);
+
+        const recentApplications = (recentRows || []).map((r: any) => {
+          const parsedPersonal = safeJsonParse(r.personal_info, {});
+          parsedPersonal.fullName = (parsedPersonal.fullName && parsedPersonal.fullName.trim() !== '') ? parsedPersonal.fullName : (r.user_name || 'Applicant');
+          return {
+            id: r.id,
+            registrationNumber: r.registration_number || r.application_number,
+            applicationNumber: r.application_number || r.registration_number,
+            rollNumber: r.roll_number,
+            classApplying: r.class_applying || 'Class 6',
+            stream: r.stream,
+            personalInfo: parsedPersonal,
+            parentInfo: safeJsonParse(r.parent_info, {}),
+            status: r.status || 'submitted',
+            paymentStatus: r.payment_status || 'completed',
+            amountPaid: parseFloat(r.amount_paid || 0),
+            createdAt: r.created_at ? (r.created_at instanceof Date ? r.created_at.toISOString() : String(r.created_at)) : new Date().toISOString(),
+          };
+        });
+
+        const recentAwaitingVerification = recentApplications.filter(
+          (a: any) => a.status === 'submitted' || a.status === 'under_review' || a.status === 'correction_needed'
+        );
+
+        // Overall status counts
+        const [statusRows]: any = await pool.query(`
+          SELECT status, COUNT(*) as cnt 
+          FROM applications 
+          GROUP BY status
+        `);
+        const statusMap: Record<string, number> = {};
+        let totalAll = 0;
+        for (const r of (statusRows || [])) {
+          const st = r.status || 'submitted';
+          const cnt = parseInt(r.cnt || '0', 10);
+          statusMap[st] = (statusMap[st] || 0) + cnt;
+          totalAll += cnt;
+        }
+
+        const draft = statusMap['draft'] || 0;
+        const rejected = statusMap['rejected'] || 0;
+        const active = totalAll - rejected - draft;
+        const submitted = (statusMap['submitted'] || 0) + (statusMap['under_review'] || 0) + (statusMap['approved'] || 0) + (statusMap['correction_needed'] || 0);
+        const underReview = (statusMap['submitted'] || 0) + (statusMap['under_review'] || 0);
+        const approved = (statusMap['approved'] || 0) + (statusMap['admit_card_ready'] || 0) + (statusMap['admitted'] || 0);
+        const correctionNeeded = statusMap['correction_needed'] || 0;
+
+        const metrics = {
+          total: totalAll,
+          active,
+          submitted,
+          draft,
+          underReview,
+          approved,
+          correctionNeeded,
+          rejected,
+          totalFeesCollected,
+        };
+
+        return {
+          stats: {
+            ...metrics,
+            totalApplications: active,
+            totalApplicants: active,
+            boysCount,
+            girlsCount,
+            totalDossiers: totalAll,
+            totalCentres: 1,
+            classCounts,
+            stateCounts,
+          },
+          recentAwaitingVerification,
+          recentApplications,
+        };
+      } catch (err) {
+        console.warn('MySQL getAdminDashboardStats error, falling back:', err);
+      }
+    }
+
+    // Fallback store implementation
+    const applications = await this.getApplications();
+    const metrics = computeApplicationMetrics(applications);
+    const activeApplications = (applications || []).filter((a) => a.status !== 'rejected');
+    const classCounts: Record<string, number> = {};
+    activeApplications.forEach((a) => {
+      const cls = a.classApplying || 'Class 6';
+      classCounts[cls] = (classCounts[cls] || 0) + 1;
+    });
+    const stateCounts: Record<string, number> = {};
+    activeApplications.forEach((a) => {
+      const rawState = a.addressInfo?.state;
+      const state = rawState && rawState.trim() ? rawState.trim() : 'Haryana';
+      stateCounts[state] = (stateCounts[state] || 0) + 1;
+    });
+    let boysCount = 0;
+    let girlsCount = 0;
+    activeApplications.forEach((a) => {
+      const gender = (a.personalInfo?.gender || '').toLowerCase();
+      const appNo = (a.applicationNumber || '').toUpperCase();
+      if (gender === 'female' || gender === 'girl' || appNo.startsWith('NILG')) {
+        girlsCount++;
+      } else {
+        boysCount++;
+      }
+    });
+    const recentAwaitingVerification = activeApplications
+      .filter((a) => a.status === 'submitted' || a.status === 'under_review' || a.status === 'correction_needed')
+      .slice(0, 8);
+    return {
+      stats: {
+        ...metrics,
+        totalApplications: activeApplications.length,
+        totalApplicants: activeApplications.length,
+        boysCount,
+        girlsCount,
+        totalDossiers: metrics.total,
+        totalCentres: 1,
+        classCounts,
+        stateCounts,
+      },
+      recentAwaitingVerification,
+      recentApplications: activeApplications.slice(0, 8),
+    };
   },
 
   async getApplicationById(id: string): Promise<Application | null> {

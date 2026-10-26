@@ -283,6 +283,10 @@ export default function ApplicationVerificationPage({ params }: { params: { id: 
                 <span className="font-medium text-slate-900">{application.personalInfo.gender} • {application.personalInfo.category}</span>
               </div>
               <div>
+                <span className="text-slate-500 block text-[11px]">Religion</span>
+                <span className="font-semibold text-slate-900">{application.personalInfo?.religion || '-'}</span>
+              </div>
+              <div>
                 <span className="text-slate-500 block text-[11px]">Aadhaar Number</span>
                 <span className="font-mono text-slate-900">{application.personalInfo.aadhaarNumber}</span>
               </div>

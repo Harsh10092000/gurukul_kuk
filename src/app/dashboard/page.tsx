@@ -273,8 +273,8 @@ export default function ApplicantDashboard() {
               <span className="font-bold text-slate-900 text-sm">{payload.classApplying || 'Class 6'} {payload.stream ? `(${payload.stream})` : ''}</span>
             </div>
             <div className="bg-slate-50 p-3.5 rounded-lg border border-slate-200">
-              <span className="text-slate-500 block mb-1">Gender / Category</span>
-              <span className="font-bold text-slate-900 text-sm">{personal.gender || '—'} / {personal.category || 'General'}</span>
+              <span className="text-slate-500 block mb-1">Gender / Category / Religion</span>
+              <span className="font-bold text-slate-900 text-sm">{personal.gender || '—'} / {personal.category || 'General'} / {personal.religion || '-'}</span>
             </div>
             <div className="bg-slate-50 p-3.5 rounded-lg border border-slate-200">
               <span className="text-slate-500 block mb-1">Father's Name</span>
@@ -791,6 +791,12 @@ export default function ApplicantDashboard() {
                 <span className="text-slate-500 block text-[10px] font-semibold uppercase tracking-wider">Gender &amp; Category</span>
                 <span className="font-medium text-slate-900 mt-0.5 block">
                   {application.personalInfo?.gender} • {application.personalInfo?.category || 'General'}
+                </span>
+              </div>
+              <div className="data-cell">
+                <span className="text-slate-500 block text-[10px] font-semibold uppercase tracking-wider">Religion</span>
+                <span className="font-medium text-slate-900 mt-0.5 block">
+                  {application.personalInfo?.religion || '-'}
                 </span>
               </div>
 
