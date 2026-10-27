@@ -284,7 +284,13 @@ export default function ApplicationVerificationPage({ params }: { params: { id: 
               </div>
               <div>
                 <span className="text-slate-500 block text-[11px]">Religion</span>
-                <span className="font-semibold text-slate-900">{application.personalInfo?.religion || '-'}</span>
+                <span className="font-semibold text-slate-900 bg-slate-100 px-2 py-0.5 rounded text-xs inline-block">
+                  {application.personalInfo?.religion || '—'}
+                </span>
+              </div>
+              <div>
+                <span className="text-slate-500 block text-[11px]">Nationality</span>
+                <span className="font-semibold text-slate-900">{application.personalInfo?.nationality || 'Indian'}</span>
               </div>
               <div>
                 <span className="text-slate-500 block text-[11px]">Aadhaar Number</span>

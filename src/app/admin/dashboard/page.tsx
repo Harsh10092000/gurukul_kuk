@@ -220,7 +220,7 @@ export default function AdminDashboard() {
                               {app.personalInfo?.fullName}
                             </div>
                             <div className="text-[10px] text-slate-400">
-                              {app.personalInfo?.gender || 'Candidate'}
+                              {app.personalInfo?.gender || 'Candidate'} • {app.personalInfo?.category || 'General'}{app.personalInfo?.religion ? ` • ${app.personalInfo.religion}` : ''}
                             </div>
                           </div>
                         </div>

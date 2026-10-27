@@ -797,6 +797,10 @@ export default function AdminApplicationsPage() {
                               {app.personalInfo?.gender ? `${app.personalInfo.gender} • ` : ''}
                               {app.personalInfo?.dob ? formatDob(app.personalInfo.dob) : (app.personalInfo?.candidateEmail || '—')}
                             </div>
+                            <div className="text-[10px] text-slate-600 font-semibold">
+                              {app.personalInfo?.category || 'General'}
+                              {app.personalInfo?.religion ? ` • Religion: ${app.personalInfo.religion}` : ''}
+                            </div>
                           </div>
                         </div>
                       </td>

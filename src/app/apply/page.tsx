@@ -789,6 +789,8 @@ export default function ApplyPage() {
           dob: formData.dob,
           gender: formData.gender,
           category: formData.category,
+          religion: formData.religion,
+          nationality: formData.nationality,
           aadhaarNumber: formData.aadhaarNumber,
           panNumber: formData.panNumber || undefined,
           apaarId: formData.apaarId || undefined,
@@ -802,10 +804,10 @@ export default function ApplyPage() {
         },
         parentInfo: {
           fatherName: formData.fatherName,
-          fatherOccupation: formData.fatherOccupation,
+          fatherOccupation: (formData.fatherOccupationOption === 'Others' || formData.fatherOccupationOption === 'Other') ? formData.fatherOccupationOther : (formData.fatherOccupationOption || formData.fatherOccupation),
           fatherPhone: formData.fatherPhone,
           motherName: formData.motherName,
-          motherOccupation: formData.motherOccupation,
+          motherOccupation: (formData.motherOccupationOption === 'Others' || formData.motherOccupationOption === 'Other') ? formData.motherOccupationOther : (formData.motherOccupationOption || formData.motherOccupation),
           motherPhone: formData.motherPhone ? formData.motherPhone.trim() : undefined,
           annualIncome: formData.annualIncome,
           guardianName: formData.guardianName || undefined,
@@ -2590,6 +2592,10 @@ export default function ApplyPage() {
                 <div>
                   <span className="text-slate-500 block text-[11px]">Gender &amp; DOB</span>
                   <span className="font-medium text-slate-900">{formData.gender} • {formData.dob}</span>
+                </div>
+                <div>
+                  <span className="text-slate-500 block text-[11px]">Category &amp; Religion</span>
+                  <span className="font-medium text-slate-900">{formData.category} • {formData.religion || '—'}</span>
                 </div>
                 <div>
                   <span className="text-slate-500 block text-[11px]">Class Applied</span>
