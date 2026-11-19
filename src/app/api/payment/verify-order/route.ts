@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { signToken, getAuthCookieOptions } from '@/lib/auth';
 import { fetchRazorpayOrder, fetchRazorpayOrderPayments } from '@/lib/razorpay';
+import { fetchHdfcOrderStatus, HDFC_CONFIG } from '@/lib/hdfc';
 import { completePaymentAndRegistration } from '@/lib/payment-completion';
 
 export const dynamic = 'force-dynamic';
@@ -40,39 +41,70 @@ export async function GET(request: Request) {
     let isCharged = orderStatusStr === 'CHARGED' || orderStatusStr === 'SUCCESS';
 
     if (!isCharged) {
-      // Self-Healing Live Check with Razorpay:
-      try {
-        let capturedPaymentId = '';
-        const paymentsRes = await fetchRazorpayOrderPayments(orderId);
-        if (paymentsRes && paymentsRes.items && paymentsRes.items.length > 0) {
-          const captured = paymentsRes.items.find((p) => p.status === 'captured' || p.status === 'authorized');
-          if (captured) {
-            capturedPaymentId = captured.id;
-          }
-        } else {
-          const rzpOrder = await fetchRazorpayOrder(orderId);
-          if (rzpOrder && (rzpOrder.status === 'paid' || rzpOrder.amount_paid > 0)) {
-            capturedPaymentId = `pay_recovered_${Date.now()}`;
-          }
-        }
-
-        if (capturedPaymentId) {
-          const completionResult = await completePaymentAndRegistration({
-            orderId,
-            paymentId: capturedPaymentId,
-            gateway: 'razorpay',
-          });
-          if (completionResult.success) {
-            const reloadedOrder = await db.getPaymentOrderByOrderId(orderId);
-            if (reloadedOrder) {
-              paymentOrder = reloadedOrder;
-              orderStatusStr = String(paymentOrder.status || '').toUpperCase();
-              isCharged = orderStatusStr === 'CHARGED' || orderStatusStr === 'SUCCESS';
+      if (orderId.startsWith('order_')) {
+        // Self-Healing Live Check with Razorpay:
+        try {
+          let capturedPaymentId = '';
+          const paymentsRes = await fetchRazorpayOrderPayments(orderId);
+          if (paymentsRes && paymentsRes.items && paymentsRes.items.length > 0) {
+            const captured = paymentsRes.items.find((p) => p.status === 'captured' || p.status === 'authorized');
+            if (captured) {
+              capturedPaymentId = captured.id;
+            }
+          } else {
+            const rzpOrder = await fetchRazorpayOrder(orderId);
+            if (rzpOrder && (rzpOrder.status === 'paid' || rzpOrder.amount_paid > 0)) {
+              capturedPaymentId = `pay_recovered_${Date.now()}`;
             }
           }
+
+          if (capturedPaymentId) {
+            const completionResult = await completePaymentAndRegistration({
+              orderId,
+              paymentId: capturedPaymentId,
+              gateway: 'razorpay',
+            });
+            if (completionResult.success) {
+              const reloadedOrder = await db.getPaymentOrderByOrderId(orderId);
+              if (reloadedOrder) {
+                paymentOrder = reloadedOrder;
+                orderStatusStr = String(paymentOrder.status || '').toUpperCase();
+                isCharged = orderStatusStr === 'CHARGED' || orderStatusStr === 'SUCCESS';
+              }
+            }
+          }
+        } catch (recoveryErr) {
+          console.warn(`[VerifyOrder] Live recovery check error for ${orderId}:`, recoveryErr);
         }
-      } catch (recoveryErr) {
-        console.warn(`[VerifyOrder] Live recovery check error for ${orderId}:`, recoveryErr);
+      } else {
+        // Self-Healing Live Check with HDFC SmartGateway:
+        try {
+          const hdfcStatus = await fetchHdfcOrderStatus(orderId);
+          const hdfcStatusUpper = (hdfcStatus?.status || '').toUpperCase();
+          if (hdfcStatusUpper === 'CHARGED' || hdfcStatusUpper === 'SUCCESS') {
+            const returnedAmount = parseFloat(String(hdfcStatus.amount));
+            const expectedAmount = paymentOrder?.amount || HDFC_CONFIG.FEE_AMOUNT;
+            if (Math.abs(returnedAmount - expectedAmount) <= 0.01) {
+              const txnId = hdfcStatus.txn_id || hdfcStatus.transaction_id || `TXN_${orderId}`;
+              const completionResult = await completePaymentAndRegistration({
+                orderId,
+                paymentId: txnId,
+                gateway: 'hdfc',
+                rawPaymentResponse: hdfcStatus,
+              });
+              if (completionResult.success) {
+                const reloadedOrder = await db.getPaymentOrderByOrderId(orderId);
+                if (reloadedOrder) {
+                  paymentOrder = reloadedOrder;
+                  orderStatusStr = String(paymentOrder.status || '').toUpperCase();
+                  isCharged = orderStatusStr === 'CHARGED' || orderStatusStr === 'SUCCESS';
+                }
+              }
+            }
+          }
+        } catch (hdfcErr) {
+          console.warn(`[VerifyOrder] Live HDFC recovery check error for ${orderId}:`, hdfcErr);
+        }
       }
     }
 

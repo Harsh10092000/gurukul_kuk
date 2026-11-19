@@ -11,18 +11,18 @@ try {
 }
 
 export const HDFC_CONFIG = {
-  MERCHANT_ID: process.env.HDFC_MERCHANT_ID || 'SG6256',
-  PAYMENT_PAGE_CLIENT_ID: process.env.HDFC_PAYMENT_PAGE_CLIENT_ID || 'hdfcmaster',
-  BASE_URL: process.env.HDFC_BASE_URL || 'https://smartgateway.hdfcuat.bank.in',
-  KEY_UUID: process.env.HDFC_KEY_UUID || 'key_b826ce4454a34986969f40123a1cb26e',
+  MERCHANT_ID: process.env.HDFC_MERCHANT_ID || '82347',
+  PAYMENT_PAGE_CLIENT_ID: process.env.HDFC_PAYMENT_PAGE_CLIENT_ID || '82347',
+  BASE_URL: process.env.HDFC_BASE_URL || 'https://smartgateway.hdfc.bank.in',
+  KEY_UUID: process.env.HDFC_KEY_UUID || 'key_5a0a367d88de464795906cbc2794e6a6',
   PRIVATE_KEY_PATH: process.env.HDFC_PRIVATE_KEY_PATH || 'certs/privateKey.pem',
-  PUBLIC_KEY_PATH: process.env.HDFC_PUBLIC_KEY_PATH || 'certs/key_b826ce4454a34986969f40123a1cb26e.pem',
+  PUBLIC_KEY_PATH: process.env.HDFC_PUBLIC_KEY_PATH || 'certs/key_5a0a367d88de464795906cbc2794e6a6.pem',
   RESPONSE_KEY: process.env.HDFC_RESPONSE_KEY || '',
   RETURN_URL: process.env.HDFC_RETURN_URL || '',
-  // Entrance examination fee (₹800)
+  // Entrance examination fee (₹1 for test, ₹800 for live)
   FEE_AMOUNT: process.env.HDFC_PAYMENT_AMOUNT ? parseFloat(process.env.HDFC_PAYMENT_AMOUNT) : 800,
   CURRENCY: 'INR',
-  PAYMENT_MODE: process.env.HDFC_PAYMENT_MODE || 'demo',
+  PAYMENT_MODE: process.env.HDFC_PAYMENT_MODE || 'live',
 };
 
 let cachedJuspayInstance: any = null;
@@ -81,12 +81,12 @@ function getPublicKey(): string {
     return fs.readFileSync(primaryPath, 'utf8');
   }
 
-  const fallbackPath = path.resolve(process.cwd(), 'certs', 'key_b826ce4454a34986969f40123a1cb26e.pem');
+  const fallbackPath = path.resolve(process.cwd(), 'certs', 'key_5a0a367d88de464795906cbc2794e6a6.pem');
   if (fs.existsSync(fallbackPath)) {
     return fs.readFileSync(fallbackPath, 'utf8');
   }
 
-  throw new Error(`HDFC SmartGateway: Public key file not found. Set HDFC_PUBLIC_KEY or HDFC_PUBLIC_KEY_B64 in Vercel environment variables, or provide certs/key_b826ce4454a34986969f40123a1cb26e.pem.`);
+  throw new Error(`HDFC SmartGateway: Public key file not found. Set HDFC_PUBLIC_KEY or HDFC_PUBLIC_KEY_B64 in Vercel environment variables, or provide certs/key_5a0a367d88de464795906cbc2794e6a6.pem.`);
 }
 
 /**
@@ -238,7 +238,7 @@ export async function createHdfcOrderSession(
   // Explicit amount if provided (e.g. ₹1 for test flow), otherwise standard fee
   const sessionAmount = typeof options.amount === 'number' && options.amount > 0
     ? options.amount
-    : (HDFC_CONFIG.PAYMENT_MODE === 'demo' ? 1 : HDFC_CONFIG.FEE_AMOUNT);
+    : HDFC_CONFIG.FEE_AMOUNT;
 
   const payload: any = {
     order_id: options.orderId,

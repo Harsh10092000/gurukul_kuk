@@ -41,7 +41,7 @@ export async function GET(request: Request) {
       success: true,
       order: {
         orderId: paymentOrder.orderId,
-        amount: paymentOrder.amount || 800,
+        amount: paymentOrder.amount || HDFC_CONFIG.FEE_AMOUNT,
         currency: paymentOrder.currency || 'INR',
         status: paymentOrder.status,
         registrationNumber: paymentOrder.registrationNumber || null,

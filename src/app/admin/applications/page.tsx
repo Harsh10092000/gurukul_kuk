@@ -87,20 +87,20 @@ export default function AdminApplicationsPage() {
         if (recoveredCount > 0) {
           setSyncResult({
             type: 'success',
-            message: `Found ${recoveredCount} candidate(s) whose payment is completed on Razorpay! They are now listed in the "Payment Rescue & Fallback Safety Net" banner below. Click "Approve & Allot Seq" to officially register them.`,
+            message: `Found ${recoveredCount} candidate(s) whose payment is completed on the payment gateway (HDFC / Razorpay)! They are now listed in the "Payment Rescue & Fallback Safety Net" banner below. Click "Approve & Allot Seq" to officially register them.`,
           });
           fetchPendingPaid();
         } else {
           setSyncResult({
             type: 'info',
-            message: `Checked ${totalChecked} unconfirmed order(s). All records are up to date (no unlinked paid orders found on Razorpay).`,
+            message: `Checked ${totalChecked} unconfirmed order(s). All records are up to date (no unlinked paid orders found on bank gateway).`,
           });
           fetchPendingPaid();
         }
       } else {
         setSyncResult({
           type: 'error',
-          message: data.error || 'Failed to sync with Razorpay.',
+          message: data.error || 'Failed to sync with payment gateway.',
         });
       }
     } catch {
@@ -322,12 +322,12 @@ export default function AdminApplicationsPage() {
             type="button"
             onClick={handleSyncWithRazorpay}
             disabled={syncLoading}
-            id="sync-razorpay-btn"
+            id="sync-gateway-btn"
             className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-indigo-600 hover:bg-indigo-700 text-white shadow-xs transition-colors disabled:opacity-50 cursor-pointer"
-            title="Check Razorpay for any completed payments that were not registered yet"
+            title="Check HDFC SmartGateway & Razorpay for any completed payments that were not registered yet"
           >
             <RefreshCw className={`w-3.5 h-3.5 ${syncLoading ? 'animate-spin' : ''}`} />
-            <span>{syncLoading ? 'Syncing...' : 'Sync with Razorpay'}</span>
+            <span>{syncLoading ? 'Syncing...' : 'Sync Gateway Payments'}</span>
           </button>
           <a
             href="/api/admin/export"

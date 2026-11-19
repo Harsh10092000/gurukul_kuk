@@ -86,15 +86,17 @@ export async function POST(request: Request) {
 
     // Determine paymentId from payment_response or fallback
     const pResponse = paymentOrder.paymentResponse as any;
-    const paymentId = pResponse?.razorpay_payment_id || pResponse?.paymentId || pResponse?.id || `pay_admin_appr_${Date.now()}`;
+    const paymentId = pResponse?.paymentId || pResponse?.razorpay_payment_id || pResponse?.txn_id || pResponse?.id || `pay_admin_appr_${Date.now()}`;
+    const gateway = pResponse?.gateway || (orderId.startsWith('GUR_') ? 'hdfc' : 'razorpay');
 
     // Atomically complete registration, issuing next sequential Registration Number & Roll Number
     const result = await completePaymentAndRegistration({
       orderId,
       paymentId,
-      gateway: 'razorpay',
+      gateway,
       rawPaymentResponse: {
         ...paymentOrder.paymentResponse,
+        gateway,
         adminApprovedBy: authUser.email,
         adminApprovedAt: new Date().toISOString(),
         customRemarks: customRemarks || 'Manually approved by institutional admissions administrator',

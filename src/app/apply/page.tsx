@@ -1289,15 +1289,37 @@ export default function ApplyPage() {
                   Payment for Order ID <span className="font-mono text-portal-navy bg-slate-100 px-1.5 py-0.5 rounded">{pendingOrderId}</span> is under verification with the bank.
                 </p>
                 <p className="text-[11px] text-slate-500 mt-0.5">
-                  An automated email will be sent once payment is confirmed or rejected. You can also log into your candidate account with your registered email and password to view status.
+                  An automated email will be sent once payment is confirmed or rejected. If you abandoned this earlier session or want to pay fresh now, click &quot;Clear &amp; Try Again&quot;.
                 </p>
               </div>
-              <Link
-                href="/login"
-                className="px-4 py-2 bg-portal-navy hover:bg-slate-800 text-white rounded-lg text-xs font-bold shadow-xs transition-colors flex items-center justify-center gap-1.5 whitespace-nowrap cursor-pointer"
-              >
-                Go to Candidate Login &rarr;
-              </Link>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={async () => {
+                    try {
+                      await fetch('/api/payment/hdfc/cancel', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ orderId: pendingOrderId }),
+                      });
+                    } catch { }
+                    try {
+                      sessionStorage.removeItem('gurukul_pending_order_id');
+                    } catch { }
+                    setPendingOrderId(null);
+                    setError('');
+                  }}
+                  className="px-3.5 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-lg text-xs font-bold shadow-xs transition-colors whitespace-nowrap cursor-pointer"
+                >
+                  Clear &amp; Try Again
+                </button>
+                <Link
+                  href="/login"
+                  className="px-4 py-2 bg-portal-navy hover:bg-slate-800 text-white rounded-lg text-xs font-bold shadow-xs transition-colors flex items-center justify-center gap-1.5 whitespace-nowrap cursor-pointer"
+                >
+                  Candidate Login &rarr;
+                </Link>
+              </div>
             </div>
           )}
         </div>
@@ -2703,7 +2725,7 @@ export default function ApplyPage() {
                 ? (process.env.NEXT_PUBLIC_ACTIVE_PAYMENT_GATEWAY === 'hdfc'
                   ? 'Connecting to HDFC Payment Gateway...'
                   : 'Redirecting to Razorpay...')
-                : 'Pay ₹800 & Submit Application'}
+                : `Pay ₹${process.env.NEXT_PUBLIC_PAYMENT_AMOUNT || '800'} & Submit Application`}
             </button>
           )}
         </div>

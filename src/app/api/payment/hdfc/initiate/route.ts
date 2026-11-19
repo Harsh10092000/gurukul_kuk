@@ -16,8 +16,11 @@ import {
   generateHdfcOrderId,
   resolveReturnUrl,
   createHdfcOrderSession,
+  fetchHdfcOrderStatus,
   HDFC_CONFIG,
 } from '@/lib/hdfc';
+import { fetchRazorpayOrderPayments } from '@/lib/razorpay';
+import { completePaymentAndRegistration } from '@/lib/payment-completion';
 
 export const dynamic = 'force-dynamic';
 
@@ -198,18 +201,8 @@ export async function POST(request: Request) {
     ).trim();
     const cleanPhone = candidateMobile.replace(/\D/g, '').slice(-10);
 
-    // Strict Check: Candidate email and mobile MUST be unique across the entire system (enforced in all environments)
+    // Strict Check: Prevent duplicate registration for already completed candidates
     if (candidateEmail) {
-      const existingEmailUser = await db.findUserByEmail(candidateEmail);
-      if (existingEmailUser && existingEmailUser.role !== 'admin') {
-        return NextResponse.json(
-          {
-            error: `An official candidate account with email '${candidateEmail}' already exists. Please login to your dashboard instead of creating a duplicate registration.`,
-          },
-          { status: 409 }
-        );
-      }
-
       const existingEmailApp = await db.findApplicationByEmail(candidateEmail);
       if (existingEmailApp && existingEmailApp.paymentStatus === 'completed') {
         return NextResponse.json(
@@ -219,26 +212,117 @@ export async function POST(request: Request) {
           { status: 409 }
         );
       }
+
+      const existingEmailUser = await db.findUserByEmail(candidateEmail);
+      if (existingEmailUser && existingEmailUser.role !== 'admin' && existingEmailUser.registrationNumber) {
+        return NextResponse.json(
+          {
+            error: `An official candidate account with email '${candidateEmail}' already exists (Registration ID: ${existingEmailUser.registrationNumber}). Please login to your dashboard instead of creating a duplicate registration.`,
+          },
+          { status: 409 }
+        );
+      }
     }
 
-    // In-flight stuck payment guard (no time limit)
+    // In-flight stuck payment guard (checks bank live status and auto-expires stale sessions > 15 mins)
     const activePendingOrder = await db.findActivePendingOrder({
       email: candidateEmail,
       aadhaar: personalInfo?.aadhaarNumber,
     });
+
     if (activePendingOrder) {
       const orderTime = new Date(activePendingOrder.createdAt).getTime();
       const elapsedMins = Math.max(1, Math.round((Date.now() - orderTime) / 60000));
-      return NextResponse.json(
-        {
-          error: `A payment transaction of ₹800 is already in process with the bank for this candidate (Order ID: ${activePendingOrder.orderId}, initiated ${elapsedMins} minute${elapsedMins > 1 ? 's' : ''} ago). To prevent accidental double payment, you cannot initiate another payment until this transaction is confirmed or rejected by the bank.`,
-          paymentPending: true,
+      let isCaptured = false;
+      let isStaleOrFailed = false;
+      let capturedPaymentId = '';
+
+      if (activePendingOrder.orderId.startsWith('GUR_')) {
+        // HDFC SmartGateway order
+        try {
+          const hdfcStatus = await fetchHdfcOrderStatus(activePendingOrder.orderId);
+          const hdfcStatusUpper = (hdfcStatus?.status || '').toUpperCase();
+          if (hdfcStatusUpper === 'CHARGED' || hdfcStatusUpper === 'SUCCESS') {
+            isCaptured = true;
+            capturedPaymentId = hdfcStatus?.txn_id || hdfcStatus?.transaction_id || `TXN_${activePendingOrder.orderId}`;
+          } else if (
+            hdfcStatusUpper === 'USER_ABORTED' ||
+            hdfcStatusUpper === 'CANCELLED' ||
+            hdfcStatusUpper === 'FAILED' ||
+            hdfcStatusUpper === 'AUTHORIZATION_FAILED' ||
+            elapsedMins > 15
+          ) {
+            isStaleOrFailed = true;
+          }
+        } catch {
+          if (elapsedMins > 15) {
+            isStaleOrFailed = true;
+          }
+        }
+      } else {
+        // Old Razorpay order
+        try {
+          const paymentsRes = await fetchRazorpayOrderPayments(activePendingOrder.orderId);
+          const captured = paymentsRes?.items?.find((p: any) => p.status === 'captured' || p.status === 'authorized');
+          if (captured) {
+            isCaptured = true;
+            capturedPaymentId = captured.id;
+          } else {
+            const everyFailed = paymentsRes?.items?.every(
+              (p: any) => p.status === 'failed' || p.status === 'refunded'
+            );
+            if (everyFailed || elapsedMins > 15) {
+              isStaleOrFailed = true;
+            }
+          }
+        } catch {
+          if (elapsedMins > 15) {
+            isStaleOrFailed = true;
+          }
+        }
+      }
+
+      // If the earlier payment was captured, automatically finalize registration!
+      if (isCaptured) {
+        const result = await completePaymentAndRegistration({
           orderId: activePendingOrder.orderId,
-          status: activePendingOrder.status,
-          elapsedMins,
-        },
-        { status: 409 }
-      );
+          paymentId: capturedPaymentId,
+          gateway: activePendingOrder.orderId.startsWith('GUR_') ? 'hdfc' : 'razorpay',
+        });
+
+        if (result.success) {
+          return NextResponse.json({
+            success: true,
+            alreadyProcessed: true,
+            registrationNumber: result.registrationNumber,
+            rollNumber: result.rollNumber,
+            redirectUrl: result.redirectUrl,
+            message: 'Your earlier payment was already confirmed by the bank. Your registration has been finalized.',
+          });
+        }
+      }
+
+      // If the earlier order failed, expired, or was abandoned >15 mins ago, purge it and allow fresh checkout!
+      if (isStaleOrFailed || elapsedMins > 15) {
+        console.log(`[HDFC Initiate] Auto-clearing stale in-flight order ${activePendingOrder.orderId} (${elapsedMins} mins old) for ${candidateEmail}`);
+        await db.purgeFailedPaymentCandidate({
+          email: candidateEmail,
+          orderId: activePendingOrder.orderId,
+          reason: 'Stale in-flight order expired or failed',
+        });
+      } else {
+        // Genuinely in-flight within last 15 minutes
+        return NextResponse.json(
+          {
+            error: `A payment transaction of ₹${activePendingOrder.amount || HDFC_CONFIG.FEE_AMOUNT} is already in process with the bank for this candidate (Order ID: ${activePendingOrder.orderId}, initiated ${elapsedMins} minute${elapsedMins > 1 ? 's' : ''} ago). To prevent accidental double payment, you cannot initiate another payment until this transaction is confirmed or rejected by the bank.`,
+            paymentPending: true,
+            orderId: activePendingOrder.orderId,
+            status: activePendingOrder.status,
+            elapsedMins,
+          },
+          { status: 409 }
+        );
+      }
     }
 
     // Generate unique order ID

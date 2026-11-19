@@ -1,5 +1,23 @@
 [
   {
+    "userId": "usr-1793945793390-p4xb3",
+    "userName": "Anshu Miglani",
+    "userRole": "applicant",
+    "action": "PAYMENT_SUCCESS_CONFIRMED",
+    "entity": "payment_orders",
+    "entityId": "GUR_1793945751430_43020B05",
+    "details": {
+      "gateway": "hdfc",
+      "orderId": "GUR_1793945751430_43020B05",
+      "paymentId": "82347-GUR_1793945751430_43020B05-1",
+      "registrationNumber": "NILB-67592",
+      "rollNumber": "27060005",
+      "amount": 1
+    },
+    "id": "audit-1793945793415-5axtc",
+    "timestamp": "2026-11-06T06:16:33.415Z"
+  },
+  {
     "userId": "usr-admin-1",
     "userName": "Principal / Exam Controller",
     "userRole": "admin",

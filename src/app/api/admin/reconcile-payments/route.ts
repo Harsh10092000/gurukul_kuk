@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { db, getDbPool, isUsingFallbackStorage } from '@/lib/db';
 import { getCurrentUser } from '@/lib/auth';
 import { fetchRazorpayOrderPayments, fetchRazorpayOrder } from '@/lib/razorpay';
+import { fetchHdfcOrderStatus } from '@/lib/hdfc';
 import { completePaymentAndRegistration } from '@/lib/payment-completion';
 
 export const dynamic = 'force-dynamic';
@@ -59,18 +60,38 @@ export async function POST(request: Request) {
     for (const order of pendingOrders) {
       const orderId = order.orderId;
       try {
-        // Query Razorpay payments for this order
-        const paymentsRes = await fetchRazorpayOrderPayments(orderId);
-        const captured = paymentsRes?.items?.find((p) => p.status === 'captured' || p.status === 'authorized');
+        let isPaid = false;
+        let paymentId = '';
+        let detectedGateway = 'razorpay';
 
-        let isPaid = Boolean(captured);
-        let paymentId = captured?.id || '';
+        // Check whether this order belongs to HDFC SmartGateway (GUR_ prefix or active gateway)
+        if (orderId.startsWith('GUR_') || (!orderId.startsWith('order_') && (process.env.ACTIVE_PAYMENT_GATEWAY || '').toLowerCase() === 'hdfc')) {
+          detectedGateway = 'hdfc';
+          try {
+            const hdfcStatus = await fetchHdfcOrderStatus(orderId);
+            const hdfcStatusUpper = (hdfcStatus?.status || '').toUpperCase();
+            if (hdfcStatusUpper === 'CHARGED' || hdfcStatusUpper === 'SUCCESS') {
+              isPaid = true;
+              paymentId = hdfcStatus?.txn_id || hdfcStatus?.transaction_id || `TXN_${orderId}`;
+            }
+          } catch (hdfcErr) {
+            console.warn(`[Reconcile] HDFC status check error for ${orderId}:`, hdfcErr);
+          }
+        } else {
+          detectedGateway = 'razorpay';
+          // Query Razorpay payments for this order
+          const paymentsRes = await fetchRazorpayOrderPayments(orderId);
+          const captured = paymentsRes?.items?.find((p) => p.status === 'captured' || p.status === 'authorized');
 
-        if (!isPaid) {
-          const rzpOrder = await fetchRazorpayOrder(orderId);
-          if (rzpOrder && (rzpOrder.status === 'paid' || rzpOrder.amount_paid > 0)) {
-            isPaid = true;
-            paymentId = `pay_admin_reconcile_${Date.now()}`;
+          isPaid = Boolean(captured);
+          paymentId = captured?.id || '';
+
+          if (!isPaid) {
+            const rzpOrder = await fetchRazorpayOrder(orderId);
+            if (rzpOrder && (rzpOrder.status === 'paid' || rzpOrder.amount_paid > 0)) {
+              isPaid = true;
+              paymentId = `pay_admin_reconcile_${Date.now()}`;
+            }
           }
         }
 
@@ -79,17 +100,18 @@ export async function POST(request: Request) {
           await db.updatePaymentOrderRecord(orderId, {
             status: 'CHARGED',
             paymentResponse: {
-              gateway: 'razorpay',
-              razorpay_payment_id: paymentId,
-              razorpay_order_id: orderId,
+              gateway: detectedGateway,
+              paymentId,
+              orderId,
               verifiedAt: new Date().toISOString(),
-              syncSource: 'admin_razorpay_sync',
+              syncSource: `admin_${detectedGateway}_sync`,
             },
           });
 
           results.recoveredCount++;
           results.details.push({
             orderId,
+            gateway: detectedGateway,
             status: 'AWAITING_ADMIN_APPROVAL',
             paymentId,
             customerEmail: order.customerEmail,
@@ -98,7 +120,8 @@ export async function POST(request: Request) {
           results.stillUnpaid++;
           results.details.push({
             orderId,
-            status: 'UNPAID_ON_RAZORPAY',
+            gateway: detectedGateway,
+            status: `UNPAID_ON_${detectedGateway.toUpperCase()}`,
             customerEmail: order.customerEmail,
           });
         }

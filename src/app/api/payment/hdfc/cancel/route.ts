@@ -14,10 +14,30 @@ export async function POST(request: Request) {
     }
 
     const order = await db.getPaymentOrderByOrderId(orderId);
-    if (order && order.status === 'PENDING') {
+    if (order) {
+      if (order.status !== 'CHARGED') {
+        await db.updatePaymentOrderRecord(orderId, {
+          status: 'CANCELLED',
+        });
+      }
+      if (order.customerEmail) {
+        await db.purgeFailedPaymentCandidate({
+          email: order.customerEmail,
+          orderId,
+          reason: 'Candidate or admin cancelled/cleared session',
+        });
+      }
+    } else {
       await db.updatePaymentOrderRecord(orderId, {
         status: 'CANCELLED',
-      });
+      }).catch(() => {});
+      if (body.email) {
+        await db.purgeFailedPaymentCandidate({
+          email: body.email,
+          orderId,
+          reason: 'Cleared session by email',
+        });
+      }
     }
 
     return NextResponse.json({

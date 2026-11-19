@@ -53,6 +53,8 @@ export async function completePaymentAndRegistration(
     return { success: false, orderId, error: 'Payment order record not found in institutional database.' };
   }
 
+  const actualFee = typeof paymentOrder.amount === 'number' && paymentOrder.amount > 0 ? paymentOrder.amount : 800;
+
   // 2. Idempotency check: if order was already completed and charged
   if (paymentOrder.status === 'CHARGED' && paymentOrder.registrationNumber) {
     const candidateEmail = (paymentOrder.customerEmail || paymentOrder.applicationPayload?.personalInfo?.candidateEmail || '').trim().toLowerCase();
@@ -163,7 +165,7 @@ export async function completePaymentAndRegistration(
         signature: signature || '',
         verifiedAt: new Date().toISOString(),
         isDuplicatePayment: isDoublePayment,
-        duplicateNote: isDoublePayment ? `Duplicate payment of ₹800 received for existing registration ${regId}. Original transaction: ${existingCompletedApp.transactionId}` : undefined,
+        duplicateNote: isDoublePayment ? `Duplicate payment of ₹${actualFee} received for existing registration ${regId}. Original transaction: ${existingCompletedApp.transactionId}` : undefined,
       },
     });
 
@@ -287,7 +289,7 @@ export async function completePaymentAndRegistration(
           `UPDATE applications SET
             application_number = ?, roll_number = ?, class_applying = ?, personal_info = ?, parent_info = ?,
             address_info = ?, academic_info = ?, exam_centre_pref = ?, documents = ?,
-            status = 'approved', payment_status = 'completed', amount_paid = 800.00,
+            status = 'approved', payment_status = 'completed', amount_paid = ?,
             transaction_id = ?, updated_at = ?
            WHERE id = ?`,
           [
@@ -306,6 +308,7 @@ export async function completePaymentAndRegistration(
             }),
             JSON.stringify(studyLoc),
             JSON.stringify(documents || {}),
+            actualFee,
             paymentId,
             toMySqlDatetime(),
             finalAppId,
@@ -324,7 +327,7 @@ export async function completePaymentAndRegistration(
             roll_number = VALUES(roll_number),
             status = 'approved',
             payment_status = 'completed',
-            amount_paid = 800.00,
+            amount_paid = VALUES(amount_paid),
             transaction_id = VALUES(transaction_id),
             updated_at = VALUES(updated_at)`,
           [
@@ -348,7 +351,7 @@ export async function completePaymentAndRegistration(
             'approved',
             null,
             'completed',
-            800.00,
+            actualFee,
             paymentId,
             toMySqlDatetime(),
             toMySqlDatetime(),
@@ -503,7 +506,7 @@ export async function completePaymentAndRegistration(
       documents: documents || {},
       status: 'approved',
       paymentStatus: 'completed',
-      amountPaid: 800,
+      amountPaid: actualFee,
       transactionId: paymentId,
     });
 
@@ -570,7 +573,7 @@ export async function completePaymentAndRegistration(
           paymentId,
           registrationNumber: finalRegNo,
           rollNumber: finalRollNo,
-          amount: 800,
+          amount: actualFee,
         },
       });
 
@@ -595,7 +598,7 @@ export async function completePaymentAndRegistration(
           applicationNumber: finalRegNo,
           receiptNumber: receiptNo,
           transactionId: paymentId,
-          amount: 800,
+          amount: actualFee,
           classApplying: classApplying.replace(/^Class\s*/i, 'Class '),
           candidateEmail,
           candidateMobile,
@@ -639,8 +642,8 @@ export async function completePaymentAndRegistration(
           previousSchoolName: personalInfo?.previousSchoolName || 'Not specified',
           previousBoard: prevBoard,
           transactionId: paymentId,
-          amount: 800,
-          amountPaid: 800,
+          amount: actualFee,
+          amountPaid: actualFee,
           registrationTime: formattedDate,
           paymentDate: formattedDate,
         },

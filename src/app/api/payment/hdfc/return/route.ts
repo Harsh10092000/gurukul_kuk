@@ -1,9 +1,8 @@
 import { NextResponse } from 'next/server';
 import { db, toMySqlDatetime } from '@/lib/db';
-import { hashPassword, signToken, getAuthCookieOptions } from '@/lib/auth';
-import { sendNotification, ADMIN_NOTIFICATION_EMAIL } from '@/lib/notifications';
-import { getExamDetailsForGender } from '@/lib/validations';
+import { signToken, getAuthCookieOptions } from '@/lib/auth';
 import { fetchHdfcOrderStatus, HDFC_CONFIG, getPublicBaseUrl } from '@/lib/hdfc';
+import { completePaymentAndRegistration } from '@/lib/payment-completion';
 
 export const dynamic = 'force-dynamic';
 
@@ -248,308 +247,47 @@ async function handleHdfcReturn(request: Request) {
 
   // 5. Handle Payment Statuses
   if (isSuccess) {
-    // Payment verified successfully! Finalize official registration
-    const payload = paymentOrder.applicationPayload;
-    if (!payload || !payload.personalInfo) {
-      console.error(`HDFC Return: Missing or incomplete application payload for order ${orderId}`);
-      await db.updatePaymentOrderRecord(orderId, {
-        status: 'CHARGED',
-        paymentResponse: statusResponse,
-      });
+    // Payment verified successfully! Atomically finalize registration via completePaymentAndRegistration
+    const completionResult = await completePaymentAndRegistration({
+      orderId,
+      paymentId: txnId,
+      gateway: 'hdfc',
+      rawPaymentResponse: statusResponse,
+    });
+
+    if (!completionResult.success) {
+      console.error(`[HDFC Return] Failed to complete registration for ${orderId}:`, completionResult.error);
       return NextResponse.redirect(
         new URL(
-          `/apply?payment=pending&orderId=${encodeURIComponent(orderId)}&txnId=${encodeURIComponent(txnId)}&msg=Payment+was+received+successfully+but+application+details+are+pending.+Please+contact+admissions+helpline.`,
+          `/apply?payment=pending&orderId=${encodeURIComponent(orderId)}&txnId=${encodeURIComponent(txnId)}&msg=${encodeURIComponent(completionResult.error || 'Payment was received but registration is pending verification. Please contact admissions helpline.')}`,
           baseUrl
         ),
         303
       );
     }
 
-    const {
-      classApplying,
-      stream,
-      personalInfo,
-      parentInfo,
-      addressInfo,
-      studyLocationPref,
-      documents,
-      password,
-      authUserId,
-    } = payload;
-
-    const gender = (personalInfo?.gender || 'Male') as 'Male' | 'Female';
-
-    // Prepare credentials
-    const candidateEmail = (personalInfo?.candidateEmail || paymentOrder.customerEmail || '').trim().toLowerCase();
-    const candidateMobile = (personalInfo?.candidateMobile || paymentOrder.customerPhone || '').trim();
-    const cleanPhone = candidateMobile.replace(/\D/g, '').slice(-10);
-
-    // Check if an official application already exists for this email
-    const existingAppByEmail = await db.findApplicationByEmail(candidateEmail);
-    if (existingAppByEmail && existingAppByEmail.paymentStatus === 'completed') {
-      const regId = existingAppByEmail.registrationNumber || existingAppByEmail.applicationNumber;
-      console.log(`[HDFC Return] Application already exists for email ${candidateEmail}: RegNo ${regId}`);
-      await db.updatePaymentOrderRecord(orderId, {
-        status: 'CHARGED',
-        applicationId: existingAppByEmail.id,
-        registrationNumber: regId,
-        paymentResponse: statusResponse,
-      });
-
-      const existingUser = await db.findUserByEmail(candidateEmail);
-      if (existingUser) {
-        const token = signToken({
-          userId: existingUser.id,
-          name: existingUser.name,
-          email: existingUser.email,
-          role: existingUser.role,
-        });
-        const redirectUrl = new URL(
-          `/payment/thank-you?orderId=${encodeURIComponent(orderId)}&regNo=${encodeURIComponent(regId)}&txnId=${encodeURIComponent(txnId)}`,
-          baseUrl
-        );
-        const response = NextResponse.redirect(redirectUrl, 303);
-        const cookieOptions = getAuthCookieOptions();
-        response.cookies.set(cookieOptions.name, token, cookieOptions);
-        return response;
-      }
-    }
-
-    // Atomically Generate Registration ID & Roll Number
-    const registrationId = await db.getNextRegistrationNumber(gender);
-    const assignedRollNo = await db.getNextRollNumber(classApplying, gender, stream || payload.academicInfo?.stream);
-
-    let passwordHash = '';
-    if (password) {
-      passwordHash = await hashPassword(password);
-    } else {
-      passwordHash = await hashPassword('Student@123');
-    }
-
-    // Create official user account if not already existing
-    let officialUser: any;
-    const existingUser = await db.findUserByEmail(candidateEmail);
-    if (existingUser) {
-      officialUser = existingUser;
-    } else {
-      officialUser = await db.createUser({
-        name: personalInfo.fullName.trim(),
-        email: candidateEmail,
-        phone: cleanPhone,
-        role: 'applicant',
-        passwordHash,
-        registrationNumber: registrationId,
-      });
-    }
-
-    // Create official application record
-    const newApplication = await db.createApplication({
-      userId: officialUser.id,
-      registrationNumber: registrationId,
-      rollNumber: assignedRollNo,
-      classApplying: classApplying.replace(/^Class\s*/i, 'Class '),
-      stream: classApplying.includes('11') ? stream : undefined,
-      personalInfo: {
-        ...personalInfo,
-        candidateEmail,
-        candidateMobile,
-        whatsappNumber: addressInfo?.whatsappNumber || candidateMobile,
-      },
-      parentInfo,
-      addressInfo,
-      academicInfo: {
-        applyingClass: classApplying,
-        stream: classApplying.includes('11') ? stream : undefined,
-        previousSchoolName: personalInfo.previousSchoolName,
-        previousBoard: personalInfo.previousBoard,
-        otherBoard: personalInfo.otherBoard,
-      },
-      studyLocationPref: studyLocationPref,
-      examCentrePref: studyLocationPref,
-      documents: documents || {},
-      status: 'approved',
-      paymentStatus: 'completed',
-      amountPaid: 800,
-      transactionId: txnId,
-    });
-
-    // Create Admit Card Record
-    const settings = await db.getSettings();
-    const examDetails = getExamDetailsForGender(gender, registrationId);
-
-    const isFemale = gender === 'Female';
-    const rawSeq = parseInt(assignedRollNo.slice(4), 10) || 1;
-    const candidateIndex = isFemale ? (rawSeq > 5000 ? rawSeq - 5000 : rawSeq) : rawSeq;
-    const indexForSeating = (candidateIndex % 1000) || candidateIndex;
-    const hallNumber = Math.ceil(indexForSeating / 30);
-    const deskNumber = ((indexForSeating - 1) % 30) + 1;
-
-    await db.generateOrReleaseAdmitCard({
-      id: 'admit-' + newApplication.id,
-      applicationId: newApplication.id,
-      applicationNumber: registrationId,
-      rollNumber: assignedRollNo,
-      candidateName: personalInfo.fullName.trim(),
-      fatherName: parentInfo?.fatherName?.trim() || '',
-      classApplying: newApplication.classApplying,
-      stream: newApplication.stream,
-      examCentreName: examDetails.examCentreName,
-      examCentreAddress: examDetails.examCentreAddress,
-      examDate: examDetails.examDate,
-      reportingTime: examDetails.reportingTime,
-      examDuration: examDetails.examDuration,
-      roomNumber: `Hall-${hallNumber}, Desk ${deskNumber}`,
-      candidatePhotoUrl: documents?.photo || '/logo-gurukul.png',
-      candidateSignatureUrl: documents?.signature || undefined,
-      isReleased: Boolean(settings.admitCardsReleased),
-      instructions: [
-        'Bring a printed clear copy of this Admit Card along with your original Aadhaar Card.',
-        'Candidates must report to their allotted examination centre at least 45 minutes before exam start time.',
-        'Calculators, smart devices, watches, and mobile phones are strictly prohibited in the exam hall.',
-        'Only Blue or Black ballpoint pens are permitted for marking answers.',
-      ],
-      createdAt: toMySqlDatetime(new Date()),
-    });
-
-    // Clean up temporary session if needed
-    if (authUserId && authUserId.startsWith('temp_')) {
-      await db.deleteTempApplication(authUserId);
-    }
-
-    // Dispatch Confirmation Email & Receipt to Candidate
-    const receiptNo = 'REC-HDFC-' + Math.floor(100000 + Math.random() * 900000);
-    const paymentTimestamp = new Date().toLocaleString('en-IN', {
-      timeZone: 'Asia/Kolkata',
-      dateStyle: 'medium',
-      timeStyle: 'short',
-    });
-
-    try {
-      await sendNotification({
-        to: candidateEmail,
-        name: personalInfo.fullName,
-        type: 'APPLICATION_SUBMITTED',
-        data: {
-          registrationNumber: registrationId,
-          applicationNumber: registrationId,
-          classApplying: newApplication.classApplying,
-        },
-      });
-
-      await sendNotification({
-        to: candidateEmail,
-        name: personalInfo.fullName,
-        type: 'FEE_PAYMENT_RECEIPT',
-        data: {
-          registrationNumber: registrationId,
-          applicationNumber: registrationId,
-          receiptNumber: receiptNo,
-          transactionId: txnId,
-          amount: 800,
-          classApplying: newApplication.classApplying,
-          candidateEmail,
-          candidateMobile,
-          paymentDate: paymentTimestamp,
-        },
-      });
-    } catch (mailErr) {
-      console.warn('Candidate confirmation notification dispatch error:', mailErr);
-    }
-
-    // Dispatch Admin Notification
-    try {
-      const fullAddress = [
-        addressInfo?.streetAddress,
-        addressInfo?.city,
-        addressInfo?.district,
-        addressInfo?.state,
-        addressInfo?.pincode ? `PIN: ${addressInfo.pincode}` : '',
-      ].filter(Boolean).join(', ') || addressInfo?.city || studyLocationPref?.firstPreference || 'Not provided';
-
-      const prevSchool = personalInfo?.previousSchoolName
-        ? `${personalInfo.previousSchoolName}${personalInfo.previousBoard ? ` (${personalInfo.previousBoard})` : ''}`
-        : (personalInfo?.previousBoard || 'N/A');
-
-      const prevMarks = personalInfo?.previousMarks || personalInfo?.previousPercentage || personalInfo?.previousClassMarksPercentage || (personalInfo?.previousBoard ? `Board: ${personalInfo.previousBoard}` : 'N/A');
-
-      await sendNotification({
-        to: ADMIN_NOTIFICATION_EMAIL,
-        name: 'Admissions Desk',
-        type: 'ADMIN_NEW_REGISTRATION_ALERT',
-        data: {
-          registrationNumber: registrationId,
-          applicationNumber: registrationId,
-          receiptNumber: receiptNo,
-          fullName: personalInfo.fullName,
-          classApplying: newApplication.classApplying,
-          fatherName: parentInfo?.fatherName || 'N/A',
-          fatherOccupation: parentInfo?.fatherOccupation || 'N/A',
-          motherName: parentInfo?.motherName || 'N/A',
-          motherOccupation: parentInfo?.motherOccupation || 'N/A',
-          dob: personalInfo.dob || 'N/A',
-          gender,
-          category: personalInfo.category || 'General',
-          aadhaarNumber: personalInfo?.aadhaarNumber ? `XXXXXXXX${personalInfo.aadhaarNumber.slice(-4)}` : 'N/A',
-          address: fullAddress,
-          studyLocation: studyLocationPref?.firstPreference || 'The Gurukul Nilokheri',
-          previousSchool: prevSchool,
-          previousSchoolName: personalInfo?.previousSchoolName || prevSchool,
-          previousBoard: (personalInfo?.previousBoard === 'Others' ? personalInfo?.otherBoard : personalInfo?.previousBoard) || 'CBSE',
-          previousMarks: prevMarks,
-          amountPaid: 800,
-          transactionId: txnId,
-          registrationTime: paymentTimestamp,
-        },
-      });
-
-      await db.createAdminNotification({
-        type: 'APPLICATION_SUBMITTED',
-        title: `New HDFC Paid Candidate: ${personalInfo.fullName} (${registrationId})`,
-        message: `${personalInfo.fullName} completed registration and paid fee ₹800 via HDFC SmartGateway. Study Location: ${studyLocationPref?.firstPreference}.`,
-        entityId: newApplication.id,
-        entityType: 'application',
-        link: `/admin/applications/${newApplication.id}`,
-        metadata: {
-          applicationId: newApplication.id,
-          candidateName: personalInfo.fullName,
-          registrationNumber: registrationId,
-          classApplying: newApplication.classApplying,
-          email: candidateEmail,
-          phone: candidateMobile,
-          transactionId: txnId,
-        },
-      });
-    } catch (adminErr) {
-      console.warn('Admin notification dispatch error:', adminErr);
-    }
-
-    // Update payment order record
-    await db.updatePaymentOrderRecord(orderId, {
-      status: 'CHARGED',
-      applicationId: newApplication.id,
-      registrationNumber: registrationId,
-      paymentResponse: statusResponse,
-    });
-
-    // Sign authentication JWT token for official user
-    const token = signToken({
-      userId: officialUser.id,
-      name: officialUser.name,
-      email: officialUser.email,
-      role: officialUser.role,
-    });
-
+    const regNo = completionResult.registrationNumber || '';
     const redirectUrl = new URL(
-      `/payment/thank-you?orderId=${encodeURIComponent(orderId)}&regNo=${encodeURIComponent(registrationId)}&txnId=${encodeURIComponent(txnId)}`,
+      completionResult.redirectUrl || `/payment/thank-you?orderId=${encodeURIComponent(orderId)}&regNo=${encodeURIComponent(regNo)}&txnId=${encodeURIComponent(txnId)}`,
       baseUrl
     );
     const response = NextResponse.redirect(redirectUrl, 303);
 
-    const cookieOptions = getAuthCookieOptions();
-    response.cookies.set(cookieOptions.name, token, cookieOptions);
+    if (completionResult.user) {
+      const token = signToken({
+        userId: completionResult.user.id,
+        name: completionResult.user.name,
+        email: completionResult.user.email,
+        role: completionResult.user.role as any,
+      });
+      const cookieOptions = getAuthCookieOptions();
+      response.cookies.set(cookieOptions.name, token, cookieOptions);
+    }
 
     return response;
   }
+
+
 
   if (orderStatus === 'AUTHORIZING' || orderStatus === 'PENDING' || orderStatus === 'PENDING_VBV') {
     return NextResponse.redirect(

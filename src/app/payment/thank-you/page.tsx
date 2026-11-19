@@ -216,7 +216,7 @@ function ThankYouContent() {
                 </button>
 
                 <Link
-                  href="/dashboard"
+                  href="/"
                   className="btn-primary flex-1 text-xs h-11 justify-center gap-2 font-bold"
                 >
                   <LayoutDashboard className="w-4 h-4" />
