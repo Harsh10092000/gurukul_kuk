@@ -207,6 +207,29 @@ export default function ApplyPage() {
     });
   };
 
+  // Auto-reset loading state whenever candidate returns to this tab or navigates back from payment page
+  useEffect(() => {
+    const handleResetLoading = () => {
+      setLoading(false);
+      setVerifyingPayment(false);
+    };
+
+    window.addEventListener('pageshow', handleResetLoading);
+    window.addEventListener('focus', handleResetLoading);
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible') {
+        handleResetLoading();
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibility);
+
+    return () => {
+      window.removeEventListener('pageshow', handleResetLoading);
+      window.removeEventListener('focus', handleResetLoading);
+      document.removeEventListener('visibilitychange', handleVisibility);
+    };
+  }, []);
+
   // Adjust study locations and class when activeLocations load or settings change
   useEffect(() => {
     const isFem = formData.gender === 'Female' || (formData.gender as string)?.toLowerCase() === 'female';
@@ -1049,6 +1072,9 @@ export default function ApplyPage() {
 
       // Case B: HDFC Hosted Page Redirect
       if (data.paymentUrl) {
+        setTimeout(() => {
+          setLoading(false);
+        }, 2500);
         window.location.href = data.paymentUrl;
       } else {
         setError('Payment gateway returned an invalid session. Please try again.');
